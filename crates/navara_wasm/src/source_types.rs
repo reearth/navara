@@ -39,6 +39,18 @@ const DEFAULT_OVERSCALED_MAX_ZOOM: usize = 24;
 const DEFAULT_TILE_SIZE: u32 = 256;
 const DEFAULT_MAX_SSE: f32 = 2.0;
 
+/// Downcast the previous [`Source`] to a specific variant for partial-update
+/// merges, yielding `Some(&inner)` only when it matches. Every `SourceDescription::to`
+/// arm needs the same match; this keeps them from diverging.
+macro_rules! old_source {
+    ($old:expr, $variant:path) => {
+        match $old {
+            Some($variant(o)) => Some(o),
+            _ => None,
+        }
+    };
+}
+
 #[wasm_bindgen]
 #[derive(Debug, Clone, Deserialize)]
 pub struct GeoJsonSourceDescription {
@@ -528,10 +540,7 @@ impl SourceDescription {
             "geojson" => {
                 let desc: GeoJsonSourceDescription =
                     serde_wasm_bindgen::from_value(value.clone()).ok()?;
-                let old = match old {
-                    Some(Source::GeoJson(o)) => Some(o),
-                    _ => None,
-                };
+                let old = old_source!(old, Source::GeoJson);
 
                 // A top-level `url` takes the URL path; otherwise inline GeoJSON
                 // is read from `data` (which serde skips, so re-extract it here).
@@ -544,9 +553,13 @@ impl SourceDescription {
                             data: JsValue::NULL,
                         });
                     if !js_data.data.is_null() && !js_data.data.is_undefined() {
+                        // `data` is present but must parse as GeoJSON. On parse
+                        // failure keep the previous data instead of silently
+                        // clearing the source's geometry (which renders blank).
                         serde_wasm_bindgen::from_value::<GeoJson>(js_data.data)
                             .ok()
                             .map(GeoJsonData::GeoJson)
+                            .or_else(|| old.and_then(|o| o.data.clone()))
                     } else {
                         old.and_then(|o| o.data.clone())
                     }
@@ -562,10 +575,7 @@ impl SourceDescription {
             "vector-tile" => {
                 let desc: VectorTileSourceDescription =
                     serde_wasm_bindgen::from_value(value).ok()?;
-                let old = match old {
-                    Some(Source::VectorTile(o)) => Some(o),
-                    _ => None,
-                };
+                let old = old_source!(old, Source::VectorTile);
                 Some(Source::VectorTile(VectorTileSource {
                     source_id: source_id.to_string(),
                     url: desc.url.or_else(|| old.map(|o| o.url.clone()))?,
@@ -587,10 +597,7 @@ impl SourceDescription {
             "raster-tile" => {
                 let desc: RasterTileSourceDescription =
                     serde_wasm_bindgen::from_value(value).ok()?;
-                let old = match old {
-                    Some(Source::RasterTile(o)) => Some(o),
-                    _ => None,
-                };
+                let old = old_source!(old, Source::RasterTile);
                 Some(Source::RasterTile(RasterTileSource {
                     source_id: source_id.to_string(),
                     url: desc.url.or_else(|| old.map(|o| o.url.clone()))?,
@@ -612,10 +619,7 @@ impl SourceDescription {
             "raster-dem" => {
                 let desc: RasterDemSourceDescription =
                     serde_wasm_bindgen::from_value(value).ok()?;
-                let old = match old {
-                    Some(Source::RasterDem(o)) => Some(o),
-                    _ => None,
-                };
+                let old = old_source!(old, Source::RasterDem);
                 Some(Source::RasterDem(RasterDemSource {
                     source_id: source_id.to_string(),
                     url: desc.url.or_else(|| old.map(|o| o.url.clone()))?,
@@ -646,10 +650,7 @@ impl SourceDescription {
             "quantized-mesh" => {
                 let desc: QuantizedMeshSourceDescription =
                     serde_wasm_bindgen::from_value(value).ok()?;
-                let old = match old {
-                    Some(Source::QuantizedMesh(o)) => Some(o),
-                    _ => None,
-                };
+                let old = old_source!(old, Source::QuantizedMesh);
                 // Cesium quantized-mesh terrain is geographic (EPSG:4326) with a
                 // TMS (south-origin) y by default, matching the legacy material.
                 // Each tiling-scheme sub-field falls back to the previous source.
@@ -693,10 +694,7 @@ impl SourceDescription {
             }
             "3d-tiles" => {
                 let desc: Tiles3dSourceDescription = serde_wasm_bindgen::from_value(value).ok()?;
-                let old = match old {
-                    Some(Source::Tiles3d(o)) => Some(o),
-                    _ => None,
-                };
+                let old = old_source!(old, Source::Tiles3d);
                 Some(Source::Tiles3d(Tiles3dSource {
                     source_id: source_id.to_string(),
                     url: desc.url.or_else(|| old.map(|o| o.url.clone()))?,
@@ -705,10 +703,7 @@ impl SourceDescription {
             }
             "b3dm" => {
                 let desc: Tiles3dSourceDescription = serde_wasm_bindgen::from_value(value).ok()?;
-                let old = match old {
-                    Some(Source::B3dm(o)) => Some(o),
-                    _ => None,
-                };
+                let old = old_source!(old, Source::B3dm);
                 Some(Source::B3dm(B3dmSource {
                     source_id: source_id.to_string(),
                     url: desc.url.or_else(|| old.map(|o| o.url.clone()))?,
@@ -717,10 +712,7 @@ impl SourceDescription {
             }
             "pnts" => {
                 let desc: Tiles3dSourceDescription = serde_wasm_bindgen::from_value(value).ok()?;
-                let old = match old {
-                    Some(Source::Pnts(o)) => Some(o),
-                    _ => None,
-                };
+                let old = old_source!(old, Source::Pnts);
                 Some(Source::Pnts(PntsSource {
                     source_id: source_id.to_string(),
                     url: desc.url.or_else(|| old.map(|o| o.url.clone()))?,

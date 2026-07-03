@@ -43,6 +43,10 @@ pub struct PendingReload {
     /// waits for teardown to actually start (guards the rare case of a reset
     /// queued before the layer entity has even spawned).
     pub seen_alive: bool,
+    /// The layer's order index captured before teardown, restored on re-add so
+    /// `get_layer_index` stays stable across a source update (teardown otherwise
+    /// drops the index and the re-add would assign a fresh, higher one).
+    pub order: Option<usize>,
 }
 
 /// Queue of layers waiting to be re-added after teardown, drained by
@@ -209,7 +213,7 @@ pub fn flush_layer_reloads(
     // Layer ids whose entity is currently alive.
     let alive: std::collections::HashSet<&str> = live.iter().map(|l| l.0.as_str()).collect();
 
-    let mut ready: Vec<(String, LayerDescription)> = Vec::new();
+    let mut ready: Vec<(String, LayerDescription, Option<usize>)> = Vec::new();
     queue.pending.retain_mut(|reload| {
         if alive.contains(reload.layer_id.as_str()) {
             // Old entity still alive: teardown in flight (or not started). Wait.
@@ -217,7 +221,7 @@ pub fn flush_layer_reloads(
             true
         } else if reload.seen_alive {
             // Was alive, now gone: teardown complete, safe to re-add.
-            ready.push((reload.layer_id.clone(), reload.desc.clone()));
+            ready.push((reload.layer_id.clone(), reload.desc.clone(), reload.order));
             false
         } else {
             // Haven't seen the entity yet; wait for it to appear first.
@@ -225,10 +229,11 @@ pub fn flush_layer_reloads(
         }
     });
 
-    for (layer_id, desc) in ready {
-        // `process_delete_events` removed the stored description on teardown, so
-        // re-register it before respawning the layer entity.
-        layer_desc_store.add(layer_id, desc.clone());
+    for (layer_id, desc, order) in ready {
+        // `process_delete_events` removed the stored description (and its order)
+        // on teardown, so re-register it before respawning the layer entity,
+        // restoring the captured order so `get_layer_index` stays stable.
+        layer_desc_store.add_with_order(layer_id, desc.clone(), order);
         add_events.write(AddLayerEvent(desc));
     }
 }
@@ -266,6 +271,7 @@ mod tests {
                 layer_id: layer_id.to_owned(),
                 desc: tiles_desc(layer_id),
                 seen_alive: false,
+                order: None,
             });
     }
 

@@ -81,7 +81,7 @@ The `Source` handle returned by `addSource` exposes two methods for managing the
 
 ### update()
 
-Changes the source configuration and re-fetches its data. Every layer that references this source is **reset** (its loaded resources are torn down) and then **reloaded** against the new configuration, so a changed URL, zoom range, tiling scheme, or inline data takes effect on the already-visible layers, not just future tile requests.
+Changes the source configuration and re-fetches its data. Every layer that references this source is **reset** (its loaded resources are torn down) and then **reloaded** against the new configuration, so a changed URL, zoom range, tiling scheme, or inline data takes effect on the already-visible layers, not just future tile requests. Terrain layers are the exception: they are refreshed in place — re-traversed to pick up the new configuration — rather than torn down and re-added.
 
 The update is **partial**, the same way [`Layer.update()`](../../../three/layer/about/) merges materials: any field you omit keeps its current value instead of resetting to a default. `type` (which cannot change) is always required, and `url` is required by the type — set it to the unchanged value to leave the fetched URL as-is.
 

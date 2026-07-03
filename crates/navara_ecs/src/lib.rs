@@ -430,6 +430,16 @@ impl App {
             source_store.unlink_layer(layer_id);
         }
 
+        // Drop any queued reset for this layer so an in-flight source update can't
+        // re-add (resurrect) a layer the caller has explicitly deleted.
+        if let Some(mut queue) = self
+            .app
+            .world_mut()
+            .get_resource_mut::<navara_layer_event::LayerReloadQueue>()
+        {
+            queue.pending.retain(|reload| reload.layer_id != layer_id);
+        }
+
         self.app
             .world_mut()
             .write_message(navara_layer_event::DeleteLayerEvent(LayerId(
@@ -467,13 +477,15 @@ impl App {
         if let Some(mut source_store) = self.app.world_mut().get_resource_mut::<SourceStore>() {
             source_store.update(source_id.to_owned(), source);
         }
+    }
 
-        // Terrain reads its fetch config live from the source (it has no teardown
-        // marker, so it is not reset via delete+re-add like other layers). It
-        // re-traverses only on camera/layer changes, so a static-camera source
-        // update would otherwise go unnoticed; force one re-traversal here.
-        // Raster and the other layer types are reset via delete+re-add instead
-        // (see `Core::update_source`), so they don't need this.
+    /// Force a single terrain re-traversal so terrain layers pick up a changed
+    /// source's fetch config, which they read live from `SourceStore`. Terrain has
+    /// no teardown marker, so — unlike other layer types (reset via delete+re-add
+    /// in `Core::update_source`) — it re-traverses only on camera/layer changes; a
+    /// static-camera source update would otherwise go unnoticed. Call this only
+    /// when a terrain layer actually references the updated source.
+    pub fn force_terrain_update(&mut self) {
         if let Some(mut terrain_tc) =
             self.app
                 .world_mut()
@@ -521,6 +533,14 @@ impl App {
     /// keeps its single reference across the reset. The re-add is deferred until
     /// teardown finishes — see `navara_layer_event::flush_layer_reloads`.
     pub fn reset_layer(&mut self, layer_id: &str, desc: LayerDescription) {
+        // Capture the layer's current order index before teardown drops it, so the
+        // re-add can restore it and `get_layer_index` stays stable across the reset.
+        let order = self
+            .app
+            .world()
+            .get_resource::<LayerDescStore>()
+            .and_then(|store| store.get_order(layer_id).copied());
+
         self.app
             .world_mut()
             .write_message(navara_layer_event::DeleteLayerEvent(LayerId(
@@ -532,11 +552,25 @@ impl App {
             .world_mut()
             .get_resource_mut::<navara_layer_event::LayerReloadQueue>()
         {
-            queue.pending.push(navara_layer_event::PendingReload {
-                layer_id: layer_id.to_owned(),
-                desc,
-                seen_alive: false,
-            });
+            // Dedup: several source updates can land within one teardown window
+            // (e.g. dragging a source-level slider). Only one entity is ever torn
+            // down, so replace any existing pending reload's description instead of
+            // enqueuing a duplicate — otherwise `flush_layer_reloads` would re-add
+            // the same layer once per queued entry. Keep the first-captured order.
+            if let Some(existing) = queue
+                .pending
+                .iter_mut()
+                .find(|reload| reload.layer_id == layer_id)
+            {
+                existing.desc = desc;
+            } else {
+                queue.pending.push(navara_layer_event::PendingReload {
+                    layer_id: layer_id.to_owned(),
+                    desc,
+                    seen_alive: false,
+                    order,
+                });
+            }
         }
     }
 

@@ -370,16 +370,23 @@ impl Core {
         //
         // Terrain is the exception: it has no teardown marker (see
         // `process_delete_events`), so it can't be delete+re-added. It reads its
-        // fetch config live from the source instead; `update_terrain` re-traverses
-        // via the `force_update` flag set in `App::update_source`.
+        // fetch config live and only needs a forced re-traversal, triggered once
+        // below — and only when a terrain layer actually references this source.
+        // The variant is checked via the cheap `get_layer_type` so terrain layers
+        // don't clone their whole description just to be skipped.
+        let mut has_terrain = false;
         for layer_id in self.app.layers_for_source(&source_id) {
+            if matches!(self.app.get_layer_type(&layer_id), Some("terrain")) {
+                has_terrain = true;
+                continue;
+            }
             let Some(desc) = self.app.get_layer_description(&layer_id) else {
                 continue;
             };
-            if matches!(desc, navara_layer::LayerDescription::Terrain(_)) {
-                continue;
-            }
             self.app.reset_layer(&layer_id, desc);
+        }
+        if has_terrain {
+            self.app.force_terrain_update();
         }
     }
 

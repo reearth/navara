@@ -143,7 +143,7 @@ pub fn delete_model_by_pnts_layer(
     mut buf: ResMut<BufferStore>,
     mut layer_store: ResMut<LayerStore>,
     deleted: Query<(Entity, &DeletePntsLayerMarker)>,
-    pnts_layers: Query<Entity, With<PntsLayer>>,
+    pnts_layers: Query<(Entity, &PntsLayer)>,
     features: Query<
         &ModelBin,
         (
@@ -167,8 +167,12 @@ pub fn delete_model_by_pnts_layer(
             commands.entity(*e).despawn();
         }
 
-        for e in &pnts_layers {
-            commands.entity(e).despawn();
+        // Despawn only the PNTS layer entity being deleted, not every PNTS
+        // layer: `d.0` is the target layer id, so match on it.
+        for (le, layer) in &pnts_layers {
+            if layer.layer_id == d.0 {
+                commands.entity(le).despawn();
+            }
         }
         layer_store.remove(&d.0);
         commands.entity(e).despawn();

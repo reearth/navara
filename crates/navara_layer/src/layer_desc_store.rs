@@ -22,6 +22,24 @@ impl LayerDescStore {
         self.map.insert(layer_id, desc);
     }
 
+    /// Re-insert a layer while restoring a previously captured order index (used
+    /// when a reset re-adds a layer, so `get_order` stays stable across a source
+    /// update). Falls back to assigning a fresh index when `order` is `None`.
+    pub fn add_with_order(
+        &mut self,
+        layer_id: String,
+        desc: LayerDescription,
+        order: Option<usize>,
+    ) {
+        match order {
+            Some(index) => {
+                self.order.insert(layer_id.clone(), index);
+                self.map.insert(layer_id, desc);
+            }
+            None => self.add(layer_id, desc),
+        }
+    }
+
     pub fn update(&mut self, layer_id: String, desc: LayerDescription) {
         self.map.insert(layer_id, desc);
     }
