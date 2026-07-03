@@ -119,7 +119,7 @@ export type InstancedSpriteBaseMutates = Mutates<
      * float32 subtraction that would otherwise cause jitter.
      */
     updateRtcUniforms: (
-      viewMatrixInverse: Matrix4,
+      viewMatrix: Matrix4,
       state: InstancedSpriteBaseState,
     ) => void;
     /**

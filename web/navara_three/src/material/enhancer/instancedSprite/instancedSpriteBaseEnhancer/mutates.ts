@@ -118,7 +118,7 @@ export const createBaseMutates = (
     },
 
     updateRtcUniforms: (
-      viewMatrixInverse: Matrix4,
+      viewMatrix: Matrix4,
       state: InstancedSpriteBaseState,
     ) => {
       if (state.useRTE) return;
@@ -127,7 +127,7 @@ export const createBaseMutates = (
       // `viewMatrix * uRTCCenter` where both operands are ~6.4e6 in float32.
       refs.uRTCCenterView.value
         .copy(refs.uRTCCenter.value)
-        .applyMatrix4(viewMatrixInverse);
+        .applyMatrix4(viewMatrix);
     },
 
     updateFarPlane: (far: number) => {

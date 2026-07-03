@@ -137,7 +137,7 @@ export type SdfTextBaseMutates = Mutates<
       cameraX: number,
       cameraY: number,
       cameraZ: number,
-      viewMatrixInverse: Matrix4,
+      viewMatrix: Matrix4,
       state: SdfTextBaseState,
     ) => void;
     /**

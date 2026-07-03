@@ -139,7 +139,7 @@ export const createBaseMutates = (
       cameraX: number,
       cameraY: number,
       cameraZ: number,
-      viewMatrixInverse: Matrix4,
+      viewMatrix: Matrix4,
       state: SdfTextBaseState,
     ) => {
       refs.uFovRad.value = fovRad;
@@ -161,7 +161,7 @@ export const createBaseMutates = (
         // float32 — the source of the jitter.
         refs.uRTCCenterView.value
           .copy(refs.uRTCCenter.value)
-          .applyMatrix4(viewMatrixInverse);
+          .applyMatrix4(viewMatrix);
       }
     },
 
