@@ -467,9 +467,28 @@ impl App {
         if let Some(mut source_store) = self.app.world_mut().get_resource_mut::<SourceStore>() {
             source_store.update(source_id.to_owned(), source);
         }
+
+        // Terrain reads its fetch config live from the source (it has no teardown
+        // marker, so it is not reset via delete+re-add like other layers). It
+        // re-traverses only on camera/layer changes, so a static-camera source
+        // update would otherwise go unnoticed; force one re-traversal here.
+        // Raster and the other layer types are reset via delete+re-add instead
+        // (see `Core::update_source`), so they don't need this.
+        if let Some(mut terrain_tc) =
+            self.app
+                .world_mut()
+                .get_resource_mut::<navara_tile::tile::tile_cache_manager::TileCacheManager>()
+        {
+            terrain_tc.force_update = true;
+        }
     }
 
-    pub fn delete_source(&mut self, source_id: &str) {
+    /// Remove a source and its resources, returning whether it was deleted.
+    ///
+    /// Returns `false` (and deletes nothing) while any layer still references the
+    /// source, or if the source id is unknown; `true` once it has been removed.
+    /// Sources own no ECS entities, so removing the store entry is the cleanup.
+    pub fn delete_source(&mut self, source_id: &str) -> bool {
         if let Some(mut source_store) = self.app.world_mut().get_resource_mut::<SourceStore>() {
             let ref_count = source_store.ref_count(source_id);
             if ref_count > 0 {
@@ -477,9 +496,47 @@ impl App {
                 bevy_log::warn!(
                     "Cannot delete source `{source_id}` while {ref_count} layer(s) reference it"
                 );
-                return;
+                return false;
             }
-            source_store.delete(source_id);
+            return source_store.delete(source_id).is_some();
+        }
+        false
+    }
+
+    /// The ids of every layer currently referencing `source_id`.
+    pub fn layers_for_source(&self, source_id: &str) -> Vec<String> {
+        self.app
+            .world()
+            .get_resource::<SourceStore>()
+            .map(|store| store.layers_for_source(source_id))
+            .unwrap_or_default()
+    }
+
+    /// Reset a layer: tear down its current resources and re-add it with `desc`
+    /// once the teardown completes. Used when a referenced source changes so the
+    /// layer reloads against the new fetch config.
+    ///
+    /// The source reference is intentionally left intact (this does not go through
+    /// [`delete_layer`](Self::delete_layer), which would unlink it), so the layer
+    /// keeps its single reference across the reset. The re-add is deferred until
+    /// teardown finishes — see `navara_layer_event::flush_layer_reloads`.
+    pub fn reset_layer(&mut self, layer_id: &str, desc: LayerDescription) {
+        self.app
+            .world_mut()
+            .write_message(navara_layer_event::DeleteLayerEvent(LayerId(
+                layer_id.to_owned(),
+            )));
+
+        if let Some(mut queue) = self
+            .app
+            .world_mut()
+            .get_resource_mut::<navara_layer_event::LayerReloadQueue>()
+        {
+            queue.pending.push(navara_layer_event::PendingReload {
+                layer_id: layer_id.to_owned(),
+                desc,
+                seen_alive: false,
+            });
         }
     }
 

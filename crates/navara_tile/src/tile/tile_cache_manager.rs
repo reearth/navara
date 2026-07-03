@@ -47,6 +47,10 @@ pub struct TileCacheManager {
     pub last_rendered_frame: usize,
     pub is_updated_in_this_frame: bool,
     pub prev_layers_len: usize,
+    /// Set when a source changes (e.g. `updateSource`) to force one re-traversal
+    /// even with a static camera, so terrain tiles pick up the new fetch config
+    /// read live from the source. Cleared once consumed.
+    pub force_update: bool,
 }
 
 impl TileCacheManager {

@@ -75,6 +75,61 @@ view.addLayer({ type: "raster", source: imagery, raster: { opacity: 0.8 } });
 view.addLayer({ type: "terrain", source: dem, terrain: { skirt: true } });
 ```
 
+## Updating and deleting a source
+
+The `Source` handle returned by `addSource` exposes two methods for managing the source over its lifetime.
+
+### update()
+
+Changes the source configuration and re-fetches its data. Every layer that references this source is **reset** (its loaded resources are torn down) and then **reloaded** against the new configuration, so a changed URL, zoom range, tiling scheme, or inline data takes effect on the already-visible layers, not just future tile requests.
+
+The update is **partial**, the same way [`Layer.update()`](../../../three/layer/about/) merges materials: any field you omit keeps its current value instead of resetting to a default. `type` (which cannot change) is always required, and `url` is required by the type — set it to the unchanged value to leave the fetched URL as-is.
+
+```typescript
+const imagery = view.addSource({
+  type: "raster-tile",
+  url: "https://example.com/{z}/{x}/{y}.png",
+  maxZoom: 19,
+  tms: true,
+});
+view.addLayer({ type: "raster", source: imagery });
+
+// Swap the imagery — the raster layer reloads against the new URL.
+imagery.update({
+  type: "raster-tile",
+  url: "https://example.com/new/{z}/{x}/{y}.png",
+  maxZoom: 19,
+});
+
+// Partial: only maxZoom changes; url and tms are preserved.
+imagery.update({
+  type: "raster-tile",
+  url: "https://example.com/new/{z}/{x}/{y}.png",
+  maxZoom: 22,
+});
+```
+
+Layer-only settings (materials, and a vector layer's `sourceLayers`) are preserved across the reset; only the source's fetch/decode configuration changes.
+
+### delete()
+
+Removes the source and its resources. The engine reference-counts sources and **refuses to delete a source while any layer still references it**.
+
+**Returns:** `false` (and removes nothing) while at least one layer references the source; `true` once the source has been removed.
+
+```typescript
+const layer = view.addLayer({ type: "raster", source: imagery });
+
+imagery.delete(); // → false: `layer` still references it
+
+layer.delete(); // remove the referencing layer first
+imagery.delete(); // → true: the source is now removed
+```
+
+:::note
+Delete the referencing layers before the source. To swap the data of an existing layer instead of removing it, use [`update()`](#update).
+:::
+
 ## Source types
 
 | Type                                                                        | Description                                      |
@@ -88,6 +143,6 @@ view.addLayer({ type: "terrain", source: dem, terrain: { skirt: true } });
 
 ## Related Resources
 
-- [ThreeView functions](../../../three/api/threeview-functions/) — `addSource` (update/delete are on the returned `Source` handle)
+- [ThreeView functions](../../../three/api/threeview-functions/) — `addSource` (see [Updating and deleting a source](#updating-and-deleting-a-source) for the returned handle's `update()` / `delete()`)
 - [About Layer](../../../three/layer/about/) — layer types
 - [Materials](../../../three/material/about/) — materials (styling) reference

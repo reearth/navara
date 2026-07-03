@@ -3,7 +3,9 @@
 mod event;
 
 use bevy_app::{App, Plugin, Update};
-pub use event::{AddLayerEvent, DeleteLayerEvent, UpdateLayerEvent};
+pub use event::{
+    AddLayerEvent, DeleteLayerEvent, LayerReloadQueue, LiveLayer, PendingReload, UpdateLayerEvent,
+};
 
 pub struct LayerPlugin;
 
@@ -17,5 +19,8 @@ impl Plugin for LayerPlugin {
 
         app.add_message::<DeleteLayerEvent>()
             .add_systems(Update, event::process_delete_events);
+
+        app.init_resource::<LayerReloadQueue>()
+            .add_systems(Update, event::flush_layer_reloads);
     }
 }

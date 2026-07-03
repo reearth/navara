@@ -45,18 +45,36 @@ export class Source {
   }
 
   /**
-   * Updates the source configuration and re-fetches its data. The change
-   * propagates to every layer that references this source.
+   * Updates the source configuration and re-fetches its data. Every layer that
+   * references this source is reset (its resources are torn down) and reloaded
+   * against the new configuration.
+   *
+   * The update is partial, like {@link Layer.update}: any field you omit keeps
+   * its current value instead of resetting to a default. `type` cannot change
+   * and is always required; `url` is required by the type but, when set to the
+   * unchanged value, leaves the fetched URL as-is.
+   *
+   * @example
+   * ```typescript
+   * // Only maxZoom changes; tms and the other fields are preserved.
+   * imagery.update({
+   *   type: "raster-tile",
+   *   url: "https://example.com/{z}/{x}/{y}.png",
+   *   maxZoom: 22,
+   * });
+   * ```
    */
   update(s: SourceDescription) {
     this.core.updateSource(this.id, s);
   }
 
   /**
-   * Removes the source.
-   * Note: deletion is ignored while any layer still references this source.
+   * Removes the source and its resources.
+   *
+   * @returns `false` (and removes nothing) while any layer still references this
+   * source; `true` once the source has been removed.
    */
-  delete() {
-    this.core.deleteSource(this.id);
+  delete(): boolean {
+    return this.core.deleteSource(this.id);
   }
 }
