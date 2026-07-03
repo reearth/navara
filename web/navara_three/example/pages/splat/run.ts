@@ -223,7 +223,7 @@ const addDebugPane = (
     // re-tracks it — no reload needed. High scales show sort "boiling".
     const scaleParams = { scale: sample.scale };
     sub
-      .addBinding(scaleParams, "scale", { min: 0.1, max: 10, step: 0.1 })
+      .addBinding(scaleParams, "scale", { min: 0.1, max: 20, step: 0.1 })
       .on("change", (ev) => {
         handles.get(sample)?.update({
           scale: { x: ev.value, y: ev.value, z: ev.value },
