@@ -1,5 +1,5 @@
 import { encodePosition } from "@navara/engine-api";
-import { Color, DataTexture, Vector2, Vector3 } from "three";
+import { Color, DataTexture, type Matrix4, Vector2, Vector3 } from "three";
 
 import type { UniformValue } from "../../../types";
 
@@ -50,6 +50,7 @@ export const createBaseMutates = (
         rtcCenter?.[2] ?? 0,
       ),
     },
+    uRTCCenterView: { value: new Vector3(0, 0, 0) },
     uEyeRTELow: { value: new Vector3(0, 0, 0) },
     uEyeRTEHigh: { value: new Vector3(0, 0, 0) },
     nvr_uBatchId: { value: batchId ?? 0 },
@@ -110,6 +111,7 @@ export const createBaseMutates = (
       uniforms.uTextHeight = refs.uTextHeight;
       uniforms.uBgYBounds = refs.uBgYBounds;
       uniforms.uRTCCenter = refs.uRTCCenter;
+      uniforms.uRTCCenterView = refs.uRTCCenterView;
       uniforms.uEyeRTELow = refs.uEyeRTELow;
       uniforms.uEyeRTEHigh = refs.uEyeRTEHigh;
       uniforms.nvr_uBatchId = refs.nvr_uBatchId;
@@ -137,6 +139,7 @@ export const createBaseMutates = (
       cameraX: number,
       cameraY: number,
       cameraZ: number,
+      viewMatrixInverse: Matrix4,
       state: SdfTextBaseState,
     ) => {
       refs.uFovRad.value = fovRad;
@@ -151,6 +154,14 @@ export const createBaseMutates = (
           encoded.high.y,
           encoded.high.z,
         );
+      } else {
+        // Transform the RTC center into view space here (JS numbers are
+        // float64), so the shader receives a small, precise value instead of
+        // doing `viewMatrix * uRTCCenter` where both operands are ~6.4e6 in
+        // float32 — the source of the jitter.
+        refs.uRTCCenterView.value
+          .copy(refs.uRTCCenter.value)
+          .applyMatrix4(viewMatrixInverse);
       }
     },
 

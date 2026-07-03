@@ -1,6 +1,7 @@
 import { encodePosition } from "@navara/engine-api";
 import {
   DataArrayTexture,
+  type Matrix4,
   Vector2 as ThreeVector2,
   Vector3 as ThreeVector3,
 } from "three";
@@ -34,6 +35,7 @@ export const createBaseMutates = (
         rtcCenter?.[2] ?? 0,
       ),
     },
+    uRTCCenterView: { value: new ThreeVector3(0, 0, 0) },
     uEyeRTELow: { value: new ThreeVector3(0, 0, 0) },
     uEyeRTEHigh: { value: new ThreeVector3(0, 0, 0) },
     uScale: { value: 100.0 },
@@ -77,6 +79,7 @@ export const createBaseMutates = (
 
     updateUniforms: (uniforms) => {
       uniforms.uRTCCenter = refs.uRTCCenter;
+      uniforms.uRTCCenterView = refs.uRTCCenterView;
       uniforms.uEyeRTELow = refs.uEyeRTELow;
       uniforms.uEyeRTEHigh = refs.uEyeRTEHigh;
       uniforms.uScale = refs.uScale;
@@ -112,6 +115,19 @@ export const createBaseMutates = (
         encoded.high.y,
         encoded.high.z,
       );
+    },
+
+    updateRtcUniforms: (
+      viewMatrixInverse: Matrix4,
+      state: InstancedSpriteBaseState,
+    ) => {
+      if (state.useRTE) return;
+      // Transform the RTC center into view space here (JS numbers are float64),
+      // so the shader receives a small, precise value instead of doing
+      // `viewMatrix * uRTCCenter` where both operands are ~6.4e6 in float32.
+      refs.uRTCCenterView.value
+        .copy(refs.uRTCCenter.value)
+        .applyMatrix4(viewMatrixInverse);
     },
 
     updateFarPlane: (far: number) => {
