@@ -316,7 +316,7 @@ pub struct TextMaterial {
     pub opacity: Option<f32>,
     /// Enable transparency and alpha blending
     pub transparent: Option<bool>,
-    /// Enable writing to depth buffer )
+    /// Enable writing to depth buffer
     #[wasm_bindgen(js_name = depthWrite)]
     #[serde(rename = "depthWrite")]
     pub depth_write: Option<bool>,

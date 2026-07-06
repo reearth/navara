@@ -107,7 +107,6 @@ const run = async () => {
         castShadow: true,
         receiveShadow: true,
         height: -30,
-        transparent: true,
       },
     });
 
@@ -126,7 +125,6 @@ const run = async () => {
             return currentShow[">= 90m"];
           })();
 
-          let opacity = 1;
           // Determine color: either by colormap or by threshold
           const color = (() => {
             if (colorModeParams.colorMap !== "None") {
@@ -152,12 +150,10 @@ const run = async () => {
               return new Color().setStyle(currentColors["< 60m"]);
             if (measuredHeight < 90)
               return new Color().setStyle(currentColors["< 90m"]);
-
-            opacity = 0.5;
             return new Color().setStyle(currentColors[">= 90m"]);
           })();
 
-          return { color, show, opacity };
+          return { color, show };
         },
         { filters: ["bldg:measuredHeight"] },
       );

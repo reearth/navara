@@ -134,17 +134,17 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       colorAttr.needsUpdate = true;
     }
 
-    // Height (per-instance attribute)
+    // Height (per-instance attribute - X component of instanceParams vec4)
     if (this._initialHeight !== (m.material.height ?? 0.0)) {
       this._initialHeight = m.material.height ?? 0.0;
-      const heightAttr = this.geometry.getAttribute(
-        "instanceHeight",
+      const paramsAttr = this.geometry.getAttribute(
+        "instanceParams",
       ) as InstancedBufferAttribute;
-      const instanceCount = heightAttr.count;
+      const instanceCount = paramsAttr.count;
       for (let i = 0; i < instanceCount; i++) {
-        heightAttr.setX(i, m.material.height ?? 0.0);
+        paramsAttr.setX(i, m.material.height ?? 0.0);
       }
-      heightAttr.needsUpdate = true;
+      paramsAttr.needsUpdate = true;
     }
 
     // Position updates (per-instance attributes)

@@ -103,15 +103,13 @@ const run = async () => {
       text: {
         lang: "ja",
         font: FONT_DATASETS.LineSeedJP.url,
-        color: new Color().setStyle("#ff0000"),
+        color: new Color().setStyle("#ffffff"),
         sizeInMeters: false,
         clampToGround: true,
         size: params.size,
         center: { x: 0.5, y: 0.0 },
         outlineColor: new Color().setStyle("#000000"),
         outlineWidth: 2,
-        transparent: true,
-        backgroundColor: new Color().setStyle("#0000ff"),
       },
       vectorTile: {
         maxZoom: 16,
@@ -147,13 +145,7 @@ const run = async () => {
 
           uniqueLabels.add(text);
 
-          let opacity = 1;
-          if (ftCode % 2 === 0) {
-            opacity = 0.5; // Prefectural government
-          }
-
           return {
-            opacity,
             text,
             show: !!text,
           };

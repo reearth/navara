@@ -189,7 +189,7 @@ void main() {
 #include <color_fragment>
 
 #ifdef USE_BATCH_COLOR_SHOW
-  diffuseColor.a = nvr_vShow;
+  diffuseColor.a = nvr_vOpacity;
 #endif
 `,
     )

@@ -2,7 +2,7 @@ import { Color, DataTexture, FloatType, Material, RGBAFormat } from "three";
 import invariant from "tiny-invariant";
 
 export const BATCH_TEXTURE_ROW = [
-  "COLOR_SHOW", // R=colorR, G=colorG, B=colorB, A=show*opacity
+  "COLOR_SHOW", // R=colorR, G=colorG, B=colorB, A=packed(show[1bit], opacity[7bit])
   "HEIGHT", // R,G,B,A=height as RGBA
   "EXTRUDED_HEIGHT", // R,G,B,A=extrudedHeight as RGBA
   "LINE_WIDTH", // R,G,B,A=lineWidth as RGBA
@@ -17,13 +17,13 @@ export type BatchTextureConfig = {
 };
 
 export const BATCHED_ATTRIBUTE_NAMES = [
-  "color", // R=colorR, G=colorG, B=colorB, A=show
-  "show", // Use alpha channel of color texel.
+  "color", // R=colorR, G=colorG, B=colorB
+  "show", // Packed into alpha channel of color texel (bit 7)
   "height", // R,G,B,A=Encoded height as RGBA
   "extrudedHeight", // R,G,B,A=Encoded extruded height as RGBA
   "lineWidth", // R,G,B,A=Encoded lineWidth as RGBA
   "size", // R,G,B,A=Encoded size as RGBA
-  "opacity", // R,G,B,A=Encoded opacity as RGBA
+  "opacity", // Packed into alpha channel of color texel (bits 0-6)
 ] as const;
 
 export type BatchedAttributeName = (typeof BATCHED_ATTRIBUTE_NAMES)[number];
@@ -38,6 +38,44 @@ export function encodeFloatToRGBA(
 
   // Normalize 0-255 value to 0-1 value.
   return [bytes[0] / 255, bytes[1] / 255, bytes[2] / 255, bytes[3] / 255];
+}
+
+/**
+ * Pack show (1 bit) and opacity (7 bits) into a single byte.
+ *
+ * Bit layout:
+ * - Bit 7: show (0 = hidden, 1 = visible)
+ * - Bits 0-6: opacity (0-127, giving 128 precision levels)
+ *
+ * @param show - 0 (hidden) or 1 (visible)
+ * @param opacity - opacity value 0.0-1.0
+ * @returns normalized value 0.0-1.0 for texture storage
+ */
+export function packShowOpacity(show: number, opacity: number): number {
+  const showBit = show > 0.5 ? 1 : 0;
+  const opacityBits =
+    Math.floor(Math.max(0, Math.min(1, opacity)) * 127) & 0x7f;
+  const packed = (showBit << 7) | opacityBits;
+  return packed / 255; // Normalize to 0-1 for texture
+}
+
+/**
+ * Unpack show and opacity from a packed byte value.
+ *
+ * @param packedNormalized - normalized packed value 0.0-1.0 from texture
+ * @returns { show: 0 or 1, opacity: 0.0-1.0 }
+ */
+export function unpackShowOpacity(packedNormalized: number): {
+  show: number;
+  opacity: number;
+} {
+  const packed = Math.floor(packedNormalized * 255);
+  const showBit = (packed >> 7) & 1;
+  const opacityBits = packed & 0x7f;
+  return {
+    show: showBit,
+    opacity: opacityBits / 127,
+  };
 }
 
 // Maximum batch texture width to stay within WebGL texture size limits (max 16384).
@@ -87,10 +125,11 @@ export function initBatchDataTexture(
   const textureHeight = batchRows * rowCount;
   const data = new Float32Array(textureWidth * 4 * textureHeight);
 
-  // Initialize COLOR_SHOW alpha channel to 1.0 for all batch IDs (default is fully visible and opaque)
-  // Alpha channel now contains: show * opacity (1.0 * 1.0 = 1.0 by default)
+  // Initialize COLOR_SHOW alpha channel with packed show=1, opacity=1 for all batch IDs
+  // (default is fully visible and opaque)
   const colorShowRowIndex = config.rows.indexOf("COLOR_SHOW");
   if (colorShowRowIndex >= 0) {
+    const defaultPacked = packShowOpacity(1, 1); // show=1, opacity=1
     for (let batchId = 0; batchId < config.batchLength; batchId++) {
       const baseIndex = batchBaseIndex(
         textureWidth,
@@ -99,7 +138,7 @@ export function initBatchDataTexture(
         colorShowRowIndex,
       );
       // R, G, B remain 0 (will be set when color is first written)
-      data[baseIndex + 3] = 1.0; // A = show (true) * opacity (1.0)
+      data[baseIndex + 3] = defaultPacked; // A = packed(show=1, opacity=1)
     }
   }
 
@@ -258,12 +297,14 @@ export function updateBatchAttribute(
         data[baseIndex + 1] = color.g; // G
         data[baseIndex + 2] = color.b; // B
       }
-      // Get current opacity (default 1.0 if not set)
-      const currentOpacity = material.userData._batchOpacityTouched
-        ? data[baseIndex + 3]
-        : 1.0;
-      // Alpha = show * opacity
-      data[baseIndex + 3] = value ? currentOpacity : 0.0; // A
+
+      // Read current packed value and extract opacity
+      const currentPacked = data[baseIndex + 3];
+      const { opacity } = unpackShowOpacity(currentPacked);
+
+      // Update show bit, preserve opacity
+      const newShow = value ? 1 : 0;
+      data[baseIndex + 3] = packShowOpacity(newShow, opacity);
       break;
     }
     case "height": {
@@ -369,12 +410,14 @@ export function updateBatchAttribute(
         data[baseIndex + 1] = color.g; // G
         data[baseIndex + 2] = color.b; // B
       }
-      // Get current show state (default true if not set)
-      const currentShow = material.userData._batchShowTouched
-        ? data[baseIndex + 3] > 0.0
-        : material.visible;
-      // Alpha = show * opacity
-      data[baseIndex + 3] = currentShow ? value : 0.0; // A
+
+      // Read current packed value and extract show bit
+      const currentPacked = data[baseIndex + 3];
+      const { show } = unpackShowOpacity(currentPacked);
+
+      // Update opacity, preserve show bit
+      const newOpacity = Math.max(0, Math.min(1, value));
+      data[baseIndex + 3] = packShowOpacity(show, newOpacity);
       break;
     }
   }

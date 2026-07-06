@@ -10,6 +10,8 @@ import {
   getBatchDataTexture,
   initBatchDataTexture,
   initBatchedMaterial,
+  packShowOpacity,
+  unpackShowOpacity,
   updateBatchAttribute,
 } from "./batchTexture";
 
@@ -177,6 +179,42 @@ function setupBatchMaterial(batchLength: number): {
   return { material, config };
 }
 
+// ── packShowOpacity / unpackShowOpacity ─────────────────────────────────
+
+describe("packShowOpacity / unpackShowOpacity", () => {
+  test("round-trip preserves show and opacity (with 7-bit precision)", () => {
+    const testCases = [
+      { show: 1, opacity: 0.0 },
+      { show: 1, opacity: 0.25 },
+      { show: 1, opacity: 0.5 },
+      { show: 1, opacity: 0.75 },
+      { show: 1, opacity: 1.0 },
+      { show: 0, opacity: 0.0 },
+      { show: 0, opacity: 0.5 },
+      { show: 0, opacity: 1.0 },
+    ];
+
+    for (const { show, opacity } of testCases) {
+      const packed = packShowOpacity(show, opacity);
+      const unpacked = unpackShowOpacity(packed);
+      expect(unpacked.show).toBe(show);
+      // 7-bit precision = 128 levels, quantization step ~1/127 ≈ 0.008
+      // Use tolerance of 1 decimal place (0.05) to account for quantization
+      expect(unpacked.opacity).toBeCloseTo(opacity, 1);
+    }
+  });
+
+  test("clamps opacity to 0-1 range", () => {
+    const packed1 = packShowOpacity(1, -0.5);
+    const { opacity: opacity1 } = unpackShowOpacity(packed1);
+    expect(opacity1).toBeCloseTo(0.0, 2);
+
+    const packed2 = packShowOpacity(1, 1.5);
+    const { opacity: opacity2 } = unpackShowOpacity(packed2);
+    expect(opacity2).toBeCloseTo(1.0, 2);
+  });
+});
+
 // ── batchBaseIndex ──────────────────────────────────────────────────────
 
 describe("batchBaseIndex", () => {
@@ -273,7 +311,7 @@ describe("initBatchDataTexture", () => {
     expect(tex1).toBe(tex2);
   });
 
-  test("initializes COLOR_SHOW alpha to 1.0 (show*opacity) for all batchIds", () => {
+  test("initializes COLOR_SHOW alpha to packed(show=1, opacity=1) for all batchIds", () => {
     const config: BatchTextureConfig = {
       rows: ["COLOR_SHOW", "HEIGHT"],
       batchLength: 100,
@@ -289,7 +327,9 @@ describe("initBatchDataTexture", () => {
     const rowCount = config.rows.length;
     const colorShowRowIndex = config.rows.indexOf("COLOR_SHOW");
 
-    // Check all 100 batch IDs have alpha = 1.0 (show=true * opacity=1.0)
+    const expectedPacked = packShowOpacity(1, 1);
+
+    // Check all 100 batch IDs have alpha = packed(show=1, opacity=1)
     for (let batchId = 0; batchId < 100; batchId++) {
       const baseIndex = batchBaseIndex(
         texWidth,
@@ -297,15 +337,15 @@ describe("initBatchDataTexture", () => {
         batchId,
         colorShowRowIndex,
       );
-      // Alpha channel contains show * opacity (default 1.0)
+      // Alpha channel contains packed show and opacity
       expect(
         data[baseIndex + 3],
-        `batchId ${batchId} should have alpha 1.0`,
-      ).toBe(1.0);
+        `batchId ${batchId} should have packed(1, 1)`,
+      ).toBeCloseTo(expectedPacked, 5);
     }
   });
 
-  test("opacity bundled with show: updating opacity updates COLOR_SHOW alpha", () => {
+  test("opacity bundled with show: updating opacity updates COLOR_SHOW alpha with bit packing", () => {
     const config: BatchTextureConfig = {
       rows: ["COLOR_SHOW", "HEIGHT"],
       batchLength: 10,
@@ -325,11 +365,13 @@ describe("initBatchDataTexture", () => {
     // Update opacity for batchId 5 to 0.5
     updateBatchAttribute(material, 5, "opacity", 0.5, defaultValues);
 
-    // Verify batchId 5 has alpha 0.5 (show=true * opacity=0.5)
+    // Verify batchId 5 has packed(show=1, opacity=0.5)
     let baseIndex = batchBaseIndex(texWidth, rowCount, 5, colorShowRowIndex);
-    expect(data[baseIndex + 3]).toBeCloseTo(0.5);
+    const expectedPacked1 = packShowOpacity(1, 0.5);
+    expect(data[baseIndex + 3]).toBeCloseTo(expectedPacked1, 2);
 
-    // Verify other batchIds still have default alpha 1.0
+    // Verify other batchIds still have default packed(show=1, opacity=1)
+    const defaultPacked = packShowOpacity(1, 1);
     for (const batchId of [0, 1, 9]) {
       baseIndex = batchBaseIndex(
         texWidth,
@@ -339,15 +381,22 @@ describe("initBatchDataTexture", () => {
       );
       expect(
         data[baseIndex + 3],
-        `batchId ${batchId} should still have alpha 1.0`,
-      ).toBe(1.0);
+        `batchId ${batchId} should still have packed(1, 1)`,
+      ).toBeCloseTo(defaultPacked, 5);
     }
 
     // Update show to false for batchId 5
     updateBatchAttribute(material, 5, "show", false, defaultValues);
-    // Now alpha should be 0 (show=false * opacity=0.5)
+    // Now alpha should be packed(show=0, opacity=0.5)
     baseIndex = batchBaseIndex(texWidth, rowCount, 5, colorShowRowIndex);
-    expect(data[baseIndex + 3]).toBe(0.0);
+    const expectedPacked2 = packShowOpacity(0, 0.5);
+    expect(data[baseIndex + 3]).toBeCloseTo(expectedPacked2, 2);
+
+    // Update show back to true for batchId 5
+    updateBatchAttribute(material, 5, "show", true, defaultValues);
+    // Opacity should be preserved: packed(show=1, opacity=0.5)
+    baseIndex = batchBaseIndex(texWidth, rowCount, 5, colorShowRowIndex);
+    expect(data[baseIndex + 3]).toBeCloseTo(expectedPacked1, 2);
   });
 
   test("initializes LINE_WIDTH row to -1.0 for all batchIds when LINE_WIDTH is in config", () => {
@@ -504,8 +553,9 @@ describe("updateBatchAttribute with 2D layout", () => {
     const texture = getBatchDataTexture(material);
     invariant(texture);
     const data = texture.image.data as Float32Array;
-    // Alpha channel (show) should be 0
-    expect(data[expectedIndex + 3]).toBe(0.0);
+    // Alpha channel should be packed(show=0, opacity=1)
+    const expectedPacked = packShowOpacity(0, 1);
+    expect(data[expectedIndex + 3]).toBeCloseTo(expectedPacked, 2);
     // RGB should have default color since _batchColorTouched is false
     expect(data[expectedIndex]).toBeCloseTo(0.8);
     expect(data[expectedIndex + 1]).toBeCloseTo(0.9);

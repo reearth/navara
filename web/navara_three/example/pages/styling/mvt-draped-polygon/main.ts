@@ -79,7 +79,6 @@ const run = async () => {
         clampToGround: true,
         wireframe: false,
         opacity: 0.6,
-        transparent: true,
       },
       vectorTile: { maxZoom: 16 },
     });
@@ -89,11 +88,10 @@ const run = async () => {
       evaluator.evaluate(
         ({ properties }) => {
           const functionType = properties?.["urf_function"] as string;
-          let opacity = 1;
+
           const color = (() => {
             // Fireproof area
             if (functionType === "防火地域") {
-              opacity = 0.5;
               return currentColors["防火地域"];
             }
             // Semi-fireproof area
@@ -104,7 +102,6 @@ const run = async () => {
           })();
 
           return {
-            opacity,
             color: new Color().setStyle(color),
           };
         },

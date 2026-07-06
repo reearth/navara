@@ -80,7 +80,6 @@ const run = async () => {
         clampToGround: true,
         color: new Color().setStyle("#ff0000"),
         center: { x: 0, y: -0.5 },
-        transparent: true,
       },
       vectorTile: {
         maxZoom: 16,
@@ -95,32 +94,21 @@ const run = async () => {
       evaluator.evaluate(
         ({ properties }) => {
           const type = properties?.["備考"] as string;
-          let height = 0;
-          let opacity = 1;
-          let size = 500;
+
           // Color based on heliport type
           const color = (() => {
             // Athletic field (陸上競技場)
             if (type === "陸上競技場") {
-              height = 100;
-              opacity = 0.5;
-              size = 1000;
               return 0x0000ff;
             }
             // Riverbed (河川敷)
             if (type?.endsWith("河川敷")) {
-              height = 500;
-              size = 1000;
-              opacity = 0.5;
               return 0x00ff00;
             }
             return 0xff0000;
           })();
 
           return {
-            height,
-            opacity,
-            size,
             color: new Color().setHex(color),
           };
         },
