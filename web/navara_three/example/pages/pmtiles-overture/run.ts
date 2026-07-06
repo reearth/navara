@@ -598,7 +598,12 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     });
 
   layersFolder
-    .addBinding(params, "maxWidth", { min: 0, max: 20, step: 0.5, label: "label max width" })
+    .addBinding(params, "maxWidth", {
+      min: 0,
+      max: 20,
+      step: 0.5,
+      label: "label max width",
+    })
     .on("change", ({ value }) => {
       labelLayer.update({ text: { maxWidth: value } });
       poiLayer.update({ text: { maxWidth: value } });

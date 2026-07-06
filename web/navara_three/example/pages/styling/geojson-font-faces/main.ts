@@ -49,8 +49,6 @@ const run = async () => {
 
   const params = {
     size: 15,
-    // Two-line labels ("name\ncountry") demonstrating explicit line breaks
-    twoLine: false,
     // Wrap width in ems (multiples of size); 0 disables wrapping
     maxWidth: 0,
     lineHeight: 1.0,
@@ -88,15 +86,12 @@ const run = async () => {
       evaluator.evaluate(
         ({ properties }) => {
           const name = properties?.["name"] as string | undefined;
-          const country = properties?.["country"] as string | undefined;
-          const text =
-            params.twoLine && name && country ? `${name}\n${country}` : name;
           return {
-            text: text ?? "",
+            text: name ?? "",
             show: !!name,
           };
         },
-        { filters: ["name", "country"] },
+        { filters: ["name"] },
       );
     });
 
@@ -126,15 +121,6 @@ const run = async () => {
     .on("change", ({ value }) => {
       layer?.update({ text: { size: value } });
     });
-
-  // Text-layout controls: explicit line breaks, word wrapping, alignment.
-  const rebuildLayer = () => {
-    if (!layer) return;
-    view.deleteLayerById(layer.id);
-    layer = addCityLayer();
-  };
-
-  pane.addBinding(params, "twoLine").on("change", rebuildLayer);
 
   pane
     .addBinding(params, "maxWidth", { min: 0, max: 20, step: 0.5 })
