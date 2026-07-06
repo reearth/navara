@@ -31,47 +31,50 @@ await view.init();
 const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // Add terrain layer
+const terrainSource = view.addSource({
+  type: "raster-dem",
+  url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+  elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  maxZoom: 15,
+  minZoom: 5,
+});
 view.addLayer({
   type: "terrain",
-  data: {
-    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
-  },
-  rasterTerrain: {
-    maxZoom: 15,
-    minZoom: 5,
-    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  source: terrainSource,
+  terrain: {
     castShadow: true,
     receiveShadow: true,
   },
 });
 
 // Add hillshade layer
+const hillshadeSource = view.addSource({
+  type: "raster-dem",
+  // Credit:
+  // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
+  //   https://maps.gsi.go.jp/development/ichiran.html
+  url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+  elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  minZoom: 6,
+  maxZoom: 15,
+});
 view.addLayer({
-  type: "tiles",
-  data: {
-    // Credit:
-    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
-    //   https://maps.gsi.go.jp/development/ichiran.html
-    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
-  },
-  rasterTile: {
-    minZoom: 6,
-    maxZoom: 15,
-  },
-  hillshade: {
-    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-  },
+  type: "raster",
+  source: hillshadeSource,
+  hillshade: {},
 });
 
 // Add raster tile layer
+const rasterSource = view.addSource({
+  type: "raster-tile",
+  url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  maxZoom: 23,
+});
 view.addLayer({
-  type: "tiles",
-  data: {
-    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-  },
-  rasterTile: {
+  type: "raster",
+  source: rasterSource,
+  raster: {
     color: new Color().setHex(0xffffff),
-    maxZoom: 23,
     opacity: 1,
   },
 });

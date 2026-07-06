@@ -7,7 +7,7 @@ use bevy_ecs::{
 };
 
 use navara_component::Deleted;
-use navara_core::is_pmtiles_url;
+use navara_core::{is_pmtiles_url, is_tile_url};
 use navara_feature_component::{
     batch::BatchedFeature, id::FeatureId, polygon::UpdatePolygon, render::RenderableFeature,
 };
@@ -29,18 +29,32 @@ use crate::source_cache::MvtSourceId;
 pub fn prepare_layer_resource(
     mut commands: Commands,
     mvt_layers: Query<(Entity, &MvtLayer), Added<MvtLayer>>,
+    source_store: Res<navara_source::SourceStore>,
     mut source_cache: ResMut<VectorTileSourceCache>,
     mut source_query: Query<(&mut VectorTileSourceResources, Option<&mut TileSource>)>,
 ) {
     let mut layer_source_map: HashMap<navara_vector_tile::SourceId, Vec<Entity>> = HashMap::new();
 
     for (layer_entity, layer) in &mvt_layers {
+        // Resolve the referenced source; its URL + zoom/sse drive traversal.
+        let Some(source) = layer
+            .source_id
+            .as_deref()
+            .and_then(|id| source_store.get(id))
+        else {
+            continue;
+        };
+        let Some(url) = source.url() else {
+            continue;
+        };
         // Accept both `{z}/{x}/{y}` tile templates (MvtSource) and `.pmtiles`
         // archive URLs (PmtilesSource); skip anything else.
-        if !layer.has_template_url() && !layer.is_pmtiles() {
+        if !is_tile_url(url) && !is_pmtiles_url(url) {
             continue;
         }
-        let Some(source_id) = navara_vector_tile::SourceId::from_mvt_layer(layer) else {
+        let Some(source_id) =
+            navara_vector_tile::SourceId::from_mvt_layer(layer, url.to_owned(), source)
+        else {
             continue;
         };
         layer_source_map
@@ -161,11 +175,7 @@ fn set_layer_appearances(tile_source: &mut TileSource, layer_id: &str, appearanc
 }
 
 fn owned_layer_info(layer: &MvtLayer) -> OwnedMatchedLayerInfo {
-    let limit_layers = layer
-        .vector_tile_appearance()
-        .map(|vt| &vt.layers)
-        .unwrap_or(&None)
-        .clone();
+    let limit_layers = layer.source_layers.clone();
     OwnedMatchedLayerInfo {
         layer_id: layer.layer_id.clone(),
         appearances: layer.appearances.clone(),

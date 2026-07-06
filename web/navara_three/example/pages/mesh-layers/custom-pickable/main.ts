@@ -34,6 +34,7 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
+import { AttributionPlugin } from "@navara/three_plugins";
 import {
   Matrix4,
   Mesh,
@@ -44,7 +45,7 @@ import {
 } from "three";
 import { Pane } from "tweakpane";
 
-import { showAttributions } from "../../../helpers/attributions";
+import { datasetToSource } from "../../../helpers/attribution-source";
 import { TILE_DATASETS } from "../../../helpers/constants";
 import { addDateControl, atZoneTime } from "../../../helpers/control";
 
@@ -238,6 +239,10 @@ const run = async () => {
 
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
+
+  const attribution = new AttributionPlugin();
+  view.addPlugin(attribution);
+
   await view.init();
 
   defaultPlugin.addDefaultPhotorealScene();
@@ -330,7 +335,7 @@ const run = async () => {
     idBinding.refresh();
   });
 
-  showAttributions([TILE_DATASETS.openstreetmap]);
+  attribution.show([datasetToSource(TILE_DATASETS.openstreetmap)]);
 };
 
 run();

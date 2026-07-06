@@ -4,8 +4,9 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
+import { AttributionPlugin } from "@navara/three_plugins";
 
-import { showAttributions } from "../../../helpers/attributions";
+import { datasetToSource } from "../../../helpers/attribution-source";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 import { atZoneTime } from "../../../helpers/control";
 
@@ -19,6 +20,9 @@ const run = async () => {
 
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
+
+  const attribution = new AttributionPlugin();
+  view.addPlugin(attribution);
 
   await view.init();
 
@@ -100,7 +104,10 @@ const run = async () => {
     rasterTile: { maxZoom: 23 },
   });
 
-  showAttributions([TILE_DATASETS.openstreetmap, TERRAIN_DATASETS.gsi]);
+  attribution.show([
+    datasetToSource(TILE_DATASETS.openstreetmap),
+    datasetToSource(TERRAIN_DATASETS.gsi),
+  ]);
 };
 
 run();

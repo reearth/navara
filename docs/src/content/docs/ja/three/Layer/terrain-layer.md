@@ -1,0 +1,87 @@
+---
+title: Terrain Layer
+description: raster-dem または quantized-mesh の Source を 3D 地形として描画する
+sidebar:
+  order: 13
+---
+
+`terrain` レイヤーは、[`raster-dem`](../../../three/source/raster-dem-source/) の Source（GPU 上でデコードされる RGB エンコードされた標高タイル）または [`quantized-mesh`](../../../three/source/quantized-mesh-source/) の Source（あらかじめメッシュ化されたタイル、例：Cesium Ion）を、3D グローブの地表として描画します。描画オプションは Source のデータ形式にかかわらず同じで、取得・ジオメトリの設定はすべて Source 側にあります。
+
+## プロパティ
+
+| プロパティ | 型                 | 説明                                                    |
+| -------- | ------------------ | ------------------------------------------------------ |
+| `type`   | `"terrain"`        | レイヤータイプ（必須）。                                 |
+| `source` | `Source \| string` | `raster-dem` または `quantized-mesh` の Source（必須）。 |
+
+### 描画オプション
+
+| マテリアル                                                        | 設定キー   | 説明                                 |
+| ---------------------------------------------------------------- | ---------- | ------------------------------------ |
+| [TerrainMaterial](../../../three/material/terrain-material/) | `terrain`  | 地形メッシュの見た目（影、スカートなど）。 |
+
+## 使用例
+
+### Raster DEM
+
+```typescript
+import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
+
+const view = new ThreeView(/* options */);
+await view.init();
+
+const dem = view.addSource({
+  type: "raster-dem",
+  url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+  elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  maxZoom: 15,
+  minZoom: 5,
+});
+
+view.addLayer({
+  type: "terrain",
+  source: dem,
+  terrain: { castShadow: true, receiveShadow: true },
+});
+```
+
+### Quantized-mesh
+
+```typescript
+const terrain = view.addSource({
+  type: "quantized-mesh",
+  url: "https://example.com/{z}/{x}/{y}.terrain",
+  requestVertexNormals: true,
+  requestWaterMask: true,
+  maxZoom: 18,
+});
+
+view.addLayer({
+  type: "terrain",
+  source: terrain,
+  terrain: { castShadow: true, receiveShadow: true },
+});
+```
+
+:::note
+Cesium Ion の quantized-mesh アセット（エンドポイント + トークンを実行時に解決）の場合は、`addSource` を直接呼び出すのではなく [`CesiumIonPlugin`](../../../three_plugins/cesiumionplugin/) を使用してください。
+:::
+
+### 地形への画像のドレープ
+
+terrain レイヤーは 3D の地表のみを提供します。その上に [`raster`](../../../three/layer/raster-layer/) レイヤーを追加すると、そのタイルがメッシュ上にドレープされます。後から追加したレイヤーが上に描画されるため、高解像度のオーバーレイで広範囲のベースレイヤーを精細化できます。
+
+```typescript
+const terrain = view.addSource({ type: "quantized-mesh", url: "https://example.com/{z}/{x}/{y}.terrain", maxZoom: 18 });
+const satellite = view.addSource({ type: "raster-tile", url: "https://example.com/satellite/{z}/{x}/{y}.jpg", maxZoom: 15 });
+
+view.addLayer({ type: "terrain", source: terrain });
+view.addLayer({ type: "raster", source: satellite });
+```
+
+## 関連リソース
+
+- [Raster DEM Source](../../../three/source/raster-dem-source/) / [Quantized Mesh Source](../../../three/source/quantized-mesh-source/)
+- [TerrainMaterial](../../../three/material/terrain-material/) — 地形の詳細設定
+- [Raster Layer](../../../three/layer/raster-layer/) — 地形の上に画像をドレープ／陰影起伏を追加
+- [CesiumIonPlugin](../../../three_plugins/cesiumionplugin/) — Cesium Ion の quantized-mesh アセット

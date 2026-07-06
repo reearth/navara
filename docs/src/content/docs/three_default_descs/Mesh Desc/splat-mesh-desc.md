@@ -50,7 +50,26 @@ On fetch failure, a `console.warn` is logged; no exception is thrown and no even
 }
 ```
 
-> `url` and `lod` are fixed at construction time. Calling `handle.update()` with a different value logs a warning; recreate the descriptor instead.
+### originCellSize
+
+**Type:** `number`
+
+**Default:** `2000`
+
+**Description:** Cell edge, in meters, of the floating origin that keeps splats numerically stable at globe (ECEF) scale. Navara renders splats relative to an origin that follows the camera, snapped to a grid of this size, so the large ECEF coordinates never reach the renderer's single-precision math — this is what prevents sub-meter jitter as the camera moves. This is automatic; the property only tunes the grid. Smaller values tighten precision near the camera but re-sort splats more often as the camera crosses cells; larger values re-sort less often. The value is shared per transparent scene: the first splat added fixes it for every splat on that renderer. Most applications never need to change the default.
+
+**Example:**
+
+```typescript
+{
+  splat: {
+    url: "/splat/your-asset.ply",
+    originCellSize: 500,
+  }
+}
+```
+
+> `url`, `lod`, and `originCellSize` are fixed at construction time. Calling `handle.update()` with a different value logs a warning; recreate the descriptor instead.
 
 ## Usage Examples
 
@@ -117,3 +136,4 @@ Navara supports the following Gaussian Splatting formats.
 
 - **No scene lighting**: Lighting is baked into the splat data; `SunLight` / `AmbientLight` do not affect rendering.
 - **No shadow / selective effect / picking**: Splats render in the transparent pass and are not integrated with shadows, `SelectiveBloomEffect` / `SelectiveOutlineEffect`, or Navara's picking pipeline.
+- **Very large scale can look unstable**: A very large `scale` makes each splat span a large world region, so the depth sort order can change abruptly with small camera moves (visible as "boiling"). This is inherent to Gaussian Splatting and is unrelated to placement precision — author assets close to their intended world size rather than scaling them up heavily.

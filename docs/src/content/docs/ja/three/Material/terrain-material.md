@@ -1,0 +1,86 @@
+---
+title: TerrainMaterial
+description: terrain レイヤーの地形メッシュ描画オプション
+sidebar:
+  order: 36
+---
+
+`TerrainMaterial` は、[`terrain`](../../../three/layer/terrain-layer/) レイヤーのメッシュの描画オプションを保持します。`terrain` キーで設定し、Source のデータ形式（[`raster-dem`](../../../three/source/raster-dem-source/)（RGB エンコードされた標高）または [`quantized-mesh`](../../../three/source/quantized-mesh-source/)）にかかわらず適用されます。取得・ジオメトリの設定（ズーム範囲、タイリングスキーム、標高デコーダ、拡張、トークン）はすべて、参照する Source 側にあり、ここにはありません。
+
+## プロパティ
+
+### show
+
+**型:** `boolean | undefined` — **デフォルト:** `true`
+
+**説明:** 地形を表示するかどうか。
+
+```typescript
+{ terrain: { show: true } }
+```
+
+### castShadow
+
+**型:** `boolean | undefined` — **デフォルト:** `false`
+
+**説明:** 地形が影を落とすかどうか。
+
+```typescript
+{ terrain: { castShadow: true } }
+```
+
+### receiveShadow
+
+**型:** `boolean | undefined` — **デフォルト:** `false`
+
+**説明:** 地形が影を受けるかどうか。
+
+```typescript
+{ terrain: { receiveShadow: true } }
+```
+
+### showBoundingBox
+
+**型:** `boolean | undefined` — **デフォルト:** `false`
+
+**説明:** タイルごとのバウンディングボックスを表示するかどうか。デバッグ用です。
+
+```typescript
+{ terrain: { showBoundingBox: true } }
+```
+
+### skirt
+
+**型:** `boolean | undefined` — **デフォルト:** `true`
+
+**説明:** 異なる LOD の隣接するタイル間の隙間を隠すために、タイル境界に沿ってスカートを描画するかどうか。地下のモデルを可視化したい場合は無効にします。
+
+```typescript
+{ terrain: { skirt: true } }
+```
+
+### skirtExaggeration
+
+**型:** `number | undefined` — **デフォルト:** `1.0`
+
+**説明:** 自動計算されたスカートの高さに適用する乗数。`1.0` はデフォルトの計算された高さを使用します。
+
+```typescript
+{ terrain: { skirtExaggeration: 1.5 } }
+```
+
+## 他のレイヤーとの組み合わせ
+
+terrain レイヤーは 3D の地表のみを提供します。[`raster`](../../../three/layer/raster-layer/) レイヤーでその上に画像や陰影起伏をドレープします。
+
+| 地形の上に            | 対応       | 備考                                                                            |
+| ----------------------- | --------- | -------------------------------------------------------------------------------- |
+| `raster`（画像）        | ✅ 可能    | ラスター画像が再投影され、メッシュ上にドレープされます。複数を重ねられます。       |
+| `raster`（陰影起伏）    | ✅ 可能    | DEM タイルから計算された陰影起伏を 3D の地表に描画します。                        |
+| `vector`（ベクタータイル） | ❌ 未対応 | 現在、ベクタータイルは quantized-mesh 地形にドレープできません。                 |
+
+## 関連リソース
+
+- [Terrain Layer](../../../three/layer/terrain-layer/) — このマテリアルの使い方
+- [Raster DEM Source](../../../three/source/raster-dem-source/) / [Quantized Mesh Source](../../../three/source/quantized-mesh-source/) — 地形データの Source
+- [CesiumIonPlugin](../../../three_plugins/cesiumionplugin/) — Cesium Ion の quantized-mesh アセット

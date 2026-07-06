@@ -66,18 +66,18 @@ view.addEffect({
 });
 
 // ベースの衛星写真タイル
+const satelliteSource = view.addSource({
+  type: "raster-tile",
+  // Credit:
+  // - Geospatial Information Authority of Japan Tiles - Latest Nationwide Photo (Seamless)
+  //   https://maps.gsi.go.jp/development/ichiran.html
+  url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
+  maxZoom: 6,
+  minZoom: 2,
+});
 view.addLayer({
-  type: "tiles",
-  data: {
-    // Credit:
-    // - Geospatial Information Authority of Japan Tiles - Latest Nationwide Photo (Seamless)
-    //   https://maps.gsi.go.jp/development/ichiran.html
-    url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
-  },
-  rasterTile: {
-    maxZoom: 6,
-    minZoom: 2,
-  },
+  type: "raster",
+  source: satelliteSource,
 });
 
 // カメラを地球全体が見える位置に設定
@@ -96,16 +96,18 @@ view.setCamera({ lng: 140, lat: 20, height: 12_600_000, heading: 0, pitch: -90, 
 
 ```typescript
 // 夜景タイルを追加（半透明で重ねる）
+const nightSource = view.addSource({
+  type: "raster-tile",
+  // Credit:
+  // - NASA Earth at Night imagery (Converted as raster tiles)
+  url: "/data/blue-marble-night/{z}/{x}/{y}.webp",
+  maxZoom: 6,
+  minZoom: 1,
+});
 view.addLayer({
-  type: "tiles",
-  data: {
-    // Credit:
-    // - NASA Earth at Night imagery (Converted as raster tiles)
-    url: "/data/blue-marble-night/{z}/{x}/{y}.webp",
-  },
-  rasterTile: {
-    maxZoom: 6,
-    minZoom: 1,
+  type: "raster",
+  source: nightSource,
+  raster: {
     opacity: 0.8, // 半透明で重ねる
   },
 });
@@ -429,31 +431,33 @@ async function run() {
   });
 
   // 衛星写真タイル
+  const satelliteSource = view.addSource({
+    type: "raster-tile",
+    // Credit:
+    // - Geospatial Information Authority of Japan Tiles - Latest Nationwide Photo (Seamless)
+    //   https://maps.gsi.go.jp/development/ichiran.html
+    url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
+    maxZoom: 6,
+    minZoom: 2,
+  });
   view.addLayer({
-    type: "tiles",
-    data: {
-      // Credit:
-      // - Geospatial Information Authority of Japan Tiles - Latest Nationwide Photo (Seamless)
-      //   https://maps.gsi.go.jp/development/ichiran.html
-      url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
-    },
-    rasterTile: {
-      maxZoom: 6,
-      minZoom: 2,
-    },
+    type: "raster",
+    source: satelliteSource,
   });
 
   // 夜景タイル（オプション）
+  const nightSource = view.addSource({
+    type: "raster-tile",
+    // Credit:
+    // - NASA Earth at Night imagery (Converted as raster tiles)
+    url: "/data/blue-marble-night/{z}/{x}/{y}.webp",
+    maxZoom: 6,
+    minZoom: 1,
+  });
   view.addLayer({
-    type: "tiles",
-    data: {
-      // Credit:
-      // - NASA Earth at Night imagery (Converted as raster tiles)
-      url: "/data/blue-marble-night/{z}/{x}/{y}.webp",
-    },
-    rasterTile: {
-      maxZoom: 6,
-      minZoom: 1,
+    type: "raster",
+    source: nightSource,
+    raster: {
       opacity: 0.8,
     },
   });

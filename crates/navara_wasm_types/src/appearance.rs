@@ -2,7 +2,7 @@ use navara_wasm_utils::ToU8;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
-use crate::{ElevationDecoder, TextureFragment, TileUvTransform, Vec2, Vec3 as WasmVec3};
+use crate::{TextureFragment, TileUvTransform, Vec2, Vec3 as WasmVec3};
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PointMaterial {
@@ -1240,75 +1240,42 @@ impl From<ModelInternalMaterial> for navara_material::ModelInternalMaterial {
     }
 }
 
+/// Render-only appearance for a `raster` layer's imagery. All fetch/tiling
+/// config lives on the referenced `Source`; only display fields are carried
+/// here. Parallel to [`HillshadeMaterial`] / [`ElevationHeatmapMaterial`].
 #[wasm_bindgen]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RasterTileMaterial {
+#[derive(Debug, Clone, Deserialize)]
+pub struct RasterMaterial {
     pub show: Option<bool>,
     pub color: Option<u32>,
     pub opacity: Option<f32>,
-    #[wasm_bindgen(js_name = maxZoom)]
-    #[serde(rename = "maxZoom")]
-    pub max_zoom: Option<usize>,
-    #[wasm_bindgen(js_name = minZoom)]
-    #[serde(rename = "minZoom")]
-    pub min_zoom: Option<usize>,
-    pub tms: Option<bool>,
     #[wasm_bindgen(js_name = showBoundingBox)]
     #[serde(rename = "showBoundingBox")]
     pub show_bounding_box: Option<bool>,
-    #[wasm_bindgen(js_name = overscaledMaxZoom)]
-    #[serde(rename = "overscaledMaxZoom")]
-    pub overscaled_max_zoom: Option<usize>,
 }
 
-impl From<RasterTileMaterial> for navara_material::RasterTileMaterial {
-    fn from(val: RasterTileMaterial) -> Self {
-        let default = navara_material::RasterTileMaterial::default();
-        navara_material::RasterTileMaterial {
+impl From<RasterMaterial> for navara_material::RasterMaterial {
+    fn from(val: RasterMaterial) -> Self {
+        let default = navara_material::RasterMaterial::default();
+        navara_material::RasterMaterial {
             show: val.show.unwrap_or(default.show),
             color: val.color.unwrap_or(default.color),
             opacity: val.opacity.unwrap_or(default.opacity),
-            max_zoom: val.max_zoom.unwrap_or(default.max_zoom),
-            min_zoom: val.min_zoom.unwrap_or(default.min_zoom),
-            tms: val.tms.unwrap_or(default.tms),
             show_bounding_box: val.show_bounding_box.unwrap_or(default.show_bounding_box),
-            overscaled_max_zoom: val
-                .overscaled_max_zoom
-                .unwrap_or(default.overscaled_max_zoom),
-        }
-    }
-}
-impl<'a> From<&'a navara_material::RasterTileMaterial> for RasterTileMaterial {
-    fn from(value: &'a navara_material::RasterTileMaterial) -> RasterTileMaterial {
-        RasterTileMaterial {
-            show: Some(value.show),
-            color: Some(value.color),
-            opacity: Some(value.opacity),
-            max_zoom: Some(value.max_zoom),
-            min_zoom: Some(value.min_zoom),
-            tms: Some(value.tms),
-            show_bounding_box: Some(value.show_bounding_box),
-            overscaled_max_zoom: Some(value.overscaled_max_zoom),
         }
     }
 }
 
-impl RasterTileMaterial {
+impl RasterMaterial {
     pub fn merge(
         &self,
-        other: &navara_material::RasterTileMaterial,
-    ) -> navara_material::RasterTileMaterial {
-        navara_material::RasterTileMaterial {
+        other: &navara_material::RasterMaterial,
+    ) -> navara_material::RasterMaterial {
+        navara_material::RasterMaterial {
             show: self.show.unwrap_or(other.show),
             color: self.color.unwrap_or(other.color),
             opacity: self.opacity.unwrap_or(other.opacity),
-            max_zoom: self.max_zoom.unwrap_or(other.max_zoom),
-            min_zoom: self.min_zoom.unwrap_or(other.min_zoom),
-            tms: self.tms.unwrap_or(other.tms),
             show_bounding_box: self.show_bounding_box.unwrap_or(other.show_bounding_box),
-            overscaled_max_zoom: self
-                .overscaled_max_zoom
-                .unwrap_or(other.overscaled_max_zoom),
         }
     }
 }
@@ -1476,44 +1443,44 @@ impl<'a> From<&'a navara_material::RasterTileInternalMaterial> for RasterTileInt
                 .map(|c| c.max_height)
                 .unwrap_or(1000.0),
             elevation_r_scaler: m
-                .elevation_heatmap_config
+                .heatmap_elevation_decoder
                 .as_ref()
-                .map(|c| c.elevation_decoder.r_scaler)
+                .map(|d| d.r_scaler)
                 .unwrap_or(0.0),
             elevation_g_scaler: m
-                .elevation_heatmap_config
+                .heatmap_elevation_decoder
                 .as_ref()
-                .map(|c| c.elevation_decoder.g_scaler)
+                .map(|d| d.g_scaler)
                 .unwrap_or(0.0),
             elevation_b_scaler: m
-                .elevation_heatmap_config
+                .heatmap_elevation_decoder
                 .as_ref()
-                .map(|c| c.elevation_decoder.b_scaler)
+                .map(|d| d.b_scaler)
                 .unwrap_or(0.0),
             elevation_boundary: m
-                .elevation_heatmap_config
+                .heatmap_elevation_decoder
                 .as_ref()
-                .map(|c| c.elevation_decoder.boundary)
+                .map(|d| d.boundary)
                 .unwrap_or(0.0),
             elevation_max_offset: m
-                .elevation_heatmap_config
+                .heatmap_elevation_decoder
                 .as_ref()
-                .map(|c| c.elevation_decoder.max_offset)
+                .map(|d| d.max_offset)
                 .unwrap_or(0.0),
             elevation_min_offset: m
-                .elevation_heatmap_config
+                .heatmap_elevation_decoder
                 .as_ref()
-                .map(|c| c.elevation_decoder.min_offset)
+                .map(|d| d.min_offset)
                 .unwrap_or(0.0),
             elevation_epsilon: m
-                .elevation_heatmap_config
+                .heatmap_elevation_decoder
                 .as_ref()
-                .map(|c| c.elevation_decoder.epsilon)
+                .map(|d| d.epsilon)
                 .unwrap_or(1.0),
             elevation_offset: m
-                .elevation_heatmap_config
+                .heatmap_elevation_decoder
                 .as_ref()
-                .map(|c| c.elevation_decoder.offset)
+                .map(|d| d.offset)
                 .unwrap_or(0.0),
 
             logarithmic: m
@@ -1530,44 +1497,44 @@ impl<'a> From<&'a navara_material::RasterTileInternalMaterial> for RasterTileInt
             // Hillshade fields
             is_hillshades: m.is_hillshades.iter().map(|b| b.to_u8()).collect(),
             hillshade_r_scaler: m
-                .hillshade_config
+                .hillshade_elevation_decoder
                 .as_ref()
-                .map(|c| c.elevation_decoder.r_scaler)
+                .map(|d| d.r_scaler)
                 .unwrap_or(0.0),
             hillshade_g_scaler: m
-                .hillshade_config
+                .hillshade_elevation_decoder
                 .as_ref()
-                .map(|c| c.elevation_decoder.g_scaler)
+                .map(|d| d.g_scaler)
                 .unwrap_or(0.0),
             hillshade_b_scaler: m
-                .hillshade_config
+                .hillshade_elevation_decoder
                 .as_ref()
-                .map(|c| c.elevation_decoder.b_scaler)
+                .map(|d| d.b_scaler)
                 .unwrap_or(0.0),
             hillshade_boundary: m
-                .hillshade_config
+                .hillshade_elevation_decoder
                 .as_ref()
-                .map(|c| c.elevation_decoder.boundary)
+                .map(|d| d.boundary)
                 .unwrap_or(0.0),
             hillshade_epsilon: m
-                .hillshade_config
+                .hillshade_elevation_decoder
                 .as_ref()
-                .map(|c| c.elevation_decoder.epsilon)
+                .map(|d| d.epsilon)
                 .unwrap_or(0.01),
             hillshade_max_offset: m
-                .hillshade_config
+                .hillshade_elevation_decoder
                 .as_ref()
-                .map(|c| c.elevation_decoder.max_offset)
+                .map(|d| d.max_offset)
                 .unwrap_or(0.0),
             hillshade_min_offset: m
-                .hillshade_config
+                .hillshade_elevation_decoder
                 .as_ref()
-                .map(|c| c.elevation_decoder.min_offset)
+                .map(|d| d.min_offset)
                 .unwrap_or(0.0),
             hillshade_offset: m
-                .hillshade_config
+                .hillshade_elevation_decoder
                 .as_ref()
-                .map(|c| c.elevation_decoder.offset)
+                .map(|d| d.offset)
                 .unwrap_or(0.0),
             hillshade_exaggeration: m
                 .hillshade_config
@@ -1589,82 +1556,13 @@ impl<'a> From<&'a navara_material::RasterTileInternalMaterial> for RasterTileInt
     }
 }
 
+/// Render-only appearance for a `terrain` layer's mesh, regardless of the
+/// referenced source's data format (raster-dem, quantized-mesh, or the
+/// source-less ellipsoid). All fetch/geometry config lives on the referenced
+/// `Source`; the data format itself is carried by `TerrainDataType`.
 #[wasm_bindgen]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct VectorTileMaterial {
-    pub show: Option<bool>,
-    #[wasm_bindgen(js_name = castShadow)]
-    #[serde(rename = "castShadow")]
-    pub cast_shadow: Option<bool>,
-    #[wasm_bindgen(js_name = receiveShadow)]
-    #[serde(rename = "receiveShadow")]
-    pub receive_shadow: Option<bool>,
-    #[wasm_bindgen(js_name = maxZoom)]
-    #[serde(rename = "maxZoom")]
-    pub max_zoom: Option<usize>,
-    /// `Globe.max_sse` would be used to a material that uses `clamp_to_ground`.
-    #[wasm_bindgen(js_name = maxSse)]
-    #[serde(rename = "maxSse")]
-    pub max_sse: Option<f32>,
-    #[wasm_bindgen(getter_with_clone)]
-    pub layers: Option<Vec<String>>,
-    #[wasm_bindgen(js_name = overscaledMaxZoom)]
-    #[serde(rename = "overscaledMaxZoom")]
-    pub overscaled_max_zoom: Option<usize>,
-}
-
-impl From<VectorTileMaterial> for navara_material::VectorTileMaterial {
-    fn from(val: VectorTileMaterial) -> Self {
-        let default = navara_material::VectorTileMaterial::default();
-        navara_material::VectorTileMaterial {
-            show: val.show.unwrap_or(default.show),
-            cast_shadow: val.cast_shadow.unwrap_or(default.cast_shadow),
-            receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
-            max_zoom: val.max_zoom.unwrap_or(default.max_zoom),
-            max_sse: val.max_sse.unwrap_or(default.max_sse),
-            layers: val.layers.clone(),
-            overscaled_max_zoom: val
-                .overscaled_max_zoom
-                .unwrap_or(default.overscaled_max_zoom),
-        }
-    }
-}
-impl<'a> From<&'a navara_material::VectorTileMaterial> for VectorTileMaterial {
-    fn from(value: &'a navara_material::VectorTileMaterial) -> VectorTileMaterial {
-        VectorTileMaterial {
-            show: Some(value.show),
-            cast_shadow: Some(value.cast_shadow),
-            receive_shadow: Some(value.receive_shadow),
-            max_zoom: Some(value.max_zoom),
-            max_sse: Some(value.max_sse),
-            layers: value.layers.clone(),
-            overscaled_max_zoom: Some(value.overscaled_max_zoom),
-        }
-    }
-}
-
-impl VectorTileMaterial {
-    pub fn merge(
-        &self,
-        other: &navara_material::VectorTileMaterial,
-    ) -> navara_material::VectorTileMaterial {
-        navara_material::VectorTileMaterial {
-            show: self.show.unwrap_or(other.show),
-            cast_shadow: self.cast_shadow.unwrap_or(other.cast_shadow),
-            receive_shadow: self.receive_shadow.unwrap_or(other.receive_shadow),
-            max_zoom: self.max_zoom.unwrap_or(other.max_zoom),
-            max_sse: self.max_sse.unwrap_or(other.max_sse),
-            layers: self.layers.clone().or_else(|| other.layers.clone()),
-            overscaled_max_zoom: self
-                .overscaled_max_zoom
-                .unwrap_or(other.overscaled_max_zoom),
-        }
-    }
-}
-
-#[wasm_bindgen]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RasterTerrainMaterial {
+#[derive(Debug, Clone, Deserialize)]
+pub struct TerrainMaterial {
     pub show: Option<bool>,
     #[wasm_bindgen(js_name = castShadow)]
     #[serde(rename = "castShadow")]
@@ -1675,22 +1573,6 @@ pub struct RasterTerrainMaterial {
     #[wasm_bindgen(js_name = showBoundingBox)]
     #[serde(rename = "showBoundingBox")]
     pub show_bounding_box: Option<bool>,
-    #[wasm_bindgen(js_name = maxZoom)]
-    #[serde(rename = "maxZoom")]
-    pub max_zoom: Option<usize>,
-    /// The terrain is upsampled until it reaches `overscaled_max_zoom`.
-    #[wasm_bindgen(js_name = overscaledMaxZoom)]
-    #[serde(rename = "overscaledMaxZoom")]
-    pub overscaled_max_zoom: Option<usize>,
-    #[wasm_bindgen(js_name = minZoom)]
-    #[serde(rename = "minZoom")]
-    pub min_zoom: Option<usize>,
-    #[wasm_bindgen(js_name = elevationDecoder)]
-    #[serde(rename = "elevationDecoder")]
-    pub elevation_decoder: Option<ElevationDecoder>,
-    #[wasm_bindgen(js_name = tileSize)]
-    #[serde(rename = "tileSize")]
-    pub tile_size: Option<u32>,
     /// Whether to render skirts along tile boundaries to hide gaps.
     /// You should disable `skirt` if you want to visualize an underground model.
     pub skirt: Option<bool>,
@@ -1701,59 +1583,32 @@ pub struct RasterTerrainMaterial {
     pub skirt_exaggeration: Option<f32>,
 }
 
-impl From<RasterTerrainMaterial> for navara_material::RasterTerrainMaterial {
-    fn from(val: RasterTerrainMaterial) -> Self {
-        let default = navara_material::RasterTerrainMaterial::default();
-        navara_material::RasterTerrainMaterial {
-            show: val.show.unwrap_or(default.show),
-            cast_shadow: val.cast_shadow.unwrap_or(default.cast_shadow),
-            receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
-            show_bounding_box: val.show_bounding_box.unwrap_or(default.show_bounding_box),
-            max_zoom: val.max_zoom.unwrap_or(default.max_zoom),
-            overscaled_max_zoom: val
-                .overscaled_max_zoom
-                .unwrap_or(default.overscaled_max_zoom),
-            min_zoom: val.min_zoom.unwrap_or(default.min_zoom),
-            tile_size: val.tile_size.unwrap_or(default.tile_size),
-            elevation_decoder: val
-                .elevation_decoder
-                .unwrap_or(default.elevation_decoder.into())
-                .into(),
-            skirt: val.skirt.unwrap_or(default.skirt),
-            skirt_exaggeration: val.skirt_exaggeration.unwrap_or(default.skirt_exaggeration),
+impl From<TerrainMaterial> for navara_material::TerrainMaterial {
+    fn from(val: TerrainMaterial) -> Self {
+        val.merge(&navara_material::TerrainMaterial::default())
+    }
+}
+
+impl TerrainMaterial {
+    pub fn merge(
+        &self,
+        other: &navara_material::TerrainMaterial,
+    ) -> navara_material::TerrainMaterial {
+        navara_material::TerrainMaterial {
+            show: self.show.unwrap_or(other.show),
+            cast_shadow: self.cast_shadow.unwrap_or(other.cast_shadow),
+            receive_shadow: self.receive_shadow.unwrap_or(other.receive_shadow),
+            show_bounding_box: self.show_bounding_box.unwrap_or(other.show_bounding_box),
+            skirt: self.skirt.unwrap_or(other.skirt),
+            skirt_exaggeration: self.skirt_exaggeration.unwrap_or(other.skirt_exaggeration),
         }
     }
 }
 
-impl<'a> From<&'a navara_material::RasterTerrainMaterial> for RasterTerrainMaterial {
-    fn from(value: &'a navara_material::RasterTerrainMaterial) -> RasterTerrainMaterial {
-        RasterTerrainMaterial {
-            show: Some(value.show),
-            cast_shadow: Some(value.cast_shadow),
-            receive_shadow: Some(value.receive_shadow),
-            show_bounding_box: Some(value.show_bounding_box),
-            max_zoom: Some(value.max_zoom),
-            overscaled_max_zoom: Some(value.overscaled_max_zoom),
-            min_zoom: Some(value.min_zoom),
-            elevation_decoder: Some(ElevationDecoder {
-                r_scaler: value.elevation_decoder.r_scaler,
-                g_scaler: value.elevation_decoder.g_scaler,
-                b_scaler: value.elevation_decoder.b_scaler,
-                offset: value.elevation_decoder.offset,
-                max_offset: value.elevation_decoder.max_offset,
-                min_offset: value.elevation_decoder.min_offset,
-                boundary: value.elevation_decoder.boundary,
-                epsilon: value.elevation_decoder.epsilon,
-            }),
-            tile_size: Some(value.tile_size),
-            skirt: Some(value.skirt),
-            skirt_exaggeration: Some(value.skirt_exaggeration),
-        }
-    }
-}
-
+/// Elevation-heatmap render options for a `raster` layer. The elevation decoder
+/// is taken from the referenced `raster-dem` source, not from here.
 #[wasm_bindgen]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct ElevationHeatmapMaterial {
     #[wasm_bindgen(js_name = maxHeight)]
     #[serde(rename = "maxHeight")]
@@ -1761,161 +1616,17 @@ pub struct ElevationHeatmapMaterial {
     #[wasm_bindgen(js_name = minHeight)]
     #[serde(rename = "minHeight")]
     pub min_height: Option<f64>,
-    #[wasm_bindgen(js_name = elevationDecoder)]
-    #[serde(rename = "elevationDecoder")]
-    pub elevation_decoder: Option<ElevationDecoder>,
-    pub logarithmic: bool,
+    pub logarithmic: Option<bool>,
     #[wasm_bindgen(js_name = logBoundary)]
     #[serde(rename = "logBoundary")]
-    pub log_boundary: f64,
+    pub log_boundary: Option<f64>,
 }
 
+/// Hillshade render options for a `raster` layer. The elevation decoder is taken
+/// from the referenced `raster-dem` source, not from here.
 #[wasm_bindgen]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct HillshadeMaterial {
-    #[wasm_bindgen(js_name = elevationDecoder)]
-    #[serde(rename = "elevationDecoder")]
-    pub elevation_decoder: Option<ElevationDecoder>,
     /// Exaggeration factor for hillshade effect (default: 1.0)
     pub exaggeration: Option<f32>,
-}
-
-#[wasm_bindgen]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EllipsoidTerrainMaterial {
-    #[wasm_bindgen(js_name = castShadow)]
-    #[serde(rename = "castShadow")]
-    pub cast_shadow: Option<bool>,
-    #[wasm_bindgen(js_name = receiveShadow)]
-    #[serde(rename = "receiveShadow")]
-    pub receive_shadow: Option<bool>,
-    #[wasm_bindgen(js_name = showBoundingBox)]
-    #[serde(rename = "showBoundingBox")]
-    pub show_bounding_box: Option<bool>,
-    #[wasm_bindgen(js_name = maxZoom)]
-    #[serde(rename = "maxZoom")]
-    pub max_zoom: Option<usize>,
-    #[wasm_bindgen(js_name = minZoom)]
-    #[serde(rename = "minZoom")]
-    pub min_zoom: Option<usize>,
-}
-
-impl From<EllipsoidTerrainMaterial> for navara_material::EllipsoidTerrainMaterial {
-    fn from(val: EllipsoidTerrainMaterial) -> Self {
-        let default = navara_material::EllipsoidTerrainMaterial::default();
-        navara_material::EllipsoidTerrainMaterial {
-            cast_shadow: val.cast_shadow.unwrap_or(default.cast_shadow),
-            receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
-            show_bounding_box: val.show_bounding_box.unwrap_or(default.show_bounding_box),
-            max_zoom: val.max_zoom.unwrap_or(default.max_zoom),
-            min_zoom: val.min_zoom.unwrap_or(default.min_zoom),
-        }
-    }
-}
-
-impl<'a> From<&'a navara_material::EllipsoidTerrainMaterial> for EllipsoidTerrainMaterial {
-    fn from(value: &'a navara_material::EllipsoidTerrainMaterial) -> EllipsoidTerrainMaterial {
-        EllipsoidTerrainMaterial {
-            cast_shadow: Some(value.cast_shadow),
-            receive_shadow: Some(value.receive_shadow),
-            show_bounding_box: Some(value.show_bounding_box),
-            max_zoom: Some(value.max_zoom),
-            min_zoom: Some(value.min_zoom),
-        }
-    }
-}
-
-#[wasm_bindgen]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuantizedMeshTerrainMaterial {
-    pub show: Option<bool>,
-    #[wasm_bindgen(js_name = castShadow)]
-    #[serde(rename = "castShadow")]
-    pub cast_shadow: Option<bool>,
-    #[wasm_bindgen(js_name = receiveShadow)]
-    #[serde(rename = "receiveShadow")]
-    pub receive_shadow: Option<bool>,
-    #[wasm_bindgen(js_name = showBoundingBox)]
-    #[serde(rename = "showBoundingBox")]
-    pub show_bounding_box: Option<bool>,
-    #[wasm_bindgen(js_name = maxZoom)]
-    #[serde(rename = "maxZoom")]
-    pub max_zoom: Option<usize>,
-    #[wasm_bindgen(js_name = overscaledMaxZoom)]
-    #[serde(rename = "overscaledMaxZoom")]
-    pub overscaled_max_zoom: Option<usize>,
-    #[wasm_bindgen(js_name = minZoom)]
-    #[serde(rename = "minZoom")]
-    pub min_zoom: Option<usize>,
-    pub skirt: Option<bool>,
-    #[wasm_bindgen(js_name = skirtExaggeration)]
-    #[serde(rename = "skirtExaggeration")]
-    pub skirt_exaggeration: Option<f32>,
-    pub tms: Option<bool>,
-    pub geographic: Option<bool>,
-    #[wasm_bindgen(js_name = requestVertexNormals)]
-    #[serde(rename = "requestVertexNormals")]
-    pub request_vertex_normals: Option<bool>,
-    #[wasm_bindgen(js_name = requestWaterMask)]
-    #[serde(rename = "requestWaterMask")]
-    pub request_water_mask: Option<bool>,
-    #[wasm_bindgen(getter_with_clone)]
-    pub token: Option<String>,
-}
-
-impl From<QuantizedMeshTerrainMaterial> for navara_material::QuantizedMeshTerrainMaterial {
-    fn from(val: QuantizedMeshTerrainMaterial) -> Self {
-        use navara_core::TilingScheme;
-        let default = navara_material::QuantizedMeshTerrainMaterial::default();
-        let tms = val.tms.unwrap_or_else(|| default.tiling_scheme.tms());
-        let geographic = val
-            .geographic
-            .unwrap_or_else(|| default.tiling_scheme.is_geographic());
-        navara_material::QuantizedMeshTerrainMaterial {
-            show: val.show.unwrap_or(default.show),
-            cast_shadow: val.cast_shadow.unwrap_or(default.cast_shadow),
-            receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
-            show_bounding_box: val.show_bounding_box.unwrap_or(default.show_bounding_box),
-            max_zoom: val.max_zoom.unwrap_or(default.max_zoom),
-            overscaled_max_zoom: val
-                .overscaled_max_zoom
-                .unwrap_or(default.overscaled_max_zoom),
-            min_zoom: val.min_zoom.unwrap_or(default.min_zoom),
-            skirt: val.skirt.unwrap_or(default.skirt),
-            skirt_exaggeration: val.skirt_exaggeration.unwrap_or(default.skirt_exaggeration),
-            tiling_scheme: if geographic {
-                TilingScheme::Geographic { tms }
-            } else {
-                TilingScheme::WebMercator { tms }
-            },
-            request_vertex_normals: val
-                .request_vertex_normals
-                .unwrap_or(default.request_vertex_normals),
-            request_water_mask: val.request_water_mask.unwrap_or(default.request_water_mask),
-            token: val.token.or(default.token),
-        }
-    }
-}
-
-impl<'a> From<&'a navara_material::QuantizedMeshTerrainMaterial> for QuantizedMeshTerrainMaterial {
-    fn from(
-        value: &'a navara_material::QuantizedMeshTerrainMaterial,
-    ) -> QuantizedMeshTerrainMaterial {
-        QuantizedMeshTerrainMaterial {
-            show: Some(value.show),
-            cast_shadow: Some(value.cast_shadow),
-            receive_shadow: Some(value.receive_shadow),
-            show_bounding_box: Some(value.show_bounding_box),
-            max_zoom: Some(value.max_zoom),
-            overscaled_max_zoom: Some(value.overscaled_max_zoom),
-            min_zoom: Some(value.min_zoom),
-            skirt: Some(value.skirt),
-            skirt_exaggeration: Some(value.skirt_exaggeration),
-            tms: Some(value.tiling_scheme.tms()),
-            geographic: Some(value.tiling_scheme.is_geographic()),
-            request_vertex_normals: Some(value.request_vertex_normals),
-            request_water_mask: Some(value.request_water_mask),
-            token: value.token.clone(),
-        }
-    }
 }

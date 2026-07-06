@@ -1,5 +1,5 @@
 import { atlasRangePx } from "@navara/font";
-import type { Color, DataTexture, Vector2, Vector3 } from "three";
+import type { Color, DataTexture, Matrix4, Vector2, Vector3 } from "three";
 
 import type { UniformValue } from "../../../types";
 import type { Mutates } from "../../MaterialEnhancer";
@@ -99,6 +99,7 @@ export type SdfTextBaseRefs = {
   uTextHeight: UniformValue<number>;
   uBgYBounds: UniformValue<Vector2>;
   uRTCCenter: UniformValue<Vector3>;
+  uRTCCenterView: UniformValue<Vector3>;
   uEyeRTELow: UniformValue<Vector3>;
   uEyeRTEHigh: UniformValue<Vector3>;
   nvr_uBatchId: UniformValue<number>;
@@ -136,6 +137,7 @@ export type SdfTextBaseMutates = Mutates<
       cameraX: number,
       cameraY: number,
       cameraZ: number,
+      viewMatrix: Matrix4,
       state: SdfTextBaseState,
     ) => void;
     /**

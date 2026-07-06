@@ -89,6 +89,7 @@ import { PickHelper } from "./pick/pickHelper";
 import { TerrainPicker } from "./pick/pickTerrain";
 import { TexturizedSceneByTileCoordinates, type Scenes } from "./scene";
 import { ShadowMapViewers } from "./ShadowMapViewers";
+import { Source } from "./source";
 import { RendererStats } from "./stats";
 import { warmUp } from "./tasks/warmUp";
 import type { TextureOptions } from "./textures";
@@ -96,6 +97,7 @@ import { TileTextureCompositor } from "./tileTexture";
 import {
   type AbortControllers,
   type LayerDescription,
+  type SourceDescription,
   type BuiltInEffectDescription,
   type Descriptions,
   type EmptyDescriptions,
@@ -137,6 +139,7 @@ export * from "./constants";
 export * from "./light";
 export * from "./mesh";
 export * from "./layer";
+export * from "./source";
 export * from "./effects";
 export * from "./shaders";
 export * from "./material";
@@ -1266,8 +1269,16 @@ export default class ThreeView<
    * @returns A Layer for controlling the added layer
    */
   addLayer(l: LayerDescription): Layer {
+    // Normalize a Source handle reference to its id before passing to Rust.
+    const normalized =
+      "source" in l && l.source instanceof Source
+        ? { ...l, source: l.source.id }
+        : l;
+
     // Convert all Color objects to numbers before passing to Rust
-    const processedLayer = this._convertColorsToNumbers(l) as LayerDescription;
+    const processedLayer = this._convertColorsToNumbers(
+      normalized,
+    ) as LayerDescription;
 
     // Existing resource layer process
     const layerId = this._core?.addLayer(processedLayer);
@@ -1282,6 +1293,21 @@ export default class ThreeView<
     this.layersManager.add(layer);
 
     return layer;
+  }
+
+  /**
+   * Registers a data source (GeoJSON, vector tile, raster tile, raster DEM,
+   * quantized mesh, 3D Tiles) and returns a {@link Source} handle.
+   * Reference the returned source from layers via `addLayer({ source })`.
+   * @param s - Source configuration object specifying type and options
+   * @returns A Source handle for referencing, updating, and deleting the source
+   */
+  addSource(s: SourceDescription): Source {
+    invariant(this._core);
+    invariant(s.type);
+    const sourceId = this._core.addSource(s);
+
+    return new Source(sourceId, s.type, this._core);
   }
 
   /**
@@ -1431,8 +1457,7 @@ export default class ThreeView<
     invariant(this._core);
     const target = this.layersManager.get(id);
     if (!target || !(target instanceof Layer)) return;
-    const processedLayer = this._convertColorsToNumbers(l) as LayerDescription;
-    target.update(processedLayer);
+    target.update(l);
   }
 
   /**

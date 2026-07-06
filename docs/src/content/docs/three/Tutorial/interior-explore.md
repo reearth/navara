@@ -97,50 +97,53 @@ This tutorial uses `Soldier.glb` from the official Three.js samples. Download it
 Add terrain and satellite imagery tiles for the exploration area. Turn off the terrain skirt so the underground portion of buildings stays visible.
 
 ```typescript
+const terrainSource = view.addSource({
+  type: "raster-dem",
+  // Credit:
+  // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
+  //   https://maps.gsi.go.jp/development/ichiran.html
+  url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+  elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  minZoom: 6,
+  maxZoom: 15,
+});
 view.addLayer({
   type: "terrain",
-  data: {
-    // Credit:
-    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
-    //   https://maps.gsi.go.jp/development/ichiran.html
-    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
-  },
-  rasterTerrain: {
-    minZoom: 6,
-    maxZoom: 15,
-    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  source: terrainSource,
+  terrain: {
     castShadow: true,
     receiveShadow: true,
     skirt: false,
   },
 });
 
+const hillshadeSource = view.addSource({
+  type: "raster-dem",
+  // Credit:
+  // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
+  //   https://maps.gsi.go.jp/development/ichiran.html
+  url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+  elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  minZoom: 6,
+  maxZoom: 15,
+});
 view.addLayer({
-  type: "tiles",
-  data: {
-    // Credit:
-    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
-    //   https://maps.gsi.go.jp/development/ichiran.html
-    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
-  },
-  rasterTile: {
-    minZoom: 6,
-    maxZoom: 15,
-  },
-  hillshade: {
-    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-  },
+  type: "raster",
+  source: hillshadeSource,
+  hillshade: {},
 });
 
+const photoSource = view.addSource({
+  type: "raster-tile",
+  // Credit:
+  // - Geospatial Information Authority of Japan Tiles - Latest Nationwide Photo (Seamless)
+  //   https://maps.gsi.go.jp/development/ichiran.html
+  url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
+  maxZoom: 18,
+});
 view.addLayer({
-  type: "tiles",
-  data: {
-    // Credit:
-    // - Geospatial Information Authority of Japan Tiles - Latest Nationwide Photo (Seamless)
-    //   https://maps.gsi.go.jp/development/ichiran.html
-    url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
-  },
-  rasterTile: { maxZoom: 18 },
+  type: "raster",
+  source: photoSource,
 });
 ```
 
@@ -149,14 +152,16 @@ view.addLayer({
 Load a Cesium 3D Tiles building such as those published by PLATEAU and enable shadows so the interior reads as a real space.
 
 ```typescript
+const buildingSource = view.addSource({
+  type: "3d-tiles",
+  // Credit:
+  // - [UC23-11] Advanced Area Management Using Storytelling GIS - MLIT PLATEAU
+  //   https://www.geospatial.jp/ckan/dataset/plateau-uc23-11
+  url: "https://assets.cms.plateau.reearth.io/assets/c1/28f9ff-e9d0-44df-b092-88ac7ebdfa42/tngw_4gaiku/tileset.json",
+});
 view.addLayer({
-  type: "cesium3dtiles",
-  data: {
-    // Credit:
-    // - [UC23-11] Advanced Area Management Using Storytelling GIS - MLIT PLATEAU
-    //   https://www.geospatial.jp/ckan/dataset/plateau-uc23-11
-    url: "https://assets.cms.plateau.reearth.io/assets/c1/28f9ff-e9d0-44df-b092-88ac7ebdfa42/tngw_4gaiku/tileset.json",
-  },
+  type: "3d-tiles",
+  source: buildingSource,
   model: {
     show: true,
     castShadow: true,
@@ -279,60 +284,65 @@ view.toneMappingExposure = 10;
 const layers = plugin.addDefaultPhotorealScene();
 layers.sun.update({ sun: { castShadow: true } });
 
+const terrainSource = view.addSource({
+  type: "raster-dem",
+  // Credit:
+  // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
+  //   https://maps.gsi.go.jp/development/ichiran.html
+  url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+  elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  minZoom: 6,
+  maxZoom: 15,
+});
 view.addLayer({
   type: "terrain",
-  data: {
-    // Credit:
-    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
-    //   https://maps.gsi.go.jp/development/ichiran.html
-    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
-  },
-  rasterTerrain: {
-    minZoom: 6,
-    maxZoom: 15,
-    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  source: terrainSource,
+  terrain: {
     castShadow: true,
     receiveShadow: true,
     skirt: false,
   },
 });
 
+const hillshadeSource = view.addSource({
+  type: "raster-dem",
+  // Credit:
+  // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
+  //   https://maps.gsi.go.jp/development/ichiran.html
+  url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+  elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  minZoom: 6,
+  maxZoom: 15,
+});
 view.addLayer({
-  type: "tiles",
-  data: {
-    // Credit:
-    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
-    //   https://maps.gsi.go.jp/development/ichiran.html
-    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
-  },
-  rasterTile: {
-    minZoom: 6,
-    maxZoom: 15,
-  },
-  hillshade: {
-    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-  },
+  type: "raster",
+  source: hillshadeSource,
+  hillshade: {},
 });
 
+const photoSource = view.addSource({
+  type: "raster-tile",
+  // Credit:
+  // - Geospatial Information Authority of Japan Tiles - Latest Nationwide Photo (Seamless)
+  //   https://maps.gsi.go.jp/development/ichiran.html
+  url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
+  maxZoom: 18,
+});
 view.addLayer({
-  type: "tiles",
-  data: {
-    // Credit:
-    // - Geospatial Information Authority of Japan Tiles - Latest Nationwide Photo (Seamless)
-    //   https://maps.gsi.go.jp/development/ichiran.html
-    url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
-  },
-  rasterTile: { maxZoom: 18 },
+  type: "raster",
+  source: photoSource,
 });
 
+const buildingSource = view.addSource({
+  type: "3d-tiles",
+  // Credit:
+  // - [UC23-11] Advanced Area Management Using Storytelling GIS - MLIT PLATEAU
+  //   https://www.geospatial.jp/ckan/dataset/plateau-uc23-11
+  url: "https://assets.cms.plateau.reearth.io/assets/c1/28f9ff-e9d0-44df-b092-88ac7ebdfa42/tngw_4gaiku/tileset.json",
+});
 view.addLayer({
-  type: "cesium3dtiles",
-  data: {
-    // Credit:
-    // - [UC23-11] Advanced Area Management Using Storytelling GIS - MLIT PLATEAU
-    //   https://www.geospatial.jp/ckan/dataset/plateau-uc23-11
-    url: "https://assets.cms.plateau.reearth.io/assets/c1/28f9ff-e9d0-44df-b092-88ac7ebdfa42/tngw_4gaiku/tileset.json",
-  },
+  type: "3d-tiles",
+  source: buildingSource,
   model: {
     show: true,
     castShadow: true,

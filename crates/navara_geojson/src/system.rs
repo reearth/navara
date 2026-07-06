@@ -1,4 +1,5 @@
 use bevy_ecs::{
+    change_detection::DetectChangesMut,
     entity::Entity,
     query::{Added, Changed, Or, Without},
     system::{Commands, Query, Res, ResMut},
@@ -26,7 +27,8 @@ use navara_layer::{
 };
 use navara_material::Appearance;
 
-use navara_layer::{GeoJsonLayerData, GeoJsonLayerDataRequesterMarker};
+use navara_layer::GeoJsonLayerDataRequesterMarker;
+use navara_source::{GeoJsonData, Source, SourceStore};
 
 use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequesterStatus};
 use navara_parser::geojson::GeoJson;
@@ -39,10 +41,17 @@ pub fn construct_feature(
     mut commands: Commands,
     mut batch_table_res: ResMut<BatchTable>,
     mut buf: ResMut<BufferStore>,
+    source_store: Res<SourceStore>,
     geojson_layers: Query<&GeoJsonLayer, Or<(Added<GeoJsonLayer>, Changed<GeoJsonLayer>)>>,
 ) {
     for layer in &geojson_layers {
-        if let Some(GeoJsonLayerData::GeoJson(geo_data)) = &layer.data {
+        // Read the inline GeoJSON live from the referenced source. A URL source
+        // is skipped here until `parse_geojson` writes the fetched document back
+        // onto the source (which retriggers this system).
+        if let Some(source_id) = layer.source_id.as_deref()
+            && let Some(Source::GeoJson(s)) = source_store.get(source_id)
+            && let Some(GeoJsonData::GeoJson(geo_data)) = &s.data
+        {
             geometry::construct_geometry(
                 &mut commands,
                 &mut batch_table_res,
@@ -214,10 +223,15 @@ pub fn delete_geo_json_layer(
 pub fn request_geojson(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
+    source_store: Res<SourceStore>,
     geojson_layers: Query<(Entity, &GeoJsonLayer), Added<GeoJsonLayer>>,
 ) {
     for (e, l) in &geojson_layers {
-        if let Some(GeoJsonLayerData::URL(url)) = &l.data {
+        // Only URL sources need fetching; inline GeoJSON is read directly.
+        if let Some(source_id) = l.source_id.as_deref()
+            && let Some(Source::GeoJson(s)) = source_store.get(source_id)
+            && let Some(GeoJsonData::Url(url)) = &s.data
+        {
             commands.spawn((
                 GeoJsonLayerDataRequesterMarker(e),
                 Priority::Medium,
@@ -231,6 +245,7 @@ pub fn request_geojson(
 pub fn parse_geojson(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
+    mut source_store: ResMut<SourceStore>,
     requesters: Query<
         (Entity, &GeoJsonLayerDataRequesterMarker, &DataRequester),
         (Changed<DataRequester>, Without<Deleted>),
@@ -247,10 +262,18 @@ pub fn parse_geojson(
         }
 
         let geojson = buf.remove_u8(&req.handle).unwrap();
-        let geojson = GeoJson::from_reader(geojson.as_slice()).unwrap();
+        let Ok(geojson) = GeoJson::from_reader(geojson.as_slice()) else {
+            continue;
+        };
 
-        if let Ok(mut l) = layers.get_mut(marker.0) {
-            l.data = Some(GeoJsonLayerData::GeoJson(geojson));
+        // Cache the parsed document on the source so it (and any layer sharing
+        // the source) reads it live, then mark the layer changed to retrigger
+        // the chained `construct_feature` / `setup_tiled_geojson` this frame.
+        if let Ok(mut l) = layers.get_mut(marker.0)
+            && let Some(source_id) = l.source_id.clone()
+        {
+            source_store.set_geojson_data(&source_id, geojson);
+            l.set_changed();
         }
     }
 }

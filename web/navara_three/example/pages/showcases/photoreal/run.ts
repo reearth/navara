@@ -17,16 +17,14 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
+import { AttributionPlugin } from "@navara/three_plugins";
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import { Vector2 } from "three";
 import { Pane } from "tweakpane";
 
-import {
-  hideAttributions,
-  showAttributions,
-} from "../../../helpers/attributions";
+import { datasetToSource } from "../../../helpers/attribution-source";
 import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
@@ -271,7 +269,10 @@ const writeSceneToUrl = (key: string) => {
   window.history.replaceState({}, "", url.toString());
 };
 
-const buildGoogle = (v: ThreeView<CustomDescriptions>) => {
+const buildGoogle = (
+  v: ThreeView<CustomDescriptions>,
+  attribution: AttributionPlugin,
+) => {
   const tiles = v.addLayer({
     type: "cesium3dtiles",
     data: {
@@ -285,10 +286,17 @@ const buildGoogle = (v: ThreeView<CustomDescriptions>) => {
     },
   });
 
-  showAttributions([TILES_3D_DATASETS.googlePhotorealTiles], [tiles]);
+  attribution.show([
+    datasetToSource(TILES_3D_DATASETS.googlePhotorealTiles, {
+      creditLayerId: tiles.id,
+    }),
+  ]);
 };
 
-const buildMapterhorn = (v: ThreeView<CustomDescriptions>) => {
+const buildMapterhorn = (
+  v: ThreeView<CustomDescriptions>,
+  attribution: AttributionPlugin,
+) => {
   v.addLayer({
     type: "tiles",
     data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
@@ -316,14 +324,15 @@ const buildMapterhorn = (v: ThreeView<CustomDescriptions>) => {
     },
   });
 
-  showAttributions([
-    TERRAIN_DATASETS.mapterhorn,
-    TILE_DATASETS.gsiSeamlessphoto,
+  attribution.show([
+    datasetToSource(TERRAIN_DATASETS.mapterhorn),
+    datasetToSource(TILE_DATASETS.gsiSeamlessphoto),
   ]);
 };
 
 export const run = async () => {
   let view: ThreeView<CustomDescriptions> | null = null;
+  let attribution: AttributionPlugin | null = null;
   let pane: Pane | null = null;
   let switching = false;
   let currentScene = readSceneFromUrl();
@@ -336,6 +345,11 @@ export const run = async () => {
 
     const plugin = new DefaultPlugin();
     v.addPlugin(plugin);
+
+    const attributionPlugin = new AttributionPlugin();
+    attribution = attributionPlugin;
+    v.addPlugin(attributionPlugin);
+
     await v.init();
 
     const defaultScene = plugin.addDefaultPhotorealScene();
@@ -365,9 +379,9 @@ export const run = async () => {
     }
 
     if (scene.terrain === "google") {
-      buildGoogle(v);
+      buildGoogle(v, attributionPlugin);
     } else {
-      buildMapterhorn(v);
+      buildMapterhorn(v, attributionPlugin);
     }
 
     if (scene.clouds) {
@@ -405,7 +419,10 @@ export const run = async () => {
     pane = null;
     view?.dispose();
     view = null;
-    hideAttributions();
+    // ThreeView.dispose() does not dispose plugins; release the attribution
+    // plugin's DOM explicitly or it leaks across scene switches.
+    attribution?.dispose();
+    attribution = null;
   };
 
   const switchScene = async (key: string) => {

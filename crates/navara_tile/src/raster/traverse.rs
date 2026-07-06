@@ -8,6 +8,7 @@ use navara_frame::FrameManager;
 use navara_layer::TilesLayer;
 use navara_math::{FloatType, Transform};
 use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
+use navara_source::SourceStore;
 use navara_tile_component::{
     RasterTile, RasterTileQuadtree, TerrainTileQuadtree, Tile, TileHandle,
     TileTextureFragmentQuery, terrain_height_for_extent,
@@ -33,6 +34,7 @@ use super::tile_cache_manager::RasterTileCacheManager;
 pub fn traverse_raster(
     command: &mut Commands,
     tiles: &Query<(&TilesLayer, &Order)>,
+    source_store: &SourceStore,
     handle: TileHandle,
     qt: &mut RasterTileQuadtree,
     tc: &mut RasterTileCacheManager,
@@ -92,7 +94,8 @@ pub fn traverse_raster(
     let is_over_min_z = tiles
         .iter()
         .filter(|(t, _)| t.hillshade_config.is_none())
-        .any(|(t, _)| t.is_over_min_zoom(coords_z));
+        .filter_map(|(t, _)| t.source_id.as_deref().and_then(|id| source_store.get(id)))
+        .any(|s| s.is_over_min_zoom(coords_z));
 
     // Request this level's textures along the selected path (idempotent: the
     // request helper skips layers that already have an in-flight/loaded
@@ -104,6 +107,7 @@ pub fn traverse_raster(
             command,
             tile,
             tiles,
+            source_store,
             handle,
             texture_fragment,
             Priority::Medium,
@@ -118,7 +122,8 @@ pub fn traverse_raster(
     let any_under_max = tiles
         .iter()
         .filter(|(t, _)| t.hillshade_config.is_none())
-        .any(|(t, _)| !t.is_over_max_zoom(coords_z));
+        .filter_map(|(t, _)| t.source_id.as_deref().and_then(|id| source_store.get(id)))
+        .any(|s| !s.is_over_max_zoom(coords_z));
     if meets_sse || !any_under_max {
         return;
     }
@@ -133,6 +138,7 @@ pub fn traverse_raster(
             traverse_raster(
                 command,
                 tiles,
+                source_store,
                 child,
                 qt,
                 tc,
@@ -159,9 +165,8 @@ mod tests {
     use bevy_app::{App, Update};
     use bevy_ecs::prelude::{Res, ResMut, Resource};
 
-    use navara_core::{Angle, ElevationDecoder, TileXYZ, WGS84_64, WGS84_A_64};
-    use navara_layer::LayerData;
-    use navara_material::{Appearance, HillshadeConfig, RasterTileMaterial};
+    use navara_core::{Angle, TileXYZ, WGS84_64, WGS84_A_64};
+    use navara_material::{Appearance, HillshadeConfig, RasterMaterial};
     use navara_math::Vec3;
     use navara_mesh::CachedMeshHandle;
     use navara_texture_fragment::TextureFragment;
@@ -216,6 +221,7 @@ mod tests {
         window: Res<Window>,
         target: Res<TargetHandle>,
         config: Res<TraverseConfig>,
+        source_store: Res<SourceStore>,
     ) {
         let camera_ecef = Vec3::new(WGS84_A_64 * 2.0, 0.0, 0.0);
         let camera = Transform::from_translation(camera_ecef).looking_at(Vec3::ZERO, Vec3::Y);
@@ -226,10 +232,10 @@ mod tests {
             density: 0.,
             sse_factor: 1.0,
         };
-
         traverse_raster(
             &mut commands,
             &tiles,
+            &source_store,
             target.0,
             &mut qt,
             &mut tc,
@@ -273,37 +279,57 @@ mod tests {
             max_sse: 1e30,
             terrain_present: false,
         });
+        // Layers register their own sources via `spawn_layer`.
+        app.insert_resource(SourceStore::new());
 
         (app, handle)
     }
 
-    /// A regular (non-hillshade) raster layer with the given zoom range.
-    fn raster_layer(layer_id: &str, min_zoom: usize, max_zoom: usize) -> TilesLayer {
-        TilesLayer {
+    /// A raster source carrying the layer's zoom range (zoom lives on the source
+    /// now). The id matches the layer's `source_id`.
+    fn layer_source(id: &str, min_zoom: usize, max_zoom: usize) -> navara_source::Source {
+        navara_source::Source::RasterTile(navara_source::RasterTileSource {
+            source_id: id.to_string(),
+            url: "https://example.com/{z}/{x}/{y}.png".to_string(),
+            tms: false,
+            min_zoom,
+            max_zoom,
+            overscaled_max_zoom: max_zoom,
+        })
+    }
+
+    /// A regular (non-hillshade) raster layer with the given zoom range, paired
+    /// with its source.
+    fn raster_layer(
+        layer_id: &str,
+        min_zoom: usize,
+        max_zoom: usize,
+    ) -> (TilesLayer, navara_source::Source) {
+        let layer = TilesLayer {
             layer_id: layer_id.to_string(),
-            data: Some(LayerData {
-                url: "https://example.com/{z}/{x}/{y}.png".to_string(),
-            }),
-            appearance: Some(Appearance::TerrainTile(RasterTileMaterial {
-                min_zoom,
-                max_zoom,
-                overscaled_max_zoom: max_zoom,
-                ..Default::default()
-            })),
+            source_id: Some(layer_id.to_string()),
+            appearance: Some(Appearance::TerrainTile(RasterMaterial::default())),
             elevation_heatmap_config: None,
             hillshade_config: None,
-        }
+        };
+        (layer, layer_source(layer_id, min_zoom, max_zoom))
     }
 
     /// A hillshade layer. Hillshade is resolved on the terrain side, so the raster
     /// traversal must skip it entirely.
-    fn hillshade_layer(layer_id: &str) -> TilesLayer {
-        let mut layer = raster_layer(layer_id, 0, 20);
-        layer.hillshade_config = Some(HillshadeConfig {
-            elevation_decoder: ElevationDecoder::default(),
-            exaggeration: 1.0,
-        });
-        layer
+    fn hillshade_layer(layer_id: &str) -> (TilesLayer, navara_source::Source) {
+        let (mut layer, source) = raster_layer(layer_id, 0, 20);
+        layer.hillshade_config = Some(HillshadeConfig { exaggeration: 1.0 });
+        (layer, source)
+    }
+
+    /// Register the layer's source in the store and spawn the layer entity.
+    fn spawn_layer(app: &mut App, layer: (TilesLayer, navara_source::Source), order: Order) {
+        let (layer, source) = layer;
+        app.world_mut()
+            .resource_mut::<SourceStore>()
+            .add(source.source_id().to_string(), source);
+        app.world_mut().spawn((layer, order));
     }
 
     /// URLs of every (non-deleted) texture fragment currently in the world.
@@ -371,7 +397,7 @@ mod tests {
     fn traverse_raster_requests_texture_for_in_zoom_layer() {
         let (mut app, handle) = app_with_root(TerrainTileQuadtree::new_with_linear_qt());
         app.insert_resource(TargetHandle(handle));
-        app.world_mut().spawn((raster_layer("a", 0, 20), Order(0)));
+        spawn_layer(&mut app, raster_layer("a", 0, 20), Order(0));
 
         app.add_systems(Update, run_traverse_system);
         app.update();
@@ -404,7 +430,7 @@ mod tests {
     fn traverse_raster_request_is_idempotent() {
         let (mut app, handle) = app_with_root(TerrainTileQuadtree::new_with_linear_qt());
         app.insert_resource(TargetHandle(handle));
-        app.world_mut().spawn((raster_layer("a", 0, 20), Order(0)));
+        spawn_layer(&mut app, raster_layer("a", 0, 20), Order(0));
 
         app.add_systems(Update, run_traverse_system);
         // Two passes with the same camera: the second must not re-spawn a fragment
@@ -423,9 +449,8 @@ mod tests {
         let (mut app, handle) = app_with_root(TerrainTileQuadtree::new_with_linear_qt());
         app.insert_resource(TargetHandle(handle));
         // Regular layer at slot 0, hillshade layer at slot 1.
-        app.world_mut()
-            .spawn((raster_layer("regular", 0, 20), Order(0)));
-        app.world_mut().spawn((hillshade_layer("hill"), Order(1)));
+        spawn_layer(&mut app, raster_layer("regular", 0, 20), Order(0));
+        spawn_layer(&mut app, hillshade_layer("hill"), Order(1));
 
         app.add_systems(Update, run_traverse_system);
         app.update();
@@ -456,7 +481,7 @@ mod tests {
         // A layer that only exists from zoom 2 upward. The root (z=0) and z=1 are
         // below its min zoom, so requests must only appear once the traversal
         // reaches z=2 (subdivision is forced to reach the layer's data).
-        app.world_mut().spawn((raster_layer("a", 2, 20), Order(0)));
+        spawn_layer(&mut app, raster_layer("a", 2, 20), Order(0));
 
         app.add_systems(Update, run_traverse_system);
         app.update();
@@ -478,7 +503,7 @@ mod tests {
     fn traverse_raster_stops_when_sse_satisfied() {
         let (mut app, handle) = app_with_root(TerrainTileQuadtree::new_with_linear_qt());
         app.insert_resource(TargetHandle(handle));
-        app.world_mut().spawn((raster_layer("a", 0, 20), Order(0)));
+        spawn_layer(&mut app, raster_layer("a", 0, 20), Order(0));
         // Huge threshold: the root's error is always acceptable.
         app.insert_resource(TraverseConfig {
             max_sse: 1e30,
@@ -500,7 +525,7 @@ mod tests {
         let (mut app, handle) = app_with_root(TerrainTileQuadtree::new_with_linear_qt());
         app.insert_resource(TargetHandle(handle));
         // max_zoom=2 bounds how deep the forced subdivision goes.
-        app.world_mut().spawn((raster_layer("a", 0, 2), Order(0)));
+        spawn_layer(&mut app, raster_layer("a", 0, 2), Order(0));
         // Zero threshold: the error is never satisfied, so the traversal descends.
         app.insert_resource(TraverseConfig {
             max_sse: 0.,
@@ -526,7 +551,7 @@ mod tests {
         app.insert_resource(TargetHandle(handle));
         // Layer maxes out at zoom 0, so even an unsatisfiable error must not fetch
         // finer tiles past the max zoom.
-        app.world_mut().spawn((raster_layer("a", 0, 0), Order(0)));
+        spawn_layer(&mut app, raster_layer("a", 0, 0), Order(0));
         app.insert_resource(TraverseConfig {
             max_sse: 0.,
             terrain_present: false,

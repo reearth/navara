@@ -316,6 +316,7 @@ export class SDFTextMesh
         camera.position.x,
         camera.position.y,
         camera.position.z,
+        camera.matrixWorldInverse,
         state,
       );
       // Keep atlas-size uniforms in sync with the (possibly resized) shared

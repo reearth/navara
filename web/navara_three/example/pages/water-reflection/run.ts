@@ -37,46 +37,36 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     },
   });
 
-  view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
-    rasterTile: {
-      maxZoom: 23,
-    },
+  const baseImagery = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.gsiSeamlessphoto.url,
+    maxZoom: 23,
   });
+  view.addLayer({ type: "raster", source: baseImagery });
 
+  // GSI DEM shared by the terrain and the hillshade.
+  const dem = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.gsi.url,
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    maxZoom: 15,
+    minZoom: 6,
+  });
   view.addLayer({
     type: "terrain",
-    data: {
-      url: TERRAIN_DATASETS.gsi.url,
-    },
-    rasterTerrain: {
-      maxZoom: 15,
-      minZoom: 6,
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-      receiveShadow: true,
-      castShadow: true,
-    },
+    source: dem,
+    terrain: { receiveShadow: true, castShadow: true },
   });
-
-  view.addLayer({
-    type: "tiles",
-    data: { url: TERRAIN_DATASETS.gsi.url },
-    rasterTile: {
-      maxZoom: 15,
-      minZoom: 6,
-    },
-    hillshade: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
-  });
+  view.addLayer({ type: "raster", source: dem, hillshade: {} });
 
   // Add some 3D tiles buildings
+  const buildings = view.addSource({
+    type: "3d-tiles",
+    url: TILES_3D_DATASETS.plateauChiyoda.url,
+  });
   view.addLayer({
-    type: "cesium3dtiles",
-    data: {
-      url: TILES_3D_DATASETS.plateauChiyoda.url,
-    },
+    type: "3d-tiles",
+    source: buildings,
     model: {
       show: true,
       color: new Color().setStyle("#ffffff"),
@@ -312,12 +302,37 @@ const addSSRControls = (view: ThreeView<CustomDescriptions>, pane: Pane) => {
 };
 
 const addWaterControls = (view: ThreeView<CustomDescriptions>, pane: Pane) => {
+  // Vector-tile and GeoJSON sources for the two water data variants.
+  const waterTileSource = view.addSource({
+    type: "vector-tile",
+    url: VECTOR_DATASETS.gsiExperimentalVector.url,
+    maxZoom: 16,
+  });
+  const waterGeojsonSource = view.addSource({
+    type: "geojson",
+    data: {
+      type: "Feature",
+      properties: null,
+      geometry: {
+        coordinates: [
+          [
+            [139.64114960199845, 35.77501909535009],
+            [139.64114960199845, 35.6170718697025],
+            [139.90177394130632, 35.6170718697025],
+            [139.90177394130632, 35.77501909535009],
+            [139.64114960199845, 35.77501909535009],
+          ],
+        ],
+        type: "Polygon",
+      },
+    },
+  });
+
   // Store the layer description object
   const mvtDesc: LayerDescription = {
-    type: "mvt",
-    data: {
-      url: VECTOR_DATASETS.gsiExperimentalVector.url,
-    },
+    type: "vector",
+    source: waterTileSource.id,
+    sourceLayers: ["waterarea"],
     polygon: {
       color: new Color().setStyle("#001e0f"),
       reflectivity: 0.02,
@@ -332,28 +347,10 @@ const addWaterControls = (view: ThreeView<CustomDescriptions>, pane: Pane) => {
       transparent: false,
       opacity: 1.0,
     },
-    vectorTile: {
-      maxZoom: 16,
-      layers: ["waterarea"],
-    },
   };
   const geoJsonDesc: LayerDescription = {
-    type: "geojson" as const,
-    data: {
-      type: "Feature" as const,
-      geometry: {
-        coordinates: [
-          [
-            [139.64114960199845, 35.77501909535009],
-            [139.64114960199845, 35.6170718697025],
-            [139.90177394130632, 35.6170718697025],
-            [139.90177394130632, 35.77501909535009],
-            [139.64114960199845, 35.77501909535009],
-          ],
-        ],
-        type: "Polygon" as const,
-      },
-    },
+    type: "vector",
+    source: waterGeojsonSource.id,
     polygon: {
       color: new Color().setStyle("#001e0f"),
       height: 55,

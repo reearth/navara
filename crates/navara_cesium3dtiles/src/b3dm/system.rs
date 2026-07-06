@@ -31,17 +31,23 @@ use super::requester::B3dmLayerDataRequesterMarker;
 pub fn request_model_by_b3dm_layer(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
+    source_store: Res<navara_source::SourceStore>,
     b3dm_layers: Query<(Entity, &B3dmLayer), Added<B3dmLayer>>,
 ) {
     for (e, layer) in &b3dm_layers {
+        // Resolve the content URL live from the referenced source.
+        let Some(base_url) = layer
+            .source_id
+            .as_deref()
+            .and_then(|id| source_store.get(id))
+            .and_then(|s| s.url())
+        else {
+            continue;
+        };
         commands.spawn((
             B3dmLayerDataRequesterMarker(e),
             Priority::Medium,
-            DataRequester::from_store(
-                layer.data.as_ref().unwrap().url.clone(),
-                &mut buf,
-                DataRequesterExtension::B3dm,
-            ),
+            DataRequester::from_store(base_url.to_owned(), &mut buf, DataRequesterExtension::B3dm),
         ));
     }
 }
@@ -154,7 +160,7 @@ pub fn delete_model_by_b3dm_layer(
     mut feature_batch_id_map: ResMut<FeatureBatchIdMap>,
     mut layer_store: ResMut<LayerStore>,
     deleted: Query<(Entity, &DeleteB3dmLayerMarker)>,
-    b3dm_layers: Query<Entity, With<B3dmLayer>>,
+    b3dm_layers: Query<(Entity, &B3dmLayer)>,
     features: Query<
         (&ModelBin, &FeatureBatchId, &GlobalBatchIds),
         (
@@ -195,8 +201,12 @@ pub fn delete_model_by_b3dm_layer(
             }
         }
 
-        for e in &b3dm_layers {
-            commands.entity(e).despawn();
+        // Despawn only the B3DM layer entity being deleted, not every B3DM
+        // layer: `d.0` is the target layer id, so match on it.
+        for (le, layer) in &b3dm_layers {
+            if layer.layer_id == d.0 {
+                commands.entity(le).despawn();
+            }
         }
         layer_store.remove(&d.0);
         commands.entity(e).despawn();

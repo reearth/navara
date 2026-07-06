@@ -369,6 +369,8 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
           camera.position.z,
           enhancer.states(),
         );
+      } else {
+        mutates.updateRtcUniforms(camera.matrixWorldInverse, enhancer.states());
       }
     };
 

@@ -47,16 +47,13 @@ view.addPlugin(plugin);
 // Initialize the engine
 await view.init();
 
-// Add a raster tile layer using OpenStreetMap
-view.addLayer({
-  type: "tiles",
-  data: {
-    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-  },
-  rasterTile: {
-    maxZoom: 18,
-  },
+// Register a raster tile source (OpenStreetMap), then render it with a layer
+const basemap = view.addSource({
+  type: "raster-tile",
+  url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  maxZoom: 18,
 });
+view.addLayer({ type: "raster", source: basemap });
 
 // Position the camera over Tokyo
 view.setCamera({

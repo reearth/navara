@@ -11,7 +11,7 @@ This page describes all functions (methods) available on a ThreeView instance.
 
 ### addLayer()
 
-Adds a new resource layer to navara_three. This method is used for resource layers only (tiles, terrain, geojson, mvt, cesium3dtiles, b3dm, pnts). For mesh, light, and effect descriptors, use `addMesh()`, `addLight()`, and `addEffect()` respectively.
+Adds a new resource layer to navara_three. This method is used for resource layers only (vector, raster, terrain, 3d-tiles). Each resource layer references a [source](../../../three/source/about/) via its `source` property. For mesh, light, and effect descriptors, use `addMesh()`, `addLight()`, and `addEffect()` respectively.
 
 **Syntax:**
 
@@ -21,7 +21,7 @@ addLayer(l: LayerDescription): Layer
 
 **Parameters:**
 
-For detailed types of LayerDescription, see [Resource Layer Reference](../../../three/resource-layer/resource-layer/).
+For layer configuration options, see [About Layer](../../../three/layer/about/) and each layer type page.
 
 **Returns:**
 
@@ -34,19 +34,57 @@ Returns a `Layer` instance for the added resource layer.
 **Example:**
 
 ```tsx
+const source = view.addSource({
+  type: "raster-tile",
+  url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
+  maxZoom: 23,
+});
+
 const layer = view.addLayer({
-  type: "tiles",
-  data: {
-    url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
-  },
-  rasterTile: {
-    segments: 10,
+  type: "raster",
+  source,
+  raster: {
     color: new Color().setStyle("#cccccc"),
-    maxSse: 2,
-    maxZoom: 23,
-    wireframe: false,
   },
 });
+```
+
+### addSource()
+
+Registers a data [source](../../../three/source/about/) and returns a `Source` handle. A source describes where data comes from and how it is fetched/decoded; reference it from a resource layer via the layer's `source` property (the handle or its `id`).
+
+**Syntax:**
+
+```tsx
+addSource(s: SourceDescription): Source
+```
+
+**Parameters:**
+
+For the available source types and their fields, see [About Source](../../../three/source/about/).
+
+**Returns:**
+
+```tsx
+Source;
+```
+
+A `Source` handle exposing `id`, `type`, `update(s)`, and `delete()`.
+
+**Example:**
+
+```tsx
+const imagery = view.addSource({
+  type: "raster-tile",
+  url: "https://example.com/{z}/{x}/{y}.png",
+  maxZoom: 19,
+});
+
+view.addLayer({ type: "raster", source: imagery });
+
+// Later
+imagery.update({ type: "raster-tile", url: "https://example.com/new/{z}/{x}/{y}.png" });
+imagery.delete();
 ```
 
 ### addMesh()
@@ -145,17 +183,12 @@ updateLayerById(id: string, l: LayerDescription): void
 ```tsx
 const id = layer.id; // Get the layer ID from the addLayer return value
 
+// `source` is the raster-tile source referenced by the layer.
 view.updateLayerById(id, {
-  type: "tiles",
-  data: {
-    url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
-  },
-  rasterTile: {
-    segments: 10,
+  type: "raster",
+  source,
+  raster: {
     color: new Color().setStyle("#ffffff"),
-    maxSse: 2,
-    maxZoom: 23,
-    wireframe: false,
   },
 });
 ```
@@ -343,11 +376,13 @@ const view = new ThreeView();
 await view.init();
 
 // Add layers after init()
-view.addLayer({
-  type: "tiles",
-  data: { url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png" },
-  rasterTile: { maxZoom: 19 },
+const osm = view.addSource({
+  type: "raster-tile",
+  url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  maxZoom: 19,
 });
+
+view.addLayer({ type: "raster", source: osm });
 ```
 
 ### dispose()
@@ -986,7 +1021,7 @@ await view.init();
 
 ### addFontFamily()
 
-Registers a font family composed of multiple faces. Each face covers a set of unicode ranges and points to a separate font file URL (ttf, otf, woff, or woff2). Once a family is registered, a text layer can reference it by its `family` name through [`material.font`](../../resource-layer/text-material/#font); only the faces whose unicode ranges cover the characters in the label's `text` are downloaded.
+Registers a font family composed of multiple faces. Each face covers a set of unicode ranges and points to a separate font file URL (ttf, otf, woff, or woff2). Once a family is registered, a text layer can reference it by its `family` name through [`material.font`](../../../three/material/text-material/#font); only the faces whose unicode ranges cover the characters in the label's `text` are downloaded.
 
 **Face priority and fallback:**
 
@@ -1028,9 +1063,14 @@ view.addFontFamily({
   ],
 });
 
-const layer = view.addLayer({
+const source = view.addSource({
   type: "geojson",
-  data: { url: "/cities.geojson" },
+  url: "/cities.geojson",
+});
+
+const layer = view.addLayer({
+  type: "vector",
+  source,
   text: {
     font: "MapFont",
   },

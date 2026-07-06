@@ -1,4 +1,4 @@
-import { type DataTexture, Color } from "three";
+import { type DataTexture, Color, Matrix4 } from "three";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ShaderUniforms } from "../../MaterialEnhancer";
@@ -225,7 +225,7 @@ describe("sdfTextBaseEnhancer/mutates", () => {
       const mutates = createBaseMutates(false);
       mutates.update(state);
 
-      mutates.updatePerFrame(1.5, 1080, 10000, 0, 0, 0, state);
+      mutates.updatePerFrame(1.5, 1080, 10000, 0, 0, 0, new Matrix4(), state);
 
       const uniforms: ShaderUniforms = {};
       mutates.updateUniforms(uniforms, state);
@@ -243,7 +243,16 @@ describe("sdfTextBaseEnhancer/mutates", () => {
       const mutates = createBaseMutates(true);
       mutates.update(state);
 
-      mutates.updatePerFrame(1.0, 1080, 1000, 100, 200, 300, state);
+      mutates.updatePerFrame(
+        1.0,
+        1080,
+        1000,
+        100,
+        200,
+        300,
+        new Matrix4(),
+        state,
+      );
 
       const uniforms: ShaderUniforms = {};
       mutates.updateUniforms(uniforms, state);
@@ -262,7 +271,16 @@ describe("sdfTextBaseEnhancer/mutates", () => {
       const mutates = createBaseMutates(false);
       mutates.update(state);
 
-      mutates.updatePerFrame(1.0, 1080, 1000, 100, 200, 300, state);
+      mutates.updatePerFrame(
+        1.0,
+        1080,
+        1000,
+        100,
+        200,
+        300,
+        new Matrix4(),
+        state,
+      );
 
       const uniforms: ShaderUniforms = {};
       mutates.updateUniforms(uniforms, state);
@@ -270,6 +288,23 @@ describe("sdfTextBaseEnhancer/mutates", () => {
       expect(uniforms.uEyeRTEHigh?.value.x).toBe(0);
       expect(uniforms.uEyeRTEHigh?.value.y).toBe(0);
       expect(uniforms.uEyeRTEHigh?.value.z).toBe(0);
+    });
+
+    it("should transform the RTC center into view space when useRTE=false", () => {
+      const state: SdfTextBaseState = { ...DEFAULT_BASE_STATE };
+      const mutates = createBaseMutates(false, [6_400_000, 0, 0]);
+      mutates.update(state);
+
+      // View matrix cancels the center's large X so it lands near the origin.
+      const viewInverse = new Matrix4().makeTranslation(-6_400_000, 0, 0);
+      mutates.updatePerFrame(1.0, 1080, 1000, 0, 0, 0, viewInverse, state);
+
+      const uniforms: ShaderUniforms = {};
+      mutates.updateUniforms(uniforms, state);
+
+      expect(uniforms.uRTCCenterView?.value.x).toBeCloseTo(0, 3);
+      expect(uniforms.uRTCCenterView?.value.y).toBeCloseTo(0, 3);
+      expect(uniforms.uRTCCenterView?.value.z).toBeCloseTo(0, 3);
     });
   });
 

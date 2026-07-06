@@ -129,6 +129,7 @@ navara_parser = { path = "crates/navara_parser" }
 navara_pmtiles = { path = "crates/navara_pmtiles" }
 navara_pnts = { path = "crates/navara_pnts" }
 navara_quadtree = { path = "crates/navara_quadtree" }
+navara_source = { path = "crates/navara_source" }
 navara_texture_fragment = { path = "crates/navara_texture_fragment" }
 navara_tile = { path = "crates/navara_tile" }
 navara_vector_tile = { path = "crates/navara_vector_tile" }

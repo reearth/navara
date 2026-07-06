@@ -1,7 +1,7 @@
 use bevy_ecs::prelude::*;
 use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, Order, OrderByDistance, Priority};
-use navara_core::{Ellipsoid, TilingScheme};
+use navara_core::Ellipsoid;
 use navara_data_requester::DataManager;
 
 use navara_fog::Fog;
@@ -27,6 +27,7 @@ use super::{
 };
 
 use navara_layer::{TerrainDataType, TerrainLayer, TilesLayer};
+use navara_source::SourceStore;
 
 // This process works in the following steps.
 // 1. Check if the AABB of the tile is within the camera's frustum.(Frustum culling)
@@ -41,6 +42,7 @@ pub fn traverse_terrain(
     command: &mut Commands,
     tiles: &Query<(&TilesLayer, &Order)>,
     terrain_layer: &Option<&TerrainLayer>,
+    source_store: &SourceStore,
     handle: TileHandle,
     tc: &mut TileCacheManager,
     qt: &mut TerrainTileQuadtree,
@@ -73,7 +75,8 @@ pub fn traverse_terrain(
                 && tiles
                     .iter()
                     .filter(|(t, _)| t.hillshade_config.is_none())
-                    .all(|(t, _)| t.is_over_max_zoom(tile.coords.z));
+                    .filter_map(|(t, _)| t.source_id.as_deref().and_then(|id| source_store.get(id)))
+                    .all(|s| s.is_over_max_zoom(tile.coords.z));
 
             // Hillshade layers: allow overscaling - stop at overscaled_max_zoom
             let has_hillshade_tiles = tiles.iter().any(|(t, _)| t.hillshade_config.is_some());
@@ -81,13 +84,14 @@ pub fn traverse_terrain(
                 && tiles
                     .iter()
                     .filter(|(t, _)| t.hillshade_config.is_some())
-                    .all(|(t, _)| t.is_over_overscaled_max_zoom(tile.coords.z));
+                    .filter_map(|(t, _)| t.source_id.as_deref().and_then(|id| source_store.get(id)))
+                    .all(|s| s.is_over_overscaled_max_zoom(tile.coords.z));
 
             // Terrain: allow upsampling - stop at overscaled_max_zoom
-            let terrain_overmax = terrain_layer.is_some()
-                && terrain_layer
-                    .unwrap()
-                    .is_over_overscaled_max_zoom(tile.coords.z);
+            let terrain_overmax = terrain_layer
+                .and_then(|l| l.source_id.as_deref())
+                .and_then(|id| source_store.get(id))
+                .is_some_and(|s| s.is_over_overscaled_max_zoom(tile.coords.z));
 
             // Only stop if ALL active sources are beyond their limits
             if (!has_regular_tiles || tile_overmax)
@@ -126,6 +130,7 @@ pub fn traverse_terrain(
         terrain_data_requester,
         terrain_layer,
         tiles,
+        source_store,
     );
     let is_tile_ready = tile_ready_state.is_tile_ready;
     let use_terrain = tile_ready_state.use_terrain;
@@ -154,7 +159,8 @@ pub fn traverse_terrain(
         tiles
             .iter()
             .filter(|(t, _)| t.hillshade_config.is_none())
-            .any(|(t, _)| t.is_over_min_zoom(tile.coords.z))
+            .filter_map(|(t, _)| t.source_id.as_deref().and_then(|id| source_store.get(id)))
+            .any(|s| s.is_over_min_zoom(tile.coords.z))
     } else {
         true
     };
@@ -172,6 +178,7 @@ pub fn traverse_terrain(
             command,
             tile,
             tiles,
+            source_store,
             handle,
             data_requesters,
             Priority::High,
@@ -183,7 +190,7 @@ pub fn traverse_terrain(
     // This should not create the unnecessary terrain data, since `is_upsamplable` becomes `true`
     // only when the parent tile has been rendered.
     if tile_ready_state.is_upsamplable {
-        prepare_upsamplable_terrain_data(qt, terrain_layer, handle);
+        prepare_upsamplable_terrain_data(qt, terrain_layer, source_store, handle);
     }
 
     if meets_sse || meets_sse_ancestors {
@@ -197,6 +204,7 @@ pub fn traverse_terrain(
                 handle,
                 tc,
                 tiles,
+                source_store,
                 data_requesters,
                 terrain_data_requester,
                 if is_renderable {
@@ -250,6 +258,7 @@ pub fn traverse_terrain(
                 command,
                 tiles,
                 terrain_layer,
+                source_store,
                 *child,
                 tc,
                 qt,
@@ -416,6 +425,7 @@ pub fn traverse_terrain(
                 handle,
                 tc,
                 tiles,
+                source_store,
                 data_requesters,
                 terrain_data_requester,
                 Priority::Extreme,
@@ -532,24 +542,30 @@ pub fn prepare_tile_resource(
     handle: TileHandle,
     tc: &mut TileCacheManager,
     tiles: &Query<(&TilesLayer, &Order)>,
+    source_store: &SourceStore,
     data_requesters: &Query<&navara_data_requester::DataRequester>,
     terrain_data_requester: &TileTerrainDataRequesterQuery,
     priority: Priority,
 ) {
     let tile = qt.qt.get_mut(handle).unwrap();
 
-    let should_upsample = terrain_layer.is_some_and(|l| l.should_upsample(tile.coords.z));
+    let terrain_source = terrain_layer
+        .and_then(|l| l.source_id.as_deref())
+        .and_then(|id| source_store.get(id));
+
+    let should_upsample = terrain_source.is_some_and(|s| s.should_overscale(tile.coords.z));
     if should_upsample {
         return;
     }
 
-    if matches!(terrain_layer, Some(l) if l.is_over_min_zoom(tile.coords.z)) {
+    if matches!(terrain_source, Some(s) if s.is_over_min_zoom(tile.coords.z)) {
         request_terrain_data(
             commands,
             tile,
             buf,
             data_manager,
             terrain_layer,
+            source_store,
             handle,
             terrain_data_requester,
             priority,
@@ -561,6 +577,7 @@ pub fn prepare_tile_resource(
             commands,
             tile,
             tiles,
+            source_store,
             handle,
             data_requesters,
             Priority::High,
@@ -577,6 +594,7 @@ pub fn prepare_tile_resource(
 fn prepare_upsamplable_terrain_data(
     qt: &mut TerrainTileQuadtree,
     terrain_layer: &Option<&TerrainLayer>,
+    source_store: &SourceStore,
     handle: TileHandle,
 ) {
     if qt.qt.get(handle).is_some_and(|t| t.terrain_data.is_some()) {
@@ -586,25 +604,24 @@ fn prepare_upsamplable_terrain_data(
     let Some(layer) = terrain_layer else {
         return;
     };
+    let Some(source) = layer
+        .source_id
+        .as_deref()
+        .and_then(|id| source_store.get(id))
+    else {
+        return;
+    };
 
     let terrain_data: Box<dyn navara_tile_component::TerrainData> = match &layer.terrain_type {
         TerrainDataType::RasterDEM => {
-            let Some(elevation_decoder) = layer
-                .appearance
-                .as_ref()
-                .and_then(|a| a.elevation_decoder())
-            else {
+            let Some(elevation_decoder) = source.elevation_decoder() else {
                 return;
             };
             Box::new(RasterDEMData::new(*elevation_decoder))
         }
-        TerrainDataType::QuantizedMesh => {
-            let scheme = layer
-                .appearance
-                .as_ref()
-                .map_or_else(TilingScheme::default, |a| a.tiling_scheme());
-            Box::new(QuantizedMeshData::new_with_tiling_scheme(scheme))
-        }
+        TerrainDataType::QuantizedMesh => Box::new(QuantizedMeshData::new_with_tiling_scheme(
+            source.tiling_scheme(),
+        )),
         TerrainDataType::Ellipsoid | TerrainDataType::Unknown => unreachable!(),
     };
 
@@ -639,8 +656,7 @@ mod tests {
     use bevy_app::{App, Update};
 
     use navara_core::{Aabb, Angle, TileXYZ, WGS84_64, WGS84_A_64};
-    use navara_layer::LayerData;
-    use navara_material::{Appearance, RasterTileMaterial};
+    use navara_material::{Appearance, RasterMaterial};
     use navara_math::Vec3;
 
     /// Camera placed at twice the Earth radius above (lng 0, lat 0), looking at
@@ -717,6 +733,7 @@ mod tests {
         mut meshes: Query<&mut Mesh, (With<TileMeshMarker>, Without<Deleted>)>,
         target: Res<TargetHandle>,
         config: Res<TraverseConfig>,
+        source_store: Res<SourceStore>,
         mut out: ResMut<LastResult>,
     ) {
         let (camera, frustum, occluder) = test_camera();
@@ -731,6 +748,7 @@ mod tests {
             &mut commands,
             &tiles,
             &terrain_layer,
+            &source_store,
             target.0,
             &mut tc,
             &mut qt,
@@ -771,22 +789,38 @@ mod tests {
         }
     }
 
-    /// A regular (non-hillshade) raster layer with the given zoom range.
-    fn raster_layer(layer_id: &str, min_zoom: usize, max_zoom: usize) -> TilesLayer {
-        TilesLayer {
+    /// A regular (non-hillshade) raster layer with the given zoom range, paired
+    /// with the source carrying that zoom range (zoom lives on the source now).
+    fn raster_layer(
+        layer_id: &str,
+        min_zoom: usize,
+        max_zoom: usize,
+    ) -> (TilesLayer, navara_source::Source) {
+        let layer = TilesLayer {
             layer_id: layer_id.to_string(),
-            data: Some(LayerData {
-                url: "https://example.com/{z}/{x}/{y}.png".to_string(),
-            }),
-            appearance: Some(Appearance::TerrainTile(RasterTileMaterial {
-                min_zoom,
-                max_zoom,
-                overscaled_max_zoom: max_zoom,
-                ..Default::default()
-            })),
+            source_id: Some(layer_id.to_string()),
+            appearance: Some(Appearance::TerrainTile(RasterMaterial::default())),
             elevation_heatmap_config: None,
             hillshade_config: None,
-        }
+        };
+        let source = navara_source::Source::RasterTile(navara_source::RasterTileSource {
+            source_id: layer_id.to_string(),
+            url: "https://example.com/{z}/{x}/{y}.png".to_string(),
+            tms: false,
+            min_zoom,
+            max_zoom,
+            overscaled_max_zoom: max_zoom,
+        });
+        (layer, source)
+    }
+
+    /// Register the layer's source in the store and spawn the layer entity.
+    fn spawn_layer(app: &mut App, layer: (TilesLayer, navara_source::Source), order: Order) {
+        let (layer, source) = layer;
+        app.world_mut()
+            .resource_mut::<SourceStore>()
+            .add(source.source_id().to_string(), source);
+        app.world_mut().spawn((layer, order));
     }
 
     /// App holding the terrain quadtree root and the resources `traverse_terrain`
@@ -811,6 +845,7 @@ mod tests {
         });
         app.insert_resource(LastResult::default());
         app.insert_resource(TraverseConfig { max_sse: 1e30 });
+        app.insert_resource(SourceStore::default());
 
         (app, handle)
     }
@@ -821,7 +856,7 @@ mod tests {
         app.insert_resource(TargetHandle(handle));
         // Layer maxes out at zoom 0; the root (z=0) is already beyond it, so all
         // sources are over their limit and the traversal bails before visiting.
-        app.world_mut().spawn((raster_layer("a", 0, 0), Order(0)));
+        spawn_layer(&mut app, raster_layer("a", 0, 0), Order(0));
 
         app.add_systems(Update, run_terrain_traverse);
         app.update();
@@ -839,7 +874,7 @@ mod tests {
     fn traverse_terrain_renders_ready_tile_when_sse_satisfied() {
         let (mut app, handle) = terrain_app_with_root();
         app.insert_resource(TargetHandle(handle));
-        app.world_mut().spawn((raster_layer("a", 0, 20), Order(0)));
+        spawn_layer(&mut app, raster_layer("a", 0, 20), Order(0));
         // Huge threshold: the root's error is acceptable. With no terrain layer the
         // tile is ready (flat geometry), so geometry-first rendering selects it.
         app.insert_resource(TraverseConfig { max_sse: 1e30 });
@@ -863,7 +898,7 @@ mod tests {
         let (mut app, handle) = terrain_app_with_root();
         app.insert_resource(TargetHandle(handle));
         // max_zoom=1 bounds the forced subdivision to a single level.
-        app.world_mut().spawn((raster_layer("a", 0, 1), Order(0)));
+        spawn_layer(&mut app, raster_layer("a", 0, 1), Order(0));
         // Zero threshold: the root error is never satisfied, so it subdivides.
         app.insert_resource(TraverseConfig { max_sse: 0. });
 
@@ -882,7 +917,7 @@ mod tests {
     #[test]
     fn traverse_terrain_culls_occluded_tile() {
         let (mut app, _root) = terrain_app_with_root();
-        app.world_mut().spawn((raster_layer("a", 0, 20), Order(0)));
+        spawn_layer(&mut app, raster_layer("a", 0, 20), Order(0));
 
         // A tile on the far side of the globe (centre ~lng 146°, > 60° from the
         // camera), so its horizon-culling point is occluded.
@@ -956,7 +991,7 @@ mod tests {
         app.insert_resource(TargetHandle(root));
         // max_zoom=2 bounds the forced subdivision: the z=1 children render, their
         // z=2 grandchildren are over max → NotFound, so each child resolves at z=1.
-        app.world_mut().spawn((raster_layer("a", 0, 2), Order(0)));
+        spawn_layer(&mut app, raster_layer("a", 0, 2), Order(0));
         app.insert_resource(TraverseConfig { max_sse: 0. });
 
         // The parent begins visible: a prepared, active mesh.

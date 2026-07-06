@@ -47,16 +47,13 @@ view.addPlugin(plugin);
 // エンジンを初期化
 await view.init();
 
-// OpenStreetMap を使用したラスタータイルレイヤーを追加
-view.addLayer({
-  type: "tiles",
-  data: {
-    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-  },
-  rasterTile: {
-    maxZoom: 18,
-  },
+// ラスタータイル Source（OpenStreetMap）を登録し、レイヤーで描画
+const basemap = view.addSource({
+  type: "raster-tile",
+  url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  maxZoom: 18,
 });
+view.addLayer({ type: "raster", source: basemap });
 
 // カメラを東京上空に配置
 view.setCamera({

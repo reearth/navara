@@ -4,7 +4,6 @@ use bevy_ecs::system::Commands;
 
 use navara_buffer_store::BufferStore;
 use navara_component::{OrderByDistance, Priority, Requested};
-use navara_core::TilingScheme;
 use navara_data_requester::{DataManager, DataRequester, DataRequesterExtension};
 use navara_layer::{TerrainDataType, TerrainLayer};
 use navara_tile_component::{
@@ -19,6 +18,7 @@ pub(crate) fn request_terrain_data(
     buf: &mut BufferStore,
     data_manager: &mut DataManager,
     terrain_layer: &Option<&TerrainLayer>,
+    source_store: &navara_source::SourceStore,
     handle: TileHandle,
     terrain_data_requester: &TileTerrainDataRequesterQuery,
     priority: Priority,
@@ -38,15 +38,20 @@ pub(crate) fn request_terrain_data(
             _ => {}
         }
 
-        let scheme = t
-            .appearance
-            .as_ref()
-            .map_or_else(TilingScheme::default, |a| a.tiling_scheme());
-        let url = scheme.tile_url(t.data.as_ref().unwrap().url.as_str(), tile.coords);
+        // All terrain fetch config (URL, tiling scheme, decoder, quantized-mesh
+        // extensions, token) is read live from the referenced source.
+        let Some(source) = t.source_id.as_deref().and_then(|id| source_store.get(id)) else {
+            return;
+        };
+        let scheme = source.tiling_scheme();
+        let Some(url_template) = source.url() else {
+            return;
+        };
+        let url = scheme.tile_url(url_template, tile.coords);
         let mut terrain_data: Box<dyn TerrainData> = match &t.terrain_type {
-            TerrainDataType::RasterDEM => Box::new(RasterDEMData::new(
-                *t.appearance.as_ref().unwrap().elevation_decoder().unwrap(),
-            )),
+            TerrainDataType::RasterDEM => {
+                Box::new(RasterDEMData::new(*source.elevation_decoder().unwrap()))
+            }
             TerrainDataType::QuantizedMesh => {
                 Box::new(QuantizedMeshData::new_with_tiling_scheme(scheme.clone()))
             }
@@ -54,15 +59,9 @@ pub(crate) fn request_terrain_data(
         };
         let extension = DataRequesterExtension::from_url(&url::Url::from_str(&url).unwrap());
 
-        let (request_vertex_normals, request_water_mask) = t
-            .appearance
-            .as_ref()
-            .map(|app| (app.request_vertex_normals(), app.request_water_mask()))
-            .unwrap_or((false, false));
-        let token = t
-            .appearance
-            .as_ref()
-            .and_then(|app| app.token().map(|s| s.to_string()));
+        let request_vertex_normals = source.request_vertex_normals();
+        let request_water_mask = source.request_water_mask();
+        let token = source.token().map(|s| s.to_string());
 
         // Spawn entity first to get entity ID
         let entity_id = commands.spawn_empty().id();
