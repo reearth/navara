@@ -197,6 +197,7 @@ export class TileTextureCompositor {
     const camera = this.vectorCamera;
     const prevTarget = this.renderer.getRenderTarget();
     const prevClear = this.renderer.getClearColor(PREV_CLEAR_COLOR);
+    const prevClearAlpha = this.renderer.getClearAlpha();
     const prevAutoClear = this.renderer.autoClear;
     // Accumulate multiple sources into one RT: clear once, never per render.
     this.renderer.autoClear = false;
@@ -238,7 +239,7 @@ export class TileTextureCompositor {
 
     this.renderer.autoClear = prevAutoClear;
     this.renderer.setRenderTarget(prevTarget);
-    this.renderer.setClearColor(prevClear, 1);
+    this.renderer.setClearColor(prevClear, prevClearAlpha);
   }
 
   // ---------------------------------------------------------------------
@@ -269,6 +270,7 @@ export class TileTextureCompositor {
 
     const prevTarget = this.renderer.getRenderTarget();
     const prevClear = this.renderer.getClearColor(PREV_CLEAR_COLOR);
+    const prevClearAlpha = this.renderer.getClearAlpha();
 
     // No active slots → either clear (nothing to bake) or fall through to the
     // shader path when a slot-independent feature still needs to write the
@@ -281,7 +283,7 @@ export class TileTextureCompositor {
       this.renderer.setClearColor(0x000000, 0);
       this.renderer.clear();
       this.renderer.setRenderTarget(prevTarget);
-      this.renderer.setClearColor(prevClear, 1);
+      this.renderer.setClearColor(prevClear, prevClearAlpha);
       entry.atlas.color.needsUpdate = true;
       entry.atlas.attr.needsUpdate = true;
       entry.atlas.normal.needsUpdate = true;
@@ -300,7 +302,7 @@ export class TileTextureCompositor {
     this.renderer.render(this.quadScene, this.quadCamera);
 
     this.renderer.setRenderTarget(prevTarget);
-    this.renderer.setClearColor(prevClear, 1);
+    this.renderer.setClearColor(prevClear, prevClearAlpha);
 
     entry.atlas.color.needsUpdate = true;
     entry.atlas.attr.needsUpdate = true;
