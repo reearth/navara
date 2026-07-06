@@ -379,18 +379,21 @@ export class SDFTextMesh
   }
 
   setOpacity(opacity: number): void {
-    this._enhancer.update({ base: { opacity } });
+    const clampedOpacity = Number.isFinite(opacity)
+      ? Math.max(0, Math.min(1, opacity))
+      : 1.0;
+    this._enhancer.update({ base: { opacity: clampedOpacity } });
   }
 
   _setFeatureWidth(_width: number): void {
     // Width is not applicable to text meshes.
     // This method is intentionally a no-op to satisfy the FeatureMesh guard.
   }
-  _setFeatureSize(size: number): void {
-    this.setSize(size);
-  }
   _setFeatureOpacity(opacity: number): void {
-    this._enhancer.update({ base: { opacity } });
+    const clampedOpacity = Number.isFinite(opacity)
+      ? Math.max(0, Math.min(1, opacity))
+      : 1.0;
+    this._enhancer.update({ base: { opacity: clampedOpacity } });
   }
 
   setPosition(
@@ -435,7 +438,10 @@ export class SDFTextMesh
       hasUpdate = true;
     }
 
-    const nextOpacity = material.opacity ?? 1.0;
+    const nextOpacityRaw = material.opacity ?? 1.0;
+    const nextOpacity = Number.isFinite(nextOpacityRaw)
+      ? Math.max(0.0, Math.min(1.0, nextOpacityRaw))
+      : 1.0;
     if (nextOpacity !== state.opacity) {
       baseProps.opacity = nextOpacity;
       hasUpdate = true;

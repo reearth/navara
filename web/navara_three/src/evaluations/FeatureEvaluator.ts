@@ -303,8 +303,7 @@ export class FeatureEvaluator {
    * - `extrudedHeight` - Extrusion height for polygons in meters
    * - `text` - Label text content (for text/label features)
    * - `width` - Line width in pixels (for polylines)
-   * - `size` - Point/text size in pixels or meters (for points/text)
-   * - `opacity` - Feature opacity 0-1 (for polygons)
+   * - `opacity` - Feature opacity 0-1
    *
    * Note: Evaluated styles override the layer's default styles.
    *
@@ -454,9 +453,6 @@ export class FeatureEvaluator {
       }
       if (evaluated.width != null) {
         featureMesh._setFeatureWidth(evaluated.width);
-      }
-      if (evaluated.size != null) {
-        featureMesh._setFeatureSize(evaluated.size);
       }
       if (evaluated.opacity != null) {
         featureMesh._setFeatureOpacity(evaluated.opacity);

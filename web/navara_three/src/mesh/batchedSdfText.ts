@@ -458,7 +458,10 @@ export class BatchedSdfTextMesh
   setFeatureOpacityByBatchIndex(batchIndex: number, opacity: number) {
     const mesh = this.meshes()[batchIndex];
     if (mesh) {
-      mesh.setOpacity(opacity);
+      const clampedOpacity = Number.isFinite(opacity)
+        ? Math.max(0, Math.min(1, opacity))
+        : 1.0;
+      mesh.setOpacity(clampedOpacity);
     }
   }
 

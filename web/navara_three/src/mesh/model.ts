@@ -440,11 +440,6 @@ export class ModelMesh
     // This method is intentionally a no-op to satisfy the FeatureMesh interface.
   }
 
-  _setFeatureSize(_size: number): void {
-    // Size adjustment is not applicable to 3D models.
-    // This method is intentionally a no-op to satisfy the FeatureMesh interface.
-  }
-
   _setFeatureOpacity(opacity: number): void {
     this.traverseMesh((m) => {
       this._updateBatchAttribute(m, 0, "opacity", opacity);

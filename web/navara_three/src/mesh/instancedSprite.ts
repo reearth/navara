@@ -618,7 +618,9 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     const paramsAttr = this.geometry.getAttribute(
       "instanceParams",
     ) as InstancedBufferAttribute;
-    paramsAttr.setX(instanceId, height);
+
+    const sanitizedHeight = Number.isFinite(height) ? height : 0.0;
+    paramsAttr.setX(instanceId, sanitizedHeight);
     paramsAttr.needsUpdate = true;
   }
 
@@ -629,7 +631,9 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     const paramsAttr = this.geometry.getAttribute(
       "instanceParams",
     ) as InstancedBufferAttribute;
-    paramsAttr.setY(instanceId, size);
+
+    const sanitizedSize = Number.isFinite(size) ? size : -1.0;
+    paramsAttr.setY(instanceId, sanitizedSize);
     paramsAttr.needsUpdate = true;
   }
 

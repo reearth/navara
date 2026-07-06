@@ -324,7 +324,8 @@ export function updateBatchAttribute(
       }
 
       // Encode the height to RGBA
-      const encodedHeight = encodeFloatToRGBA(value);
+      const sanitizedValue = Number.isFinite(value) ? value : 0.0;
+      const encodedHeight = encodeFloatToRGBA(sanitizedValue);
 
       // Store as RGBA
       const baseIndex = batchBaseIndex(texWidth, rowCount, batchId, rowIndex);
@@ -345,7 +346,8 @@ export function updateBatchAttribute(
         material.needsUpdate = true;
       }
 
-      const encodedHeight = encodeFloatToRGBA(value);
+      const sanitizedValue = Number.isFinite(value) ? value : 0.0;
+      const encodedHeight = encodeFloatToRGBA(sanitizedValue);
 
       const baseIndex = batchBaseIndex(texWidth, rowCount, batchId, rowIndex);
       data[baseIndex] = encodedHeight[0]; // R
@@ -365,7 +367,8 @@ export function updateBatchAttribute(
         material.needsUpdate = true;
       }
 
-      const encodedLineWidth = encodeFloatToRGBA(value);
+      const sanitizedValue = Number.isFinite(value) ? value : -1.0;
+      const encodedLineWidth = encodeFloatToRGBA(sanitizedValue);
 
       const baseIndex = batchBaseIndex(texWidth, rowCount, batchId, rowIndex);
       data[baseIndex] = encodedLineWidth[0]; // R
@@ -421,7 +424,9 @@ export function updateBatchAttribute(
       const { show } = unpackShowOpacity(currentPacked);
 
       // Update opacity, preserve show bit
-      const newOpacity = Math.max(0, Math.min(1, value));
+      const newOpacity = Number.isFinite(value)
+        ? Math.max(0, Math.min(1, value))
+        : 1.0;
       data[baseIndex + 3] = packShowOpacity(show, newOpacity);
       break;
     }

@@ -132,10 +132,6 @@ export class BatchedFeatureMesh<
     this._updateBatchAttribute(0, "lineWidth", width);
   }
 
-  _setFeatureSize(size: number): void {
-    this._updateBatchAttribute(0, "size", size);
-  }
-
   _setFeatureOpacity(opacity: number): void {
     this._updateBatchAttribute(0, "opacity", opacity);
   }

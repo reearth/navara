@@ -346,11 +346,6 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
     // This method is intentionally a no-op to satisfy the FeatureMesh interface.
   }
 
-  _setFeatureSize(_size: number): void {
-    // Size is not applicable to polygon outlines.
-    // This method is intentionally a no-op to satisfy the FeatureMesh interface.
-  }
-
   _setFeatureOpacity(_opacity: number): void {
     // Opacity adjustment is not applicable to polygon outlines.
     // This method is intentionally a no-op to satisfy the FeatureMesh interface.
