@@ -155,13 +155,12 @@ function wrapSegment(
       }
       lines.push(head);
 
-      line = line.slice(breakIdx + 1);
-      while (
-        line.length > 0 &&
-        line[0].charClass === GlyphCharClass.Whitespace
-      ) {
-        line.shift();
-      }
+      const tail = line.slice(breakIdx + 1);
+      const start = tail.findIndex(
+        (gg) => gg.charClass !== GlyphCharClass.Whitespace,
+      );
+      line = start === -1 ? [] : tail.slice(start);
+
       width = 0;
       for (const rest of line) width += rest.xAdvance;
       breakIdx = -1;
@@ -732,13 +731,13 @@ export class SDFTextMesh
     // Unit quad: 2 triangles, 6 vertices
     // prettier-ignore
     const positions = new Float32Array([
-      -0.5, -0.5, 0,   0.5, -0.5, 0,   0.5, 0.5, 0,
-      -0.5, -0.5, 0,   0.5,  0.5, 0,  -0.5, 0.5, 0,
+      -0.5, -0.5, 0, 0.5, -0.5, 0, 0.5, 0.5, 0,
+      -0.5, -0.5, 0, 0.5, 0.5, 0, -0.5, 0.5, 0,
     ]);
     // prettier-ignore
     const uvs = new Float32Array([
-      0, 0,  1, 0,  1, 1,
-      0, 0,  1, 1,  0, 1,
+      0, 0, 1, 0, 1, 1,
+      0, 0, 1, 1, 0, 1,
     ]);
 
     geo.setAttribute("position", new BufferAttribute(positions, 3));
