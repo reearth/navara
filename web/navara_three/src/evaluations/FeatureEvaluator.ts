@@ -53,7 +53,7 @@ export type EvaluatableMaterialProperty = {
   width: AvailableMaterialProperty["width"];
   /** Point/text size expression from layer configuration (for points/text). */
   size: AvailableMaterialProperty["size"];
-  /** Opacity expression from layer configuration (for polygons). */
+  /** Opacity expression from layer configuration (for polygons/points/text where supported). */
   opacity: AvailableMaterialProperty["opacity"];
 };
 

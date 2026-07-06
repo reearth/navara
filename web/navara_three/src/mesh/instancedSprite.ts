@@ -601,7 +601,10 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     const paramsAttr = this.geometry.getAttribute(
       "instanceParams",
     ) as InstancedBufferAttribute;
-    paramsAttr.setW(instanceId, opacity);
+    const clampedOpacity = Number.isFinite(opacity)
+      ? Math.max(0.0, Math.min(1.0, opacity))
+      : 1.0;
+    paramsAttr.setW(instanceId, clampedOpacity);
     paramsAttr.needsUpdate = true;
   }
 

@@ -69,7 +69,7 @@ export function unpackShowOpacity(packedNormalized: number): {
   show: number;
   opacity: number;
 } {
-  const packed = Math.floor(packedNormalized * 255);
+  const packed = Math.max(0, Math.min(255, Math.round(packedNormalized * 255)));
   const showBit = (packed >> 7) & 1;
   const opacityBits = packed & 0x7f;
   return {
