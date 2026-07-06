@@ -435,12 +435,10 @@ export class SDFTextMesh
       hasUpdate = true;
     }
 
-    if (material.opacity !== undefined) {
-      const nextOpacity = material.opacity;
-      if (nextOpacity !== state.opacity) {
-        baseProps.opacity = nextOpacity;
-        hasUpdate = true;
-      }
+    const nextOpacity = material.opacity ?? 1.0;
+    if (nextOpacity !== state.opacity) {
+      baseProps.opacity = nextOpacity;
+      hasUpdate = true;
     }
 
     const nextFontSize = material.size ?? 16.0;
