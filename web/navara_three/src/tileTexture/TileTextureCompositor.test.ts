@@ -14,6 +14,7 @@ function makeRenderer() {
     getRenderTarget: vi.fn().mockReturnValue(null),
     setRenderTarget: vi.fn(),
     getClearColor: vi.fn().mockImplementation((c) => c),
+    getClearAlpha: vi.fn().mockReturnValue(1),
     setClearColor: vi.fn(),
     clear: vi.fn(),
     render: vi.fn(),
