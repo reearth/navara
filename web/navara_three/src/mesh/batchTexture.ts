@@ -271,8 +271,13 @@ export function updateBatchAttribute(
       data[baseIndex] = value[0]; // R
       data[baseIndex + 1] = value[1]; // G
       data[baseIndex + 2] = value[2]; // B
-      if (!material.userData._batchShowTouched) {
-        data[baseIndex + 3] = material.visible ? 1 : 0; // A: Default show
+      // Only write default alpha if neither show nor opacity has been touched
+      if (
+        !material.userData._batchShowTouched &&
+        !material.userData._batchOpacityTouched
+      ) {
+        const defaultShow = material.visible ? 1 : 0;
+        data[baseIndex + 3] = packShowOpacity(defaultShow, 1.0);
       }
       break;
     }
