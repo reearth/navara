@@ -303,6 +303,7 @@ export class FeatureEvaluator {
    * - `extrudedHeight` - Extrusion height for polygons in meters
    * - `text` - Label text content (for text/label features)
    * - `width` - Line width in pixels (for polylines)
+   * - `size` - Feature size in pixels (for points/text)
    * - `opacity` - Feature opacity 0-1
    *
    * Note: Evaluated styles override the layer's default styles.
