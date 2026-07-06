@@ -388,7 +388,8 @@ export function updateBatchAttribute(
         material.needsUpdate = true;
       }
 
-      const encodedSize = encodeFloatToRGBA(value);
+      const sanitizedValue = Number.isFinite(value) ? value : 1.0;
+      const encodedSize = encodeFloatToRGBA(sanitizedValue);
 
       const baseIndex = batchBaseIndex(texWidth, rowCount, batchId, rowIndex);
       data[baseIndex] = encodedSize[0]; // R

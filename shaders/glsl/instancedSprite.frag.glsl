@@ -53,8 +53,8 @@ void main() {
     #ifdef BILLBOARD
         // Sample the specific layer from the Texture Array
         vec4 color = texture(uTexture, vec3(vUv, vLayer));
-        vec4 tint = vec4(vColor, color.a);
-        color *= tint ;
+        // Tint RGB only, preserve texture alpha (avoid squaring alpha)
+        color.rgb *= vColor;
         alpha = color.a * vOpacity; // Apply opacity
     #else
         alpha = nvr_circle_alpha(vUv - vec2(0.5)) * vOpacity; // Apply opacity
