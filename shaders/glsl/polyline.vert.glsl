@@ -34,7 +34,6 @@ uniform vec2 frustumNearFar;
 uniform vec4 frustumRatio;
 uniform float maxWidth;
 uniform float uAddHeight;
-uniform float uBatchLineWidth;
 
 flat out vec4 v_startPlaneNormalEcAndHalfWidth;
 flat out vec3 v_endPlaneNormalEc;
@@ -59,7 +58,10 @@ void main() {
     #include <color_vertex>
 
     #include chunks/height_vertex;
-    #include chunks/line_width_vertex;
+
+    // batchLineWidth is populated by batch_texture_vertex when USE_BATCH_LINE_WIDTH is defined
+    float batchLineWidth = -1.0;
+
     #include chunks/batch_texture_vertex;
 
     vec3 ecStart;

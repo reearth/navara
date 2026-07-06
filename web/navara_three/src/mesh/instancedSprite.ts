@@ -249,7 +249,10 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     this._initialSize = -1.0;
     const initialShow =
       m.material.show !== undefined ? (m.material.show ? 1.0 : 0.0) : 1.0;
-    const initialOpacity = 1.0;
+    const initialOpacity = Math.max(
+      0.0,
+      Math.min(1.0, m.material.opacity ?? 1.0),
+    );
 
     for (let i = 0; i < instanceCount; i++) {
       paramsBuffer[i * 4 + 0] = m.material.height ?? 0.0; // height

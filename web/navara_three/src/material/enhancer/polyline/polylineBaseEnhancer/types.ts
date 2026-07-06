@@ -21,7 +21,6 @@ export type PolylineBaseProps = {
   // Height/width
   minMaxHeight?: [number, number];
   addHeight?: number;
-  lineWidth?: number;
   width?: number;
   maxWidth?: number;
 
@@ -70,7 +69,6 @@ export type PolylineBaseState = Readonly<
     emissiveIntensity: number;
     minMaxHeight: [number, number];
     addHeight: number;
-    lineWidth: number;
     width: number;
     maxWidth: number;
     color: number;
@@ -91,7 +89,6 @@ export type PolylineBaseRefs = {
   minMaxHeightAndWidth: UniformValue<[number, number, number]>;
   maxWidth: UniformValue<number>;
   uAddHeight: UniformValue<number>;
-  uBatchLineWidth: UniformValue<number>;
   color: UniformValue<Color>;
   nvr_uPickable: UniformValue<number>;
   uEffectIdsMask: UniformValue<number>;

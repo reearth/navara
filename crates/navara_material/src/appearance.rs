@@ -78,6 +78,7 @@ pub struct PointMaterial {
     pub offset_depth: bool,
     // Allow transparency and anti-aliasing.
     pub transparent: bool,
+    pub opacity: f32,
     // post effect
     pub effect_ids: Option<Vec<String>>,
     pub emissive_intensity: Option<f32>,
@@ -97,6 +98,7 @@ impl Default for PointMaterial {
             depth_test: true,
             offset_depth: true,
             transparent: true,
+            opacity: 1.0,
             // post effect
             effect_ids: None,
             emissive_intensity: None,
@@ -128,6 +130,7 @@ pub struct BillboardMaterial {
     pub offset_depth: bool,
     // Allow transparency and anti-aliasing.
     pub transparent: bool,
+    pub opacity: f32,
     pub alpha_test: f32,
     // post effect
     pub effect_ids: Option<Vec<String>>,
@@ -149,6 +152,7 @@ impl Default for BillboardMaterial {
             depth_test: true,
             offset_depth: true,
             transparent: false,
+            opacity: 1.0,
             alpha_test: 0.1,
             // post effect
             effect_ids: None,

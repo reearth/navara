@@ -13,7 +13,6 @@ in vec4 right_normal_and_texture_coordinate_normalization_y;
 
 uniform vec3 minMaxHeightAndWidth;
 uniform float uAddHeight;
-uniform float uBatchLineWidth;
 
 out float nvr_vBatchId;
 
@@ -22,7 +21,10 @@ void main() {
     #include <color_vertex>
 
     #include chunks/height_vertex;
-    #include chunks/line_width_vertex;
+
+    // batchLineWidth is populated by batch_texture_vertex when USE_BATCH_LINE_WIDTH is defined
+    float batchLineWidth = -1.0;
+
     #include chunks/batch_texture_vertex;
 
     nvr_vBatchId = attrBatchId;

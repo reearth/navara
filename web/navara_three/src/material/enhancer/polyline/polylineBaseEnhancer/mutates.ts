@@ -23,7 +23,6 @@ const DEFAULT_BASE_REFS: PolylineBaseRefs = {
   minMaxHeightAndWidth: { value: [0, 0, 1] },
   maxWidth: { value: 10000 },
   uAddHeight: { value: 0 },
-  uBatchLineWidth: { value: 0 },
   color: { value: new ThreeColor(0xffffff) },
   nvr_uPickable: { value: 0 },
   uEffectIdsMask: { value: 0 },
@@ -64,7 +63,6 @@ export const createBaseMutates = (useRTE: boolean): PolylineBaseMutates => {
       ];
       refs.maxWidth.value = state.maxWidth;
       refs.uAddHeight.value = state.addHeight;
-      refs.uBatchLineWidth.value = state.lineWidth;
       refs.nvr_uPickable.value = state.pickable ? 1 : 0;
       refs.uEffectIdsMask.value = state.effectIdsMask;
       const c = state.emissiveColor;
@@ -86,7 +84,6 @@ export const createBaseMutates = (useRTE: boolean): PolylineBaseMutates => {
       uniforms.minMaxHeightAndWidth = refs.minMaxHeightAndWidth;
       uniforms.maxWidth = refs.maxWidth;
       uniforms.uAddHeight = refs.uAddHeight;
-      uniforms.uBatchLineWidth = refs.uBatchLineWidth;
       uniforms.color = refs.color;
       uniforms.nvr_uPickable = refs.nvr_uPickable;
       uniforms.uEffectIdsMask = refs.uEffectIdsMask;
