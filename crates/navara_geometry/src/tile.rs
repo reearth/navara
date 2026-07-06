@@ -117,8 +117,25 @@ pub fn uv_rect_from_extents_mercator(
     let target_width = target.east.val() - target.west.val();
     let source_width = source.east.val() - source.west.val();
 
-    let target_south = merc(target.south.val());
-    let target_north = merc(target.north.val());
+    // A target tile entirely outside the WM band (e.g. a Geographic tile in the
+    // polar cap ~87°..90°) would clamp both its lat edges onto the same band edge,
+    // giving a zero-height rect → a bake OrthographicCamera with top == bottom
+    // (1/(top-bottom) = ∞ in its projection matrix). Nudge it to a minimal sliver
+    // hugging that edge so the edge vector row is captured and stretched across the
+    // cap downstream, matching how the raster path reuses its band-edge row.
+    let eps = 1e-6;
+    let mut target_south_lat = target.south.val();
+    let mut target_north_lat = target.north.val();
+    if target_south_lat >= WM_MAX_LAT {
+        target_south_lat = WM_MAX_LAT - eps;
+        target_north_lat = WM_MAX_LAT;
+    } else if target_north_lat <= -WM_MAX_LAT {
+        target_north_lat = -WM_MAX_LAT + eps;
+        target_south_lat = -WM_MAX_LAT;
+    }
+
+    let target_south = merc(target_south_lat);
+    let target_north = merc(target_north_lat);
     let source_south = merc(source.south.val());
     let source_north = merc(source.north.val());
     let source_height = source_north - source_south;
@@ -429,5 +446,39 @@ mod tests {
             cam.top,
             epsilon = 1e-5
         );
+    }
+
+    /// A Geographic terrain tile fully inside the polar cap collapses onto the WM
+    /// band edge (target_north == target_south after clamping). The mercator rect
+    /// must still have a strictly positive height so the downstream bake camera
+    /// doesn't degenerate to top == bottom (division by zero).
+    #[test]
+    fn uv_rect_mercator_polar_cap_has_positive_height() {
+        use navara_core::LngLat;
+
+        // LngLat::new is (lat, lng). Source: the top WM tile row extent (north edge
+        // is the band edge).
+        let source = Extent::from_points(&[
+            LngLat::new(84.0_f64.to_radians(), 0.0),
+            LngLat::new(WM_MAX_LAT, 1.0_f64.to_radians()),
+        ]);
+        // Target: entirely in the polar cap, past the WM band on both lat edges.
+        let target = Extent::from_points(&[
+            LngLat::new(87.0_f64.to_radians(), 0.0),
+            LngLat::new(90.0_f64.to_radians(), 1.0_f64.to_radians()),
+        ]);
+
+        let tf = uv_rect_from_extents_mercator(target, source);
+
+        assert!(
+            tf.scale.y > 0.0,
+            "polar-cap rect must have positive height, got {}",
+            tf.scale.y
+        );
+        assert!(tf.scale.y.is_finite());
+        // North cap → sliver hugs the top edge of the source tile, framed in [0, 1].
+        assert!(tf.offset.y >= 0.0);
+        assert!(tf.offset.y as f64 + tf.scale.y as f64 <= 1.0 + 1e-9);
+        assert!(tf.offset.y as f64 >= 1.0 - 1e-3 - 1e-9);
     }
 }

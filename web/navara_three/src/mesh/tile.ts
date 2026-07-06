@@ -331,9 +331,10 @@ export class TileMesh
    * Drive each vector slot's main-shader state per frame: texture, per-slot UV
    * transform, visibility and the draped mesh's material attributes. One slot per
    * layer, sourced from the WM vector tile the Rust resolve picked. The resolve
-   * walks up to the nearest `scene_ready` tile, so the slot's scene is always
-   * bakeable (its own render target was framed by the bake) and the UV is identity
-   * — the ancestor LOD fallback lives entirely in Rust. Replaces the old
+   * walks up to the nearest rendered tile (readiness derived from ECS activation
+   * / the Rust resolve, not a JS-side scene_ready flag), so the slot's scene is
+   * always bakeable (its own render target was framed by the bake) and the UV is
+   * identity — the ancestor LOD fallback lives entirely in Rust. Replaces the old
    * scene-observer `updateTexturizedSceneTextureVisibility`.
    */
   private bindVectorSlots() {
@@ -413,14 +414,20 @@ export class TileMesh
    */
   private computeFeatures(): CompositeFeatures {
     const ud = this.material.userData;
+    // Only slots that are still shown count: bindVectorSlots sets shows=0 when a
+    // slot loses its representative mesh but leaves the per-slot waters/heatmap
+    // uniforms at their previous values, so a disappeared layer would otherwise
+    // keep its shader feature (e.g. water) compiled in. Mirrors the shows gate in
+    // buildCompositeLayers.
+    const shows: number[] = ud.shows?.value ?? [];
+    const waters = ud.waters?.value as boolean[] | undefined;
+    const heatmaps = ud.isElevationHeatmaps?.value as boolean[] | undefined;
     return {
       hasHillshade: ud.defines?.USE_HILLSHADE === 1,
-      hasWater: !!(ud.waters?.value as boolean[] | undefined)?.some(
-        (v) => v === true,
+      hasWater: !!waters?.some((v, i) => v === true && shows[i] === 1),
+      hasElevationHeatmap: !!heatmaps?.some(
+        (v, i) => v === true && shows[i] === 1,
       ),
-      hasElevationHeatmap: !!(
-        ud.isElevationHeatmaps?.value as boolean[] | undefined
-      )?.some((v) => v === true),
       hasWatermask: this.userData.watermask != null,
     };
   }
