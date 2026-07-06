@@ -19,9 +19,14 @@ let gB3dmLayer: Layer;
 let gPntsLayer: Layer;
 let gMvtLayer: Layer;
 
-// Raster-tile source for gTileLayer. Source-level params (zoom/tms) are updated
-// via this handle; appearance params (show/color/opacity) via the layer.
+// Source handles. Source-level params (URL, zoom/tms) are updated via these
+// handles; appearance params (show/color/opacity) via the layer handle.
 let gTileSource: Source;
+let gGeojsonSource: Source;
+let gB3dmSource: Source;
+let gPntsSource: Source;
+let gMvtSource: Source;
+
 const gTileSourceDesc = {
   type: "raster-tile" as const,
   url: TILE_DATASETS.openstreetmap.url,
@@ -29,6 +34,220 @@ const gTileSourceDesc = {
   minZoom: 0,
   tms: false,
 };
+
+// Inline GeoJSON used as one of the GeoJSON source options (a polygon near Mt.
+// Fuji). The other option fetches world countries from a URL, to show that a
+// source can switch between inline `data` and a fetched `url`.
+const FUJI_POLYGON = {
+  type: "Feature" as const,
+  properties: {},
+  geometry: {
+    coordinates: [
+      [
+        [138.66861922558115, 35.46838056308519],
+        [138.6559918549957, 35.29164005065681],
+        [138.81174182884172, 35.279838616806046],
+        [138.8071009152797, 35.436389815907134],
+        [138.66861922558115, 35.46838056308519],
+      ],
+    ],
+    type: "Polygon" as const,
+  },
+};
+
+/**
+ * A camera destination for a dataset, so switching sources frames the object.
+ * Uses `distance` (meters from the ground target along the camera forward
+ * direction) rather than absolute height, so the object is sized correctly
+ * regardless of its scale.
+ */
+type FlyToTarget = {
+  lat: number;
+  lng: number;
+  distance: number;
+  heading?: number;
+  pitch?: number;
+};
+
+function flyTo(view: ThreeView, target: FlyToTarget) {
+  view.flyTo({
+    lat: target.lat,
+    lng: target.lng,
+    height: 0,
+    distance: target.distance,
+    heading: target.heading ?? 0,
+    pitch: target.pitch ?? -45,
+    roll: 360,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Current source selections. The URL switchers mutate these; the source
+// factories below read them so a delete + re-add recreates the current config.
+// ---------------------------------------------------------------------------
+
+let gGeojsonUsesWorld = false;
+let gB3dmUrl = TILES_3D_DATASETS.plateauChiyoda.url;
+let gPntsUrl = TILES_3D_DATASETS.plateauKakegawaCastle.url;
+
+// Current fly-to target per layer (updated by the URL switchers), used by each
+// layer folder's "fly to" button.
+const RASTER_TARGET: FlyToTarget = {
+  lat: 35.68,
+  lng: 139.76,
+  distance: 3_000_000,
+  pitch: -89,
+};
+const GEOJSON_FUJI_TARGET: FlyToTarget = {
+  lat: 35.37,
+  lng: 138.73,
+  distance: 50_000,
+  pitch: -55,
+};
+const GEOJSON_WORLD_TARGET: FlyToTarget = {
+  lat: 20,
+  lng: 0,
+  distance: 25_000_000,
+  pitch: -89,
+};
+let gB3dmTarget: FlyToTarget = {
+  lat: 35.6938,
+  lng: 139.753,
+  distance: 3000,
+  pitch: -35,
+};
+let gPntsTarget: FlyToTarget = {
+  lat: 34.7735,
+  lng: 138.0164,
+  distance: 500,
+  pitch: -30,
+};
+
+// Every MVT option here is a polygon district dataset, so the layer always
+// renders with the polygon appearance; only the URL, source-layer, and color
+// differ between options.
+type MvtOption = {
+  url: string;
+  sourceLayers: string[];
+  color: number;
+  target: FlyToTarget;
+};
+const MVT_OPTIONS: Record<string, MvtOption> = {
+  "Tokyo Fire Prevention District": {
+    url: MVT_DATASETS.plateauTokyoFirePrevention.url,
+    sourceLayers: ["FirePreventionDistrict"],
+    color: 0xff6600,
+    target: { lat: 35.6906, lng: 139.7514, distance: 24000, pitch: -55 },
+  },
+  "Tokyo Height Control District": {
+    url: MVT_DATASETS.plateauTokyoHeightControl.url,
+    sourceLayers: ["HeightControlDistrict"],
+    color: 0x0088ff,
+    target: { lat: 35.6906, lng: 139.7514, distance: 24000, pitch: -55 },
+  },
+};
+let gMvtOption: MvtOption = MVT_OPTIONS["Tokyo Fire Prevention District"];
+
+/** The layer config for an MVT option: correct source-layer + polygon color. */
+function mvtLayerConfig(source: Source | string, o: MvtOption) {
+  return {
+    type: "vector" as const,
+    source,
+    sourceLayers: o.sourceLayers,
+    polygon: {
+      show: true,
+      color: new Color().setHex(o.color),
+      clampToGround: true,
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Source + layer factories. Called on initial load and by the "re-add" buttons.
+// ---------------------------------------------------------------------------
+
+function createRaster(view: ThreeView) {
+  gTileSource = view.addSource(gTileSourceDesc);
+  gTileLayer = view.addLayer({ type: "raster", source: gTileSource });
+}
+
+function createGeojson(view: ThreeView) {
+  gGeojsonSource = view.addSource(
+    gGeojsonUsesWorld
+      ? { type: "geojson", url: "/globe.geojson" }
+      : { type: "geojson", data: FUJI_POLYGON },
+  );
+  gGeojsonLayer = view.addLayer({
+    type: "vector",
+    source: gGeojsonSource,
+    polygon: { outline: true },
+  });
+}
+
+function createB3dm(view: ThreeView) {
+  gB3dmSource = view.addSource({ type: "3d-tiles", url: gB3dmUrl });
+  gB3dmLayer = view.addLayer({
+    type: "3d-tiles",
+    source: gB3dmSource,
+    model: {
+      show: true,
+      color: new Color().setStyle("#ffffff"),
+      metalness: 0.1,
+      roughness: 0.1,
+    },
+  });
+}
+
+function createPnts(view: ThreeView) {
+  gPntsSource = view.addSource({ type: "3d-tiles", url: gPntsUrl });
+  gPntsLayer = view.addLayer({
+    type: "3d-tiles",
+    source: gPntsSource,
+    model: { show: true, pointSize: 0.3, height: 0, maxSse: 16 },
+  });
+}
+
+function createMvt(view: ThreeView) {
+  gMvtSource = view.addSource({
+    type: "vector-tile",
+    url: gMvtOption.url,
+    maxZoom: 16,
+  });
+  gMvtLayer = view.addLayer(mvtLayerConfig(gMvtSource, gMvtOption));
+}
+
+/**
+ * Add a "fly to" button and an add/delete toggle for a layer's source. Deleting
+ * removes the layer first (`Source.delete()` is reference-counted and only
+ * removes the source once no layer references it); the toggle tracks presence so
+ * clicks can't stack duplicate sources or no-op on an already-deleted one.
+ */
+function addSourceLifecycleButtons(
+  view: ThreeView,
+  folder: ReturnType<Pane["addFolder"]>,
+  getLayer: () => Layer,
+  getSource: () => Source,
+  reAdd: () => void,
+  flyTarget: () => FlyToTarget,
+) {
+  folder
+    .addButton({ title: "fly to" })
+    .on("click", () => flyTo(view, flyTarget()));
+
+  let present = true;
+  const toggle = folder.addButton({ title: "delete source" });
+  toggle.on("click", () => {
+    if (present) {
+      getLayer().delete();
+      getSource().delete();
+      toggle.title = "add source";
+    } else {
+      reAdd();
+      toggle.title = "delete source";
+    }
+    present = !present;
+  });
+}
 
 export const run = async (view: ThreeView<DefaultDescriptions>) => {
   const defaultPlugin = new DefaultPlugin();
@@ -40,117 +259,34 @@ export const run = async (view: ThreeView<DefaultDescriptions>) => {
     ambient: {},
   });
 
-  gTileSource = view.addSource(gTileSourceDesc);
-  gTileLayer = view.addLayer({ type: "raster", source: gTileSource });
+  // Raster tiles drape onto terrain tiles, so a terrain layer must be present.
+  view.addLayer({ type: "terrain", ellipsoid: {} });
 
-  const geojsonSource = view.addSource({
-    type: "geojson",
-    data: {
-      type: "Feature",
-      properties: {},
-      geometry: {
-        coordinates: [
-          [
-            [138.66861922558115, 35.46838056308519],
-            [138.6559918549957, 35.29164005065681],
-            [138.81174182884172, 35.279838616806046],
-            [138.8071009152797, 35.436389815907134],
-            [138.66861922558115, 35.46838056308519],
-          ],
-        ],
-        type: "Polygon",
-      },
-    },
-  });
-  gGeojsonLayer = view.addLayer({
-    type: "vector",
-    source: geojsonSource,
-    polygon: {
-      outline: true,
-    },
-  });
-
-  const b3dmSource = view.addSource({
-    type: "3d-tiles",
-    url: TILES_3D_DATASETS.plateauChiyoda.url,
-  });
-  gB3dmLayer = view.addLayer({
-    type: "3d-tiles",
-    source: b3dmSource,
-    model: {
-      show: true,
-      color: new Color().setStyle("#ffffff"),
-      metalness: 0.1,
-      roughness: 0.1,
-    },
-  });
-
-  const pntsSource = view.addSource({
-    type: "3d-tiles",
-    url: TILES_3D_DATASETS.plateauKakegawaCastle.url,
-  });
-  gPntsLayer = view.addLayer({
-    type: "3d-tiles",
-    source: pntsSource,
-    model: {
-      show: true,
-      pointSize: 0.3,
-      height: 0,
-      maxSse: 16,
-    },
-  });
-
-  const mvtSource = view.addSource({
-    type: "vector-tile",
-    url: MVT_DATASETS.plateauGifuTran.url,
-    maxZoom: 16,
-  });
-  gMvtLayer = view.addLayer({
-    type: "vector",
-    source: mvtSource,
-    polyline: {
-      show: true,
-      color: new Color().setStyle("#00ff00"),
-      width: 2,
-      height: 1,
-      clampToGround: true,
-    },
-  });
+  createRaster(view);
+  createGeojson(view);
+  createB3dm(view);
+  createPnts(view);
+  createMvt(view);
 
   const pane = new Pane({
     title: "Parameters",
     expanded: true,
   });
 
-  addCustomCameraControl(view, pane);
+  addCameraControl(view, pane);
   addPanel(view, pane);
   addDateControl(view, pane);
 };
 
-function addCustomCameraControl(view: ThreeView, pane: Pane) {
-  addCameraControl(view, pane);
-
-  pane.addButton({ title: "Kakegawa castle view" }).on("click", () => {
-    view.flyTo({
-      lat: 34.7734947205,
-      lng: 138.0163726807,
-      height: 424.66,
-      heading: 326.62109375,
-      pitch: -56.2649879456,
-      roll: 360.0,
-    });
-  });
+function addPanel(view: ThreeView, pane: Pane) {
+  addRasterTileFolder(view, pane);
+  addGeojsonLayerFolder(view, pane);
+  addB3dmLayerFolder(view, pane);
+  addPntsLayerFolder(view, pane);
+  addMvtLayerFolder(view, pane);
 }
 
-function addPanel(_view: ThreeView, pane: Pane) {
-  addRasterTileFolder(pane);
-  addGeojsonLayerFolder(pane);
-  addB3dmLayerFolder(pane);
-  addPntsLayerFolder(pane);
-  addMvtLayerFolder(pane);
-}
-
-function addRasterTileFolder(pane: Pane) {
+function addRasterTileFolder(view: ThreeView, pane: Pane) {
   const tileParams = {
     rasterShow: true,
     rasterColor: 0xffffff,
@@ -171,10 +307,19 @@ function addRasterTileFolder(pane: Pane) {
     expanded: false,
   });
 
-  const rasterFolder = tileFolder.addFolder({
-    title: "Raster Tile",
-    expanded: false,
-  });
+  // Partial source update. `Source.update` merges like the layer's `update`:
+  // the engine keeps every source field we don't mention, so each control sends
+  // ONLY its changed field (plus the required `type`/`url`). We also merge the
+  // patch into `gTileSourceDesc` so a later delete + re-add recreates the
+  // current config.
+  const updateTileSource = (patch: Partial<typeof gTileSourceDesc>) => {
+    Object.assign(gTileSourceDesc, patch);
+    gTileSource.update({
+      type: "raster-tile",
+      url: gTileSourceDesc.url,
+      ...patch,
+    });
+  };
 
   // Appearance updates need the layer's type + source so the layer can be
   // rebuilt from its source.
@@ -188,6 +333,54 @@ function addRasterTileFolder(pane: Pane) {
       type: "raster",
       source: gTileSource.id,
       raster: patch,
+    });
+
+  // Re-apply the current appearance after a delete + re-add. `createRaster`
+  // already restores the source config (it reads `gTileSourceDesc`), so only the
+  // layer appearance params need to be pushed back onto the fresh layer.
+  const applyRaster = () =>
+    updateRaster({
+      show: tileParams.rasterShow,
+      color: new Color().setHex(tileParams.rasterColor),
+      opacity: tileParams.rasterOpacity,
+      showBoundingBox: tileParams.rasterShowBoundingBox,
+    });
+
+  addSourceLifecycleButtons(
+    view,
+    tileFolder,
+    () => gTileLayer,
+    () => gTileSource,
+    () => {
+      createRaster(view);
+      applyRaster();
+    },
+    () => RASTER_TARGET,
+  );
+
+  const rasterFolder = tileFolder.addFolder({
+    title: "Raster Tile",
+    expanded: false,
+  });
+
+  // Source URL switch. The imagery URL is a source-level param, so it goes
+  // through the source; the raster loader reads it live per tile request.
+  const rasterUrlOptions = {
+    OpenStreetMap: "openstreetmap",
+    "GSI Standard": "gsiStd",
+    "GSI Seamless Photo": "gsiSeamlessphoto",
+    "EOX Sentinel-2": "eox",
+  } as const;
+  const rasterUrlParams = { source: "openstreetmap" };
+  rasterFolder
+    .addBinding(rasterUrlParams, "source", {
+      label: "url",
+      options: rasterUrlOptions,
+    })
+    .on("change", (v) => {
+      updateTileSource({
+        url: TILE_DATASETS[v.value as keyof typeof TILE_DATASETS].url,
+      });
     });
 
   rasterFolder
@@ -210,7 +403,8 @@ function addRasterTileFolder(pane: Pane) {
     })
     .on("change", (v) => updateRaster({ opacity: v.value }));
 
-  // zoom / tms are source-level params, so update them through the source.
+  // zoom / tms are source-level params, so update them through the source. Each
+  // sends only its own field — the engine preserves the URL and the other two.
   rasterFolder
     .addBinding(tileParams, "rasterMaxZoom", {
       label: "maxZoom",
@@ -218,10 +412,7 @@ function addRasterTileFolder(pane: Pane) {
       max: 30,
       step: 1,
     })
-    .on("change", (v) => {
-      gTileSourceDesc.maxZoom = v.value;
-      gTileSource.update(gTileSourceDesc);
-    });
+    .on("change", (v) => updateTileSource({ maxZoom: v.value }));
 
   rasterFolder
     .addBinding(tileParams, "rasterMinZoom", {
@@ -230,17 +421,11 @@ function addRasterTileFolder(pane: Pane) {
       max: 30,
       step: 1,
     })
-    .on("change", (v) => {
-      gTileSourceDesc.minZoom = v.value;
-      gTileSource.update(gTileSourceDesc);
-    });
+    .on("change", (v) => updateTileSource({ minZoom: v.value }));
 
   rasterFolder
     .addBinding(tileParams, "rasterTms", { label: "tms" })
-    .on("change", (v) => {
-      gTileSourceDesc.tms = v.value;
-      gTileSource.update(gTileSourceDesc);
-    });
+    .on("change", (v) => updateTileSource({ tms: v.value }));
 
   rasterFolder
     .addBinding(tileParams, "rasterShowBoundingBox", {
@@ -249,7 +434,7 @@ function addRasterTileFolder(pane: Pane) {
     .on("change", (v) => updateRaster({ showBoundingBox: v.value }));
 }
 
-function addGeojsonLayerFolder(pane: Pane) {
+function addGeojsonLayerFolder(view: ThreeView, pane: Pane) {
   const geoParams = {
     show: true,
     color: 0xffffff,
@@ -269,6 +454,58 @@ function addGeojsonLayerFolder(pane: Pane) {
     title: "GeoJSON Layer",
     expanded: false,
   });
+
+  // Re-apply the current polygon appearance after a delete + re-add.
+  // `createGeojson` restores the source (inline data vs. url), so only the layer
+  // appearance params need to be pushed back onto the fresh layer.
+  const applyGeojson = () =>
+    gGeojsonLayer.update({
+      polygon: {
+        show: geoParams.show,
+        color: new Color().setHex(geoParams.color),
+        height: geoParams.height,
+        extrudedHeight: geoParams.extrudedHeight,
+        clampToGround: geoParams.clampToGround,
+        wireframe: geoParams.wireframe,
+        opacity: geoParams.opacity,
+        transparent: geoParams.transparent,
+        surfaceShow: geoParams.surfaceShow,
+        outlineShow: geoParams.outlineShow,
+        outlineColor: new Color().setHex(geoParams.outlineColor),
+        outlineWidth: geoParams.outlineWidth,
+      },
+    });
+
+  addSourceLifecycleButtons(
+    view,
+    geoFolder,
+    () => gGeojsonLayer,
+    () => gGeojsonSource,
+    () => {
+      createGeojson(view);
+      applyGeojson();
+    },
+    () => (gGeojsonUsesWorld ? GEOJSON_WORLD_TARGET : GEOJSON_FUJI_TARGET),
+  );
+
+  // Source switch: inline `data` (a polygon near Mt. Fuji) vs. a fetched `url`
+  // (world countries). Both render with the polygon appearance below.
+  const geoSourceParams = { source: "fuji" };
+  geoFolder
+    .addBinding(geoSourceParams, "source", {
+      label: "source",
+      options: { "Fuji (inline data)": "fuji", "World (url)": "world" },
+    })
+    .on("change", (v) => {
+      gGeojsonUsesWorld = v.value === "world";
+      if (gGeojsonUsesWorld) {
+        gGeojsonSource.update({ type: "geojson", url: "/globe.geojson" });
+        flyTo(view, { lat: 20, lng: 0, distance: 25_000_000, pitch: -89 });
+      } else {
+        gGeojsonSource.update({ type: "geojson", data: FUJI_POLYGON });
+        flyTo(view, { lat: 35.37, lng: 138.73, distance: 50_000, pitch: -55 });
+      }
+    });
 
   const polygonFolder = geoFolder.addFolder({
     title: "Polygon",
@@ -365,7 +602,7 @@ function addGeojsonLayerFolder(pane: Pane) {
     );
 }
 
-function addB3dmLayerFolder(pane: Pane) {
+function addB3dmLayerFolder(view: ThreeView, pane: Pane) {
   const b3dmParams = {
     show: true,
     color: 0xffffff,
@@ -380,6 +617,63 @@ function addB3dmLayerFolder(pane: Pane) {
     title: "B3DM Layer",
     expanded: false,
   });
+
+  // Re-apply the current model appearance after a delete + re-add. `createB3dm`
+  // restores the source URL, so only the layer params need to be pushed back.
+  const applyB3dm = () =>
+    gB3dmLayer.update({
+      model: {
+        show: b3dmParams.show,
+        color: new Color().setHex(b3dmParams.color),
+        metalness: b3dmParams.metalness,
+        roughness: b3dmParams.roughness,
+        maxSse: b3dmParams.maxSse,
+        castShadow: b3dmParams.castShadow,
+        receiveShadow: b3dmParams.receiveShadow,
+      },
+    });
+
+  addSourceLifecycleButtons(
+    view,
+    b3dmFolder,
+    () => gB3dmLayer,
+    () => gB3dmSource,
+    () => {
+      createB3dm(view);
+      applyB3dm();
+    },
+    () => gB3dmTarget,
+  );
+
+  // Source URL switch: each option is a PLATEAU 3D Tiles building tileset in a
+  // different Tokyo ward, so switching flies the camera there.
+  const b3dmSources: Record<string, { key: string; target: FlyToTarget }> = {
+    Chiyoda: {
+      key: "plateauChiyoda",
+      target: { lat: 35.6938, lng: 139.753, distance: 3000, pitch: -35 },
+    },
+    Shinjuku: {
+      key: "plateauShinjuku",
+      target: { lat: 35.6896, lng: 139.6917, distance: 3500, pitch: -35 },
+    },
+    Chuo: {
+      key: "plateauChuo",
+      target: { lat: 35.6706, lng: 139.772, distance: 3000, pitch: -35 },
+    },
+  };
+  const b3dmSourceParams = { source: "Chiyoda" };
+  b3dmFolder
+    .addBinding(b3dmSourceParams, "source", {
+      label: "url",
+      options: { Chiyoda: "Chiyoda", Shinjuku: "Shinjuku", Chuo: "Chuo" },
+    })
+    .on("change", (v) => {
+      const o = b3dmSources[v.value];
+      gB3dmUrl = TILES_3D_DATASETS[o.key as keyof typeof TILES_3D_DATASETS].url;
+      gB3dmTarget = o.target;
+      gB3dmSource.update({ type: "3d-tiles", url: gB3dmUrl });
+      flyTo(view, gB3dmTarget);
+    });
 
   const modelFolder = b3dmFolder.addFolder({
     title: "Model",
@@ -432,7 +726,7 @@ function addB3dmLayerFolder(pane: Pane) {
     );
 }
 
-function addPntsLayerFolder(pane: Pane) {
+function addPntsLayerFolder(view: ThreeView, pane: Pane) {
   const pntsParams = {
     show: true,
     pointSize: 0.3,
@@ -444,6 +738,58 @@ function addPntsLayerFolder(pane: Pane) {
     title: "PNTS Layer",
     expanded: false,
   });
+
+  // Re-apply the current model appearance after a delete + re-add. `createPnts`
+  // restores the source URL, so only the layer params need to be pushed back.
+  const applyPnts = () =>
+    gPntsLayer.update({
+      model: {
+        show: pntsParams.show,
+        pointSize: pntsParams.pointSize,
+        height: pntsParams.height,
+        maxSse: pntsParams.maxSse,
+      },
+    });
+
+  addSourceLifecycleButtons(
+    view,
+    pntsFolder,
+    () => gPntsLayer,
+    () => gPntsSource,
+    () => {
+      createPnts(view);
+      applyPnts();
+    },
+    () => gPntsTarget,
+  );
+
+  // Source URL switch between two PLATEAU point-cloud tilesets.
+  const pntsSources: Record<string, { key: string; target: FlyToTarget }> = {
+    "Kakegawa Castle": {
+      key: "plateauKakegawaCastle",
+      target: { lat: 34.7735, lng: 138.0164, distance: 500, pitch: -30 },
+    },
+    "Yamanashi Kyonaka": {
+      key: "YamanashiKyonaka",
+      target: { lat: 35.6636, lng: 138.5686, distance: 3000, pitch: -40 },
+    },
+  };
+  const pntsSourceParams = { source: "Kakegawa Castle" };
+  pntsFolder
+    .addBinding(pntsSourceParams, "source", {
+      label: "url",
+      options: {
+        "Kakegawa Castle": "Kakegawa Castle",
+        "Yamanashi Kyonaka": "Yamanashi Kyonaka",
+      },
+    })
+    .on("change", (v) => {
+      const o = pntsSources[v.value];
+      gPntsUrl = TILES_3D_DATASETS[o.key as keyof typeof TILES_3D_DATASETS].url;
+      gPntsTarget = o.target;
+      gPntsSource.update({ type: "3d-tiles", url: gPntsUrl });
+      flyTo(view, gPntsTarget);
+    });
 
   const modelFolder = pntsFolder.addFolder({
     title: "Model",
@@ -478,15 +824,16 @@ function addPntsLayerFolder(pane: Pane) {
     .on("change", (v) => gPntsLayer.update({ model: { maxSse: v.value } }));
 }
 
-function addMvtLayerFolder(pane: Pane) {
+function addMvtLayerFolder(view: ThreeView, pane: Pane) {
   const mvtParams = {
-    Show: true,
-    Color: 0x00ff00,
-    Height: 1,
-    Width: 2,
-    ClampToGround: true,
-    CastShadow: true,
-    ReceiveShadow: false,
+    show: true,
+    color: 0xff6600,
+    extrudedHeight: 0,
+    clampToGround: true,
+    wireframe: false,
+    // Polygon `opacity` only takes effect when `transparent` is enabled.
+    transparent: false,
+    opacity: 1,
   };
 
   const mvtFolder = pane.addFolder({
@@ -494,54 +841,109 @@ function addMvtLayerFolder(pane: Pane) {
     expanded: false,
   });
 
-  const PolylineFolder = mvtFolder.addFolder({
-    title: "Polyline",
+  // Re-apply the current polygon appearance after a delete + re-add. `createMvt`
+  // restores the source (URL + source-layer) from `gMvtOption`, so only the
+  // layer appearance params need to be pushed back onto the fresh layer.
+  const applyMvt = () =>
+    gMvtLayer.update({
+      polygon: {
+        show: mvtParams.show,
+        color: new Color().setHex(mvtParams.color),
+        extrudedHeight: mvtParams.extrudedHeight,
+        clampToGround: mvtParams.clampToGround,
+        wireframe: mvtParams.wireframe,
+        transparent: mvtParams.transparent,
+        opacity: mvtParams.opacity,
+      },
+    });
+
+  addSourceLifecycleButtons(
+    view,
+    mvtFolder,
+    () => gMvtLayer,
+    () => gMvtSource,
+    () => {
+      createMvt(view);
+      applyMvt();
+    },
+    () => gMvtOption.target,
+  );
+
+  // Source URL switch. Each PLATEAU MVT dataset stores its polygons under a
+  // different source-layer name, so switching the URL must also update
+  // `sourceLayers` (and here the polygon color).
+  const mvtSourceParams = { source: "Tokyo Fire Prevention District" };
+  mvtFolder
+    .addBinding(mvtSourceParams, "source", {
+      label: "url",
+      options: {
+        "Tokyo Fire District": "Tokyo Fire Prevention District",
+        "Tokyo Height District": "Tokyo Height Control District",
+      },
+    })
+    .on("change", (v) => {
+      gMvtOption = MVT_OPTIONS[v.value];
+      // Update the layer's source layer first (so the stored layer description
+      // is current), then update the source URL — the vector loader rebuilds
+      // the layer against the new source and source-layer filter.
+      gMvtLayer.update(mvtLayerConfig(gMvtSource.id, gMvtOption));
+      mvtParams.color = gMvtOption.color;
+      mvtFolder.refresh();
+      // Partial source update: only the URL changes; `maxZoom` set at creation
+      // is preserved by the engine.
+      gMvtSource.update({ type: "vector-tile", url: gMvtOption.url });
+      flyTo(view, gMvtOption.target);
+    });
+
+  const polygonFolder = mvtFolder.addFolder({
+    title: "Polygon",
     expanded: false,
   });
 
-  PolylineFolder.addBinding(mvtParams, "Show", { label: "show" }).on(
-    "change",
-    (v) => gMvtLayer.update({ polyline: { show: v.value } }),
-  );
+  polygonFolder
+    .addBinding(mvtParams, "show", { label: "show" })
+    .on("change", (v) => gMvtLayer.update({ polygon: { show: v.value } }));
 
-  PolylineFolder.addBinding(mvtParams, "Color", {
-    label: "color",
-    color: { type: "int" },
-  }).on("change", (v) =>
-    gMvtLayer.update({
-      polyline: { color: new Color().setHex(v.value) },
-    }),
-  );
+  polygonFolder
+    .addBinding(mvtParams, "color", { label: "color", color: { type: "int" } })
+    .on("change", (v) =>
+      gMvtLayer.update({ polygon: { color: new Color().setHex(v.value) } }),
+    );
 
-  PolylineFolder.addBinding(mvtParams, "Height", {
-    label: "height",
-    min: -1000,
-    max: 10000,
-    step: 1,
-  }).on("change", (v) => gMvtLayer.update({ polyline: { height: v.value } }));
+  polygonFolder
+    .addBinding(mvtParams, "extrudedHeight", {
+      label: "extrudedHeight",
+      min: 0,
+      max: 500,
+      step: 1,
+    })
+    .on("change", (v) =>
+      gMvtLayer.update({ polygon: { extrudedHeight: v.value } }),
+    );
 
-  PolylineFolder.addBinding(mvtParams, "Width", {
-    label: "width",
-    min: -1000,
-    max: 10000,
-    step: 1,
-  }).on("change", (v) => gMvtLayer.update({ polyline: { width: v.value } }));
+  polygonFolder
+    .addBinding(mvtParams, "clampToGround", { label: "clampToGround" })
+    .on("change", (v) =>
+      gMvtLayer.update({ polygon: { clampToGround: v.value } }),
+    );
 
-  PolylineFolder.addBinding(mvtParams, "ClampToGround", {
-    label: "clampToGround",
-  }).on("change", (v) =>
-    gMvtLayer.update({ polyline: { clampToGround: v.value } }),
-  );
+  polygonFolder
+    .addBinding(mvtParams, "wireframe", { label: "wireframe" })
+    .on("change", (v) => gMvtLayer.update({ polygon: { wireframe: v.value } }));
 
-  PolylineFolder.addBinding(mvtParams, "CastShadow", {
-    label: "castShadow",
-  }).on("change", (v) =>
-    gMvtLayer.update({ polyline: { castShadow: v.value } }),
-  );
+  // `opacity` needs `transparent` enabled to take visible effect.
+  polygonFolder
+    .addBinding(mvtParams, "transparent", { label: "transparent" })
+    .on("change", (v) =>
+      gMvtLayer.update({ polygon: { transparent: v.value } }),
+    );
 
-  PolylineFolder.addBinding(mvtParams, "ReceiveShadow", {
-    label: "receiveShadow",
-  }).on("change", (v) =>
-    gMvtLayer.update({ polyline: { receiveShadow: v.value } }),
-  );
+  polygonFolder
+    .addBinding(mvtParams, "opacity", {
+      label: "opacity",
+      min: 0,
+      max: 1,
+      step: 0.01,
+    })
+    .on("change", (v) => gMvtLayer.update({ polygon: { opacity: v.value } }));
 }

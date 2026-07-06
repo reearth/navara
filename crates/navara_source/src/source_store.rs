@@ -121,6 +121,18 @@ impl SourceStore {
         self.map.get(source_id).map_or(0, |entry| entry.ref_count)
     }
 
+    /// The ids of every layer currently referencing `source_id`. Derived from the
+    /// `layer_sources` reverse map (each layer references at most one source), so
+    /// callers can reset those layers when the source config changes. Returns an
+    /// empty vec when no layer references the source.
+    pub fn layers_for_source(&self, source_id: &str) -> Vec<String> {
+        self.layer_sources
+            .iter()
+            .filter(|(_, sid)| sid.as_str() == source_id)
+            .map(|(layer_id, _)| layer_id.clone())
+            .collect()
+    }
+
     /// Record that a layer references a source and increment its reference count.
     pub fn link_layer(&mut self, layer_id: String, source_id: &str) {
         self.increment_ref(source_id);
@@ -180,6 +192,24 @@ mod tests {
             "explicit user source must survive at ref_count 0 (removed only via delete)"
         );
         assert_eq!(store.ref_count("s"), 0);
+    }
+
+    #[test]
+    fn layers_for_source_returns_all_referencing_layers() {
+        let mut store = SourceStore::new();
+        store.add("s".to_owned(), source("s"));
+        store.add("other".to_owned(), source("other"));
+        store.link_layer("a".to_owned(), "s");
+        store.link_layer("b".to_owned(), "s");
+        store.link_layer("c".to_owned(), "other");
+
+        let mut layers = store.layers_for_source("s");
+        layers.sort();
+        assert_eq!(layers, vec!["a".to_owned(), "b".to_owned()]);
+        assert!(
+            store.layers_for_source("unknown").is_empty(),
+            "an unreferenced source id yields no layers"
+        );
     }
 
     #[test]

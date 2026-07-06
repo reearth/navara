@@ -430,6 +430,16 @@ impl App {
             source_store.unlink_layer(layer_id);
         }
 
+        // Drop any queued reset for this layer so an in-flight source update can't
+        // re-add (resurrect) a layer the caller has explicitly deleted.
+        if let Some(mut queue) = self
+            .app
+            .world_mut()
+            .get_resource_mut::<navara_layer_event::LayerReloadQueue>()
+        {
+            queue.pending.retain(|reload| reload.layer_id != layer_id);
+        }
+
         self.app
             .world_mut()
             .write_message(navara_layer_event::DeleteLayerEvent(LayerId(
@@ -469,7 +479,28 @@ impl App {
         }
     }
 
-    pub fn delete_source(&mut self, source_id: &str) {
+    /// Force a single terrain re-traversal so terrain layers pick up a changed
+    /// source's fetch config, which they read live from `SourceStore`. Terrain has
+    /// no teardown marker, so — unlike other layer types (reset via delete+re-add
+    /// in `Core::update_source`) — it re-traverses only on camera/layer changes; a
+    /// static-camera source update would otherwise go unnoticed. Call this only
+    /// when a terrain layer actually references the updated source.
+    pub fn force_terrain_update(&mut self) {
+        if let Some(mut terrain_tc) =
+            self.app
+                .world_mut()
+                .get_resource_mut::<navara_tile::tile::tile_cache_manager::TileCacheManager>()
+        {
+            terrain_tc.force_update = true;
+        }
+    }
+
+    /// Remove a source and its resources, returning whether it was deleted.
+    ///
+    /// Returns `false` (and deletes nothing) while any layer still references the
+    /// source, or if the source id is unknown; `true` once it has been removed.
+    /// Sources own no ECS entities, so removing the store entry is the cleanup.
+    pub fn delete_source(&mut self, source_id: &str) -> bool {
         if let Some(mut source_store) = self.app.world_mut().get_resource_mut::<SourceStore>() {
             let ref_count = source_store.ref_count(source_id);
             if ref_count > 0 {
@@ -477,9 +508,69 @@ impl App {
                 bevy_log::warn!(
                     "Cannot delete source `{source_id}` while {ref_count} layer(s) reference it"
                 );
-                return;
+                return false;
             }
-            source_store.delete(source_id);
+            return source_store.delete(source_id).is_some();
+        }
+        false
+    }
+
+    /// The ids of every layer currently referencing `source_id`.
+    pub fn layers_for_source(&self, source_id: &str) -> Vec<String> {
+        self.app
+            .world()
+            .get_resource::<SourceStore>()
+            .map(|store| store.layers_for_source(source_id))
+            .unwrap_or_default()
+    }
+
+    /// Reset a layer: tear down its current resources and re-add it with `desc`
+    /// once the teardown completes. Used when a referenced source changes so the
+    /// layer reloads against the new fetch config.
+    ///
+    /// The source reference is intentionally left intact (this does not go through
+    /// [`delete_layer`](Self::delete_layer), which would unlink it), so the layer
+    /// keeps its single reference across the reset. The re-add is deferred until
+    /// teardown finishes — see `navara_layer_event::flush_layer_reloads`.
+    pub fn reset_layer(&mut self, layer_id: &str, desc: LayerDescription) {
+        // Capture the layer's current order index before teardown drops it, so the
+        // re-add can restore it and `get_layer_index` stays stable across the reset.
+        let order = self
+            .app
+            .world()
+            .get_resource::<LayerDescStore>()
+            .and_then(|store| store.get_order(layer_id).copied());
+
+        self.app
+            .world_mut()
+            .write_message(navara_layer_event::DeleteLayerEvent(LayerId(
+                layer_id.to_owned(),
+            )));
+
+        if let Some(mut queue) = self
+            .app
+            .world_mut()
+            .get_resource_mut::<navara_layer_event::LayerReloadQueue>()
+        {
+            // Dedup: several source updates can land within one teardown window
+            // (e.g. dragging a source-level slider). Only one entity is ever torn
+            // down, so replace any existing pending reload's description instead of
+            // enqueuing a duplicate — otherwise `flush_layer_reloads` would re-add
+            // the same layer once per queued entry. Keep the first-captured order.
+            if let Some(existing) = queue
+                .pending
+                .iter_mut()
+                .find(|reload| reload.layer_id == layer_id)
+            {
+                existing.desc = desc;
+            } else {
+                queue.pending.push(navara_layer_event::PendingReload {
+                    layer_id: layer_id.to_owned(),
+                    desc,
+                    seen_alive: false,
+                    order,
+                });
+            }
         }
     }
 

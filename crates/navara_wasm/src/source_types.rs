@@ -39,6 +39,18 @@ const DEFAULT_OVERSCALED_MAX_ZOOM: usize = 24;
 const DEFAULT_TILE_SIZE: u32 = 256;
 const DEFAULT_MAX_SSE: f32 = 2.0;
 
+/// Downcast the previous [`Source`] to a specific variant for partial-update
+/// merges, yielding `Some(&inner)` only when it matches. Every `SourceDescription::to`
+/// arm needs the same match; this keeps them from diverging.
+macro_rules! old_source {
+    ($old:expr, $variant:path) => {
+        match $old {
+            Some($variant(o)) => Some(o),
+            _ => None,
+        }
+    };
+}
+
 #[wasm_bindgen]
 #[derive(Debug, Clone, Deserialize)]
 pub struct GeoJsonSourceDescription {
@@ -510,14 +522,29 @@ impl SourceDescription {
         serde_wasm_bindgen::from_value(value).ok()
     }
 
-    pub fn to(source_id: &str, source_type: &str, value: JsValue) -> Option<Source> {
+    /// Build a [`Source`] from a JS description.
+    ///
+    /// `old` is the currently-stored source (when called from `updateSource`);
+    /// pass `None` when adding a brand-new source. A partial update carries only
+    /// the changed fields, so every omitted field falls back to `old`'s value
+    /// before the source-level default — mirroring `updateLayer`'s material
+    /// merge. `url` is still required (it has no default), but it too is taken
+    /// from `old` when the update omits it.
+    pub fn to(
+        source_id: &str,
+        source_type: &str,
+        value: JsValue,
+        old: Option<&Source>,
+    ) -> Option<Source> {
         match source_type {
             "geojson" => {
                 let desc: GeoJsonSourceDescription =
                     serde_wasm_bindgen::from_value(value.clone()).ok()?;
+                let old = old_source!(old, Source::GeoJson);
 
                 // A top-level `url` takes the URL path; otherwise inline GeoJSON
                 // is read from `data` (which serde skips, so re-extract it here).
+                // When the update carries neither, keep the previous data.
                 let data = if let Some(url) = desc.url.clone() {
                     Some(GeoJsonData::Url(url))
                 } else {
@@ -526,112 +553,170 @@ impl SourceDescription {
                             data: JsValue::NULL,
                         });
                     if !js_data.data.is_null() && !js_data.data.is_undefined() {
+                        // `data` is present but must parse as GeoJSON. On parse
+                        // failure keep the previous data instead of silently
+                        // clearing the source's geometry (which renders blank).
                         serde_wasm_bindgen::from_value::<GeoJson>(js_data.data)
                             .ok()
                             .map(GeoJsonData::GeoJson)
+                            .or_else(|| old.and_then(|o| o.data.clone()))
                     } else {
-                        None
+                        old.and_then(|o| o.data.clone())
                     }
                 };
 
                 Some(Source::GeoJson(GeoJsonSource {
                     source_id: source_id.to_string(),
                     data,
-                    crs: crs(desc.crs),
-                    tiled: desc.tiled.unwrap_or(false),
+                    crs: crs(desc.crs).or_else(|| old.and_then(|o| o.crs.clone())),
+                    tiled: desc.tiled.or(old.map(|o| o.tiled)).unwrap_or(false),
                 }))
             }
             "vector-tile" => {
                 let desc: VectorTileSourceDescription =
                     serde_wasm_bindgen::from_value(value).ok()?;
+                let old = old_source!(old, Source::VectorTile);
                 Some(Source::VectorTile(VectorTileSource {
                     source_id: source_id.to_string(),
-                    url: desc.url?,
-                    max_zoom: desc.max_zoom.unwrap_or(DEFAULT_MAX_ZOOM),
+                    url: desc.url.or_else(|| old.map(|o| o.url.clone()))?,
+                    max_zoom: desc
+                        .max_zoom
+                        .or(old.map(|o| o.max_zoom))
+                        .unwrap_or(DEFAULT_MAX_ZOOM),
                     overscaled_max_zoom: desc
                         .overscaled_max_zoom
+                        .or(old.map(|o| o.overscaled_max_zoom))
                         .unwrap_or(DEFAULT_OVERSCALED_MAX_ZOOM),
-                    max_sse: desc.max_sse.unwrap_or(DEFAULT_MAX_SSE),
-                    crs: crs(desc.crs),
+                    max_sse: desc
+                        .max_sse
+                        .or(old.map(|o| o.max_sse))
+                        .unwrap_or(DEFAULT_MAX_SSE),
+                    crs: crs(desc.crs).or_else(|| old.and_then(|o| o.crs.clone())),
                 }))
             }
             "raster-tile" => {
                 let desc: RasterTileSourceDescription =
                     serde_wasm_bindgen::from_value(value).ok()?;
+                let old = old_source!(old, Source::RasterTile);
                 Some(Source::RasterTile(RasterTileSource {
                     source_id: source_id.to_string(),
-                    url: desc.url?,
-                    tms: desc.tms.unwrap_or(false),
-                    min_zoom: desc.min_zoom.unwrap_or(DEFAULT_MIN_ZOOM),
-                    max_zoom: desc.max_zoom.unwrap_or(DEFAULT_MAX_ZOOM),
+                    url: desc.url.or_else(|| old.map(|o| o.url.clone()))?,
+                    tms: desc.tms.or(old.map(|o| o.tms)).unwrap_or(false),
+                    min_zoom: desc
+                        .min_zoom
+                        .or(old.map(|o| o.min_zoom))
+                        .unwrap_or(DEFAULT_MIN_ZOOM),
+                    max_zoom: desc
+                        .max_zoom
+                        .or(old.map(|o| o.max_zoom))
+                        .unwrap_or(DEFAULT_MAX_ZOOM),
                     overscaled_max_zoom: desc
                         .overscaled_max_zoom
+                        .or(old.map(|o| o.overscaled_max_zoom))
                         .unwrap_or(DEFAULT_OVERSCALED_MAX_ZOOM),
                 }))
             }
             "raster-dem" => {
                 let desc: RasterDemSourceDescription =
                     serde_wasm_bindgen::from_value(value).ok()?;
+                let old = old_source!(old, Source::RasterDem);
                 Some(Source::RasterDem(RasterDemSource {
                     source_id: source_id.to_string(),
-                    url: desc.url?,
-                    tms: desc.tms.unwrap_or(false),
-                    elevation_decoder: desc.elevation_decoder.map(Into::into).unwrap_or_default(),
-                    tile_size: desc.tile_size.unwrap_or(DEFAULT_TILE_SIZE),
-                    min_zoom: desc.min_zoom.unwrap_or(DEFAULT_MIN_ZOOM),
-                    max_zoom: desc.max_zoom.unwrap_or(DEFAULT_MAX_ZOOM),
+                    url: desc.url.or_else(|| old.map(|o| o.url.clone()))?,
+                    tms: desc.tms.or(old.map(|o| o.tms)).unwrap_or(false),
+                    elevation_decoder: desc
+                        .elevation_decoder
+                        .map(Into::into)
+                        .or_else(|| old.map(|o| o.elevation_decoder))
+                        .unwrap_or_default(),
+                    tile_size: desc
+                        .tile_size
+                        .or(old.map(|o| o.tile_size))
+                        .unwrap_or(DEFAULT_TILE_SIZE),
+                    min_zoom: desc
+                        .min_zoom
+                        .or(old.map(|o| o.min_zoom))
+                        .unwrap_or(DEFAULT_MIN_ZOOM),
+                    max_zoom: desc
+                        .max_zoom
+                        .or(old.map(|o| o.max_zoom))
+                        .unwrap_or(DEFAULT_MAX_ZOOM),
                     overscaled_max_zoom: desc
                         .overscaled_max_zoom
+                        .or(old.map(|o| o.overscaled_max_zoom))
                         .unwrap_or(DEFAULT_OVERSCALED_MAX_ZOOM),
                 }))
             }
             "quantized-mesh" => {
                 let desc: QuantizedMeshSourceDescription =
                     serde_wasm_bindgen::from_value(value).ok()?;
+                let old = old_source!(old, Source::QuantizedMesh);
                 // Cesium quantized-mesh terrain is geographic (EPSG:4326) with a
                 // TMS (south-origin) y by default, matching the legacy material.
-                let tms = desc.tms.unwrap_or(true);
-                let tiling_scheme = if desc.geographic.unwrap_or(true) {
+                // Each tiling-scheme sub-field falls back to the previous source.
+                let (old_geographic, old_tms) = match old.map(|o| &o.tiling_scheme) {
+                    Some(TilingScheme::Geographic { tms }) => (Some(true), Some(*tms)),
+                    Some(TilingScheme::WebMercator { tms }) => (Some(false), Some(*tms)),
+                    None => (None, None),
+                };
+                let tms = desc.tms.or(old_tms).unwrap_or(true);
+                let tiling_scheme = if desc.geographic.or(old_geographic).unwrap_or(true) {
                     TilingScheme::Geographic { tms }
                 } else {
                     TilingScheme::WebMercator { tms }
                 };
                 Some(Source::QuantizedMesh(QuantizedMeshSource {
                     source_id: source_id.to_string(),
-                    url: desc.url?,
+                    url: desc.url.or_else(|| old.map(|o| o.url.clone()))?,
                     tiling_scheme,
-                    request_vertex_normals: desc.request_vertex_normals.unwrap_or(false),
-                    request_water_mask: desc.request_water_mask.unwrap_or(false),
-                    token: desc.token,
-                    min_zoom: desc.min_zoom.unwrap_or(DEFAULT_MIN_ZOOM),
-                    max_zoom: desc.max_zoom.unwrap_or(DEFAULT_MAX_ZOOM),
+                    request_vertex_normals: desc
+                        .request_vertex_normals
+                        .or(old.map(|o| o.request_vertex_normals))
+                        .unwrap_or(false),
+                    request_water_mask: desc
+                        .request_water_mask
+                        .or(old.map(|o| o.request_water_mask))
+                        .unwrap_or(false),
+                    token: desc.token.or_else(|| old.and_then(|o| o.token.clone())),
+                    min_zoom: desc
+                        .min_zoom
+                        .or(old.map(|o| o.min_zoom))
+                        .unwrap_or(DEFAULT_MIN_ZOOM),
+                    max_zoom: desc
+                        .max_zoom
+                        .or(old.map(|o| o.max_zoom))
+                        .unwrap_or(DEFAULT_MAX_ZOOM),
                     overscaled_max_zoom: desc
                         .overscaled_max_zoom
+                        .or(old.map(|o| o.overscaled_max_zoom))
                         .unwrap_or(DEFAULT_OVERSCALED_MAX_ZOOM),
                 }))
             }
             "3d-tiles" => {
                 let desc: Tiles3dSourceDescription = serde_wasm_bindgen::from_value(value).ok()?;
+                let old = old_source!(old, Source::Tiles3d);
                 Some(Source::Tiles3d(Tiles3dSource {
                     source_id: source_id.to_string(),
-                    url: desc.url?,
-                    crs: crs(desc.crs),
+                    url: desc.url.or_else(|| old.map(|o| o.url.clone()))?,
+                    crs: crs(desc.crs).or_else(|| old.and_then(|o| o.crs.clone())),
                 }))
             }
             "b3dm" => {
                 let desc: Tiles3dSourceDescription = serde_wasm_bindgen::from_value(value).ok()?;
+                let old = old_source!(old, Source::B3dm);
                 Some(Source::B3dm(B3dmSource {
                     source_id: source_id.to_string(),
-                    url: desc.url?,
-                    crs: crs(desc.crs),
+                    url: desc.url.or_else(|| old.map(|o| o.url.clone()))?,
+                    crs: crs(desc.crs).or_else(|| old.and_then(|o| o.crs.clone())),
                 }))
             }
             "pnts" => {
                 let desc: Tiles3dSourceDescription = serde_wasm_bindgen::from_value(value).ok()?;
+                let old = old_source!(old, Source::Pnts);
                 Some(Source::Pnts(PntsSource {
                     source_id: source_id.to_string(),
-                    url: desc.url?,
-                    crs: crs(desc.crs),
+                    url: desc.url.or_else(|| old.map(|o| o.url.clone()))?,
+                    crs: crs(desc.crs).or_else(|| old.and_then(|o| o.crs.clone())),
                 }))
             }
             _ => None,

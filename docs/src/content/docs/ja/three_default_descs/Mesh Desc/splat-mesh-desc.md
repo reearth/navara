@@ -50,7 +50,26 @@ sidebar:
 }
 ```
 
-> `url` と `lod` は構築時に固定されます。`handle.update()` で異なる値を渡すと警告が出るので、Descriptor を作り直してください。
+### originCellSize
+
+**Type:** `number`
+
+**Default:** `2000`
+
+**Description:** globe（ECEF）スケールで splat を数値的に安定させる floating origin のグリッドのセル辺長（メートル）です。Navara は splat を「カメラに追従し、このサイズのグリッドにスナップした原点」からの相対座標で描画するため、巨大な ECEF 座標が単精度演算に渡らず、カメラ移動時のサブメートルのジッターを防ぎます。この処理は自動で行われ、本プロパティはグリッドの調整のみを行います。小さくするとカメラ近傍の精度は上がりますが、セルを跨ぐたびの再ソート頻度が増えます。大きくすると再ソートは減ります。値は transparent シーン単位で共有され、最初に追加した splat の値がそのレンダラ上の全 splat に適用されます。通常は既定値を変更する必要はありません。
+
+**Example:**
+
+```typescript
+{
+  splat: {
+    url: "/splat/your-asset.ply",
+    originCellSize: 500,
+  }
+}
+```
+
+> `url`、`lod`、`originCellSize` は構築時に固定されます。`handle.update()` で異なる値を渡すと警告が出るので、Descriptor を作り直してください。
 
 ## Usage Examples
 
@@ -117,3 +136,4 @@ Navara は以下の Gaussian Splatting フォーマットに対応していま�
 
 - **シーンライティング非対応**: splat は照明をデータ内に焼き込んでおり、`SunLight` / `AmbientLight` などの影響を受けません。
 - **shadow / selective effect / picking 非対応**: splat は transparent パスで描画され、shadow、`SelectiveBloomEffect` / `SelectiveOutlineEffect`、Navara の picking パイプラインのいずれの対象にもなりません。
+- **極端に大きい scale は不安定に見えることがある**: `scale` を極端に大きくすると各 splat が広い world 領域に広がるため、僅かなカメラ移動で深度ソート順が急に入れ替わり「boiling（沸き立ち）」として見えることがあります。これは Gaussian Splatting 固有の挙動で、配置精度とは無関係です。大きく拡大するのではなく、アセットを意図する world サイズに近い状態で作成してください。

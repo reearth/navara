@@ -174,6 +174,11 @@ pub fn update_terrain(
     let tiles = &tiles_set.p0();
     let tiles_len = tiles.iter().len();
     let is_layers_len_changed = tiles_len != tc.prev_layers_len;
+    // A source update (e.g. `updateSource`) sets this so terrain re-traverses even
+    // with a static camera and picks up the new fetch config read live from the
+    // source. Consume it here.
+    let is_source_changed = tc.force_update;
+    tc.force_update = false;
 
     let needs_update = is_texture_fragment_changed
         || is_data_requester_changed
@@ -186,7 +191,8 @@ pub fn update_terrain(
         || occluder.is_changed()
         || is_tile_layer_added
         || is_terrain_layer_added
-        || is_layers_len_changed;
+        || is_layers_len_changed
+        || is_source_changed;
     if !needs_update {
         return;
     }

@@ -332,7 +332,7 @@ impl Core {
         // the existing source (later definition wins).
         let source_id = sd.id.clone().unwrap_or_else(generate_id);
         if let Some(source_type) = sd.r#type
-            && let Some(s) = SourceDescription::to(&source_id, source_type.as_str(), source)
+            && let Some(s) = SourceDescription::to(&source_id, source_type.as_str(), source, None)
         {
             self.app.add_source(source_id.as_str(), s);
         }
@@ -340,25 +340,61 @@ impl Core {
         source_id
     }
 
-    // TODO(source-pipeline): Under the current shim, layers project the source
-    // onto their own `data` at add time, so updating a source does not yet
-    // re-render existing layers. This will take effect once loaders read from the
-    // shared source entity directly.
     #[wasm_bindgen(js_name = updateSource)]
     pub fn update_source(&mut self, source_id: String, source: JsValue) {
+        // The source type can't change on update; reuse the stored one.
         let source_type = self
             .app
             .get_source_type(&source_id)
             .unwrap_or("")
             .to_owned();
-        if let Some(s) = SourceDescription::to(source_id.as_str(), source_type.as_str(), source) {
-            self.app.update_source(source_id.as_str(), s);
+        // Partial update: omitted fields fall back to the current source's values
+        // (like `updateLayer`'s material merge) instead of resetting to defaults.
+        let old = self.app.get_source_description(&source_id);
+        let Some(s) = SourceDescription::to(
+            source_id.as_str(),
+            source_type.as_str(),
+            source,
+            old.as_ref(),
+        ) else {
+            return;
+        };
+        self.app.update_source(source_id.as_str(), s);
+
+        // Reset every referencing layer so it reloads against the new config: tear
+        // it down and re-add it (the loader rebuilds against the updated source, and
+        // its delete path cleans up the layer's tiles/features). The stored
+        // description is reused unchanged — its `source_id` is stable, so respawned
+        // loaders read the updated source live and all layer-only fields
+        // (appearances, MVT source-layers) are preserved.
+        //
+        // Terrain is the exception: it has no teardown marker (see
+        // `process_delete_events`), so it can't be delete+re-added. It reads its
+        // fetch config live and only needs a forced re-traversal, triggered once
+        // below — and only when a terrain layer actually references this source.
+        // The variant is checked via the cheap `get_layer_type` so terrain layers
+        // don't clone their whole description just to be skipped.
+        let mut has_terrain = false;
+        for layer_id in self.app.layers_for_source(&source_id) {
+            if matches!(self.app.get_layer_type(&layer_id), Some("terrain")) {
+                has_terrain = true;
+                continue;
+            }
+            let Some(desc) = self.app.get_layer_description(&layer_id) else {
+                continue;
+            };
+            self.app.reset_layer(&layer_id, desc);
+        }
+        if has_terrain {
+            self.app.force_terrain_update();
         }
     }
 
+    /// Delete a source, returning `false` while any layer still references it (or
+    /// the id is unknown) and `true` once it has been removed.
     #[wasm_bindgen(js_name = deleteSource)]
-    pub fn delete_source(&mut self, source_id: String) {
-        self.app.delete_source(source_id.as_str());
+    pub fn delete_source(&mut self, source_id: String) -> bool {
+        self.app.delete_source(source_id.as_str())
     }
 
     #[wasm_bindgen(js_name = getLayerIndex)]

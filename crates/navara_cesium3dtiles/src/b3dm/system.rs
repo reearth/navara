@@ -160,7 +160,7 @@ pub fn delete_model_by_b3dm_layer(
     mut feature_batch_id_map: ResMut<FeatureBatchIdMap>,
     mut layer_store: ResMut<LayerStore>,
     deleted: Query<(Entity, &DeleteB3dmLayerMarker)>,
-    b3dm_layers: Query<Entity, With<B3dmLayer>>,
+    b3dm_layers: Query<(Entity, &B3dmLayer)>,
     features: Query<
         (&ModelBin, &FeatureBatchId, &GlobalBatchIds),
         (
@@ -201,8 +201,12 @@ pub fn delete_model_by_b3dm_layer(
             }
         }
 
-        for e in &b3dm_layers {
-            commands.entity(e).despawn();
+        // Despawn only the B3DM layer entity being deleted, not every B3DM
+        // layer: `d.0` is the target layer id, so match on it.
+        for (le, layer) in &b3dm_layers {
+            if layer.layer_id == d.0 {
+                commands.entity(le).despawn();
+            }
         }
         layer_store.remove(&d.0);
         commands.entity(e).despawn();
