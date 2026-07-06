@@ -63,16 +63,71 @@ export function lineWidthFu(line: ShapedGlyph[]): number {
   return width;
 }
 
+/** Strong RTL code points (Hebrew through Arabic Extended, presentation
+ *  forms, and the supplementary-plane RTL blocks). Used for first-strong
+ *  paragraph direction detection, mirroring the shaper's own direction guess.
+ */
+const STRONG_RTL_RE =
+  /[\u0591-\u08FF\uFB1D-\uFDFD\uFE70-\uFEFC\u{10800}-\u{10FFF}\u{1E800}-\u{1EFFF}]/u;
+
+/** Paragraph direction from the first strong directional character (UAX #9
+ *  P2/P3 approximation): the first letter decides, RTL ranges win over other
+ *  letters. Exported for tests. */
+export function isRtlText(text: string): boolean {
+  for (const ch of text) {
+    if (STRONG_RTL_RE.test(ch)) return true;
+    if (/\p{L}/u.test(ch)) return false;
+  }
+  return false;
+}
+
 /**
  * Split a shaped glyph run into lines: hard breaks at newline markers, greedy
  * soft breaks at the last whitespace/ideographic glyph when a line would
  * exceed `maxWidthFu` (font units; 0 disables wrapping). A word longer than
- * the wrap width overflows rather than breaking mid-word. Break opportunities
- * are found in visual glyph order, so RTL runs wrap at space glyphs but long
- * mixed-direction lines may break sub-optimally — same trade other map
- * renderers make. Exported for tests.
+ * the wrap width overflows rather than breaking mid-word.
+ *
+ * When `rtl` is set, glyphs are assumed to arrive in visual order (leftmost
+ * first — how the shaper emits RTL runs), i.e. reversed logical order. Each
+ * hard-break segment is wrapped in logical order so the greedy fill starts at
+ * the sentence start and lines stack top-to-bottom in reading order, then
+ * every line is flipped back to visual order for rendering. Mixed-direction
+ * lines may still break sub-optimally — same trade other map renderers make.
+ * Exported for tests.
  */
 export function breakLines(
+  glyphs: ShapedGlyph[],
+  maxWidthFu: number,
+  rtl = false,
+): ShapedGlyph[][] {
+  const lines: ShapedGlyph[][] = [];
+
+  const pushSegment = (segment: ShapedGlyph[]) => {
+    if (!rtl) {
+      lines.push(...wrapSegment(segment, maxWidthFu));
+      return;
+    }
+    segment.reverse();
+    for (const line of wrapSegment(segment, maxWidthFu)) {
+      lines.push(line.reverse());
+    }
+  };
+
+  let segment: ShapedGlyph[] = [];
+  for (const g of glyphs) {
+    if (g.charClass === GlyphCharClass.Newline) {
+      pushSegment(segment);
+      segment = [];
+    } else {
+      segment.push(g);
+    }
+  }
+  pushSegment(segment);
+  return lines;
+}
+
+/** Greedy soft-wrap of a single hard-break-free segment in logical order. */
+function wrapSegment(
   glyphs: ShapedGlyph[],
   maxWidthFu: number,
 ): ShapedGlyph[][] {
@@ -82,14 +137,6 @@ export function breakLines(
   let breakIdx = -1; // index in `line` of the last break opportunity
 
   for (const g of glyphs) {
-    if (g.charClass === GlyphCharClass.Newline) {
-      lines.push(line);
-      line = [];
-      width = 0;
-      breakIdx = -1;
-      continue;
-    }
-
     // Trailing whitespace is invisible at a line end, so it never triggers a
     // wrap itself — it just gets trimmed if a later glyph wraps.
     if (
@@ -746,7 +793,11 @@ export class SDFTextMesh
 
     // `_maxWidth` is in ems so the wrap width tracks the font size in both
     // sizeInMeters modes; font units are ems × unitsPerEm.
-    const lines = breakLines(glyphs, this._maxWidth * unitsPerEm);
+    const lines = breakLines(
+      glyphs,
+      this._maxWidth * unitsPerEm,
+      isRtlText(this._text),
+    );
     const widths = lines.map(lineWidthFu);
     const blockWidthFu = Math.max(...widths);
 

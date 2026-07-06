@@ -1,7 +1,7 @@
 import { GlyphCharClass, type ShapedGlyph } from "@navara/font";
 import { describe, expect, it } from "vitest";
 
-import { breakLines, lineWidthFu } from "./sdfText";
+import { breakLines, isRtlText, lineWidthFu } from "./sdfText";
 
 /** Build a glyph run from a compact spec: one entry per glyph. */
 function glyphs(
@@ -97,6 +97,87 @@ describe("breakLines", () => {
   it("combines hard breaks with soft wrapping", () => {
     const lines = breakLines(fromText("aa bb\ncc"), 300);
     expect(lines.map((l) => l.length)).toEqual([2, 2, 2]);
+  });
+
+  describe("rtl", () => {
+    /** RTL glyph runs arrive in visual order = reversed logical order.
+     *  Build from logical text, then reverse (per hard-break segment). */
+    function rtlFromText(text: string, advance = 100): ShapedGlyph[] {
+      const out: ShapedGlyph[] = [];
+      let segment: ShapedGlyph[] = [];
+      for (const g of fromText(text, advance)) {
+        if (g.charClass === GlyphCharClass.Newline) {
+          out.push(...segment.reverse(), g);
+          segment = [];
+        } else {
+          segment.push(g);
+        }
+      }
+      out.push(...segment.reverse());
+      return out;
+    }
+
+    it("stacks wrapped lines in logical (reading) order, top to bottom", () => {
+      // Logical "aa bb cc" with glyphIds 1..8; visual stream is reversed.
+      const lines = breakLines(rtlFromText("aa bb cc"), 500, true);
+      expect(lines.length).toBe(2);
+      // Top line holds the logical start ("aa bb"), in visual order.
+      expect(lines[0].map((g) => g.glyphId)).toEqual([5, 4, 3, 2, 1]);
+      expect(lines[1].map((g) => g.glyphId)).toEqual([8, 7]);
+    });
+
+    it("fills lines greedily from the logical start", () => {
+      // Five words, two per line: 2-2-1, not 1-2-2.
+      const lines = breakLines(rtlFromText("a b c d e"), 300, true);
+      expect(lines.map((l) => l.length)).toEqual([3, 3, 1]);
+      expect(lines[2].map((g) => g.glyphId)).toEqual([9]); // logical last word
+    });
+
+    it("keeps hard-break segments in logical order", () => {
+      const lines = breakLines(rtlFromText("aa\nbb"), 0, true);
+      expect(lines.map((l) => l.map((g) => g.glyphId))).toEqual([
+        [2, 1],
+        [5, 4],
+      ]);
+    });
+
+    it("matches LTR output for a single unwrapped line", () => {
+      const lines = breakLines(rtlFromText("abc"), 0, true);
+      expect(lines.length).toBe(1);
+      expect(lines[0].map((g) => g.glyphId)).toEqual([3, 2, 1]);
+    });
+  });
+});
+
+describe("isRtlText", () => {
+  it("detects Arabic", () => {
+    expect(isRtlText("شارع الملك")).toBe(true);
+  });
+
+  it("detects Hebrew", () => {
+    expect(isRtlText("רחוב")).toBe(true);
+  });
+
+  it("is false for Latin", () => {
+    expect(isRtlText("Main St")).toBe(false);
+  });
+
+  it("is false for CJK", () => {
+    expect(isRtlText("東京都")).toBe(false);
+  });
+
+  it("uses the first strong character in mixed text", () => {
+    expect(isRtlText("Cafe شارع")).toBe(false);
+    expect(isRtlText("شارع Cafe")).toBe(true);
+  });
+
+  it("skips leading digits and punctuation", () => {
+    expect(isRtlText("12 - شارع")).toBe(true);
+  });
+
+  it("is false for empty or neutral-only text", () => {
+    expect(isRtlText("")).toBe(false);
+    expect(isRtlText("123 !?")).toBe(false);
   });
 });
 
