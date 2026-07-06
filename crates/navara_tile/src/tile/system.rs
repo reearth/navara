@@ -1138,7 +1138,7 @@ pub fn update_mesh_material(
                     .and_then(|id| source_store.get(id))
                     .map(|s| s.max_zoom())
                     .unwrap_or(20);
-                let target_z = crate::raster::wm_zoom_for_lng_span(lng_span, max_zoom);
+                let target_z = navara_core::wm_zoom_for_lng_span(lng_span, max_zoom);
                 // The raster pull only returns fragments that have loaded.
                 let resolved = crate::raster::resolve_raster_textures(
                     &raster_qt,

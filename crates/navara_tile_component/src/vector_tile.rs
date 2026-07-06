@@ -36,7 +36,12 @@ pub struct VectorTile {
     pub were_children_rendered: bool,
     /// Check this tile is actually rendered in the rendering engine, not selected.
     pub is_rendered: bool,
-    /// This tile should be used to show the parent tile instead of the child tile if the child tile is still preparing.
+    /// The WebMercator vector tile to bake for this tile: `Some(self)` when this tile's
+    /// draped (clamp-to-ground) features are all active (bakeable), otherwise the nearest
+    /// at-or-above ancestor that is — i.e. a **self-inclusive** drape source. Set by the
+    /// vector traverse each frame from the live ECS activation state; the draping resolve
+    /// reads it to pick the bakeable tile (the "show the parent while children prepare"
+    /// fallback). Replaces the old JS-reported `scene_ready` flag.
     pub ready_parent_tile_handle: Option<TileHandle>,
 }
 

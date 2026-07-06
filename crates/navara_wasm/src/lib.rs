@@ -491,17 +491,19 @@ impl Core {
 
     #[wasm_bindgen(js_name = getVectorTileStates)]
     pub fn get_vector_tile_states(&mut self, handle: TileHandle) -> Vec<VectorTileState> {
-        let tiles = self.app.get_vector_tiles(handle);
-        let mut res = vec![];
-        for (layer_id, tile) in tiles {
-            res.push(VectorTileState {
-                layer_id,
-                ready_parent_tile_handle: tile.ready_parent_tile_handle,
-                is_rendered: tile.is_rendered,
-            });
-        }
+        self.app
+            .get_vector_tiles(handle)
+            .into_iter()
+            .map(VectorTileState::from)
+            .collect()
+    }
 
-        res
+    /// Monotonic revision that changes only when the vector-tile resolution could have
+    /// changed. The web renderer reads it once per frame and skips the per-terrain-tile
+    /// `getVectorTileStates` calls while it is unchanged.
+    #[wasm_bindgen(js_name = vectorRevision)]
+    pub fn vector_revision(&self) -> u32 {
+        self.app.vector_revision()
     }
 
     #[wasm_bindgen(js_name = getTileElevationDecoder)]

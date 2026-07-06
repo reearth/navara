@@ -265,6 +265,43 @@ pub fn web_mercator_overlapping_tiles(
     tiles
 }
 
+/// Pick the WebMercator zoom whose tiles roughly match a terrain tile of the given
+/// longitude span, so one terrain tile overlaps only a handful of WM tiles. A WM tile
+/// at zoom `z` spans `2π / 2^z` radians of longitude, so `z = log2(2π / span)`. For
+/// WebMercator terrain this returns the terrain tile's own zoom (identity drape).
+/// Clamped to `max_zoom`.
+pub fn wm_zoom_for_lng_span(lng_span: FloatType, max_zoom: usize) -> usize {
+    if lng_span <= 0. {
+        return 0;
+    }
+    let z = (std::f64::consts::TAU / lng_span).log2().round();
+    (z.max(0.) as usize).min(max_zoom)
+}
+
+/// The WebMercator tiles covering `extent`, at the finest zoom `<= target_z` whose
+/// overlap count fits `max_tiles`. Draping WebMercator tiles on a Geographic terrain
+/// tile is N:M and the overlap grows toward the poles (Mercator compresses latitude),
+/// so a single terrain tile can overlap more WM tiles than a renderer has slots for.
+/// Coarsening the zoom shrinks the count — each step roughly halves the tile grid on
+/// both axes — so we drop to the finest zoom that still fits `max_tiles`. At least one
+/// tile is always returned (a `max_tiles` of 0 is treated as 1); the budget caps
+/// fan-out, it never drops the drape entirely.
+pub fn overlapping_tiles_within_budget(
+    extent: Extent<FloatType, Radians>,
+    target_z: usize,
+    max_tiles: usize,
+) -> Vec<TileXYZ> {
+    let budget = max_tiles.max(1);
+    let mut z = target_z;
+    loop {
+        let tiles = web_mercator_overlapping_tiles(extent, z);
+        if tiles.len() <= budget || z == 0 {
+            return tiles;
+        }
+        z -= 1;
+    }
+}
+
 /// Converts a tile Y coordinate to latitude in radians using Web Mercator projection.
 ///
 /// # Arguments
@@ -689,5 +726,48 @@ mod tests {
             south.iter().all(|t| t.y == last),
             "south cap -> y==last row: {south:?}"
         );
+    }
+
+    #[test]
+    fn wm_zoom_matches_tile_lng_span() {
+        // A WM tile at zoom z spans 2π/2^z radians; the helper recovers z.
+        for z in [0usize, 3, 7, 12] {
+            let span = std::f64::consts::TAU / (1u64 << z) as f64;
+            assert_eq!(wm_zoom_for_lng_span(span, 30), z);
+        }
+        // Clamped to max_zoom.
+        let tiny = std::f64::consts::TAU / (1u64 << 20) as f64;
+        assert_eq!(wm_zoom_for_lng_span(tiny, 5), 5);
+    }
+
+    #[test]
+    fn budget_coarsens_zoom_until_overlap_fits() {
+        // A Geographic tile draped by WebMercator overlaps several WM tiles; pick a
+        // zoom fine enough that the unbounded overlap exceeds a tight budget.
+        let geo = TilingScheme::Geographic { tms: false };
+        let extent = geo.tile_extent(TileXYZ { x: 1, y: 0, z: 3 });
+        let target_z = wm_zoom_for_lng_span((extent.east - extent.west).val(), 30);
+
+        let unbounded = web_mercator_overlapping_tiles(extent, target_z).len();
+        assert!(unbounded >= 2, "need a multi-tile overlap to test the cap");
+
+        // The budget caps the count and never coarsens past what's needed.
+        for budget in 1..=unbounded {
+            let tiles = overlapping_tiles_within_budget(extent, target_z, budget);
+            assert!(
+                tiles.len() <= budget,
+                "budget {budget} exceeded by {tiles:?}"
+            );
+            assert!(!tiles.is_empty());
+            assert!(tiles.iter().all(|t| t.z <= target_z));
+        }
+
+        // A budget at/above the unbounded count leaves the target zoom untouched.
+        let full = overlapping_tiles_within_budget(extent, target_z, unbounded);
+        assert_eq!(full.len(), unbounded);
+        assert!(full.iter().all(|t| t.z == target_z));
+
+        // A zero budget is treated as one tile, never an empty drape.
+        assert!(!overlapping_tiles_within_budget(extent, target_z, 0).is_empty());
     }
 }

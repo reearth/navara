@@ -625,6 +625,20 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     },
   });
 
+  // // TODO: Add switch panel for terrain
+  // view.addLayer({
+  //   type: "terrain",
+  //   data: {
+  //     url: TERRAIN_DATASETS.reearthQuantizedMesh.url,
+  //   },
+  //   quantizedMesh: {
+  //     maxZoom: 18,
+  //     requestVertexNormals: true,
+  //     castShadow: false,
+  //     receiveShadow: false,
+  //   },
+  // });
+
   const pane = new Pane({
     title: "Parameters",
     expanded: true,

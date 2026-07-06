@@ -79,9 +79,27 @@ view.addLayer({ type: "terrain", source: terrain });
 view.addLayer({ type: "raster", source: satellite });
 ```
 
+### Draping vector features onto terrain
+
+A [`vector`](../../../three/layer/vector-layer/) layer whose polygon/polyline materials set `clampToGround: true` also drapes onto the terrain surface, hugging the mesh instead of floating at a fixed height. This works over any terrain source — both `raster-dem` (WebMercator) and `quantized-mesh` (geographic / EPSG:4326) terrain — so clamp-to-ground vectors stay glued to the ground regardless of the terrain's tiling scheme.
+
+```typescript
+const terrain = view.addSource({ type: "quantized-mesh", url: "https://example.com/{z}/{x}/{y}.terrain", maxZoom: 18 });
+const tiles = view.addSource({ type: "vector-tile", url: "https://example.com/tiles/{z}/{x}/{y}.mvt", maxZoom: 16 });
+
+view.addLayer({ type: "terrain", source: terrain });
+view.addLayer({
+  type: "vector",
+  source: tiles,
+  sourceLayers: ["water"],
+  polygon: { color: new Color().setStyle("#00aaff"), clampToGround: true },
+});
+```
+
 ## Related Resources
 
 - [Raster DEM Source](../../../three/source/raster-dem-source/) / [Quantized Mesh Source](../../../three/source/quantized-mesh-source/)
 - [TerrainMaterial](../../../three/material/terrain-material/) — detailed terrain settings
 - [Raster Layer](../../../three/layer/raster-layer/) — drape imagery / add hillshade over terrain
+- [Vector Layer](../../../three/layer/vector-layer/) — drape clamp-to-ground vector features over terrain
 - [CesiumIonPlugin](../../../three_plugins/cesiumionplugin/) — Cesium Ion quantized-mesh assets
