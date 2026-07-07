@@ -7,7 +7,7 @@
       vColor.rgb = batchColor.rgb;
     #endif
     // Unpack show (bit 7) and opacity (bits 0-6) from alpha channel
-    float packedByte = floor(batchColor.a * 255.0 + 0.5);  // round-to-nearest to avoid precision issues
+    float packedByte = clamp(floor(batchColor.a * 255.0 + 0.5), 0.0, 255.0);  // round-to-nearest to avoid precision issues
     nvr_vShow = step(128.0, packedByte);  // Extract bit 7: 0 or 1
     nvr_vOpacity = mod(packedByte, 128.0) / 127.0;  // Extract bits 0-6: 0.0-1.0
   #endif

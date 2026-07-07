@@ -6,4 +6,10 @@
 if (nvr_vShow < 0.5) {
     discard;
 }
+
+// Treat fully transparent features as non-existent (prevents depth-write / picking artifacts)
+if (nvr_vOpacity <= 0.0) {
+    discard;
+}
+
 #endif
