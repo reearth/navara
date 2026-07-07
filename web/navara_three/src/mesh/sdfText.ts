@@ -112,12 +112,22 @@ export class SDFTextMesh
     this._enhancer = createSdfTextMaterialEnhancer(mat);
 
     // Mount enhancer with initial props
+    // Validate and clamp opacity values to prevent invalid alpha in shader
+    const initialOpacity = Number.isFinite(material.opacity ?? 1.0)
+      ? Math.max(0, Math.min(1, material.opacity ?? 1.0))
+      : 1.0;
+    const initialOutlineOpacity = Number.isFinite(
+      material.outlineOpacity ?? 1.0,
+    )
+      ? Math.max(0, Math.min(1, material.outlineOpacity ?? 1.0))
+      : 1.0;
+
     this._enhancer.mount({
       base: {
         useRTE: RTE,
         useMsdf: this._highQuality,
         color: material.color ?? 0xffffff,
-        opacity: material.opacity ?? 1.0,
+        opacity: initialOpacity,
         fontSize: material.size ?? 16.0,
         center: material.center
           ? [material.center.x, material.center.y]
@@ -127,7 +137,7 @@ export class SDFTextMesh
         offsetDepth: material.offsetDepth ?? true,
         outlineWidth: material.outlineWidth ?? 0,
         outlineColor: material.outlineColor ?? 0x000000,
-        outlineOpacity: material.outlineOpacity ?? 1.0,
+        outlineOpacity: initialOutlineOpacity,
         showBackground: material.backgroundColor !== undefined,
         backgroundColor: material.backgroundColor,
         backgroundOutlineColor: material.borderColor ?? 0x000000,
@@ -500,7 +510,10 @@ export class SDFTextMesh
       hasUpdate = true;
     }
 
-    const nextOutlineOpacity = material.outlineOpacity ?? 1.0;
+    const nextOutlineOpacityRaw = material.outlineOpacity ?? 1.0;
+    const nextOutlineOpacity = Number.isFinite(nextOutlineOpacityRaw)
+      ? Math.max(0.0, Math.min(1.0, nextOutlineOpacityRaw))
+      : 1.0;
     if (nextOutlineOpacity !== state.outlineOpacity) {
       baseProps.outlineOpacity = nextOutlineOpacity;
       hasUpdate = true;
