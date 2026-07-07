@@ -1928,8 +1928,10 @@ mod delete_layer_tests {
         let mut app = App::new();
         app.insert_resource(BufferStore::default());
 
-        let mut globe = navara_globe::Globe::default();
-        globe.tiling_scheme = TilingScheme::Geographic { tms: true };
+        let globe = navara_globe::Globe {
+            tiling_scheme: TilingScheme::Geographic { tms: true },
+            ..Default::default()
+        };
         app.insert_resource(globe);
 
         let mut qt = TerrainTileQuadtree::new_with_linear_qt();
