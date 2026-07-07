@@ -20,7 +20,10 @@ void main() {
     #include <begin_vertex>
     #include <color_vertex>
 
-    #include chunks/height_vertex;
+    // Declare variables needed by batch_texture_vertex chunk
+    // flatPolyline doesn't use height adjustment, but batch_texture_vertex may reference it
+    float addHeight = 0.0;
+    float addExtrudedHeight = 0.0;
 
     // batchLineWidth is populated by batch_texture_vertex when USE_BATCH_LINE_WIDTH is defined
     float batchLineWidth = -1.0;

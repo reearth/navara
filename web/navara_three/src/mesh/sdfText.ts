@@ -375,7 +375,11 @@ export class SDFTextMesh
   }
 
   setSize(size: number): void {
-    this._enhancer.update({ base: { fontSize: size } });
+    const currentFontSize = this._enhancer.states().fontSize;
+    const sanitizedSize = Number.isFinite(size)
+      ? Math.max(0.0, size)
+      : currentFontSize;
+    this._enhancer.update({ base: { fontSize: sanitizedSize } });
   }
 
   setOpacity(opacity: number): void {
