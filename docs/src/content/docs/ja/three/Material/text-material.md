@@ -236,6 +236,42 @@ view.addFontFamily({
 }
 ```
 
+### lineHeight
+
+**Type:** `number | undefined`
+
+**Description:** 複数行テキストの行の高さを、フォント本来の行の高さ（アセンダー − ディセンダー + ラインギャップ）に対する倍率で指定します。
+
+**Default:** `1.0`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    lineHeight: 1.2
+  }
+}
+```
+
+### maxWidth
+
+**Type:** `number | undefined`
+
+**Description:** 1 行の最大幅を em 単位（`size` の倍数）で指定します。この幅を超えると、テキストは単語の境界で折り返されます。`0` を指定すると折り返しは無効になります。`text` 内の明示的な `\n` 文字は、この設定に関わらず常に改行されます。値が em 単位のため、`sizeInMeters` の有無に関わらず折り返し幅はテキストサイズに比例します。
+
+**Default:** `0`（折り返しなし）
+
+**Example:**
+
+```typescript
+{
+  text: {
+    maxWidth: 10 // 10 em を超える行を折り返す
+  }
+}
+```
+
 ### offsetDepth
 
 **Type:** `boolean | undefined`
@@ -414,6 +450,24 @@ import { Color } from "@navara/three";
 {
   text: {
     text: "Tokyo Station"
+  }
+}
+```
+
+### textAlign
+
+**Type:** `string | undefined`
+
+**Description:** 複数行テキストブロック内での行の水平方向の配置を指定します。`"left"`、`"center"`、`"right"` のいずれかを指定します。テキストが複数行になる場合（[`maxWidth`](#maxwidth) または明示的な `\n` 文字による）にのみ効果があります。
+
+**Default:** `"center"`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    textAlign: "left"
   }
 }
 ```

@@ -1,8 +1,9 @@
 import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
+import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
-import { showAttributions } from "../../../helpers/attributions";
+import { datasetToSource } from "../../../helpers/attribution-source";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 import { addDateControl } from "../../../helpers/control";
 
@@ -13,6 +14,9 @@ const run = async () => {
 
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
+
+  const attribution = new AttributionPlugin();
+  view.addPlugin(attribution);
 
   await view.init();
 
@@ -159,7 +163,7 @@ const run = async () => {
     }
   });
 
-  showAttributions([TILE_DATASETS.openstreetmap]);
+  attribution.show([datasetToSource(TILE_DATASETS.openstreetmap)]);
 };
 
 run();

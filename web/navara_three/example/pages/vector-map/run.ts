@@ -3,9 +3,10 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
+import { AttributionPlugin } from "@navara/three_plugins";
 import { Vector3 } from "three";
 
-import { showAttributions } from "../../helpers/attributions";
+import { datasetToSource } from "../../helpers/attribution-source";
 import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
@@ -18,6 +19,10 @@ export type CustomDescriptions = DefaultDescriptions;
 export const run = async (view: ThreeView<CustomDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
+
+  const attribution = new AttributionPlugin();
+  view.addPlugin(attribution);
+
   await view.init();
 
   plugin.addDefaultPhotorealScene();
@@ -100,9 +105,9 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     },
   });
 
-  showAttributions([
-    TERRAIN_DATASETS.gsi,
-    TILE_DATASETS.openstreetmap,
-    VECTOR_DATASETS.gsiExperimentalVector,
+  attribution.show([
+    datasetToSource(TERRAIN_DATASETS.gsi),
+    datasetToSource(TILE_DATASETS.openstreetmap),
+    datasetToSource(VECTOR_DATASETS.gsiExperimentalVector),
   ]);
 };

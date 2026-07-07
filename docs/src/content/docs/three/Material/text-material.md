@@ -236,6 +236,42 @@ view.addFontFamily({
 }
 ```
 
+### lineHeight
+
+**Type:** `number | undefined`
+
+**Description:** Specifies the line height of multi-line text as a multiplier of the font's natural line height (ascender − descender + line gap).
+
+**Default:** `1.0`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    lineHeight: 1.2
+  }
+}
+```
+
+### maxWidth
+
+**Type:** `number | undefined`
+
+**Description:** Specifies the maximum line width in ems (multiples of `size`) before the text wraps at word boundaries. `0` disables wrapping. Explicit `\n` characters in `text` always break lines regardless of this setting. Because the value is in ems, the wrap width stays proportional to the text size whether `sizeInMeters` is on or off.
+
+**Default:** `0` (no wrapping)
+
+**Example:**
+
+```typescript
+{
+  text: {
+    maxWidth: 10 // Wrap lines longer than 10 ems
+  }
+}
+```
+
 ### offsetDepth
 
 **Type:** `boolean | undefined`
@@ -414,6 +450,24 @@ import { Color } from "@navara/three";
 {
   text: {
     text: "Tokyo Station"
+  }
+}
+```
+
+### textAlign
+
+**Type:** `string | undefined`
+
+**Description:** Specifies the horizontal alignment of lines within a multi-line text block. One of `"left"`, `"center"`, or `"right"`. Has a visible effect only when the text spans multiple lines (via [`maxWidth`](#maxwidth) or explicit `\n` characters).
+
+**Default:** `"center"`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    textAlign: "left"
   }
 }
 ```

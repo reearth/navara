@@ -358,7 +358,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   // registered font family resolves the correct face per glyph.
   const labelTitle = "Labels";
   visible[labelTitle] = true;
-  const params = { size: 20 };
+  const params = { size: 15, maxWidth: 9.0 };
 
   // The evaluator reads this closure variable to decide which tiers are visible;
   // kept in sync with the camera below. Seed it from the initial viewpoint, not
@@ -380,6 +380,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       outlineOpacity: 0.4,
       offsetDepth: true,
       depthTest: true,
+      maxWidth: params.maxWidth,
     },
     // Finer admin features (governorate/district) exist only in higher-zoom
     // tiles, so fetch to z12 and let the altitude tiers keep the view uncluttered.
@@ -392,7 +393,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
         ({ properties }) => {
           if (!visible[labelTitle]) return { show: false };
 
-          const name = properties?.["@name"] as string | undefined;
+          let name = properties?.["@name"] as string | undefined;
           if (!name) return { text: "", show: false };
 
           // Assign an altitude tier: prefer locale-specific `local_type`, fall
@@ -422,6 +423,9 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
               return { text: "", show: false };
             }
           }
+
+          // replace `/` with a line break
+          name = name.replace(/\s*\/\s*/g, "\n");
 
           return { text: name, show: true };
         },
@@ -489,6 +493,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       depthTest: true,
       offsetDepth: true,
       highQuality: true,
+      maxWidth: params.maxWidth,
     },
     vectorTile: { maxZoom: 14, layers: ["place"] },
   });
@@ -521,9 +526,13 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
           const labelable =
             currentHeight <= POI_LABEL_MAX_HEIGHT &&
             confidence >= POI_LABEL_MIN_CONFIDENCE;
-          const name = labelable
+          let name = labelable
             ? ((properties?.["@name"] as string | undefined) ?? "")
             : "";
+
+          // replace `/` with a line break
+          name = name.replace(/\s*\/\s*/g, "\n");
+
           return { show: true, text: name };
         },
         {
@@ -592,6 +601,19 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     })
     .on("change", ({ value }) => {
       labelLayer.update({ text: { size: value } });
+      view.forceUpdate();
+    });
+
+  layersFolder
+    .addBinding(params, "maxWidth", {
+      min: 0,
+      max: 20,
+      step: 0.5,
+      label: "label max width",
+    })
+    .on("change", ({ value }) => {
+      labelLayer.update({ text: { maxWidth: value } });
+      poiLayer.update({ text: { maxWidth: value } });
       view.forceUpdate();
     });
 

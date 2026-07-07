@@ -38,6 +38,8 @@ pub struct FontEntry {
     pub data: Vec<u8>,
     pub raster_font: fontdue::Font,
     pub units_per_em: u16,
+    /// Vertical line metrics (font units) for multi-line layout.
+    pub line_metrics: crate::shaping::LineMetrics,
     /// Key into `FontCache::atlases`: family name for shared atlases, URL for
     /// standalone fonts.
     pub atlas_key: String,
@@ -104,6 +106,14 @@ impl FontCache {
             fontdue::Font::from_bytes(data.as_slice(), fontdue::FontSettings::default())
                 .map_err(|e| format!("Failed to parse font with fontdue: {}", e))?;
         let units_per_em = crate::shaping::get_units_per_em(&data).unwrap_or(1000);
+        // Fallback approximates typical hhea values when the face is unparsable
+        // (ascender ≈ 0.8 em, descender ≈ -0.2 em).
+        let line_metrics =
+            crate::shaping::get_line_metrics(&data).unwrap_or(crate::shaping::LineMetrics {
+                ascender: (units_per_em as i32 * 4 / 5) as i16,
+                descender: -((units_per_em as i32 / 5) as i16),
+                line_gap: 0,
+            });
         let is_color = detect_colr_v1(&data);
 
         let atlas_key = atlas_key.unwrap_or_else(|| url.clone());
@@ -126,6 +136,7 @@ impl FontCache {
                 data,
                 raster_font,
                 units_per_em,
+                line_metrics,
                 atlas_key,
                 font_index,
                 is_color,

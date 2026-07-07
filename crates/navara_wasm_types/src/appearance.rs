@@ -320,6 +320,7 @@ pub struct TextMaterial {
     #[wasm_bindgen(js_name = highQuality)]
     #[serde(rename = "highQuality")]
     pub high_quality: Option<bool>,
+
     /// Opacity of the text
     pub opacity: Option<f32>,
     /// Enable transparency and alpha blending
@@ -328,6 +329,23 @@ pub struct TextMaterial {
     #[wasm_bindgen(js_name = depthWrite)]
     #[serde(rename = "depthWrite")]
     pub depth_write: Option<bool>,
+
+    /// Maximum line width in ems (multiples of `size`) before text wraps at
+    /// word boundaries. `0.0` (the default) disables wrapping; explicit `\n`
+    /// characters in `text` always break lines.
+    #[wasm_bindgen(js_name = maxWidth)]
+    #[serde(rename = "maxWidth")]
+    pub max_width: Option<f32>,
+    /// Line height as a multiplier of the font's natural line height
+    /// (ascender − descender + line gap). Defaults to `1.0`.
+    #[wasm_bindgen(js_name = lineHeight)]
+    #[serde(rename = "lineHeight")]
+    pub line_height: Option<f32>,
+    /// Horizontal alignment of lines within a multi-line block:
+    /// `"left"`, `"center"` (default), or `"right"`.
+    #[wasm_bindgen(getter_with_clone, js_name = textAlign)]
+    #[serde(rename = "textAlign")]
+    pub text_align: Option<String>,
 }
 
 impl From<TextMaterial> for navara_material::TextMaterial {
@@ -360,9 +378,14 @@ impl From<TextMaterial> for navara_material::TextMaterial {
             outline_width: val.outline_width.unwrap_or(default.outline_width),
             lang: val.lang.unwrap_or(default.lang),
             high_quality: val.high_quality.unwrap_or(default.high_quality),
+
             opacity: val.opacity.unwrap_or(default.opacity),
             transparent: val.transparent.unwrap_or(default.transparent),
             depth_write: val.depth_write.unwrap_or(default.depth_write),
+
+            max_width: val.max_width.unwrap_or(default.max_width),
+            line_height: val.line_height.unwrap_or(default.line_height),
+            text_align: val.text_align.unwrap_or(default.text_align),
         }
     }
 }
@@ -392,9 +415,14 @@ impl<'a> From<&'a navara_material::TextMaterial> for TextMaterial {
             outline_width: Some(value.outline_width),
             lang: Some(value.lang.clone()),
             high_quality: Some(value.high_quality),
+
             opacity: Some(value.opacity),
             transparent: Some(value.transparent),
             depth_write: Some(value.depth_write),
+
+            max_width: Some(value.max_width),
+            line_height: Some(value.line_height),
+            text_align: Some(value.text_align.clone()),
         }
     }
 }
@@ -428,9 +456,14 @@ impl TextMaterial {
             outline_width: self.outline_width.unwrap_or(other.outline_width),
             lang: self.lang.clone().unwrap_or(other.lang.clone()),
             high_quality: self.high_quality.unwrap_or(other.high_quality),
+
             opacity: self.opacity.unwrap_or(other.opacity),
             transparent: self.transparent.unwrap_or(other.transparent),
             depth_write: self.depth_write.unwrap_or(other.depth_write),
+
+            max_width: self.max_width.unwrap_or(other.max_width),
+            line_height: self.line_height.unwrap_or(other.line_height),
+            text_align: self.text_align.clone().unwrap_or(other.text_align.clone()),
         }
     }
 }
