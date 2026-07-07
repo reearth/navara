@@ -3,7 +3,9 @@ import ThreeView, {
   degreeToRadian,
   radianToDegree,
   type EffectHandle,
+  type Layer,
   type MeshHandle,
+  type Source,
 } from "@navara/three";
 import {
   CloudsEffectDesc,
@@ -241,51 +243,89 @@ export const run = async () => {
   let personView: PersonViewPlugin | null = null;
   let pane: Pane | null = null;
   let switching = false;
+  let defaultScene: ReturnType<
+    DefaultPlugin["addDefaultPhotorealScene"]
+  > | null = null;
+
+  // Handles for the current base's layers/sources so a base switch can tear them
+  // down on the live view (delete layers, then their sources — sources are
+  // reference-counted) without disposing the ThreeView.
+  let baseLayers: Layer[] = [];
+  let baseSources: Source[] = [];
 
   const buildMapterhorn = (v: ThreeView<CustomDescriptions>) => {
-    v.addLayer({
-      type: "tiles",
-      data: { url: TILE_DATASETS.eox.url },
-      rasterTile: { maxZoom: 16 },
+    const eoxSource = v.addSource({
+      type: "raster-tile",
+      url: TILE_DATASETS.eox.url,
+      maxZoom: 16,
     });
+    baseSources.push(eoxSource);
+    baseLayers.push(v.addLayer({ type: "raster", source: eoxSource }));
 
-    v.addLayer({
-      type: "tiles",
-      data: { url: TERRAIN_DATASETS.mapterhorn.url },
-      rasterTile: { maxZoom: 17, minZoom: 5 },
-      hillshade: {
-        elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
-      },
+    // Mapterhorn DEM as a single raster-dem source, shared by the hillshade
+    // raster layer and the terrain layer (both reference it; the source is
+    // reference-counted so it is only freed once both layers are deleted).
+    const demSource = v.addSource({
+      type: "raster-dem",
+      url: TERRAIN_DATASETS.mapterhorn.url,
+      maxZoom: 17,
+      minZoom: 5,
+      elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
+      tileSize: 512,
     });
-
-    v.addLayer({
-      type: "terrain",
-      data: { url: TERRAIN_DATASETS.mapterhorn.url },
-      rasterTerrain: {
-        maxZoom: 17,
-        minZoom: 5,
-        elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
-        castShadow: true,
-        receiveShadow: true,
-        tileSize: 512,
-      },
-    });
+    baseSources.push(demSource);
+    baseLayers.push(
+      v.addLayer({ type: "raster", source: demSource, hillshade: {} }),
+    );
+    baseLayers.push(
+      v.addLayer({
+        type: "terrain",
+        source: demSource,
+        terrain: { castShadow: true, receiveShadow: true },
+      }),
+    );
 
     showAttributions([TERRAIN_DATASETS.mapterhorn, TILE_DATASETS.eox]);
   };
 
   const buildGoogle = (v: ThreeView<CustomDescriptions>) => {
+    const source = v.addSource({
+      type: "3d-tiles",
+      url: `${TILES_3D_DATASETS.googlePhotorealTiles.url}?key=${encodeURIComponent(
+        GOOGLE_MAPS_API_KEY,
+      )}`,
+    });
+    baseSources.push(source);
     const tiles = v.addLayer({
-      type: "cesium3dtiles",
-      data: {
-        url: `${TILES_3D_DATASETS.googlePhotorealTiles.url}?key=${encodeURIComponent(
-          GOOGLE_MAPS_API_KEY,
-        )}`,
-      },
+      type: "3d-tiles",
+      source,
       model: { maxSse: 60, normals: true },
     });
+    baseLayers.push(tiles);
 
     showAttributions([TILES_3D_DATASETS.googlePhotorealTiles], [tiles]);
+  };
+
+  const buildBase = (v: ThreeView<CustomDescriptions>, mode: BaseMode) => {
+    baseLayers = [];
+    baseSources = [];
+    if (mode === "mapterhorn") {
+      buildMapterhorn(v);
+    } else {
+      buildGoogle(v);
+    }
+  };
+
+  // Tear down the current base on the live view: delete every layer first, then
+  // its sources (reference-counted, freed once no layer references them).
+  const teardownBase = () => {
+    for (const l of baseLayers) l.delete();
+    for (const s of baseSources) {
+      const removed = s.delete();
+      console.log("[camera-studio] source deleted:", removed);
+    }
+    baseLayers = [];
+    baseSources = [];
   };
 
   const setup = async (mode: BaseMode, kind: ViewKind) => {
@@ -336,7 +376,7 @@ export const run = async () => {
 
     await v.init();
 
-    const defaultScene = plugin.addDefaultPhotorealScene();
+    defaultScene = plugin.addDefaultPhotorealScene();
     defaultScene.aerialPerspective.update({
       aerialPerspective: {
         irradiance: mode === "google",
@@ -357,11 +397,7 @@ export const run = async () => {
     }
     v.camera.fov = cameraState.fov;
 
-    if (mode === "mapterhorn") {
-      buildMapterhorn(v);
-    } else {
-      buildGoogle(v);
-    }
+    buildBase(v, mode);
 
     if (kind === "person") {
       showAttributions([LOCAL_DATASETS.soldierGLTF]);
@@ -425,10 +461,18 @@ export const run = async () => {
     }
   };
 
-  const switchBase = async (mode: BaseMode) => {
-    if (switching || mode === currentMode) return;
+  // Base switch is a live operation: tear down the current base's layers and
+  // sources and build the new one on the same ThreeView (no dispose/recreate),
+  // preserving the camera, effects, and panel. Only the view-kind switch below
+  // still rebuilds, since PersonViewPlugin must be registered before init().
+  const switchBase = (mode: BaseMode) => {
+    if (switching || mode === currentMode || !view) return;
     currentMode = mode;
-    await rebuild();
+    teardownBase();
+    buildBase(view, mode);
+    defaultScene?.aerialPerspective.update({
+      aerialPerspective: { irradiance: mode === "google" },
+    });
   };
 
   const switchViewKind = async (kind: ViewKind) => {

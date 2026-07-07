@@ -414,8 +414,18 @@ impl App {
                         });
                 }
             }
-            _ => {
-                return;
+            LayerDescription::Terrain(layer) => {
+                // `Appearance` has no terrain variant, so terrain material updates
+                // flow through a dedicated event. A source change is handled by
+                // rebuilding the layer in `Core::update_layer`, not here.
+                if let Some(material) = layer.appearance.clone() {
+                    self.app.world_mut().write_message(
+                        navara_layer_event::UpdateTerrainLayerEvent {
+                            layer_id: LayerId(layer_id.to_owned()),
+                            material,
+                        },
+                    );
+                }
             }
         }
 
@@ -443,9 +453,10 @@ impl App {
 
         self.app
             .world_mut()
-            .write_message(navara_layer_event::DeleteLayerEvent(LayerId(
-                layer_id.to_owned(),
-            )));
+            .write_message(navara_layer_event::DeleteLayerEvent {
+                layer_id: LayerId(layer_id.to_owned()),
+                reset: false,
+            });
     }
 
     /// Record that a layer references a source so the source is reference-counted
@@ -453,6 +464,15 @@ impl App {
     pub fn link_layer_source(&mut self, layer_id: &str, source_id: &str) {
         if let Some(mut source_store) = self.app.world_mut().get_resource_mut::<SourceStore>() {
             source_store.link_layer(layer_id.to_owned(), source_id);
+        }
+    }
+
+    /// Drop a layer's reference to its current source (decrementing that source's
+    /// count), without deleting the layer. Used when a layer is re-pointed at a
+    /// different source so the old source is dereferenced but kept.
+    pub fn unlink_layer_source(&mut self, layer_id: &str) {
+        if let Some(mut source_store) = self.app.world_mut().get_resource_mut::<SourceStore>() {
+            source_store.unlink_layer(layer_id);
         }
     }
 
@@ -477,22 +497,6 @@ impl App {
     pub fn update_source(&mut self, source_id: &str, source: Source) {
         if let Some(mut source_store) = self.app.world_mut().get_resource_mut::<SourceStore>() {
             source_store.update(source_id.to_owned(), source);
-        }
-    }
-
-    /// Force a single terrain re-traversal so terrain layers pick up a changed
-    /// source's fetch config, which they read live from `SourceStore`. Terrain has
-    /// no teardown marker, so — unlike other layer types (reset via delete+re-add
-    /// in `Core::update_source`) — it re-traverses only on camera/layer changes; a
-    /// static-camera source update would otherwise go unnoticed. Call this only
-    /// when a terrain layer actually references the updated source.
-    pub fn force_terrain_update(&mut self) {
-        if let Some(mut terrain_tc) =
-            self.app
-                .world_mut()
-                .get_resource_mut::<navara_tile::tile::tile_cache_manager::TileCacheManager>()
-        {
-            terrain_tc.force_update = true;
         }
     }
 
@@ -544,9 +548,10 @@ impl App {
 
         self.app
             .world_mut()
-            .write_message(navara_layer_event::DeleteLayerEvent(LayerId(
-                layer_id.to_owned(),
-            )));
+            .write_message(navara_layer_event::DeleteLayerEvent {
+                layer_id: LayerId(layer_id.to_owned()),
+                reset: true,
+            });
 
         if let Some(mut queue) = self
             .app
