@@ -4,10 +4,11 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
+import { AttributionPlugin } from "@navara/three_plugins";
 import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 
-import { showAttributions } from "../../helpers/attributions";
+import { datasetToSource } from "../../helpers/attribution-source";
 import { TERRAIN_DATASETS, VECTOR_DATASETS } from "../../helpers/constants";
 import { addCameraControl } from "../../helpers/control";
 import { SH_COEFFICIENTS } from "../../helpers/sh";
@@ -16,6 +17,9 @@ export type CustomDescriptions = DefaultDescriptions;
 
 export const run = async (view: ThreeView<CustomDescriptions>) => {
   view.addPlugin(new DefaultPlugin());
+
+  const attribution = new AttributionPlugin();
+  view.addPlugin(attribution);
 
   await view.init();
 
@@ -189,8 +193,8 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   // Create control panel
   const pane = new Pane();
   addCameraControl(view, pane);
-  showAttributions([
-    TERRAIN_DATASETS.gsi,
-    VECTOR_DATASETS.gsiExperimentalVector,
+  attribution.show([
+    datasetToSource(TERRAIN_DATASETS.gsi),
+    datasetToSource(VECTOR_DATASETS.gsiExperimentalVector),
   ]);
 };
