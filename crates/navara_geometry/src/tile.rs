@@ -92,6 +92,66 @@ pub fn uv_rect_from_extents(
     }
 }
 
+const WM_MAX_LAT: f64 = 1.484_422_229_745_332_4; // atan(sinh(π))
+
+/// Like [`uv_rect_from_extents`] but the latitude (y) axis is computed in the
+/// WebMercator projection (`phi = ln(tan(lat/2 + π/4))`) instead of raw
+/// latitude. Use this for the **bake** camera that draws a source tile's
+/// offscreen scene: the draped vector geometry is laid out in WebMercator planar
+/// space, so a coarser ancestor tile's sub-region must be framed by its mercator
+/// fraction — matching [`ortho_camera_transform`] for same-grid WM tiles — not
+/// its (non-linear) latitude fraction. The geographic [`uv_rect_from_extents`]
+/// stays for the composite-shader paste, where reprojection corrects latitude.
+pub fn uv_rect_from_extents_mercator(
+    target: Extent<f64, Radians>,
+    source: Extent<f64, Radians>,
+) -> TileUvTransform {
+    // Mercator northing; increases monotonically with latitude (south → north).
+    // Clamp to the WebMercator valid band (~±85.05°) so a polar Geographic target
+    // tile doesn't diverge to ±∞ (it collapses onto the band edge, as raster does).
+    let merc = |lat: f64| {
+        let lat = lat.clamp(-WM_MAX_LAT, WM_MAX_LAT);
+        (lat * 0.5 + std::f64::consts::FRAC_PI_4).tan().ln()
+    };
+
+    let target_width = target.east.val() - target.west.val();
+    let source_width = source.east.val() - source.west.val();
+
+    // A target tile entirely outside the WM band (e.g. a Geographic tile in the
+    // polar cap ~87°..90°) would clamp both its lat edges onto the same band edge,
+    // giving a zero-height rect → a bake OrthographicCamera with top == bottom
+    // (1/(top-bottom) = ∞ in its projection matrix). Nudge it to a minimal sliver
+    // hugging that edge so the edge vector row is captured and stretched across the
+    // cap downstream, matching how the raster path reuses its band-edge row.
+    let eps = 1e-6;
+    let mut target_south_lat = target.south.val();
+    let mut target_north_lat = target.north.val();
+    if target_south_lat >= WM_MAX_LAT {
+        target_south_lat = WM_MAX_LAT - eps;
+        target_north_lat = WM_MAX_LAT;
+    } else if target_north_lat <= -WM_MAX_LAT {
+        target_north_lat = -WM_MAX_LAT + eps;
+        target_south_lat = -WM_MAX_LAT;
+    }
+
+    let target_south = merc(target_south_lat);
+    let target_north = merc(target_north_lat);
+    let source_south = merc(source.south.val());
+    let source_north = merc(source.north.val());
+    let source_height = source_north - source_south;
+
+    TileUvTransform {
+        offset: Vec2::new(
+            (target.west.val() - source.west.val()) / source_width,
+            (target_south - source_south) / source_height,
+        ),
+        scale: Vec2::new(
+            target_width / source_width,
+            (target_north - target_south) / source_height,
+        ),
+    }
+}
+
 /// OrthographicCamera transformation values to align with child tile region
 #[derive(Debug, Clone, Copy)]
 pub struct OrthoCamTransform {
@@ -350,5 +410,75 @@ mod tests {
         assert_relative_eq!(tf.scale.y, 0.5, epsilon = 1e-9);
         assert_relative_eq!(tf.offset.x, 0.5, epsilon = 1e-9);
         assert_relative_eq!(tf.offset.y, 0.5, epsilon = 1e-9);
+    }
+
+    /// The mercator UV rect drives the bake camera, so for two same-grid
+    /// WebMercator tiles it must equal [`ortho_camera_transform`]. Uses a
+    /// high-latitude tile, where the geographic rect would diverge.
+    #[test]
+    fn uv_rect_mercator_matches_ortho_camera_transform() {
+        use navara_core::{TileXYZ, TilingScheme};
+        let scheme = TilingScheme::WebMercator { tms: false };
+
+        // child (terrain) at z=5 inside its parent (vector ancestor) at z=3,
+        // up near the WebMercator pole where lat ≠ mercator.
+        let child = TileXYZ { x: 9, y: 1, z: 5 };
+        let parent = TileXYZ {
+            x: child.x >> 2,
+            y: child.y >> 2,
+            z: 3,
+        };
+
+        let tf =
+            uv_rect_from_extents_mercator(scheme.tile_extent(child), scheme.tile_extent(parent));
+        let cam = ortho_camera_transform(child, parent.z);
+
+        // offset/scale in [0,1] ↔ camera bounds in [-1,1]: l=2o-1, r=2(o+s)-1.
+        assert_relative_eq!(2.0 * tf.offset.x as f32 - 1.0, cam.left, epsilon = 1e-5);
+        assert_relative_eq!(
+            2.0 * (tf.offset.x + tf.scale.x) as f32 - 1.0,
+            cam.right,
+            epsilon = 1e-5
+        );
+        assert_relative_eq!(2.0 * tf.offset.y as f32 - 1.0, cam.bottom, epsilon = 1e-5);
+        assert_relative_eq!(
+            2.0 * (tf.offset.y + tf.scale.y) as f32 - 1.0,
+            cam.top,
+            epsilon = 1e-5
+        );
+    }
+
+    /// A Geographic terrain tile fully inside the polar cap collapses onto the WM
+    /// band edge (target_north == target_south after clamping). The mercator rect
+    /// must still have a strictly positive height so the downstream bake camera
+    /// doesn't degenerate to top == bottom (division by zero).
+    #[test]
+    fn uv_rect_mercator_polar_cap_has_positive_height() {
+        use navara_core::LngLat;
+
+        // LngLat::new is (lat, lng). Source: the top WM tile row extent (north edge
+        // is the band edge).
+        let source = Extent::from_points(&[
+            LngLat::new(84.0_f64.to_radians(), 0.0),
+            LngLat::new(WM_MAX_LAT, 1.0_f64.to_radians()),
+        ]);
+        // Target: entirely in the polar cap, past the WM band on both lat edges.
+        let target = Extent::from_points(&[
+            LngLat::new(87.0_f64.to_radians(), 0.0),
+            LngLat::new(90.0_f64.to_radians(), 1.0_f64.to_radians()),
+        ]);
+
+        let tf = uv_rect_from_extents_mercator(target, source);
+
+        assert!(
+            tf.scale.y > 0.0,
+            "polar-cap rect must have positive height, got {}",
+            tf.scale.y
+        );
+        assert!(tf.scale.y.is_finite());
+        // North cap → sliver hugs the top edge of the source tile, framed in [0, 1].
+        assert!(tf.offset.y >= 0.0);
+        assert!(tf.offset.y as f64 + tf.scale.y as f64 <= 1.0 + 1e-9);
+        assert!(tf.offset.y as f64 >= 1.0 - 1e-3 - 1e-9);
     }
 }

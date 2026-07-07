@@ -79,9 +79,27 @@ view.addLayer({ type: "terrain", source: terrain });
 view.addLayer({ type: "raster", source: satellite });
 ```
 
+### 地形へのベクター地物のドレープ
+
+polygon / polyline マテリアルで `clampToGround: true` を指定した [`vector`](../../../three/layer/vector-layer/) レイヤーも、地表に重畳されてメッシュに追従します。これは `raster-dem`（WebMercator）と `quantized-mesh`（geographic / EPSG:4326）のどちらの地形 Source でも機能するため、地形のタイリングスキームに関係なく、clamp-to-ground のベクターは地面に貼り付いたままになります。
+
+```typescript
+const terrain = view.addSource({ type: "quantized-mesh", url: "https://example.com/{z}/{x}/{y}.terrain", maxZoom: 18 });
+const tiles = view.addSource({ type: "vector-tile", url: "https://example.com/tiles/{z}/{x}/{y}.mvt", maxZoom: 16 });
+
+view.addLayer({ type: "terrain", source: terrain });
+view.addLayer({
+  type: "vector",
+  source: tiles,
+  sourceLayers: ["water"],
+  polygon: { color: new Color().setStyle("#00aaff"), clampToGround: true },
+});
+```
+
 ## 関連リソース
 
 - [Raster DEM Source](../../../three/source/raster-dem-source/) / [Quantized Mesh Source](../../../three/source/quantized-mesh-source/)
 - [TerrainMaterial](../../../three/material/terrain-material/) — 地形の詳細設定
 - [Raster Layer](../../../three/layer/raster-layer/) — 地形の上に画像をドレープ／陰影起伏を追加
+- [Vector Layer](../../../three/layer/vector-layer/) — clamp-to-ground のベクター地物を地形にドレープ
 - [CesiumIonPlugin](../../../three_plugins/cesiumionplugin/) — Cesium Ion の quantized-mesh アセット
