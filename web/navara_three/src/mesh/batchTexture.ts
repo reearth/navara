@@ -138,7 +138,7 @@ export function initBatchDataTexture(
         colorShowRowIndex,
       );
       // R, G, B remain 0 (will be set when color is first written)
-      data[baseIndex + 3] = defaultPacked; // A = packed(show=1, opacity=1)
+      data[baseIndex + 3] = defaultPacked; // A = packed(show=material.visible, opacity=1)
     }
   }
 
