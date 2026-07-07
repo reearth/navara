@@ -7,9 +7,10 @@ import ThreeView, {
 } from "@navara/three";
 import { SunLightDesc, type ShadowMode } from "@navara/three_default_descs";
 import { DefaultPlugin } from "@navara/three_default_plugin";
+import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
-import { showAttributions } from "../../helpers/attributions";
+import { datasetToSource } from "../../helpers/attribution-source";
 import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
@@ -25,6 +26,9 @@ export async function run() {
 
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
+
+  const attribution = new AttributionPlugin();
+  view.addPlugin(attribution);
 
   await view.init();
 
@@ -77,11 +81,11 @@ export async function run() {
   addViewShadowControl(view, defaultAtmospheres.sun, pane);
   addBuildingModelControl(view, pane);
 
-  showAttributions([
-    TERRAIN_DATASETS.gsi,
-    TILE_DATASETS.gsiSeamlessphoto,
-    TILES_3D_DATASETS.plateauChiyoda,
-    TILES_3D_DATASETS.plateauChuo,
+  attribution.show([
+    datasetToSource(TERRAIN_DATASETS.gsi),
+    datasetToSource(TILE_DATASETS.gsiSeamlessphoto),
+    datasetToSource(TILES_3D_DATASETS.plateauChiyoda),
+    datasetToSource(TILES_3D_DATASETS.plateauChuo),
   ]);
 }
 
