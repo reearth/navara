@@ -1,10 +1,10 @@
-import ThreeView, { Color } from "@navara/three";
+import ThreeView, { Color, type Layer, type Source } from "@navara/three";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { CesiumIonPlugin } from "@navara/three_plugins";
-import { Pane } from "tweakpane";
+import { ButtonApi, Pane } from "tweakpane";
 
 import { showAttributions } from "../../../helpers/attributions";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
@@ -38,20 +38,20 @@ const CAMERA_COORDS = {
 
 export const run = async (
   view: ThreeView<CustomDescriptions>,
-  terrainType: TerrainType,
-  onTerrainChange: (next: TerrainType) => void,
+  initialTerrainType: TerrainType = "reearth",
 ) => {
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
 
-  let cesiumIon: CesiumIonPlugin | undefined;
-  if (terrainType === "cesiumIon") {
-    cesiumIon = new CesiumIonPlugin({
-      assetId: CESIUM_ION_ASSET_ID,
-      accessToken: CESIUM_ION_TOKEN,
-    });
-    view.addPlugin(cesiumIon);
-  }
+  // The Cesium Ion plugin resolves its asset endpoint during `view.init()`, so
+  // it must be registered before init. Register it unconditionally (even when
+  // starting on Re:Earth terrain) so the terrain switcher can swap to Cesium Ion
+  // later without disposing and recreating the view.
+  const cesiumIon = new CesiumIonPlugin({
+    assetId: CESIUM_ION_ASSET_ID,
+    accessToken: CESIUM_ION_TOKEN,
+  });
+  view.addPlugin(cesiumIon);
 
   await view.init();
 
@@ -60,28 +60,63 @@ export const run = async (
   defaultPlugin.addDefaultPhotorealScene();
   view.toneMappingExposure = 10;
 
-  if (terrainType === "cesiumIon" && cesiumIon) {
-    cesiumIon.addTerrain({
-      maxZoom: 18,
-      castShadow: true,
-      receiveShadow: true,
-      requestVertexNormals: true,
-      requestWaterMask: true,
-    });
-  } else {
-    const qmSource = view.addSource({
-      type: "quantized-mesh",
-      url: TERRAIN_DATASETS.reearthQuantizedMesh.url,
-      maxZoom: 18,
-      requestVertexNormals: true,
-      requestWaterMask: true,
-    });
-    view.addLayer({
-      type: "terrain",
-      source: qmSource,
-      terrain: { castShadow: true, receiveShadow: true },
-    });
-  }
+  // Current terrain handles. Re:Earth uses an explicit quantized-mesh source;
+  // Cesium Ion's `addTerrain` creates an implicit source (reclaimed when its
+  // layer is deleted), so only its layer handle is tracked there.
+  let currentTerrainType = initialTerrainType;
+  let terrainSource: Source | undefined;
+  let terrainLayer: Layer | undefined;
+
+  const addTerrain = (type: TerrainType) => {
+    if (type === "cesiumIon") {
+      terrainLayer = cesiumIon.addTerrain({
+        maxZoom: 18,
+        castShadow: true,
+        receiveShadow: true,
+        requestVertexNormals: true,
+        requestWaterMask: true,
+      });
+      terrainSource = undefined;
+    } else {
+      terrainSource = view.addSource({
+        type: "quantized-mesh",
+        url: TERRAIN_DATASETS.reearthQuantizedMesh.url,
+        maxZoom: 18,
+        requestVertexNormals: true,
+        requestWaterMask: true,
+      });
+      terrainLayer = view.addLayer({
+        type: "terrain",
+        source: terrainSource,
+        terrain: { castShadow: true, receiveShadow: true },
+      });
+    }
+    const dataset =
+      type === "cesiumIon"
+        ? TERRAIN_DATASETS.cesiumIon
+        : TERRAIN_DATASETS.reearthQuantizedMesh;
+    showAttributions([dataset, TILE_DATASETS.eox]);
+  };
+
+  // Delete the current terrain layer and its explicit source (if any) on the
+  // live view. The globe falls back to the flat ellipsoid.
+  const removeTerrain = () => {
+    terrainLayer?.delete();
+    terrainSource?.delete();
+    terrainLayer = undefined;
+    terrainSource = undefined;
+  };
+
+  // Switch terrain on the live view: delete the current terrain, then add the
+  // new one. No dispose/recreate — the raster layers, camera, and panel persist.
+  const setTerrain = (type: TerrainType) => {
+    if (type === currentTerrainType && terrainLayer) return;
+    removeTerrain();
+    currentTerrainType = type;
+    addTerrain(type);
+  };
+
+  addTerrain(initialTerrainType);
 
   const eox = view.addSource({
     type: "raster-tile",
@@ -104,16 +139,34 @@ export const run = async (
   const pane = new Pane();
   activePane = pane;
 
-  const terrainParams = { terrain: terrainType };
-  pane
+  // Terrain controls. The type field swaps the terrain live via `setTerrain`
+  // (delete + add on the running view); the button deletes/re-adds the terrain
+  // layer outright (the globe falls back to the flat ellipsoid) — all without
+  // disposing the ThreeView.
+  const terrainFolder = pane.addFolder({ title: "Terrain", expanded: true });
+  const terrainParams = { terrain: initialTerrainType };
+  let deleteButton: ButtonApi | undefined = undefined;
+  terrainFolder
     .addBinding(terrainParams, "terrain", {
-      label: "Terrain",
+      label: "type",
       options: TERRAIN_OPTIONS,
     })
     .on("change", (ev) => {
-      if (ev.value === terrainType) return;
-      onTerrainChange(ev.value as TerrainType);
+      setTerrain(ev.value as TerrainType);
+      if (deleteButton) {
+        deleteButton.title = "delete terrain layer";
+      }
     });
+  deleteButton = terrainFolder.addButton({ title: "delete terrain layer" });
+  deleteButton.on("click", () => {
+    if (terrainLayer) {
+      removeTerrain();
+      deleteButton.title = "add terrain layer";
+    } else {
+      addTerrain(currentTerrainType);
+      deleteButton.title = "delete terrain layer";
+    }
+  });
 
   addDateControl(
     view,
@@ -125,10 +178,4 @@ export const run = async (
       minutes: 0,
     }),
   );
-
-  const terrainDataset =
-    terrainType === "cesiumIon"
-      ? TERRAIN_DATASETS.cesiumIon
-      : TERRAIN_DATASETS.reearthQuantizedMesh;
-  showAttributions([terrainDataset, TILE_DATASETS.eox]);
 };

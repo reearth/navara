@@ -118,6 +118,11 @@ export type MvtLayer = WithColorSupport<
  */
 export type SourceRef = string | Source;
 
+export type SourceLayerBase<Layer extends { source?: string | undefined }> =
+  Omit<Layer, "source"> & {
+    source?: SourceRef;
+  };
+
 type VectorLayerBase = WithColorSupport<
   Layer<VectorLayerDescription & { type: "vector" }>
 >;
@@ -126,18 +131,14 @@ type VectorLayerBase = WithColorSupport<
  * A `vector` layer renders a `geojson` or `vector-tile` source as points,
  * lines, polygons, text and billboards.
  */
-export type VectorLayer = Omit<VectorLayerBase, "source"> & {
-  source: SourceRef;
-};
+export type VectorLayer = SourceLayerBase<VectorLayerBase>;
 
 type RasterLayerBase = WithColorSupport<
   Layer<RasterLayerDescription & { type: "raster" }>
 >;
 
 /** A `raster` layer renders a `raster-tile` (imagery) or `raster-dem` source. */
-export type RasterLayer = Omit<RasterLayerBase, "source"> & {
-  source: SourceRef;
-};
+export type RasterLayer = SourceLayerBase<RasterLayerBase>;
 
 type TerrainSourceLayerBase = WithColorSupport<
   Layer<TerrainSourceLayerDescription & { type: "terrain" }>
@@ -146,18 +147,14 @@ type TerrainSourceLayerBase = WithColorSupport<
 /**
  * A `terrain` layer renders a `raster-dem` or `quantized-mesh` source as the globe surface.
  */
-export type TerrainSourceLayer = Omit<TerrainSourceLayerBase, "source"> & {
-  source: SourceRef;
-};
+export type TerrainSourceLayer = SourceLayerBase<TerrainSourceLayerBase>;
 
 type Tiles3dLayerBase = WithColorSupport<
   Layer<Tiles3dLayerDescription & { type: "3d-tiles" }>
 >;
 
 /** A `3d-tiles` layer renders a `3d-tiles`, `b3dm`, or `pnts` source. */
-export type Tiles3dLayer = Omit<Tiles3dLayerBase, "source"> & {
-  source: SourceRef;
-};
+export type Tiles3dLayer = SourceLayerBase<Tiles3dLayerBase>;
 
 export type LayerDescription =
   | TilesLayer
@@ -173,42 +170,79 @@ export type LayerDescription =
   | Tiles3dLayer;
 
 /**
- * A source describes where data comes from and how it is fetched/decoded.
- * Register one with `addSource` and reference it from layers by handle or id.
+ * Fields common to every source, independent of its `type`.
  *
  * An optional `id` may be given; when omitted a random id is generated. Adding a
  * source with an existing id overrides it (later definition wins). Combined with
  * referencing a source by its id string from a layer, this enables defining the
  * whole map declaratively (MapLibre-style) from JSON.
  */
-export type SourceDescription = Omit<
+export type SourceBase = Omit<
   NormalizeWASMClass<SourceDescriptionImpl>,
   "type"
-> &
-  (
-    | (Omit<
-        WithColorSupport<Layer<GeoJsonSourceDescription & { type: "geojson" }>>,
-        "data"
-      > & {
-        /** Inline GeoJSON. Use `url` instead to fetch from a URL. */
-        data?: FeatureCollection | Feature | Geometry;
-      })
-    | WithColorSupport<
-        Layer<VectorTileSourceDescription & { type: "vector-tile" }>
-      >
-    | WithColorSupport<
-        Layer<RasterTileSourceDescription & { type: "raster-tile" }>
-      >
-    | WithColorSupport<
-        Layer<RasterDemSourceDescription & { type: "raster-dem" }>
-      >
-    | WithColorSupport<
-        Layer<QuantizedMeshSourceDescription & { type: "quantized-mesh" }>
-      >
-    | WithColorSupport<Layer<Tiles3dSourceDescription & { type: "3d-tiles" }>>
-    | WithColorSupport<Layer<Tiles3dSourceDescription & { type: "b3dm" }>>
-    | WithColorSupport<Layer<Tiles3dSourceDescription & { type: "pnts" }>>
-  );
+>;
+
+/** A `geojson` source: inline GeoJSON, or GeoJSON fetched from a `url`. */
+export type GeoJsonSource = SourceBase &
+  Omit<
+    WithColorSupport<Layer<GeoJsonSourceDescription & { type: "geojson" }>>,
+    "data"
+  > & {
+    /** Inline GeoJSON. Use `url` instead to fetch from a URL. */
+    data?: FeatureCollection | Feature | Geometry;
+  };
+
+/** A `vector-tile` source: Mapbox Vector Tiles fetched from a `url` template. */
+export type VectorTileSource = SourceBase &
+  WithColorSupport<
+    Layer<VectorTileSourceDescription & { type: "vector-tile" }>
+  >;
+
+/** A `raster-tile` source: raster imagery tiles fetched from a `url` template. */
+export type RasterTileSource = SourceBase &
+  WithColorSupport<
+    Layer<RasterTileSourceDescription & { type: "raster-tile" }>
+  >;
+
+/** A `raster-dem` source: RGB-encoded elevation tiles fetched from a `url` template. */
+export type RasterDemSource = SourceBase &
+  WithColorSupport<Layer<RasterDemSourceDescription & { type: "raster-dem" }>>;
+
+/** A `quantized-mesh` source: Cesium quantized-mesh terrain tiles. */
+export type QuantizedMeshSource = SourceBase &
+  WithColorSupport<
+    Layer<QuantizedMeshSourceDescription & { type: "quantized-mesh" }>
+  >;
+
+/** A `3d-tiles` source: a 3D Tiles tileset (`tileset.json`). */
+export type Tiles3dSource = SourceBase &
+  WithColorSupport<Layer<Tiles3dSourceDescription & { type: "3d-tiles" }>>;
+
+/** A `b3dm` source: a single Batched 3D Model tile. */
+export type B3dmSource = SourceBase &
+  WithColorSupport<Layer<Tiles3dSourceDescription & { type: "b3dm" }>>;
+
+/** A `pnts` source: a single Point Cloud tile. */
+export type PntsSource = SourceBase &
+  WithColorSupport<Layer<Tiles3dSourceDescription & { type: "pnts" }>>;
+
+/**
+ * A source describes where data comes from and how it is fetched/decoded.
+ * Register one with `addSource` and reference it from layers by handle or id.
+ *
+ * This is the discriminated union of every per-type source description
+ * ({@link GeoJsonSource}, {@link QuantizedMeshSource}, ...); use an individual
+ * member type when you only accept one source type.
+ */
+export type SourceDescription =
+  | GeoJsonSource
+  | VectorTileSource
+  | RasterTileSource
+  | RasterDemSource
+  | QuantizedMeshSource
+  | Tiles3dSource
+  | B3dmSource
+  | PntsSource;
 
 export type MeshCache = Map<string, Mesh | Sprite | Object3D>;
 
