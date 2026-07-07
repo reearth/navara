@@ -409,6 +409,8 @@ export default class ThreeView<
       this._core?.triggerTextureFragmentLoaded(bits, status);
     },
   };
+  // Per-frame snapshot of the WASM vector resolution revision, refreshed in `_render`.
+  private _vectorRevision = 0;
   private _tileHandler: TileHandler = {
     getMartini: (id) => {
       return this._core?.getMartini(id);
@@ -425,6 +427,9 @@ export default class ThreeView<
     getVectorTileStates: (handle) => {
       return this._core?.getVectorTileStates(handle);
     },
+    // Returns the per-frame cached revision (read once in `_render`), so per-tile
+    // `onBeforeRender` gating costs no WASM-boundary call.
+    vectorRevision: () => this._vectorRevision,
     calcMetersPerTexel: (tileHandle, textureZoom, textureWidth) => {
       return (
         this._core?.calcMetersPerTexel(tileHandle, textureZoom, textureWidth) ??
@@ -1219,6 +1224,10 @@ export default class ThreeView<
   }
 
   private _render(updatedAt: number) {
+    // Read the vector resolution revision once per frame so each terrain tile's
+    // `onBeforeRender` can gate its slot re-fetch against it without its own FFI call.
+    this._vectorRevision = this._core?.vectorRevision() ?? this._vectorRevision;
+
     this._uniforms.time.value = updatedAt;
 
     this._atmosphere._update();

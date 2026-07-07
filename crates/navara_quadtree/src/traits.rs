@@ -103,4 +103,9 @@ where
 
     /// Get a leaf by a leaf's handle.
     fn remove(&mut self, handle: QuadLeafHandle) -> Option<T>;
+
+    /// Remove and return every leaf value, emptying the quadtree. Used to tear the
+    /// whole tiling down (so callers can free per-leaf resources) before re-seeding
+    /// it from scratch.
+    fn drain(&mut self) -> Vec<T>;
 }

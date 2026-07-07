@@ -12,8 +12,8 @@ use navara_math::{FloatType, Transform};
 use navara_layer::TerrainLayer;
 use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 use navara_tile_component::{
-    TerrainInformation, TerrainInformationQuadtree, Tile, TileHandle, VectorTile,
-    VectorTileQuadtree,
+    TerrainTileQuadtree, Tile, TileHandle, VectorTile, VectorTileQuadtree,
+    terrain_height_for_extent,
 };
 use navara_window::Window;
 
@@ -57,19 +57,13 @@ pub fn traverse_tile(
     // This is used to keep rendering current children when parent tile isn't ready after you zoomed out.
     meets_sse_ancestors: bool,
     terrain_layer: &Option<&TerrainLayer>,
-    terrain_qt: &TerrainInformationQuadtree,
+    terrain_tile_qt: &TerrainTileQuadtree,
     ready_parent_tile_handle: Option<TileHandle>,
     globe: &Globe,
     source: &mut dyn crate::source::VectorTileSource,
     buf: &mut BufferStore,
 ) -> TraversalResult {
     let tile = qt.qt.get_mut(handle).unwrap();
-    tile.ready_parent_tile_handle = if source.should_upscale(tile) {
-        ready_parent_tile_handle
-    } else {
-        // Clear parent handle if the source says this tile shouldn't upscale
-        None
-    };
     tile.is_rendered = false;
 
     let traversal_config = source_id.traversal_config();
@@ -81,17 +75,15 @@ pub fn traverse_tile(
         return TraversalResult::NotFound;
     }
 
-    // Reference the terrain information from the raster tile process.
-    let terrain_info = terrain_qt.qt.get(handle).map_or_else(
-        || {
-            let e = terrain_qt
-                .qt
-                .parent((tile.coords.x, tile.coords.y, tile.coords.z))?;
-            terrain_qt.qt.get(e.handle())
-        },
-        Some,
-    );
-    begin_traverse_tile(ellipsoid, occluder, camera, tile, terrain_info);
+    // Borrow the terrain elevation by EXTENT (scheme-agnostic point-in-tile walk),
+    // exactly like the raster traverse, so the SSE matches the terrain's subdivision
+    // depth instead of treating the tile as flat at sea level. A by-handle lookup
+    // would miss when the vector tile is WebMercator and the terrain is Geographic
+    // (quantized-mesh), which is what kept the drape coarse.
+    let extent = tile.extent;
+    let (max_height, min_height) =
+        terrain_height_for_extent(terrain_tile_qt, &extent).unwrap_or((0., 0.));
+    begin_traverse_tile(ellipsoid, occluder, camera, tile, max_height, min_height);
 
     let is_culled_by_occlusion = !tile
         .occludee_point_in_scaled_space
@@ -142,6 +134,22 @@ pub fn traverse_tile(
     tile.distance_from_camera = distance_from_camera;
     tile.visited_at = frame.rendered_frame();
 
+    // Self-inclusive nearest bakeable drape source: `Some(self)` when this tile's draped
+    // features are all active (and it isn't a reused/overscaled tile), else the inherited
+    // nearest-active ancestor (gated by `should_upscale`, as the old field write was). The
+    // vector draping resolve reads this; the same value is threaded to children below.
+    let inherited_drape_source = if source.should_upscale(tile) {
+        ready_parent_tile_handle
+    } else {
+        None
+    };
+    let drape_source = if is_activated && !is_overscaled {
+        Some(handle)
+    } else {
+        inherited_drape_source
+    };
+    tile.ready_parent_tile_handle = drape_source;
+
     let were_children_rendered = tile.were_children_rendered;
     tile.were_children_rendered = false;
 
@@ -190,24 +198,6 @@ pub fn traverse_tile(
 
     // Culled tiles do not traverse children, but they are rendered to prevent parent tiles from flickering.
     if !is_culled_by_frustum && let Some(children) = VectorTile::traversable_children(qt, handle) {
-        let are_feature_activated = !is_overscaled
-            && matches!(
-                are_all_renderable_features_active(
-                    tc,
-                    &handle,
-                    rendered_tiles,
-                    features,
-                    renderable_features,
-                ),
-                Some(true)
-            );
-
-        let ready_parent_tile_handle = if are_feature_activated {
-            Some(handle)
-        } else {
-            ready_parent_tile_handle
-        };
-
         let mut any_children_rendered = false;
 
         // Tile has several states to switch LOD smoothly.
@@ -251,8 +241,8 @@ pub fn traverse_tile(
                 },
                 meets_sse,
                 terrain_layer,
-                terrain_qt,
-                ready_parent_tile_handle,
+                terrain_tile_qt,
+                drape_source,
                 globe,
                 source,
                 buf,
@@ -605,12 +595,10 @@ fn begin_traverse_tile(
     occluder: &EllipsoidalOccluder,
     _camera: &Transform,
     tile: &mut VectorTile,
-    terrain_into: Option<&TerrainInformation>,
+    max_height: f64,
+    min_height: f64,
 ) {
-    tile.update_heights(
-        terrain_into.map(|t| t.max_height).unwrap_or(0.),
-        terrain_into.map(|t| t.min_height).unwrap_or(0.),
-    );
+    tile.update_heights(max_height, min_height);
     tile.update_tile_occludee_point(ellipsoid, occluder);
 }
 

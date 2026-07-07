@@ -1,9 +1,10 @@
 import ThreeView, { Color } from "@navara/three";
 import type { FontFamily } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
+import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
-import { showAttributions } from "../../../helpers/attributions";
+import { datasetToSource } from "../../../helpers/attribution-source";
 import { GEOJSON_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 import { addDateControl } from "../../../helpers/control";
 import WORLD_FONT_FAMILY from "../geojson-font-faces/worldCitiesFontFamily.json";
@@ -59,6 +60,9 @@ const run = async () => {
 
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
+
+  const attribution = new AttributionPlugin();
+  view.addPlugin(attribution);
 
   await view.init();
 
@@ -178,7 +182,7 @@ const run = async () => {
       layer?.update({ text: { size: value } });
     });
 
-  showAttributions([TILE_DATASETS.openstreetmap]);
+  attribution.show([datasetToSource(TILE_DATASETS.openstreetmap)]);
 };
 
 run();

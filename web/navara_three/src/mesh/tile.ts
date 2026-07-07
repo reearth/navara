@@ -55,7 +55,7 @@ import {
 } from "../material";
 import { deriveCompositeFeatures } from "../material/enhancer/tileComposite";
 import type { CustomObject3DEventMap } from "../object3DEvent";
-import type { SceneGroup, TexturizedSceneByTileCoordinates } from "../scene";
+import type { TexturizedSceneByTileCoordinates } from "../scene";
 import type { TextureOptions } from "../textures";
 import {
   planSlots,
@@ -77,6 +77,35 @@ import type { PickableMesh } from "./pickableMesh";
 
 export type TileMaterial = MeshBasicMaterial | MeshLambertMaterial;
 
+/**
+ * One WebMercator vector source tile baked into a layer's render target.
+ * `tileHandle` keys the cached offscreen scene; `uvOffset`/`uvScale` are the
+ * **mercator** affine framing the terrain tile's sub-region of that (possibly
+ * coarser, ancestor-resolved) source tile, driving the bake camera (identity for
+ * an exact same-tile drape).
+ */
+type VectorSource = {
+  tileHandle: TileHandle;
+  uvOffset: [number, number];
+  uvScale: [number, number];
+};
+
+/**
+ * One clamp-to-ground vector layer draped on this terrain tile, resolved by Rust.
+ * A layer is backed by one source on WebMercator terrain, but by several when the
+ * terrain is Geographic (N:M): every overlapping WM vector tile is baked into the
+ * layer's single render target, each framed by its own `uvOffset`/`uvScale`, so
+ * the RT ends up spanning the terrain tile's extent. `reproject` carries the
+ * terrain `[south, north]` band on Geographic terrain (undefined on WM) so the
+ * composite paste can remap the latitude axis WebMercator→Geographic, exactly
+ * like a raster slot.
+ */
+type VectorSlot = {
+  layerId: string;
+  sources: VectorSource[];
+  reproject?: [number, number];
+};
+
 export class TileMesh
   extends Mesh<BufferGeometry, TileMaterial, CustomObject3DEventMap>
   implements PickableMesh
@@ -86,29 +115,23 @@ export class TileMesh
   maxTextures: number;
   texturizedSceneIndexFrom: number;
   numTexturizedVector: number;
-  tileStates?: {
-    parentHandle?: TileHandle;
-    isRendered: boolean;
-    layerId: string;
-  }[];
 
-  // Track previous parent state to avoid unnecessary re-cloning and re-rendering
-  private prevParentState = new Map<
-    string,
-    {
-      parentHandle: TileHandle;
-      parentSceneRevision: number;
-      isRendered: boolean;
-    }
-  >();
+  // Per-layer texturized-vector slots resolved by Rust: one slot per clamp-to-ground
+  // layer, keyed by the WM vector tile whose offscreen scene backs it. Ancestor
+  // fallback is already resolved in Rust, so the web side just caches + bakes.
+  private vectorSlots: VectorSlot[] = [];
+  // Signature of the last baked slot set; a change drives a re-bake + re-bind.
+  private prevVectorSignature = "";
+  // The vector resolution revision at which `vectorSlots` was last fetched. Re-fetching
+  // is skipped while the global revision is unchanged (the resolve result can only change
+  // when a traverse runs or a scene becomes ready). `-1` forces a fetch on the first frame.
+  private _lastVectorRevision = -1;
 
   // Separate mesh for shadow casting (uses terrain-only geometry without skirt)
   private shadowMesh?: Mesh<BufferGeometry, TileMaterial>;
 
   private texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates;
   private compositor: TileTextureCompositor;
-  // This is used to attach this scene as a texture to the tile.
-  private texturizedScenes: SceneGroup;
 
   texturizedSceneRenderTargets: WebGLRenderTarget[] = [];
 
@@ -133,8 +156,6 @@ export class TileMesh
 
     this.texturizedSceneByTileCoordinates = texturizedSceneByTileCoordinates;
     this.compositor = tileTextureCompositor;
-
-    this.texturizedScenes = texturizedSceneByTileCoordinates.get(handle);
 
     // Acquire the per-tile composite atlas from the compositor. Pairing the
     // acquire with the mesh keeps the atlas lifecycle tied to the tile and lets
@@ -170,88 +191,65 @@ export class TileMesh
     this.onBeforeRender = this._onBeforeRender;
   }
 
-  private updateTexturizedSceneByTileState() {
-    const tileStates = this.tileHandler.getVectorTileStates(this.handle) ?? [];
-    const newTileStates: NonNullable<typeof this.tileStates> = [];
-    const newParentState: typeof this.prevParentState = new Map();
+  /**
+   * Pull the Rust-resolved texturized-vector slots for this terrain tile into
+   * {@link vectorSlots}: one bake slot per clamp-to-ground layer, keyed by the
+   * rendered WM vector tile that backs it (ancestor fallback already resolved in
+   * Rust). Only layers with an actual draped scene take a slot — Rust also returns
+   * non-draped layers (rendered in the MRT scene), which must not consume the budget.
+   * Capped to the GPU slot budget; warns once when more draped layers are requested.
+   */
+  private refreshVectorSlots() {
+    const states = this.tileHandler.getVectorTileStates(this.handle) ?? [];
 
-    let changed = false;
-
-    for (const state of tileStates) {
-      const parentHandle = state.ready_parent_tile_handle;
+    // Group the flattened per-(layer, source) states back into one slot per
+    // layer, each carrying every overlapping WM source tile (N:M on Geographic
+    // terrain). First-seen layer order assigns the render-target index, kept
+    // consistent by renderVectorScenes / bindVectorSlots / buildCompositeLayers.
+    const byLayer = new Map<string, VectorSlot>();
+    const droppedLayers = new Set<string>();
+    for (const state of states) {
       const layerId = state.layer_id;
-
-      if (parentHandle == null) continue;
-
-      newTileStates.push({
-        parentHandle,
-        layerId,
-        isRendered: state.is_rendered,
-      });
-
-      const parentScene =
-        this.texturizedSceneByTileCoordinates.findSceneByLayerId(
-          parentHandle,
+      let slot = byLayer.get(layerId);
+      if (!slot) {
+        // Rust returns a state for every vector layer with a rendered tile, including
+        // non-draped layers (those render in the MRT scene and never create a texturized
+        // scene). Only a layer that actually has a draped scene may consume a bake slot;
+        // otherwise non-draped layers would occupy the limited slot budget and crowd out
+        // genuinely-draped layers past the cap. A draped layer whose scene isn't ready yet
+        // simply gets no slot this pass and is picked up once its scene exists.
+        const hasScene =
+          this.texturizedSceneByTileCoordinates.findSceneByLayerId(
+            state.tile_handle,
+            layerId,
+          ) != null;
+        if (!hasScene) continue;
+        // Cap the layer fan-out to the GPU slot budget; extra layers are dropped.
+        if (byLayer.size >= this.numTexturizedVector) {
+          droppedLayers.add(layerId);
+          continue;
+        }
+        const reproject = state.reproject_terrain_lat;
+        slot = {
           layerId,
-        );
-      if (!parentScene) continue;
-
-      const parentSceneRevision = parentScene.revision;
-      const prev = this.prevParentState.get(layerId);
-
-      // Re-clone when parent changed or parent scene content changed
-      if (
-        !prev ||
-        prev.parentHandle !== parentHandle ||
-        prev.parentSceneRevision !== parentSceneRevision
-      ) {
-        this.texturizedSceneByTileCoordinates.addFromParentScene(
-          this.handle,
-          layerId,
-          parentScene,
-        );
-        changed = true;
+          sources: [],
+          reproject:
+            reproject.length >= 2 ? [reproject[0], reproject[1]] : undefined,
+        };
+        byLayer.set(layerId, slot);
       }
-
-      // isRendered flip changes visibility (parent fallback <-> own mesh)
-      if (prev && prev.isRendered !== state.is_rendered) {
-        changed = true;
-      }
-
-      newParentState.set(layerId, {
-        parentHandle,
-        parentSceneRevision,
-        isRendered: state.is_rendered,
+      slot.sources.push({
+        tileHandle: state.tile_handle,
+        uvOffset: [state.uv_offset[0] ?? 0, state.uv_offset[1] ?? 0],
+        uvScale: [state.uv_scale[0] ?? 1, state.uv_scale[1] ?? 1],
       });
     }
 
-    // Detect removed layers
-    if (this.prevParentState.size !== newParentState.size) {
-      changed = true;
-    }
-
-    if (changed || (this.tileStates?.length ?? 0) !== newTileStates.length) {
-      this.texturizedSceneByTileCoordinates.setNeedsUpdate(this.handle, true);
-    }
-
-    this.tileStates = newTileStates;
-    this.prevParentState = newParentState;
-  }
-
-  private _onBeforeRender = () => {
-    if (!this.visible) return;
-
-    // Refresh parent-tile fallback state. Done every frame because Rust's
-    // tile-state can flip between frames as data arrives.
-    this.updateTexturizedSceneByTileState();
-
-    // Warn once when more MVT layers requested than we have slots for.
-    const numScenes = this.texturizedScenes.tileScenes.length;
-    if (numScenes > this.numTexturizedVector) {
+    if (droppedLayers.size > 0) {
       if (!this.warnedExceededTextures) {
         this.warnedExceededTextures = true;
         console.warn(
-          `[TileMesh] Exceeded maximum MVT texture slots: ${numScenes} layers requested, ` +
+          `[TileMesh] Exceeded maximum MVT texture slots: ${byLayer.size + droppedLayers.size} layers requested, ` +
             `but only ${this.numTexturizedVector} slots available. ` +
             `Some MVT layers will not be rendered.`,
         );
@@ -260,24 +258,55 @@ export class TileMesh
       this.warnedExceededTextures = false;
     }
 
-    // Per-layer vector-scene offscreen render. Returns true when any render
-    // happened — in that case the composite atlas needs to repaint so the
-    // main shader sees the new texturized-layer pixels.
-    const vectorRendered = this.compositor.renderVectorScenes(
-      this.handle,
-      this.texturizedSceneRenderTargets,
-      (layerId) => {
-        const s = this.tileStates?.find((x) => x.layerId === layerId);
-        if (!s) return undefined;
-        return {
-          candidateParent: s.parentHandle,
-          isRendered: s.isRendered,
-        };
-      },
-      (layerId, visible) =>
-        this.updateTexturizedSceneTextureVisibility(visible, layerId),
-    );
-    if (vectorRendered) {
+    this.vectorSlots = [...byLayer.values()];
+  }
+
+  /**
+   * Identity of the current slot set + the backing scenes' content. A change means
+   * the offscreen scenes must be re-baked and the per-slot material state re-bound.
+   */
+  private vectorSignature(): string {
+    return this.vectorSlots
+      .map((slot) => {
+        const sourceSig = slot.sources
+          .map((s) => {
+            const scene =
+              this.texturizedSceneByTileCoordinates.findSceneByLayerId(
+                s.tileHandle,
+                slot.layerId,
+              );
+            return `${s.tileHandle}@${s.uvOffset[0]},${s.uvOffset[1]},${s.uvScale[0]},${s.uvScale[1]}#${scene?.revision ?? -1}:${scene?.children.length ?? 0}`;
+          })
+          .join(",");
+        return `${slot.layerId}[${sourceSig}]`;
+      })
+      .join("|");
+  }
+
+  private _onBeforeRender = () => {
+    if (!this.visible) return;
+
+    // Re-fetch the Rust-resolved slots only when the global vector resolution revision
+    // changed; otherwise reuse the cached slots. The resolve result can only flip when a
+    // traverse runs (new/removed rendered tiles, terrain subdivision) or a scene becomes
+    // ready — both bump the revision. This skips a per-tile WASM-boundary resolve every
+    // frame, the dominant steady-state cost when many terrain tiles are visible.
+    const revision = this.tileHandler.vectorRevision();
+    if (revision !== this._lastVectorRevision) {
+      this._lastVectorRevision = revision;
+      this.refreshVectorSlots();
+    }
+
+    // Re-bake the offscreen vector scenes only when the resolved slots or their
+    // backing scenes changed; otherwise the existing render targets stay valid.
+    const signature = this.vectorSignature();
+    if (signature !== this.prevVectorSignature) {
+      this.prevVectorSignature = signature;
+      this.compositor.renderVectorScenes(
+        this.vectorSlots,
+        this.texturizedSceneRenderTargets,
+      );
+      this.bindVectorSlots();
       this.compositor.markDirty(this.handle, "vector-revision");
     }
 
@@ -299,6 +328,85 @@ export class TileMesh
   };
 
   /**
+   * Drive each vector slot's main-shader state per frame: texture, per-slot UV
+   * transform, visibility and the draped mesh's material attributes. One slot per
+   * layer, sourced from the WM vector tile the Rust resolve picked. The resolve
+   * walks up to the nearest rendered tile (readiness derived from ECS activation
+   * / the Rust resolve, not a JS-side scene_ready flag), so the slot's scene is
+   * always bakeable (its own render target was framed by the bake) and the UV is
+   * identity — the ancestor LOD fallback lives entirely in Rust. Replaces the old
+   * scene-observer `updateTexturizedSceneTextureVisibility`.
+   */
+  private bindVectorSlots() {
+    const m = this.material;
+    if (!m || !m.userData || !m.userData.textures?.value) return;
+    const textures = m.userData.textures.value;
+    const uvOffsets: Vector2[] = m.userData.layerUvOffset?.value ?? [];
+    const uvScales: Vector2[] = m.userData.layerUvScale?.value ?? [];
+
+    for (let i = 0; i < this.numTexturizedVector; i++) {
+      const lastIdx = this.texturizedSceneIndexFrom + i;
+      const ownRt = this.texturizedSceneRenderTargets[i];
+      if (!ownRt) continue;
+
+      textures[lastIdx] = ownRt.texture;
+      // The bake framed every source into this RT so it spans the terrain tile's
+      // extent: the paste samples it 1:1 in longitude (identity UV here); the
+      // latitude axis is reprojected WebMercator→Geographic in the composite
+      // shader via the slot's reproject band (see buildCompositeLayers).
+      uvOffsets[lastIdx]?.set(0, 0);
+      uvScales[lastIdx]?.set(1, 1);
+
+      const slot = this.vectorSlots[i];
+      const mesh = slot ? this.representativeVectorMesh(slot) : undefined;
+      m.userData.shows.value[lastIdx] = mesh ? 1 : 0;
+      if (mesh) this.copyVectorMeshAttrs(lastIdx, mesh);
+    }
+  }
+
+  /**
+   * First available draped mesh backing any of a layer's sources. A clamp-to-ground
+   * layer's material attributes (water/specular/emissive/…) are uniform across its
+   * tiles, so any source's mesh is a faithful representative for the slot.
+   */
+  private representativeVectorMesh(slot: VectorSlot): Object3D | undefined {
+    for (const source of slot.sources) {
+      const scene = this.texturizedSceneByTileCoordinates.findSceneByLayerId(
+        source.tileHandle,
+        slot.layerId,
+      );
+      if (scene && !scene.removed && scene.children.length) {
+        return scene.children[0];
+      }
+    }
+    return undefined;
+  }
+
+  /** Copy a draped mesh's material attributes into the main shader's slot `lastIdx`. */
+  private copyVectorMeshAttrs(lastIdx: number, mesh: Object3D) {
+    const m = this.material;
+    if (mesh instanceof PolygonMesh) {
+      // Use PolygonMesh getters that expose material enhancer state
+      m.userData.reflectivities.value[lastIdx] = mesh.reflectivity;
+      m.userData.roughnesses.value[lastIdx] = mesh.roughness;
+      m.userData.waters.value[lastIdx] = mesh.water;
+      m.userData.waterScaleNormals.value[lastIdx] = mesh.waterScaleNormal;
+      m.userData.waterSpeeds.value[lastIdx] = mesh.waterSpeed;
+      m.userData.shininesses.value[lastIdx] = mesh.shininess;
+      m.userData.specularStrengths.value[lastIdx] = mesh.specularStrength;
+      m.userData.applyWaterNormals.value[lastIdx] = mesh.applyWaterNormal;
+      m.userData.speculars.value[lastIdx] = mesh.specular;
+      m.userData.emissiveIntensities.value[lastIdx] = mesh.emissiveIntensity;
+      m.userData.emissiveColors.value[lastIdx].set(mesh.emissiveColor);
+      m.userData.effectIdsMasks.value[lastIdx] = mesh.effectIdsMask;
+    } else if (mesh instanceof PolylineMesh) {
+      m.userData.emissiveIntensities.value[lastIdx] = mesh.emissiveIntensity;
+      m.userData.emissiveColors.value[lastIdx].set(mesh.emissiveColor);
+      m.userData.effectIdsMasks.value[lastIdx] = mesh.effectIdsMask;
+    }
+  }
+
+  /**
    * Feature flags for the **main** TileMesh shader (atlas-sampling side): drives
    * its program cache key and which normal/specular branches compile. Sourced
    * from the material defines/userData, independent of the composite pass's own
@@ -306,14 +414,20 @@ export class TileMesh
    */
   private computeFeatures(): CompositeFeatures {
     const ud = this.material.userData;
+    // Only slots that are still shown count: bindVectorSlots sets shows=0 when a
+    // slot loses its representative mesh but leaves the per-slot waters/heatmap
+    // uniforms at their previous values, so a disappeared layer would otherwise
+    // keep its shader feature (e.g. water) compiled in. Mirrors the shows gate in
+    // buildCompositeLayers.
+    const shows: number[] = ud.shows?.value ?? [];
+    const waters = ud.waters?.value as boolean[] | undefined;
+    const heatmaps = ud.isElevationHeatmaps?.value as boolean[] | undefined;
     return {
       hasHillshade: ud.defines?.USE_HILLSHADE === 1,
-      hasWater: !!(ud.waters?.value as boolean[] | undefined)?.some(
-        (v) => v === true,
+      hasWater: !!waters?.some((v, i) => v === true && shows[i] === 1),
+      hasElevationHeatmap: !!heatmaps?.some(
+        (v, i) => v === true && shows[i] === 1,
       ),
-      hasElevationHeatmap: !!(
-        ud.isElevationHeatmaps?.value as boolean[] | undefined
-      )?.some((v) => v === true),
       hasWatermask: this.userData.watermask != null,
     };
   }
@@ -380,6 +494,16 @@ export class TileMesh
           opacity: opacities[absSlot] ?? 1,
         });
       } else {
+        // WebMercator-on-Geographic latitude reprojection. Raster slots read the
+        // shared per-tile flag/band stashed by setupTextures; baked-vector slots
+        // (whose RT spans the terrain extent) carry the Rust-resolved terrain
+        // `[south, north]` band directly on the slot. `undefined` on WM terrain.
+        const slotReproject =
+          region === "vector"
+            ? this.vectorSlots[absSlot - boundary]?.reproject
+            : layerReproject[absSlot] === 1
+              ? reproject
+              : undefined;
         layers.push({
           kind: "raster",
           region,
@@ -390,9 +514,7 @@ export class TileMesh
           color: colors[absSlot] ?? new Color(),
           opacity: opacities[absSlot] ?? 1,
           water: waters[absSlot] ?? false,
-          // WebMercator raster on Geographic terrain: carry the terrain latitude
-          // range so the composite shader can reproject this slot's latitude.
-          reproject: layerReproject[absSlot] === 1 ? reproject : undefined,
+          reproject: slotReproject,
         });
       }
     }
@@ -904,10 +1026,9 @@ ${generateTileCommonInjection(maxTextures)}
         changedMaterial,
       );
 
-      this._setupSceneObserver();
-
-      this.texturizedSceneByTileCoordinates.setNeedsUpdate(this.handle, true);
-      // Material / texture-binding changed → composite atlas must repaint.
+      // Material / texture rebind → force the vector slots to re-bind their
+      // per-slot uniform state on the next frame, and repaint the composite atlas.
+      this.prevVectorSignature = "";
       this.compositor.markDirty(this.handle, "material");
       this.compositor.markDirty(this.handle, "texture-binding");
     }
@@ -943,109 +1064,6 @@ ${generateTileCommonInjection(maxTextures)}
     }
     if (this.material.wireframe !== globe.wireframe) {
       this.material.wireframe = globe.wireframe;
-    }
-  }
-
-  private _setupSceneObserver() {
-    if (this.texturizedScenes.childrenObserver) {
-      this.texturizedScenes.removeEventListener(
-        "childadded",
-        this.texturizedScenes.childrenObserver,
-      );
-      this.texturizedScenes.removeEventListener(
-        "childremoved",
-        this.texturizedScenes.childrenObserver,
-      );
-      this.texturizedScenes.childrenObserver = undefined;
-    }
-
-    const parentObserver = () => {
-      for (const texturizedScene of this.texturizedScenes.tileScenes) {
-        if (texturizedScene.childrenObserver) {
-          texturizedScene.removeEventListener(
-            "childadded",
-            texturizedScene.childrenObserver,
-          );
-          texturizedScene.removeEventListener(
-            "childremoved",
-            texturizedScene.childrenObserver,
-          );
-          texturizedScene.childrenObserver = undefined;
-        }
-
-        const observer = () => {
-          if (texturizedScene.children.length === 0) {
-            this.updateTexturizedSceneTextureVisibility(
-              false,
-              texturizedScene.layerId,
-            );
-          } else {
-            this.updateTexturizedSceneTextureVisibility(
-              true,
-              texturizedScene.layerId,
-            );
-          }
-          this.texturizedSceneByTileCoordinates.setNeedsUpdate(
-            this.handle,
-            true,
-          );
-          // A vector layer scene changed → composite atlas must repaint.
-          this.compositor.markDirty(this.handle, "vector-revision");
-        };
-
-        texturizedScene.childrenObserver = observer;
-
-        texturizedScene.addEventListener("childadded", observer);
-        texturizedScene.addEventListener("childremoved", observer);
-      }
-    };
-
-    this.texturizedScenes.childrenObserver = parentObserver;
-
-    this.texturizedScenes.addEventListener("childadded", parentObserver);
-    this.texturizedScenes.addEventListener("childremoved", parentObserver);
-  }
-
-  private updateTexturizedSceneTextureVisibility(
-    visible: boolean,
-    layerId: string,
-  ) {
-    if (!this.material || !this.material.userData) return;
-
-    const m = this.material;
-    const textures = m.userData.textures?.value;
-    if (!textures) return;
-
-    const sceneIdx = this.texturizedScenes.tileScenes.findIndex(
-      (c) => c.layerId === layerId,
-    );
-    if (sceneIdx === -1) return;
-
-    // Look for RenderTarget's texture to change visibility.
-    const lastIdx = this.texturizedSceneIndexFrom + sceneIdx;
-    if (textures[lastIdx]) {
-      m.userData.shows.value[lastIdx] = visible ? 1 : 0;
-
-      const mesh = this.texturizedScenes.tileScenes[sceneIdx].children[0];
-      if (mesh instanceof PolygonMesh) {
-        // Use PolygonMesh getters that expose material enhancer state
-        m.userData.reflectivities.value[lastIdx] = mesh.reflectivity;
-        m.userData.roughnesses.value[lastIdx] = mesh.roughness;
-        m.userData.waters.value[lastIdx] = mesh.water;
-        m.userData.waterScaleNormals.value[lastIdx] = mesh.waterScaleNormal;
-        m.userData.waterSpeeds.value[lastIdx] = mesh.waterSpeed;
-        m.userData.shininesses.value[lastIdx] = mesh.shininess;
-        m.userData.specularStrengths.value[lastIdx] = mesh.specularStrength;
-        m.userData.applyWaterNormals.value[lastIdx] = mesh.applyWaterNormal;
-        m.userData.speculars.value[lastIdx] = mesh.specular;
-        m.userData.emissiveIntensities.value[lastIdx] = mesh.emissiveIntensity;
-        m.userData.emissiveColors.value[lastIdx].set(mesh.emissiveColor);
-        m.userData.effectIdsMasks.value[lastIdx] = mesh.effectIdsMask;
-      } else if (mesh instanceof PolylineMesh) {
-        m.userData.emissiveIntensities.value[lastIdx] = mesh.emissiveIntensity;
-        m.userData.emissiveColors.value[lastIdx].set(mesh.emissiveColor);
-        m.userData.effectIdsMasks.value[lastIdx] = mesh.effectIdsMask;
-      }
     }
   }
 
@@ -1526,11 +1544,14 @@ ${generateTileCommonInjection(maxTextures)}
 
       textures[lastIndex] = texturizedSceneTexture;
 
-      m.userData.shows.value[lastIndex] =
-        (this.texturizedScenes.tileScenes[i]?.children.length ?? 0 > 0) ? 1 : 0;
+      // Per-slot visibility + material attributes are bound by bindVectorSlots once
+      // the Rust-resolved slots are known; default to hidden here.
+      m.userData.shows.value[lastIndex] = 0;
       m.userData.colors.value[lastIndex] = new Color(0xffffff);
       m.userData.opacities.value[lastIndex] = 1.0;
     }
+    // Re-bind vector slots on the next frame now that render targets were rebound.
+    this.prevVectorSignature = "";
   }
 
   /**
@@ -1566,13 +1587,14 @@ ${generateTileCommonInjection(maxTextures)}
   onBeforePicking(): void {
     this.material.userData.uPickable.value = 1;
 
-    this.texturizedSceneByTileCoordinates.setNeedsUpdate(this.handle, true);
+    // Force the vector scenes to re-bake for the picking pass.
+    this.prevVectorSignature = "";
     this.compositor.markDirty(this.handle, "vector-revision");
   }
 
   onAfterPicking(): void {
     this.material.userData.uPickable.value = 0;
-    this.texturizedSceneByTileCoordinates.setNeedsUpdate(this.handle, true);
+    this.prevVectorSignature = "";
     this.compositor.markDirty(this.handle, "vector-revision");
   }
 
@@ -1604,26 +1626,6 @@ ${generateTileCommonInjection(maxTextures)}
       this.shadowMesh = undefined;
     }
 
-    // Detach any observers we attached on texturized scenes
-    if (this.texturizedScenes?.childrenObserver) {
-      this.texturizedScenes.removeEventListener(
-        "childadded",
-        this.texturizedScenes.childrenObserver,
-      );
-      this.texturizedScenes.removeEventListener(
-        "childremoved",
-        this.texturizedScenes.childrenObserver,
-      );
-      this.texturizedScenes.childrenObserver = undefined;
-    }
-    for (const s of this.texturizedScenes?.tileScenes ?? []) {
-      if (s.childrenObserver) {
-        s.removeEventListener("childadded", s.childrenObserver);
-        s.removeEventListener("childremoved", s.childrenObserver);
-        s.childrenObserver = undefined;
-      }
-    }
-
     // Dispose WebGLRenderTargets to free GPU memory
     for (const renderTarget of this.texturizedSceneRenderTargets) {
       renderTarget.dispose();
@@ -1642,7 +1644,8 @@ ${generateTileCommonInjection(maxTextures)}
     // TileTextureCache). Mirrors the acquire() in the constructor.
     this.compositor.release(this.handle);
 
-    // Clean up from texturizedSceneByTileCoordinates
-    this.texturizedSceneByTileCoordinates.delete(this.handle);
+    // Note: the texturized-scene cache is keyed by WM vector tile handle and is
+    // shared across terrain tiles (N:M draping), so it is NOT deleted here — its
+    // entries are cleared by the vector unload path in event/feature.ts.
   }
 }

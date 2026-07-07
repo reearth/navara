@@ -81,6 +81,7 @@ export async function processRenderableFeatureAdded(
     layersManager,
     viewContext,
     updatedAt,
+    layerHandler,
   } = ctx;
   const id = generate_id_from_entity(ev);
   const feature = ev.feature;
@@ -141,11 +142,30 @@ export async function processRenderableFeatureAdded(
   meshes.set(id, obj);
 
   if (isDraped && tileHandle) {
+    // Insert the bakeable draped mesh into the per-tile cache now (it is fully built at
+    // this point). Readiness/ancestor-fallback is decided entirely on the Rust side from
+    // the ECS lifecycle, so no `scene_ready` is reported. Insert even when invisible —
+    // the offscreen bake skips invisible meshes.
+    const layerIndex = layerHandler?.getLayerIndex(featureLayerId);
+    // Timing: the layer may have been removed before this event; skip the insert then (the
+    // mesh object still exists, it just won't be baked for this layer).
+    if (layerIndex != null) {
+      texturizedSceneByTileCoordinates.add(
+        tileHandle,
+        featureLayerId,
+        obj as Mesh,
+        layerIndex,
+      );
+    }
     obj.addEventListener("removedFromWorld", () => {
-      texturizedSceneByTileCoordinates.remove(tileHandle, featureLayerId);
+      texturizedSceneByTileCoordinates.removeMesh(
+        tileHandle,
+        featureLayerId,
+        obj as Mesh,
+      );
     });
     obj.addEventListener("needsUpdate", () => {
-      texturizedSceneByTileCoordinates.setNeedsUpdate(tileHandle, true);
+      texturizedSceneByTileCoordinates.markDirty(tileHandle, featureLayerId);
     });
   }
 
@@ -191,7 +211,6 @@ export async function processRenderableFeatureChanged(
     viewEvents,
     layersManager,
     updatedAt,
-    layerHandler,
   } = ctx;
   const id = generate_id_from_entity(ev);
   const obj = meshes.get(id);
@@ -234,32 +253,16 @@ export async function processRenderableFeatureChanged(
     }
   }
 
-  // Handle a draped polygon mesh and polyline mesh
+  // A draped feature's material/visibility changed: bump the layer scene's revision so the
+  // consuming TileMesh re-bakes (invisible meshes stay in the scene and are skipped at bake).
+  // Cache membership is owned by CREATE / `removedFromWorld`; a runtime `clampToGround` flip
+  // is not handled here (rare — the flag is set once at mesh init).
   if (
-    (obj instanceof PolygonMesh || obj instanceof PolylineMesh) &&
+    ((obj instanceof PolygonMesh && obj.clampToGround) ||
+      (obj instanceof PolylineMesh && obj.draped)) &&
     tileHandle
   ) {
-    if (
-      (obj instanceof PolygonMesh && obj.clampToGround) ||
-      (obj instanceof PolylineMesh && obj.draped)
-    ) {
-      if (obj.visible) {
-        const layerIndex = layerHandler?.getLayerIndex(layerId);
-        // Timing issue: `layerIndex` will be undefined if the layer is removed after this feature update event.
-        if (layerIndex != null) {
-          texturizedSceneByTileCoordinates.add(
-            tileHandle,
-            layerId,
-            obj as Mesh,
-            layerIndex,
-            false,
-          );
-        }
-      }
-    } else {
-      texturizedSceneByTileCoordinates.remove(tileHandle, layerId);
-    }
-    texturizedSceneByTileCoordinates.setNeedsUpdate(tileHandle, true);
+    texturizedSceneByTileCoordinates.markDirty(tileHandle, layerId);
   }
 
   // Emit visibility changed event if visibility actually changed after material updates

@@ -110,16 +110,17 @@ ${contributions.globalUniformDecls}
     const isTexturizedConst = isVector ? "1.0" : "0.0";
     const ctx: CompositeSlotContext = { k, absSlot, isVector };
 
-    // WebMercator-on-Geographic latitude reprojection only applies to raster
-    // (imagery) slots; texturized vector reprojection is handled separately.
+    // WebMercator-on-Geographic latitude reprojection. Applies to both raster
+    // (imagery) slots and baked-vector slots: a vector layer's render target is
+    // baked spanning the terrain tile's WebMercator extent, so the paste remaps
+    // the latitude axis the same way (identity when the slot doesn't reproject,
+    // i.e. WebMercator terrain, where uReproject[k] == 0 makes this a no-op).
     //
     // Reprojection (and therefore N:M sub-rect confinement) is the only path that
     // can drive texUv outside [0,1], so both the transcendental math and the
     // `inBounds` test live behind the `uReproject` branch — non-reprojecting slots
     // keep texUv in [0,1] by construction and pay neither cost.
-    const reprojectBlock = isVector
-      ? ""
-      : `
+    const reprojectBlock = `
     if (uReproject[${k}] == 1) {
       // Affine UV is correct in longitude but stretches latitude. Remap this
       // fragment's latitude through Mercator so it samples the source correctly.
@@ -145,11 +146,12 @@ ${contributions.globalUniformDecls}
       if (abs(mDen) > 1e-3) {
         texUv${k}.y = (gReprojMLat - mRs) / mDen;
       }
-      // Polar cap fill: WM imagery stops at ±~85.05° but Geographic terrain reaches
-      // ±90°. When this slot is the band-edge raster tile (its north/south edge sits
-      // on the WM limit), clamp the polar overshoot onto that edge texel so the last
-      // available imagery row stretches across the cap instead of being dropped by
-      // the in-bounds test below. Non-edge tiles keep the normal drop.
+      // Polar cap fill: WebMercator content stops at ±~85.05° but Geographic
+      // terrain reaches ±90°. When this slot is the band-edge source (its
+      // north/south edge sits on the WM limit), clamp the polar overshoot onto
+      // that edge texel so the last available source row stretches across the cap
+      // instead of being dropped by the in-bounds test below. Non-edge tiles keep
+      // the normal drop.
       if (uReprojectMerc[${k}].z > 0.5) texUv${k}.y = min(texUv${k}.y, 1.0);
       if (uReprojectMerc[${k}].w > 0.5) texUv${k}.y = max(texUv${k}.y, 0.0);
       // Confine the slot to the sub-rect it actually covers. With N:M draping each

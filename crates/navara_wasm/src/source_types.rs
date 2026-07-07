@@ -1337,4 +1337,81 @@ mod tests {
 
         assert_eq!(merged.exaggeration, 3.5);
     }
+
+    fn terrain_desc_typed(
+        terrain_type: TerrainDataType,
+        material: navara_material::TerrainMaterial,
+    ) -> LayerDescription {
+        LayerDescription::Terrain(Box::new(TerrainLayer {
+            layer_id: "layer".into(),
+            source_id: Some("source".into()),
+            terrain_type,
+            appearance: Some(material),
+        }))
+    }
+
+    fn as_terrain(desc: &LayerDescription) -> &TerrainLayer {
+        match desc {
+            LayerDescription::Terrain(l) => l,
+            _ => panic!("expected a terrain description, got {desc:?}"),
+        }
+    }
+
+    // Dropping a terrain layer's source (ellipsoid) must keep the previous
+    // material fields the update didn't mention, drop the `source_id`, and
+    // inherit the previous data format.
+    #[test]
+    fn terrain_build_sourceless_merges_and_inherits_type() {
+        let old = terrain_desc_typed(
+            TerrainDataType::QuantizedMesh,
+            navara_material::TerrainMaterial {
+                skirt: true,
+                skirt_exaggeration: 2.0,
+                ..Default::default()
+            },
+        );
+        let desc = TerrainSourceLayerDescription {
+            terrain: Some(serde_json::from_str(r#"{"castShadow": true}"#).unwrap()),
+            ..Default::default()
+        };
+
+        let result = desc
+            .build_sourceless("layer", Some(&old))
+            .expect("sourceless terrain description");
+        let layer = as_terrain(&result);
+
+        assert_eq!(
+            layer.source_id, None,
+            "sourceless layer drops the source_id"
+        );
+        assert_eq!(
+            layer.terrain_type,
+            TerrainDataType::QuantizedMesh,
+            "previous terrain data format is inherited",
+        );
+        let material = layer.appearance.as_ref().expect("terrain material");
+        assert!(material.cast_shadow, "cast_shadow updated");
+        assert!(
+            material.skirt,
+            "skirt preserved by a cast_shadow-only update"
+        );
+        assert_eq!(
+            material.skirt_exaggeration, 2.0,
+            "skirt_exaggeration preserved",
+        );
+    }
+
+    // With no previous description, a source-less terrain is the ellipsoid.
+    #[test]
+    fn terrain_build_sourceless_without_previous_is_ellipsoid() {
+        let desc = TerrainSourceLayerDescription::default();
+
+        let result = desc
+            .build_sourceless("layer", None)
+            .expect("sourceless terrain description");
+        let layer = as_terrain(&result);
+
+        assert_eq!(layer.source_id, None);
+        assert_eq!(layer.terrain_type, TerrainDataType::Ellipsoid);
+    }
 }
