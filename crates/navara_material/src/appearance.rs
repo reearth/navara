@@ -198,6 +198,17 @@ pub struct TextMaterial {
     /// default), single-channel SDF (Felzenszwalb on a fontdue bitmap) is used
     /// — ~100× faster per glyph, slightly soft corners at extreme zoom.
     pub high_quality: bool,
+    /// Maximum line width in ems (multiples of `size`) before text wraps at
+    /// word boundaries. `0.0` (the default) disables wrapping; explicit `\n`
+    /// characters in `text` always break lines. Em units keep the wrap width
+    /// stable whether `size_in_meters` is on or off.
+    pub max_width: f32,
+    /// Line height as a multiplier of the font's natural line height
+    /// (ascender − descender + line gap). Default `1.0`.
+    pub line_height: f32,
+    /// Horizontal alignment of lines within a multi-line block:
+    /// `"left"`, `"center"` (default), or `"right"`.
+    pub text_align: String,
 }
 
 impl Default for TextMaterial {
@@ -226,6 +237,9 @@ impl Default for TextMaterial {
             outline_width: 0.0,
             lang: "".to_string(),
             high_quality: false,
+            max_width: 0.0,
+            line_height: 1.0,
+            text_align: "center".to_string(),
         }
     }
 }

@@ -120,6 +120,7 @@ function createShapeResult(text: string, unitsPerEm = 1000): ShapeTextResult {
       yAdvance: 0,
       xOffset: 0,
       yOffset: 0,
+      charClass: 0,
     })),
     metrics: [...text].map((_, i) => ({
       glyphId: i + 1,
@@ -134,6 +135,9 @@ function createShapeResult(text: string, unitsPerEm = 1000): ShapeTextResult {
       isColor: false,
     })),
     unitsPerEm,
+    ascender: 800,
+    descender: -200,
+    lineGap: 0,
   };
 }
 
@@ -823,10 +827,14 @@ describe("FontManager", () => {
                   yAdvance: 0,
                   xOffset: 0,
                   yOffset: 0,
+                  charClass: 0,
                 },
               ],
               metrics: [sharedMetric],
               unitsPerEm: 1000,
+              ascender: 800,
+              descender: -200,
+              lineGap: 0,
             },
           })),
           atlas: {
@@ -906,6 +914,7 @@ describe("FontManager", () => {
                   yAdvance: 10,
                   xOffset: 20,
                   yOffset: 30,
+                  charClass: 0,
                 })),
                 metrics: [...text].map((_, i) => ({
                   glyphId: i + 1,
@@ -920,6 +929,9 @@ describe("FontManager", () => {
                   isColor: false,
                 })),
                 unitsPerEm: cfg.unitsPerEm,
+                ascender: 800,
+                descender: -200,
+                lineGap: 0,
               },
             })),
             atlas: {
@@ -1279,6 +1291,7 @@ describe("FontManager", () => {
                       yAdvance: 0,
                       xOffset: 0,
                       yOffset: 0,
+                      charClass: 0,
                     },
                   ],
                   metrics: [
@@ -1296,6 +1309,9 @@ describe("FontManager", () => {
                     },
                   ],
                   unitsPerEm: 1000,
+                  ascender: 800,
+                  descender: -200,
+                  lineGap: 0,
                 },
               })),
               atlas: {
@@ -1442,6 +1458,7 @@ describe("FontManager", () => {
                         yAdvance: 10,
                         xOffset: 20,
                         yOffset: 30,
+                        charClass: 0,
                       })),
                       metrics: [...text].map((_, i) => ({
                         glyphId: i + 1,
@@ -1456,6 +1473,9 @@ describe("FontManager", () => {
                         isColor: false,
                       })),
                       unitsPerEm: 1000,
+                      ascender: 800,
+                      descender: -200,
+                      lineGap: 0,
                     }
                   : null,
               })),
