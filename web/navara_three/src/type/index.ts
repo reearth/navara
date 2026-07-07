@@ -118,6 +118,11 @@ export type MvtLayer = WithColorSupport<
  */
 export type SourceRef = string | Source;
 
+export type SourceLayerBase<Layer extends { source?: string | undefined }> =
+  Omit<Layer, "source"> & {
+    source?: SourceRef;
+  };
+
 type VectorLayerBase = WithColorSupport<
   Layer<VectorLayerDescription & { type: "vector" }>
 >;
@@ -126,18 +131,14 @@ type VectorLayerBase = WithColorSupport<
  * A `vector` layer renders a `geojson` or `vector-tile` source as points,
  * lines, polygons, text and billboards.
  */
-export type VectorLayer = Omit<VectorLayerBase, "source"> & {
-  source: SourceRef;
-};
+export type VectorLayer = SourceLayerBase<VectorLayerBase>;
 
 type RasterLayerBase = WithColorSupport<
   Layer<RasterLayerDescription & { type: "raster" }>
 >;
 
 /** A `raster` layer renders a `raster-tile` (imagery) or `raster-dem` source. */
-export type RasterLayer = Omit<RasterLayerBase, "source"> & {
-  source: SourceRef;
-};
+export type RasterLayer = SourceLayerBase<RasterLayerBase>;
 
 type TerrainSourceLayerBase = WithColorSupport<
   Layer<TerrainSourceLayerDescription & { type: "terrain" }>
@@ -146,18 +147,14 @@ type TerrainSourceLayerBase = WithColorSupport<
 /**
  * A `terrain` layer renders a `raster-dem` or `quantized-mesh` source as the globe surface.
  */
-export type TerrainSourceLayer = Omit<TerrainSourceLayerBase, "source"> & {
-  source: SourceRef;
-};
+export type TerrainSourceLayer = SourceLayerBase<TerrainSourceLayerBase>;
 
 type Tiles3dLayerBase = WithColorSupport<
   Layer<Tiles3dLayerDescription & { type: "3d-tiles" }>
 >;
 
 /** A `3d-tiles` layer renders a `3d-tiles`, `b3dm`, or `pnts` source. */
-export type Tiles3dLayer = Omit<Tiles3dLayerBase, "source"> & {
-  source: SourceRef;
-};
+export type Tiles3dLayer = SourceLayerBase<Tiles3dLayerBase>;
 
 export type LayerDescription =
   | TilesLayer
