@@ -10,9 +10,9 @@ in vec4 right_normal_and_texture_coordinate_normalization_y;
 #include <common>
 #include <color_pars_vertex>
 #include chunks/batch_texture_pars_vertex;
+#include chunks/height_pars_vertex;
 
 uniform vec3 minMaxHeightAndWidth;
-uniform float uAddHeight;
 
 out float nvr_vBatchId;
 
@@ -20,13 +20,8 @@ void main() {
     #include <begin_vertex>
     #include <color_vertex>
 
-    // Declare variables needed by batch_texture_vertex chunk
-    // flatPolyline doesn't use height adjustment, but batch_texture_vertex may reference it
-    float addHeight = 0.0;
-    float addExtrudedHeight = 0.0;
-
-    // batchLineWidth is populated by batch_texture_vertex when USE_BATCH_LINE_WIDTH is defined
-    float batchLineWidth = -1.0;
+    #include chunks/height_vertex;
+    #include chunks/line_width_vertex;
 
     #include chunks/batch_texture_vertex;
 

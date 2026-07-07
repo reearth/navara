@@ -58,9 +58,7 @@ void main() {
     #include <color_vertex>
 
     #include chunks/height_vertex;
-
-    // batchLineWidth is populated by batch_texture_vertex when USE_BATCH_LINE_WIDTH is defined
-    float batchLineWidth = -1.0;
+    #include chunks/line_width_vertex;
 
     #include chunks/batch_texture_vertex;
 
