@@ -125,11 +125,11 @@ export function initBatchDataTexture(
   const textureHeight = batchRows * rowCount;
   const data = new Float32Array(textureWidth * 4 * textureHeight);
 
-  // Initialize COLOR_SHOW alpha channel with packed show=1, opacity=1 for all batch IDs
-  // (default is fully visible and opaque)
+  // Initialize COLOR_SHOW alpha channel with packed show=material.visible, opacity=1 for all batch IDs
+  // (default is fully opaque, and visible/hidden based on material.visible)
   const colorShowRowIndex = config.rows.indexOf("COLOR_SHOW");
   if (colorShowRowIndex >= 0) {
-    const defaultPacked = packShowOpacity(1, 1); // show=1, opacity=1
+    const defaultPacked = packShowOpacity(material.visible ? 1 : 0, 1);
     for (let batchId = 0; batchId < config.batchLength; batchId++) {
       const baseIndex = batchBaseIndex(
         textureWidth,
