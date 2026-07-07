@@ -88,6 +88,10 @@ where
     fn remove(&mut self, handle: QuadLeafHandle) -> Option<V> {
         self.leaves.remove(&handle)
     }
+
+    fn drain(&mut self) -> Vec<V> {
+        self.leaves.drain().map(|(_, v)| v).collect()
+    }
 }
 
 #[derive(Debug)]

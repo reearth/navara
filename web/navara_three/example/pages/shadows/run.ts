@@ -4,6 +4,7 @@ import ThreeView, {
   Layer,
   LightHandle,
   type Cesium3dTilesLayer,
+  type TerrainSourceLayer,
 } from "@navara/three";
 import { SunLightDesc, type ShadowMode } from "@navara/three_default_descs";
 import { DefaultPlugin } from "@navara/three_default_plugin";
@@ -31,21 +32,6 @@ export async function run() {
   const defaultAtmospheres = defaultPlugin.addDefaultPhotorealScene();
 
   view.toneMappingExposure = 10;
-
-  // Add terrain layer
-  view.addLayer({
-    type: "terrain",
-    data: {
-      url: TERRAIN_DATASETS.gsi.url,
-    },
-    rasterTerrain: {
-      maxZoom: 15,
-      minZoom: 6,
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-      castShadow: true,
-      receiveShadow: true,
-    },
-  });
 
   view.addLayer({
     type: "tiles",
@@ -75,6 +61,7 @@ export async function run() {
   addCameraControl(view, pane);
   addDateControl(view, pane);
   addViewShadowControl(view, defaultAtmospheres.sun, pane);
+  addTerrainModelControl(view, pane);
   addBuildingModelControl(view, pane);
 
   showAttributions([
@@ -270,6 +257,59 @@ const addViewShadowControl = (
   ];
   addFieldsToFolder(
     pane.addFolder({ title: "Sun light shadow" }),
+    PARAMS,
+    fields,
+  );
+};
+
+const addTerrainModelControl = (view: ThreeView, pane: Pane) => {
+  const dem = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.gsi.url,
+    maxZoom: 15,
+    minZoom: 6,
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  });
+  const terrainLayerDescription: TerrainSourceLayer = {
+    type: "terrain",
+    source: dem,
+    terrain: {
+      castShadow: true,
+      receiveShadow: true,
+    },
+  };
+
+  const terrainLayer = view.addLayer(terrainLayerDescription);
+
+  const PARAMS = {
+    castShadow: true,
+    receiveShadow: true,
+  };
+
+  const fields: FolderFields<typeof PARAMS> = [
+    {
+      name: "castShadow",
+      onChange: (v) => {
+        terrainLayer.update({
+          terrain: {
+            castShadow: v.value,
+          },
+        });
+      },
+    },
+    {
+      name: "receiveShadow",
+      onChange: (v) => {
+        terrainLayer.update({
+          terrain: {
+            receiveShadow: v.value,
+          },
+        });
+      },
+    },
+  ];
+  addFieldsToFolder(
+    pane.addFolder({ title: "Terrain shadow" }),
     PARAMS,
     fields,
   );

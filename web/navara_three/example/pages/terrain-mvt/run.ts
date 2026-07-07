@@ -1,4 +1,8 @@
-import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
+import ThreeView, {
+  Color,
+  JAPAN_GSI_ELEVATION_DECODER,
+  type Layer,
+} from "@navara/three";
 import { ToneMappingMode } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
@@ -14,7 +18,34 @@ import { SH_COEFFICIENTS } from "../../helpers/sh";
 
 export type CustomDescriptions = DefaultDescriptions;
 
-export const run = async (view: ThreeView<CustomDescriptions>) => {
+type TerrainMode = "quantizedMesh" | "raster";
+
+type CameraState = {
+  lng: number;
+  lat: number;
+  height: number;
+  heading: number;
+  pitch: number;
+  roll: number;
+};
+
+const INITIAL_CAMERA: CameraState = {
+  lng: 138.89,
+  lat: 34.32,
+  height: 54081,
+  heading: 354,
+  pitch: -28,
+  roll: 0,
+};
+
+export const run = async () => {
+  let currentMode: TerrainMode = "quantizedMesh";
+  const cameraState: CameraState = { ...INITIAL_CAMERA };
+
+  const view = new ThreeView<CustomDescriptions>({
+    debug: true,
+  });
+
   view.addPlugin(new DefaultPlugin());
 
   await view.init();
@@ -40,17 +71,20 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     },
   });
 
-  view.setCamera({
-    lng: 138.89,
-    lat: 34.32,
-    height: 54081,
-    heading: 354,
-    pitch: -28,
-    roll: 0,
-  });
+  view.setCamera({ ...cameraState });
 
-  // GSI DEM as a raster-dem source, shared by the terrain and the hillshade.
-  const dem = view.addSource({
+  // Both terrain sources are registered up front and KEPT for the page's
+  // lifetime; switching only re-points the terrain layer at the other source
+  // (like MapLibre's `setTerrain({ source })`) via `updateLayer` — no source
+  // delete, no dispose.
+  const qmSource = view.addSource({
+    type: "quantized-mesh",
+    url: TERRAIN_DATASETS.reearthQuantizedMesh.url,
+    maxZoom: 18,
+    requestVertexNormals: true,
+  });
+  // GSI DEM as a raster-dem source, shared by the terrain and its hillshade.
+  const demSource = view.addSource({
     type: "raster-dem",
     url: TERRAIN_DATASETS.gsi.url,
     elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
@@ -58,21 +92,53 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     minZoom: 5,
   });
 
-  // Add terrain layer for 3D surface
-  view.addLayer({
+  const terrainLayer = view.addLayer({
     type: "terrain",
-    source: dem,
+    source: qmSource,
     terrain: { castShadow: false, receiveShadow: false },
   });
+  // The hillshade is a separate raster layer that only exists in raster-DEM
+  // mode; it is added/removed on switch (its DEM source stays registered).
+  let hillshadeLayer: Layer | undefined;
 
-  view.addLayer({
-    type: "raster",
-    source: dem,
-    hillshade: {},
-  });
+  // Switch terrain by re-pointing the terrain layer at the other source. The
+  // vector/GeoJSON layers, camera, effects, and panel are all preserved.
+  const switchMode = (mode: TerrainMode) => {
+    if (mode === currentMode) return;
+    currentMode = mode;
 
-  // const ellipsoid = view.addSource({ type: "ellipsoid" });
-  // view.addLayer({ type: "terrain", source: ellipsoid });
+    if (mode === "quantizedMesh") {
+      terrainLayer.update({
+        type: "terrain",
+        source: qmSource,
+        terrain: { castShadow: false, receiveShadow: false },
+      });
+      hillshadeLayer?.delete();
+      hillshadeLayer = undefined;
+    } else {
+      terrainLayer.update({
+        type: "terrain",
+        source: demSource,
+        terrain: { castShadow: false, receiveShadow: false },
+      });
+      hillshadeLayer ??= view.addLayer({
+        type: "raster",
+        source: demSource,
+        hillshade: {},
+      });
+    }
+
+    const terrainDataset =
+      mode === "quantizedMesh"
+        ? TERRAIN_DATASETS.reearthQuantizedMesh
+        : TERRAIN_DATASETS.gsi;
+    showAttributions([terrainDataset, VECTOR_DATASETS.gsiExperimentalVector]);
+  };
+
+  showAttributions([
+    TERRAIN_DATASETS.reearthQuantizedMesh,
+    VECTOR_DATASETS.gsiExperimentalVector,
+  ]);
 
   // A single vector-tile source shared by multiple vector layers; each layer
   // renders a different source layer of the same tileset.
@@ -186,11 +252,41 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     },
   });
 
+  // Keep the camera state in sync so switching terrain preserves the view.
+  const syncCamera = () => {
+    const pos = view.camera.positionGeographic;
+    const orient = view.camera.orientation;
+    if (pos?.lng !== undefined) cameraState.lng = pos.lng;
+    if (pos?.lat !== undefined) cameraState.lat = pos.lat;
+    if (pos?.height !== undefined) cameraState.height = pos.height;
+    if (orient?.heading !== undefined) cameraState.heading = orient.heading;
+    if (orient?.pitch !== undefined) cameraState.pitch = orient.pitch;
+    if (orient?.roll !== undefined) cameraState.roll = orient.roll;
+  };
+  view.camera.on("moveend", syncCamera);
+
   // Create control panel
   const pane = new Pane();
+  addTerrainControl(pane, () => currentMode, switchMode);
   addCameraControl(view, pane);
-  showAttributions([
-    TERRAIN_DATASETS.gsi,
-    VECTOR_DATASETS.gsiExperimentalVector,
-  ]);
+};
+
+const addTerrainControl = (
+  pane: Pane,
+  getMode: () => TerrainMode,
+  switchMode: (mode: TerrainMode) => void,
+) => {
+  const params = { terrain: getMode() };
+  const folder = pane.addFolder({ title: "Terrain", expanded: true });
+  folder
+    .addBinding(params, "terrain", {
+      label: "type",
+      options: [
+        { text: "Quantized Mesh", value: "quantizedMesh" },
+        { text: "DEM (Raster)", value: "raster" },
+      ],
+    })
+    .on("change", (ev) => {
+      switchMode(ev.value as TerrainMode);
+    });
 };

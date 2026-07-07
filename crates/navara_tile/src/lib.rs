@@ -48,6 +48,8 @@ impl Plugin for TilePlugin {
                 (
                     tile::system::update_layer,
                     tile::system::delete_layer,
+                    tile::system::update_terrain_layer,
+                    tile::system::sync_terrain_layer_changes,
                     tile::system::init_globe_tiling,
                     raster::system::init_raster_tiling,
                     raster::system::update_raster_tiles,

@@ -49,7 +49,7 @@ view.addLayer({ type: "terrain", source: dem, terrain: { skirt: true } });
 
 ## 更新と削除
 
-返された `Layer` ハンドルは、`update()` で設定を上書きし、`delete()` でレイヤーを削除します。レイヤーの `source` は `update()` では変更できません。別の Source を指すようにするには、レイヤーを作り直してください。
+返された `Layer` ハンドルは、`update()` で設定を上書きし、`delete()` でレイヤーを削除します。更新ペイロードに別の `source` を渡すと、レイヤーはその Source に張り替えられ、新しい Source に対して再構築されます（対象の Source は登録済みである必要があります。未登録の source id は無視され、残りの更新はそのまま適用されます）。地形（terrain）レイヤーも両方に対応しており、`delete()` で地形が削除されるとグローブはフラットな楕円体にフォールバックします。
 
 ```typescript
 const layer = view.addLayer({ type: "raster", source: imagery });

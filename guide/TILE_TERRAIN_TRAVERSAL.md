@@ -6,7 +6,9 @@ This document covers the **Rust engine side** (the `navara_tile` crate and the
 quadtrees it walks). For how the resolved textures are then baked onto a single
 mesh on the **TypeScript/GPU side**, see
 [TILE_TEXTURE_COMPOSITING.md](TILE_TEXTURE_COMPOSITING.md). For the surrounding
-architecture see [ARCHITECTURE.md](ARCHITECTURE.md).
+architecture see [ARCHITECTURE.md](ARCHITECTURE.md). Clamp-to-ground **vector**
+layers run a third quadtree/traversal of the same shape and drape via the raster
+composite path — see [VECTOR_TILE_DRAPING.md](VECTOR_TILE_DRAPING.md).
 
 ## Overview
 

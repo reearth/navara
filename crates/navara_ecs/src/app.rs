@@ -1,4 +1,5 @@
 use bevy_app::prelude::*;
+use bevy_ecs::schedule::IntoScheduleConfigs;
 use bevy_ecs::system::Commands;
 use navara_buffer_store::BufferStorePlugin;
 use navara_camera::CameraPlugin;
@@ -18,8 +19,8 @@ use navara_occluder::OccluderPlugin;
 use navara_pmtiles::PmTilesPlugin;
 use navara_source::SourcePlugin;
 use navara_texture_fragment::TextureFragmentPlugin;
-use navara_tile::TilePlugin;
-use navara_vector_tile::VectorTilePlugin;
+use navara_tile::{TilePlugin, TileSet};
+use navara_vector_tile::{VectorTilePlugin, VectorTileSet};
 use navara_window::WindowPlugin;
 use navara_worker::WorkerPlugin;
 
@@ -54,6 +55,11 @@ impl bevy_app::Plugin for Plugin {
         app.add_plugins(MvtPlugin);
         app.add_plugins(PmTilesPlugin);
         app.add_plugins(WorkerPlugin);
+
+        // The draped-vector traverse reads the terrain quadtree by extent to keep its
+        // SSE in step with the terrain's subdivision (like raster). Run it after the
+        // terrain/raster `TileSet` so it sees this frame's rendered terrain tiles.
+        app.configure_sets(Update, VectorTileSet::Process.after(TileSet));
 
         // custom systems
         app.add_systems(Startup, startup);

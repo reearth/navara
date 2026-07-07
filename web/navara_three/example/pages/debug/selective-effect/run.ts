@@ -14,10 +14,11 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
+import { AttributionPlugin } from "@navara/three_plugins";
 import { Vector3 } from "three";
 import { Pane } from "tweakpane";
 
-import { showAttributions } from "../../../helpers/attributions";
+import { datasetToSource } from "../../../helpers/attribution-source";
 import {
   TILE_DATASETS,
   TILES_3D_DATASETS,
@@ -32,6 +33,8 @@ export const run = async (view: ThreeView<DefaultDescriptions>) => {
   const debugPlugin = new DebugPlugin();
   view.addPlugin(plugin);
   view.addPlugin(debugPlugin);
+  const attribution = new AttributionPlugin();
+  view.addPlugin(attribution);
   await view.init();
 
   // Camera: Tokyo Station area
@@ -159,11 +162,11 @@ export const run = async (view: ThreeView<DefaultDescriptions>) => {
     },
   });
 
-  showAttributions([
-    TILE_DATASETS.openstreetmap,
-    TERRAIN_DATASETS.gsi,
-    TILES_3D_DATASETS.plateauChiyoda,
-    TILES_3D_DATASETS.plateauChuo,
+  attribution.show([
+    datasetToSource(TILE_DATASETS.openstreetmap),
+    datasetToSource(TERRAIN_DATASETS.gsi),
+    datasetToSource(TILES_3D_DATASETS.plateauChiyoda),
+    datasetToSource(TILES_3D_DATASETS.plateauChuo),
   ]);
 
   // --- Debug Controls ---

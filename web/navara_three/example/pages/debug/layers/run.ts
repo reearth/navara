@@ -7,10 +7,11 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
+import { AttributionPlugin } from "@navara/three_plugins";
 import { Vector3 } from "three";
 import { Pane } from "tweakpane";
 
-import { showAttributions } from "../../../helpers/attributions";
+import { datasetToSource } from "../../../helpers/attribution-source";
 import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
@@ -550,6 +551,8 @@ const geoLayersDef: MaterialDesc[] = [
 export const run = async (view: ThreeView<CustomDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
+  const attribution = new AttributionPlugin();
+  view.addPlugin(attribution);
   await view.init();
 
   const defaultAtmospheres = plugin.addDefaultPhotorealScene();
@@ -625,6 +628,20 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     },
   });
 
+  // // TODO: Add switch panel for terrain
+  // view.addLayer({
+  //   type: "terrain",
+  //   data: {
+  //     url: TERRAIN_DATASETS.reearthQuantizedMesh.url,
+  //   },
+  //   quantizedMesh: {
+  //     maxZoom: 18,
+  //     requestVertexNormals: true,
+  //     castShadow: false,
+  //     receiveShadow: false,
+  //   },
+  // });
+
   const pane = new Pane({
     title: "Parameters",
     expanded: true,
@@ -640,14 +657,14 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
 
   addCtrlPanel(geoLayersDef, view, materialCtrl as Pane);
 
-  showAttributions([
-    TERRAIN_DATASETS.gsi,
-    TILE_DATASETS.openstreetmap,
-    GEOJSON_DATASETS.calderdaleDefibrillators,
-    TILES_3D_DATASETS.plateauChiyoda,
-    TILES_3D_DATASETS.plateauChuo,
-    MVT_DATASETS.plateauWakayamaGen,
-    MVT_DATASETS.plateauGifuTran,
-    MVT_DATASETS.plateauTokyoHeightControl,
+  attribution.show([
+    datasetToSource(TERRAIN_DATASETS.gsi),
+    datasetToSource(TILE_DATASETS.openstreetmap),
+    datasetToSource(GEOJSON_DATASETS.calderdaleDefibrillators),
+    datasetToSource(TILES_3D_DATASETS.plateauChiyoda),
+    datasetToSource(TILES_3D_DATASETS.plateauChuo),
+    datasetToSource(MVT_DATASETS.plateauWakayamaGen),
+    datasetToSource(MVT_DATASETS.plateauGifuTran),
+    datasetToSource(MVT_DATASETS.plateauTokyoHeightControl),
   ]);
 };

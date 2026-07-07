@@ -275,27 +275,33 @@ impl Core {
     #[wasm_bindgen(js_name = updateLayer)]
     pub fn update_layer(&mut self, layer_id: String, layer: JsValue) {
         // Partial update payloads (e.g. `{ polygon: { opacity } }`) don't repeat
-        // `type` or `source`, so both come from the stored layer. Changing a
-        // layer's source via updateLayer is not supported: keep the layer's
-        // current source, falling back to the payload's source only when the
-        // layer has none yet.
+        // `type` or `source`, so both come from the stored layer. An explicit
+        // `source` in the payload re-points the layer at a different source; a
+        // partial payload without one keeps the layer's current source.
         let Some(layer_type) = self.app.get_layer_type(&layer_id) else {
             return;
         };
 
         let old_desc = self.app.get_layer_description(&layer_id);
-        let source_id = old_desc
+        let old_source_id = old_desc
             .as_ref()
-            .and_then(|d| d.source_id().map(str::to_owned))
-            .or_else(|| source_types::read_source_ref(layer.clone()));
+            .and_then(|d| d.source_id().map(str::to_owned));
+        // The payload's source wins when present (a source switch); otherwise the
+        // layer keeps its current source (partial appearance updates carry none).
+        // If the payload names a source that isn't registered (typo, or a source
+        // deleted earlier), ignore the switch and keep the current source so the
+        // rest of the update (appearance) still applies instead of being dropped.
+        let payload_source = source_types::read_source_ref(layer.clone())
+            .filter(|id| self.app.get_source_description(id).is_some());
+        let source_id = payload_source.or(old_source_id.clone());
 
-        // Source-less layers (currently only ellipsoid terrain) have no
-        // `source_id`, so they take a dedicated build path instead of resolving
-        // a source. Everything else builds from its referenced source.
-        let new_layer = match source_id {
+        // Build the (possibly re-sourced) layer description. Source-less layers
+        // (currently only ellipsoid terrain) have no `source_id`, so they take a
+        // dedicated build path instead of resolving a source.
+        let new_layer = match &source_id {
             Some(source_id) => self
                 .app
-                .get_source_description(&source_id)
+                .get_source_description(source_id)
                 .and_then(|source| {
                     source_types::build_source_layer(
                         layer_id.as_str(),
@@ -313,9 +319,26 @@ impl Core {
             ),
         };
 
-        if let Some(l) = new_layer {
-            self.app.update_layer(layer_id.as_str(), l);
+        let Some(new_layer) = new_layer else {
+            return;
+        };
+
+        // Re-pointing a layer at a different source rebuilds it (delete + re-add)
+        // exactly like `updateSource`, rather than mutating it in place, so the
+        // layer reloads against the new source (for terrain the teardown + re-add
+        // also rebuilds the globe tiling if the new source's scheme differs — see
+        // `init_globe_tiling`). Relink ref-counts so the old source is dereferenced
+        // and the new one referenced; both stay registered (neither is deleted).
+        if old_source_id.as_deref() != source_id.as_deref()
+            && let Some(new_source_id) = source_id.as_deref()
+        {
+            self.app.unlink_layer_source(&layer_id);
+            self.app.link_layer_source(&layer_id, new_source_id);
+            self.app.reset_layer(layer_id.as_str(), new_layer);
+            return;
         }
+
+        self.app.update_layer(layer_id.as_str(), new_layer);
     }
 
     #[wasm_bindgen(js_name = deleteLayer)]
@@ -368,25 +391,15 @@ impl Core {
         // loaders read the updated source live and all layer-only fields
         // (appearances, MVT source-layers) are preserved.
         //
-        // Terrain is the exception: it has no teardown marker (see
-        // `process_delete_events`), so it can't be delete+re-added. It reads its
-        // fetch config live and only needs a forced re-traversal, triggered once
-        // below — and only when a terrain layer actually references this source.
-        // The variant is checked via the cheap `get_layer_type` so terrain layers
-        // don't clone their whole description just to be skipped.
-        let mut has_terrain = false;
+        // Terrain resets like every other layer: its teardown marker
+        // (`DeleteTerrainLayerMarker`) re-flattens the globe, and the re-add
+        // re-meshes against the updated source, so fetch changes (e.g. URL) fully
+        // reload rather than being masked by cached tiles.
         for layer_id in self.app.layers_for_source(&source_id) {
-            if matches!(self.app.get_layer_type(&layer_id), Some("terrain")) {
-                has_terrain = true;
-                continue;
-            }
             let Some(desc) = self.app.get_layer_description(&layer_id) else {
                 continue;
             };
             self.app.reset_layer(&layer_id, desc);
-        }
-        if has_terrain {
-            self.app.force_terrain_update();
         }
     }
 
@@ -491,17 +504,19 @@ impl Core {
 
     #[wasm_bindgen(js_name = getVectorTileStates)]
     pub fn get_vector_tile_states(&mut self, handle: TileHandle) -> Vec<VectorTileState> {
-        let tiles = self.app.get_vector_tiles(handle);
-        let mut res = vec![];
-        for (layer_id, tile) in tiles {
-            res.push(VectorTileState {
-                layer_id,
-                ready_parent_tile_handle: tile.ready_parent_tile_handle,
-                is_rendered: tile.is_rendered,
-            });
-        }
+        self.app
+            .get_vector_tiles(handle)
+            .into_iter()
+            .map(VectorTileState::from)
+            .collect()
+    }
 
-        res
+    /// Monotonic revision that changes only when the vector-tile resolution could have
+    /// changed. The web renderer reads it once per frame and skips the per-terrain-tile
+    /// `getVectorTileStates` calls while it is unchanged.
+    #[wasm_bindgen(js_name = vectorRevision)]
+    pub fn vector_revision(&self) -> u32 {
+        self.app.vector_revision()
     }
 
     #[wasm_bindgen(js_name = getTileElevationDecoder)]

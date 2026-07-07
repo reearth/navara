@@ -114,35 +114,57 @@ slot:
   `userData.textures[texturizedSceneIndexFrom + i]` — always present, even when
   empty, because GLSL requires every declared sampler-array entry to be valid.
 
-`TexturizedSceneByTileCoordinates` holds a `SceneGroup` of per-layer
-`TileScene`s per handle. `renderVectorScenes()` (run from `onBeforeRender`, only
-when the group's `needsUpdate` is set) renders each layer's scene into its RT:
+`TexturizedSceneByTileCoordinates` (`scene.ts`) holds a `SceneGroup` of per-layer
+`TileScene`s per handle — one `TileScene` per `(tileHandle, layerId)`, each with a
+`revision` counter and a `removed` flag. The **which-source-backs-this-tile**
+decision no longer lives here: Rust resolves it (see
+[VECTOR_TILE_DRAPING.md](VECTOR_TILE_DRAPING.md)) and hands each terrain tile a slot
+per layer, where a slot carries the set of WebMercator source tiles covering it (one
+on WM terrain, **several** on Geographic — N:M) each with a mercator affine
+`uvOffset`/`uvScale`. `TileMesh.refreshVectorSlots` pulls those (gated by the vector
+revision) into `vectorSlots`; `renderVectorScenes()` then bakes each layer's sources
+into that layer's render target:
 
 ```mermaid
 flowchart TD
-  SG["SceneGroup<br/>per-layer TileScenes"] --> LOOP{"for each<br/>layer scene"}
-  LOOP -->|"empty / removed"| HIDE["onSceneVisibility(false)<br/>shows[slot] = 0"]
-  LOOP -->|"own mesh ready"| OWN["render tile's own scene"]
-  LOOP -->|"own mesh not ready"| PARENT["render parent scene<br/>via orthoCameraTransform(handle, parent)"]
-  OWN --> RT["RenderTarget[i].texture"]
-  PARENT --> RT
-  RT --> SLOT["userData.textures[boundary + i]"]
+  RES["Rust-resolved slots<br/>1 per layer · N WM sources each<br/>(refreshVectorSlots)"] --> LOOP{"for each layer's RT i"}
+  LOOP --> CLR["clear RT[i] once<br/>(autoClear off → accumulate)"]
+  CLR --> SRC{"for each source"}
+  SRC -->|"scene not in cache yet"| SKIP["skip → sub-rect stays transparent"]
+  SRC -->|"scene ready"| DRAW["render via one fixed [-1,1] camera<br/>reframed to the source's<br/>uvOffset/uvScale sub-rect"]
+  DRAW --> RT["RenderTarget[i].texture<br/>(spans the terrain tile's extent)"]
+  SKIP --> RT
+  RT --> BIND["bindVectorSlots():<br/>textures[boundary+i], identity UV,<br/>copy representative mesh attrs"]
 ```
 
-The **parent-tile fallback** is what keeps vector layers from flickering as data
-streams in: while a tile's own mesh for a layer isn't ready (`!isRendered`, or
-no own mesh), the parent's scene is rendered through an orthographic camera
-transformed by `orthoCameraTransform(handle, parentHandle)` so the parent
-content lands in this tile's footprint. Any render marks the RT `needsUpdate`
-and flags the atlas dirty with `vector-revision`.
+The **LOD fallback** (rendered self / finer descendants / coarser ancestor) that
+keeps vector layers from flickering as data streams in is resolved **entirely in
+Rust** and baked into the `uvOffset`/`uvScale` of each source. TypeScript no longer
+walks a parent chain or transforms a per-tile camera — it uses a single shared
+`[-1, 1]` orthographic camera, reframed per source to that source's sub-rect
+(`camera.left = 2·ox − 1`, etc.), and draws additively so several sources mosaic
+into one RT. A source whose scene hasn't reached the cache yet is skipped; its
+sub-rect stays transparent (a coarser ancestor already covers it via the Rust
+resolve). Because every source is framed to land in the terrain tile's footprint,
+the RT ends up spanning the terrain tile's extent, so the composite paste samples it
+with **identity UV** (the WM→Geographic latitude reproject happens in the paste, not
+here).
 
-`renderVectorScenes()` also calls `updateTexturizedSceneTextureVisibility()`,
-which copies each vector mesh's enhancer state (reflectivity, roughness, water,
+Re-baking is gated per tile by `vectorSignature()` — a string folding each slot's
+sources plus each backing scene's `revision` and child count — not by a scene
+`needsUpdate` flag; when it changes, the driver re-renders the RTs and marks the
+atlas dirty with `vector-revision`.
+
+After the RTs are baked, `bindVectorSlots()` (which replaced the old
+`updateTexturizedSceneTextureVisibility`) points each vector slot's texture at its
+RT, sets identity UV, sets `shows`, and — via `copyVectorMeshAttrs` — copies a
+**representative** source mesh's enhancer state (reflectivity, roughness, water,
 shininess, emissive, effect id, …) into the **main** shader's per-slot uniform
-arrays. Keep this split in mind for the rest of the pipeline: **the composite
-pass only ever bakes a layer's color plus a few flags; precision-sensitive
-material attributes stay in per-slot uniforms** and are looked up later by the
-main shader.
+arrays. Any source mesh of a layer is a faithful representative because these
+attributes are uniform across a clamp-to-ground layer's tiles. Keep this split in
+mind for the rest of the pipeline: **the composite pass only ever bakes a layer's
+color plus a few flags; precision-sensitive material attributes stay in per-slot
+uniforms** and are looked up later by the main shader.
 
 With that, every slot — raster, DEM, or vector RT — is just a texture, and the
 pipeline treats them uniformly from here.
@@ -326,10 +348,11 @@ sequenceDiagram
   participant C as TileTextureCompositor
   participant Cache as TileTextureCache
 
-  TM->>TM: updateTexturizedSceneByTileState()
-  TM->>C: renderVectorScenes() → per-layer RTs
-  C-->>TM: rendered?
-  alt any vector rendered
+  TM->>TM: vectorRevision() changed? → refreshVectorSlots()
+  TM->>TM: vectorSignature() changed?
+  alt slots/scenes changed
+    TM->>C: renderVectorScenes() → per-layer RTs
+    TM->>TM: bindVectorSlots() (textures, UV, mesh attrs)
     TM->>Cache: markDirty("vector-revision")
   end
   TM->>Cache: isDirty(handle)?
@@ -432,6 +455,14 @@ Two subtleties:
 The atlas, the main shader's atlas sampling, and the slot plan are all unchanged
 — the entire N:M mechanism lives in the pull (Rust) and the base composite
 enhancer's per-slot reprojection.
+
+> [!NOTE]
+> **Clamp-to-ground vector layers reuse this exact path.** Their features are
+> rendered offscreen to a per-layer render target, then pasted as `RasterCompositeLayer`s
+> with the same `uReproject*` reprojection — the composite pass does not distinguish
+> them from raster imagery. What differs is the *pull*: the source is a rendered
+> feature scene (not a loaded texture), so the resolve walks up **or down** to the
+> rendered level. See [VECTOR_TILE_DRAPING.md](VECTOR_TILE_DRAPING.md).
 
 ## Key files
 
