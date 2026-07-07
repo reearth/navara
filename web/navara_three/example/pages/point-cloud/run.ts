@@ -1,8 +1,9 @@
 import ThreeView from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
+import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
-import { showAttributions } from "../../helpers/attributions";
+import { datasetToSource } from "../../helpers/attribution-source";
 import { TILE_DATASETS, TILES_3D_DATASETS } from "../../helpers/constants";
 import { addDateControl } from "../../helpers/control";
 import { addCtrlPanel, type MaterialDesc } from "../../helpers/panel";
@@ -10,6 +11,9 @@ import { addCtrlPanel, type MaterialDesc } from "../../helpers/panel";
 export const run = async (view: ThreeView) => {
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
+
+  const attribution = new AttributionPlugin();
+  view.addPlugin(attribution);
 
   await view.init();
 
@@ -61,7 +65,7 @@ export const run = async (view: ThreeView) => {
   addCameraControl(view, pane);
   addCtrlPanel(geoLayersDef, view, pane);
   addDateControl(view, pane);
-  showAttributions([TILE_DATASETS.openstreetmap]);
+  attribution.show([datasetToSource(TILE_DATASETS.openstreetmap)]);
 };
 
 const addCameraControl = (view: ThreeView, pane: Pane) => {

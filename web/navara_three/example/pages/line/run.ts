@@ -8,10 +8,11 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
+import { AttributionPlugin } from "@navara/three_plugins";
 import { Vector3 } from "three";
 import { Pane } from "tweakpane";
 
-import { showAttributions } from "../../helpers/attributions";
+import { datasetToSource } from "../../helpers/attribution-source";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../helpers/constants";
 import { addCameraControl, addDateControl } from "../../helpers/control";
 
@@ -236,6 +237,10 @@ export type CustomDescriptions = DefaultDescriptions;
 export const run = async (view: ThreeView<CustomDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
+
+  const attribution = new AttributionPlugin();
+  view.addPlugin(attribution);
+
   await view.init();
 
   view.addLayer({
@@ -293,7 +298,10 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   addArcLines(view, pane);
   addSmoothLines(view, pane);
 
-  showAttributions([TERRAIN_DATASETS.gsi, TILE_DATASETS.openstreetmap]);
+  attribution.show([
+    datasetToSource(TERRAIN_DATASETS.gsi),
+    datasetToSource(TILE_DATASETS.openstreetmap),
+  ]);
 };
 
 function intToHexColor(num: number) {
