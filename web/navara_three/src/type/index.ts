@@ -177,7 +177,10 @@ export type LayerDescription =
  * referencing a source by its id string from a layer, this enables defining the
  * whole map declaratively (MapLibre-style) from JSON.
  */
-export type SourceBase = Omit<NormalizeWASMClass<SourceDescriptionImpl>, "type">;
+export type SourceBase = Omit<
+  NormalizeWASMClass<SourceDescriptionImpl>,
+  "type"
+>;
 
 /** A `geojson` source: inline GeoJSON, or GeoJSON fetched from a `url`. */
 export type GeoJsonSource = SourceBase &
@@ -191,11 +194,15 @@ export type GeoJsonSource = SourceBase &
 
 /** A `vector-tile` source: Mapbox Vector Tiles fetched from a `url` template. */
 export type VectorTileSource = SourceBase &
-  WithColorSupport<Layer<VectorTileSourceDescription & { type: "vector-tile" }>>;
+  WithColorSupport<
+    Layer<VectorTileSourceDescription & { type: "vector-tile" }>
+  >;
 
 /** A `raster-tile` source: raster imagery tiles fetched from a `url` template. */
 export type RasterTileSource = SourceBase &
-  WithColorSupport<Layer<RasterTileSourceDescription & { type: "raster-tile" }>>;
+  WithColorSupport<
+    Layer<RasterTileSourceDescription & { type: "raster-tile" }>
+  >;
 
 /** A `raster-dem` source: RGB-encoded elevation tiles fetched from a `url`. */
 export type RasterDemSource = SourceBase &
