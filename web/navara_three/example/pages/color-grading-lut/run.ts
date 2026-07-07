@@ -15,7 +15,6 @@ import {
 import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
-
 import { datasetToSource } from "../../helpers/attribution-source";
 import {
   TILE_DATASETS,
