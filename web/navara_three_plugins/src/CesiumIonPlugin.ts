@@ -34,7 +34,8 @@
  */
 import ThreeView, {
   Plugin,
-  type TerrainLayer,
+  type QuantizedMeshSource,
+  type TerrainSourceLayer,
   type ViewContext,
 } from "@navara/three";
 import type { DefaultDescriptions } from "@navara/three_default_plugin";
@@ -52,13 +53,27 @@ export type CesiumIonConfig = {
 };
 
 /**
- * Quantized-mesh terrain options forwarded to `view.addLayer()`.
- * The `token` field is provided by the plugin from the resolved endpoint.
+ * Quantized-mesh fetch/decode options forwarded to the source.
+ * The `url` and `token` fields are provided by the plugin from the resolved
+ * Cesium Ion endpoint.
  */
-export type CesiumIonTerrainOptions = Omit<
-  NonNullable<TerrainLayer["quantizedMesh"]>,
-  "token"
+export type CesiumIonSourceOptions = Omit<
+  QuantizedMeshSource,
+  "type" | "url" | "token" | "id"
 >;
+
+/** Terrain mesh rendering options forwarded to the terrain layer. */
+export type CesiumIonTerrainRenderOptions = NonNullable<
+  TerrainSourceLayer["terrain"]
+>;
+
+/**
+ * Options for {@link CesiumIonPlugin.addTerrain}. A flat object combining the
+ * quantized-mesh source's fetch/decode options with the terrain layer's render
+ * options; the plugin routes each field to the source or the layer.
+ */
+export type CesiumIonTerrainOptions = CesiumIonSourceOptions &
+  CesiumIonTerrainRenderOptions;
 
 type CesiumIonEndpoint = {
   url: string;
@@ -94,6 +109,11 @@ export class CesiumIonPlugin extends Plugin<View, ViewContext> {
   /**
    * Register the resolved Cesium Ion asset as a quantized-mesh terrain layer.
    * Must be called after `view.init()`.
+   *
+   * Internally this creates an implicit quantized-mesh source for the asset and
+   * a terrain layer that references it. The source is owned by the returned
+   * layer: deleting the layer reclaims the source too, so callers only manage
+   * the layer handle.
    */
   addTerrain(options: CesiumIonTerrainOptions = {}) {
     if (!this.view || !this.endpoint) {
@@ -102,15 +122,40 @@ export class CesiumIonPlugin extends Plugin<View, ViewContext> {
       );
     }
 
-    return this.view.addLayer({
+    const {
+      castShadow,
+      receiveShadow,
+      show,
+      showBoundingBox,
+      skirt,
+      skirtExaggeration,
+      ...sourceOptions
+    } = options;
+
+    const source = this.view.addSource({
+      type: "quantized-mesh",
+      url: `${this.endpoint.url}{z}/{x}/{y}.terrain`,
+      token: this.endpoint.accessToken,
+      ...sourceOptions,
+    });
+
+    const layer = this.view.addLayer({
       type: "terrain",
-      data: {
-        url: `${this.endpoint.url}{z}/{x}/{y}.terrain`,
-      },
-      quantizedMesh: {
-        ...options,
-        token: this.endpoint.accessToken,
+      source,
+      terrain: {
+        castShadow,
+        receiveShadow,
+        show,
+        showBoundingBox,
+        skirt,
+        skirtExaggeration,
       },
     });
+
+    // The source is implicit — the caller only holds the layer handle — so
+    // reclaim it once the layer is deleted.
+    layer.once("deleted", () => source.delete());
+
+    return layer;
   }
 }

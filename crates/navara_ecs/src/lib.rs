@@ -453,9 +453,10 @@ impl App {
 
         self.app
             .world_mut()
-            .write_message(navara_layer_event::DeleteLayerEvent(LayerId(
-                layer_id.to_owned(),
-            )));
+            .write_message(navara_layer_event::DeleteLayerEvent {
+                layer_id: LayerId(layer_id.to_owned()),
+                reset: false,
+            });
     }
 
     /// Record that a layer references a source so the source is reference-counted
@@ -547,9 +548,10 @@ impl App {
 
         self.app
             .world_mut()
-            .write_message(navara_layer_event::DeleteLayerEvent(LayerId(
-                layer_id.to_owned(),
-            )));
+            .write_message(navara_layer_event::DeleteLayerEvent {
+                layer_id: LayerId(layer_id.to_owned()),
+                reset: true,
+            });
 
         if let Some(mut queue) = self
             .app

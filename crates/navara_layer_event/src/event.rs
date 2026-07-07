@@ -31,7 +31,14 @@ pub struct UpdateTerrainLayerEvent {
 }
 
 #[derive(Debug, Clone, PartialEq, Message)]
-pub struct DeleteLayerEvent(pub LayerId);
+pub struct DeleteLayerEvent {
+    pub layer_id: LayerId,
+    /// True when this delete is the teardown half of a source switch
+    /// (`App::reset_layer`), i.e. a re-add is queued in [`LayerReloadQueue`].
+    /// Consumers that treat "no layers left" as a permanent removal (e.g. the
+    /// terrain tiling-scheme fallback) use this to skip that on a transient reset.
+    pub reset: bool,
+}
 
 /// Generic "this layer's entity is alive" tag, added to every layer entity by
 /// [`process_add_events`]. It exists continuously from the layer's add until a
@@ -175,7 +182,7 @@ pub fn process_delete_events(
     mut events: MessageReader<DeleteLayerEvent>,
 ) {
     for ev in events.read() {
-        let DeleteLayerEvent(layer_id) = ev;
+        let DeleteLayerEvent { layer_id, reset } = ev;
         let layer_desc = match layer_desc_store.get(&layer_id.0) {
             Some(l) => l,
             None => continue,
@@ -201,7 +208,10 @@ pub fn process_delete_events(
                 commands.spawn(DeleteRasterTileLayerMarker(id));
             }
             LayerDescription::Terrain(_) => {
-                commands.spawn(DeleteTerrainLayerMarker(id));
+                commands.spawn(DeleteTerrainLayerMarker {
+                    layer_id: id,
+                    reset: *reset,
+                });
             }
         };
         // delete stored value in LayerDescStore.
@@ -396,8 +406,10 @@ mod tests {
         app.world_mut()
             .resource_mut::<LayerDescStore>()
             .add("L".to_owned(), tiles_desc("L"));
-        app.world_mut()
-            .write_message(DeleteLayerEvent(LayerId("L".to_owned())));
+        app.world_mut().write_message(DeleteLayerEvent {
+            layer_id: LayerId("L".to_owned()),
+            reset: true,
+        });
         queue_reload(&mut app, "L");
 
         // Drive several frames to let teardown complete and the reload fire.

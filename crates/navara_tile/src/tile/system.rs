@@ -986,7 +986,10 @@ pub fn update_terrain_layer(
     mut commands: Commands,
     updated: Query<(Entity, &UpdateTerrainLayerMarker)>,
     mut layers: Query<&mut TerrainLayer>,
-    mut tile_materials: Query<&mut RasterTileInternalMaterial, With<TileMeshMarker>>,
+    mut tile_materials: Query<
+        &mut RasterTileInternalMaterial,
+        (With<TileMeshMarker>, Without<Deleted>),
+    >,
 ) {
     for (e, u) in &updated {
         let mut matched = false;
@@ -1076,7 +1079,7 @@ pub fn sync_terrain_layer_changes(
     // the re-added entity does not exist yet and cannot be matched here.
     for (e, u) in &deleted {
         for (le, layer) in &layers {
-            if layer.layer_id != u.0 {
+            if layer.layer_id != u.layer_id {
                 continue;
             }
             commands.entity(le).despawn();
@@ -1085,17 +1088,21 @@ pub fn sync_terrain_layer_changes(
         commands.entity(e).despawn();
     }
 
-    // Fall back to the default tiling scheme when a delete removes the last terrain
-    // layer (an outright delete, not a source switch — a switch re-adds and lets
-    // `init_globe_tiling` adopt the new source's scheme via `Added<TerrainLayer>`).
-    // The despawns above are deferred, so compute "no terrain remains" from the
-    // live layers minus the ids being deleted. Only rebuild when the scheme
-    // actually changes: each tile bakes its extent from the scheme at creation, so
-    // drop every tile here and let `init_globe_tiling` re-seed the default roots.
-    if added.is_empty() {
+    // Fall back to the default tiling scheme when a TRUE user delete removes the
+    // last terrain layer. A source switch is a delete + queued re-add (flagged
+    // `reset` on the marker); skipping it here avoids draining and flipping the
+    // scheme to default only to rebuild for the new source moments later — the
+    // re-add lets `init_globe_tiling` adopt the new source's scheme via
+    // `Added<TerrainLayer>`. The despawns above are deferred, so compute "no
+    // terrain remains" from the live layers minus the ids being deleted. Only
+    // rebuild when the scheme actually changes: each tile bakes its extent from the
+    // scheme at creation, so drop every tile here and let `init_globe_tiling`
+    // re-seed the default roots.
+    let any_reset = deleted.iter().any(|(_, u)| u.reset);
+    if added.is_empty() && !any_reset {
         let terrain_remains = layers
             .iter()
-            .any(|(_, l)| !deleted.iter().any(|(_, u)| u.0 == l.layer_id));
+            .any(|(_, l)| !deleted.iter().any(|(_, u)| u.layer_id == l.layer_id));
         let default_scheme = navara_globe::Globe::default().tiling_scheme;
         if !terrain_remains && default_scheme != globe.tiling_scheme {
             for mut tile in qt.qt.drain() {
@@ -1725,8 +1732,10 @@ mod delete_layer_tests {
             terrain_type: navara_layer::TerrainDataType::Ellipsoid,
             appearance: None,
         });
-        app.world_mut()
-            .spawn(DeleteTerrainLayerMarker("t".to_string()));
+        app.world_mut().spawn(DeleteTerrainLayerMarker {
+            layer_id: "t".to_string(),
+            reset: false,
+        });
 
         app.add_systems(Update, sync_terrain_layer_changes);
         app.update();
@@ -1908,5 +1917,94 @@ mod delete_layer_tests {
         assert!(qt.qt.leaf((1, 0, 0)).is_some());
         // ...and the stale subdivided WebMercator tile was drained.
         assert!(qt.qt.leaf((0, 0, 1)).is_none());
+    }
+
+    /// Seeds a geographic globe + tile and a terrain layer (added a frame earlier),
+    /// then deletes it with the given `reset` flag. Returns the app after the delete
+    /// frame so callers can assert on the scheme / tiling.
+    fn run_last_terrain_delete(reset: bool) -> App {
+        use navara_core::TilingScheme;
+
+        let mut app = App::new();
+        app.insert_resource(BufferStore::default());
+
+        let mut globe = navara_globe::Globe::default();
+        globe.tiling_scheme = TilingScheme::Geographic { tms: true };
+        app.insert_resource(globe);
+
+        let mut qt = TerrainTileQuadtree::new_with_linear_qt();
+        qt.qt.initialize_leaf((0, 0, 0), &|(x, y, z)| {
+            TerrainTile::new(TileXYZ { x, y, z }, 0., 0.)
+        });
+        app.insert_resource(qt);
+
+        let mut terrain_qt = TerrainInformationQuadtree::new_with_linear_qt();
+        terrain_qt
+            .qt
+            .initialize_zero(&|_c| TerrainInformation::new());
+        app.insert_resource(terrain_qt);
+
+        app.insert_resource(TileCacheManager::default());
+        app.add_systems(Update, sync_terrain_layer_changes);
+
+        // The terrain layer, added a frame earlier: the first update clears its
+        // `Added` flag (a true delete acts on a layer that is no longer `Added`).
+        app.world_mut().spawn(TerrainLayer {
+            layer_id: "t".into(),
+            source_id: Some("s".into()),
+            terrain_type: navara_layer::TerrainDataType::QuantizedMesh,
+            appearance: None,
+        });
+        app.update();
+
+        app.world_mut().spawn(DeleteTerrainLayerMarker {
+            layer_id: "t".to_string(),
+            reset,
+        });
+        app.update();
+        app
+    }
+
+    /// A TRUE user delete of the last terrain layer whose source used a non-default
+    /// scheme (geographic) must restore the default WebMercator scheme and drain the
+    /// geographic tiling so `init_globe_tiling` re-seeds the WM roots — otherwise a
+    /// terrain-less map keeps traversing the wrong (geographic) roots.
+    #[test]
+    fn sync_terrain_layer_changes_restores_default_scheme_on_user_delete() {
+        let app = run_last_terrain_delete(false);
+
+        let globe = app.world().resource::<navara_globe::Globe>();
+        assert_eq!(
+            globe.tiling_scheme,
+            navara_globe::Globe::default().tiling_scheme,
+        );
+        // The whole geographic tiling was drained (re-seeded by `init_globe_tiling`).
+        let qt = app.world().resource::<TerrainTileQuadtree>();
+        assert!(qt.qt.leaf((0, 0, 0)).is_none(), "geographic tiling drained");
+        assert!(app.world().resource::<TileCacheManager>().force_update);
+    }
+
+    /// A source switch's delete half (marker `reset: true`) must NOT fall back to
+    /// the default scheme: a re-add with the new source is queued, so flipping to
+    /// the default here would force an extra full-tiling rebuild and buffer churn.
+    #[test]
+    fn sync_terrain_layer_changes_keeps_scheme_on_reset_delete() {
+        use navara_core::TilingScheme;
+
+        let app = run_last_terrain_delete(true);
+
+        let globe = app.world().resource::<navara_globe::Globe>();
+        assert_eq!(
+            globe.tiling_scheme,
+            TilingScheme::Geographic { tms: true },
+            "a reset teardown keeps the scheme for the queued re-add",
+        );
+        // The tiling is not drained by the scheme fallback (rendered-tile reset only
+        // touches rendered tiles; this seeded root is untouched).
+        let qt = app.world().resource::<TerrainTileQuadtree>();
+        assert!(
+            qt.qt.leaf((0, 0, 0)).is_some(),
+            "tiling kept for the re-add"
+        );
     }
 }
