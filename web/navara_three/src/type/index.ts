@@ -118,9 +118,10 @@ export type MvtLayer = WithColorSupport<
  */
 export type SourceRef = string | Source;
 
-export type SourceLayerBase<Layer extends { source?: string | undefined }> = Omit<Layer, "source"> & {
-  source?: SourceRef;
-}
+export type SourceLayerBase<Layer extends { source?: string | undefined }> =
+  Omit<Layer, "source"> & {
+    source?: SourceRef;
+  };
 
 type VectorLayerBase = WithColorSupport<
   Layer<VectorLayerDescription & { type: "vector" }>
