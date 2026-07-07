@@ -16,7 +16,11 @@ vi.mock("@navara/three", () => ({
 // CesiumIonPlugin.addTerrain touches. It records the descriptions passed to
 // addSource/addLayer and lets a test fire the layer's "deleted" event.
 function makeFakeView() {
-  const source = { id: "src", type: "quantized-mesh", delete: vi.fn(() => true) };
+  const source = {
+    id: "src",
+    type: "quantized-mesh",
+    delete: vi.fn(() => true),
+  };
   let onDeleted: (() => void) | undefined;
   const layer = {
     id: "layer",
