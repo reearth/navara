@@ -632,7 +632,11 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       "instanceParams",
     ) as InstancedBufferAttribute;
 
-    const sanitizedSize = Number.isFinite(size) ? size : -1.0;
+    const sanitizedSize = Number.isFinite(size)
+      ? size < 0.0
+        ? -1.0
+        : size
+      : -1.0;
     paramsAttr.setY(instanceId, sanitizedSize);
     paramsAttr.needsUpdate = true;
   }
