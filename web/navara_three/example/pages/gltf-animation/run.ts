@@ -9,10 +9,11 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
+import { AttributionPlugin } from "@navara/three_plugins";
 import { Vector3, Quaternion, Euler, Matrix4 } from "three";
 import { Pane } from "tweakpane";
 
-import { showAttributions } from "../../helpers/attributions";
+import { datasetToSource } from "../../helpers/attribution-source";
 import { TILE_DATASETS } from "../../helpers/constants";
 import { addHidePaneKeyShortcut } from "../../helpers/control";
 
@@ -32,6 +33,10 @@ export type CustomDescriptions = DefaultDescriptions;
 export const run = async (view: ThreeView<CustomDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
+
+  const attribution = new AttributionPlugin();
+  view.addPlugin(attribution);
+
   await view.init();
 
   view.animation = true;
@@ -172,5 +177,5 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   // Start animation loop
   animate();
 
-  showAttributions([TILE_DATASETS.openstreetmap]);
+  attribution.show([datasetToSource(TILE_DATASETS.openstreetmap)]);
 };
