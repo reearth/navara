@@ -143,7 +143,7 @@ export class SDFTextMesh
         backgroundOutlineColor: material.borderColor ?? 0x000000,
         backgroundOutlineWidth: material.borderWidth ?? 0.1,
         depthTest: material.depthTest ?? true,
-        transparent: material.transparent ?? false,
+        transparent: material.transparent ?? true,
         depthWrite: material.depthWrite ?? true,
         rtcCenter: [transform.tx, transform.ty, transform.tz],
       },

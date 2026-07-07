@@ -145,7 +145,7 @@ import { Color } from "@navara/three";
 
 **Type:** `boolean | undefined`
 
-**Description:** Enables writing to the depth buffer. Set to `false` for transparent materials to prevent depth sorting issues.
+**Description:** Enables writing to the depth buffer. For SDF text, disabling `depthWrite` may reintroduce outline overlap artifacts; set to `false` only if you accept that tradeoff for improved transparency blending.
 
 **Default:** `true`
 
@@ -424,7 +424,7 @@ import { Color } from "@navara/three";
 
 **Description:** Enables transparency and alpha blending. When enabled, the `opacity` property can be used to control transparency.
 
-**Default:** `false`
+**Default:** `true`
 
 **Example:**
 

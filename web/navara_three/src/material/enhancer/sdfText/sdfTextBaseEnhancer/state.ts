@@ -31,7 +31,7 @@ export const DEFAULT_BASE_PROPS: Required<
   backgroundOutlineWidth: 0.1,
   pickable: false,
   depthTest: true,
-  transparent: false,
+  transparent: true,
   depthWrite: true,
 };
 

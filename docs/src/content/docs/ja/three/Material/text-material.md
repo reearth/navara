@@ -145,7 +145,7 @@ import { Color } from "@navara/three";
 
 **Type:** `boolean | undefined`
 
-**Description:** 深度バッファへの書き込みを有効にします。透明なマテリアルの場合は `false` に設定して、深度ソートの問題を防ぎます。
+**Description:** 深度バッファへの書き込みを有効にします。SDF テキストでは `depthWrite` を `false` にするとアウトラインの重なり補正が効かなくなる可能性があります。透明度ブレンディングを優先してそのトレードオフを許容する場合のみ `false` を設定してください。
 
 **Default:** `true`
 
@@ -424,7 +424,7 @@ import { Color } from "@navara/three";
 
 **Description:** 透明度とアルファブレンディングを有効にします。有効にすると、`opacity` プロパティを使用して透明度を制御できます。
 
-**Default:** `false`
+**Default:** `true`
 
 **Example:**
 

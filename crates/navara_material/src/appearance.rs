@@ -237,7 +237,7 @@ impl Default for TextMaterial {
             lang: "".to_string(),
             high_quality: false,
             opacity: 1.0,
-            transparent: false,
+            transparent: true,
             depth_write: true,
         }
     }
