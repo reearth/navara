@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use bevy_ecs::prelude::*;
 use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, Order, OrderByDistance, Priority};
@@ -40,7 +42,9 @@ use navara_source::SourceStore;
 #[allow(clippy::too_many_arguments)]
 pub fn traverse_terrain(
     command: &mut Commands,
-    tiles: &Query<(&TilesLayer, &Order)>,
+    // The layer list sorted by `Order`, collected once per system run — this
+    // function runs per traversed tile, so it must not sort per call.
+    sorted_layers: &[(&TilesLayer, &Order)],
     terrain_layer: &Option<&TerrainLayer>,
     source_store: &SourceStore,
     handle: TileHandle,
@@ -65,23 +69,28 @@ pub fn traverse_terrain(
     // This is used to show parent's texture if child's texture isn't ready.
     ready_parent_tile_handle: Option<TileHandle>,
     // This tracks the nearest ready hillshade parent for each layer.
-    ready_layer_parents: Option<Vec<Option<LayerParent>>>,
+    // Shared (Arc) because every child of every visited tile receives a copy.
+    ready_layer_parents: Option<Arc<Vec<Option<LayerParent>>>>,
 ) -> TraversalResult {
-    let has_regular_tiles = tiles.iter().any(|(t, _)| t.hillshade_config.is_none());
+    let has_regular_tiles = sorted_layers
+        .iter()
+        .any(|(t, _)| t.hillshade_config.is_none());
 
     match qt.qt.get(handle) {
         Some(tile) => {
             let tile_overmax = has_regular_tiles
-                && tiles
+                && sorted_layers
                     .iter()
                     .filter(|(t, _)| t.hillshade_config.is_none())
                     .filter_map(|(t, _)| t.source_id.as_deref().and_then(|id| source_store.get(id)))
                     .all(|s| s.is_over_max_zoom(tile.coords.z));
 
             // Hillshade layers: allow overscaling - stop at overscaled_max_zoom
-            let has_hillshade_tiles = tiles.iter().any(|(t, _)| t.hillshade_config.is_some());
+            let has_hillshade_tiles = sorted_layers
+                .iter()
+                .any(|(t, _)| t.hillshade_config.is_some());
             let hillshade_overmax = has_hillshade_tiles
-                && tiles
+                && sorted_layers
                     .iter()
                     .filter(|(t, _)| t.hillshade_config.is_some())
                     .filter_map(|(t, _)| t.source_id.as_deref().and_then(|id| source_store.get(id)))
@@ -129,7 +138,7 @@ pub fn traverse_terrain(
         data_requesters,
         terrain_data_requester,
         terrain_layer,
-        tiles,
+        sorted_layers,
         source_store,
     );
     let is_tile_ready = tile_ready_state.is_tile_ready;
@@ -156,7 +165,7 @@ pub fn traverse_terrain(
     tile.were_children_rendered = false;
 
     let is_over_min_z = if has_regular_tiles {
-        tiles
+        sorted_layers
             .iter()
             .filter(|(t, _)| t.hillshade_config.is_none())
             .filter_map(|(t, _)| t.source_id.as_deref().and_then(|id| source_store.get(id)))
@@ -177,7 +186,7 @@ pub fn traverse_terrain(
         request_hillshade_data_requester(
             command,
             tile,
-            tiles,
+            sorted_layers,
             source_store,
             handle,
             data_requesters,
@@ -203,7 +212,7 @@ pub fn traverse_terrain(
                 terrain_layer,
                 handle,
                 tc,
-                tiles,
+                sorted_layers,
                 source_store,
                 data_requesters,
                 terrain_data_requester,
@@ -238,8 +247,13 @@ pub fn traverse_terrain(
         };
 
         // Update hillshade parents - track nearest ready parent for each layer
-        let ready_layer_parents =
-            update_ready_layer_parents(qt, handle, tiles, data_requesters, ready_layer_parents);
+        let ready_layer_parents = update_ready_layer_parents(
+            qt,
+            handle,
+            sorted_layers,
+            data_requesters,
+            ready_layer_parents,
+        );
 
         // Tile has several states to switch LOD smoothly.
         // 1. RenderedTile component is spawned if a tile is selected.
@@ -256,7 +270,7 @@ pub fn traverse_terrain(
         for (i, child) in children.iter().enumerate() {
             let traversal_result = traverse_terrain(
                 command,
-                tiles,
+                sorted_layers,
                 terrain_layer,
                 source_store,
                 *child,
@@ -424,7 +438,7 @@ pub fn traverse_terrain(
                 terrain_layer,
                 handle,
                 tc,
-                tiles,
+                sorted_layers,
                 source_store,
                 data_requesters,
                 terrain_data_requester,
@@ -450,7 +464,7 @@ pub fn spawn_tile_entity(
     tile: &mut TerrainTile,
     tile_handle: TileHandle,
     ready_parent_tile_handle: Option<TileHandle>,
-    layer_parents: Option<Vec<Option<LayerParent>>>,
+    layer_parents: Option<Arc<Vec<Option<LayerParent>>>>,
 ) {
     tile.rendered_at = frame.rendered_frame();
     tc.is_updated_in_this_frame = true;
@@ -491,14 +505,14 @@ pub fn spawn_tile_entity(
 fn update_ready_layer_parents(
     qt: &TerrainTileQuadtree,
     handle: TileHandle,
-    tiles: &Query<(&TilesLayer, &Order)>,
+    sorted_layers: &[(&TilesLayer, &Order)],
     data_requesters: &Query<&navara_data_requester::DataRequester>,
-    ready_layer_parents: Option<Vec<Option<LayerParent>>>,
-) -> Option<Vec<Option<LayerParent>>> {
+    ready_layer_parents: Option<Arc<Vec<Option<LayerParent>>>>,
+) -> Option<Arc<Vec<Option<LayerParent>>>> {
     let tile = qt.qt.get(handle)?;
-    let mut updated_parents = Vec::new();
+    let mut updated_parents = Vec::with_capacity(sorted_layers.len());
 
-    for (i, (layer, _)) in tiles.iter().sort::<&Order>().enumerate() {
+    for (i, (layer, _)) in sorted_layers.iter().enumerate() {
         // Regular raster layers are draped via the raster pull, not the
         // terrain-side ancestor fallback, so they keep an empty slot here.
         if layer.hillshade_config.is_none() {
@@ -527,7 +541,7 @@ fn update_ready_layer_parents(
         updated_parents.push(parent);
     }
 
-    Some(updated_parents)
+    Some(Arc::new(updated_parents))
 }
 
 /// Prepare some resource that is necessary to render the tile.
@@ -541,7 +555,7 @@ pub fn prepare_tile_resource(
     terrain_layer: &Option<&TerrainLayer>,
     handle: TileHandle,
     tc: &mut TileCacheManager,
-    tiles: &Query<(&TilesLayer, &Order)>,
+    sorted_layers: &[(&TilesLayer, &Order)],
     source_store: &SourceStore,
     data_requesters: &Query<&navara_data_requester::DataRequester>,
     terrain_data_requester: &TileTerrainDataRequesterQuery,
@@ -576,7 +590,7 @@ pub fn prepare_tile_resource(
         request_hillshade_data_requester(
             commands,
             tile,
-            tiles,
+            sorted_layers,
             source_store,
             handle,
             data_requesters,
@@ -744,9 +758,10 @@ mod tests {
         };
         let terrain_layer: Option<&TerrainLayer> = None;
 
+        let sorted_layers: Vec<_> = tiles.iter().sort::<&Order>().collect();
         let result = traverse_terrain(
             &mut commands,
-            &tiles,
+            &sorted_layers,
             &terrain_layer,
             &source_store,
             target.0,
@@ -951,7 +966,6 @@ mod tests {
             skirt_vertices: None,
             skirt_uvs: None,
             skirt_indices: None,
-            skirt_indices_to_edge: None,
             skirt_normals: None,
             watermask: None,
         }

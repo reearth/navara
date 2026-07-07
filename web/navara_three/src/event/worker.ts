@@ -175,9 +175,6 @@ async function processConstructTerrainMesh(
     const skirtVertices = bufHandler.newF32(result.skirt_vertices);
     const skirtUvs = bufHandler.newF32(result.skirt_uvs);
     const skirtIndices = bufHandler.newU32(result.skirt_indices);
-    const skirtIndicesToEdge = result.skirt_indices_to_edge
-      ? bufHandler.newU32(result.skirt_indices_to_edge)
-      : undefined;
     const skirtNormals = result.skirt_normals
       ? bufHandler.newF32(result.skirt_normals)
       : undefined;
@@ -190,9 +187,6 @@ async function processConstructTerrainMesh(
     }
     if (skirtIndices != null) {
       geometry.skirt_indices = skirtIndices;
-    }
-    if (skirtIndicesToEdge != null) {
-      geometry.skirt_indices_to_edge = skirtIndicesToEdge;
     }
     if (skirtNormals != null) {
       geometry.skirt_normals = skirtNormals;
@@ -331,9 +325,6 @@ async function processUpsampleTerrainMesh(
     const skirtVertices = bufHandler.newF32(result.skirt_vertices);
     const skirtUvs = bufHandler.newF32(result.skirt_uvs);
     const skirtIndices = bufHandler.newU32(result.skirt_indices);
-    const skirtIndicesToEdge = result.skirt_indices_to_edge
-      ? bufHandler.newU32(result.skirt_indices_to_edge)
-      : undefined;
     const skirtNormals = result.skirt_normals
       ? bufHandler.newF32(result.skirt_normals)
       : undefined;
@@ -346,9 +337,6 @@ async function processUpsampleTerrainMesh(
     }
     if (skirtIndices != null) {
       geometry.skirt_indices = skirtIndices;
-    }
-    if (skirtIndicesToEdge != null) {
-      geometry.skirt_indices_to_edge = skirtIndicesToEdge;
     }
     if (skirtNormals != null) {
       geometry.skirt_normals = skirtNormals;

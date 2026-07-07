@@ -575,28 +575,13 @@ export class TileMesh
     const indices = buf.u32(mesh.indices);
     if (!position || !indices) return;
 
-    // Create terrain-only geometry (for shadow rendering)
-    // Use .slice() to copy arrays since we need the originals for combined geometry
-    const terrainGeometry = new BufferGeometry();
-    terrainGeometry.setAttribute(
-      "position",
-      new BufferAttribute(position.slice(), 3),
-    );
-
     const uv = buf.f32(mesh.uvs);
-    if (uv) {
-      terrainGeometry.setAttribute("uv", new BufferAttribute(uv.slice(), 2));
-    }
-
     const normals = mesh.normals != null ? buf.f32(mesh.normals) : null;
-    if (normals) {
-      terrainGeometry.setAttribute(
-        "normal",
-        new BufferAttribute(normals.slice(), 3),
-      );
-    }
 
-    terrainGeometry.setIndex(new BufferAttribute(indices.slice(), 1));
+    // Terrain-only geometry (for shadow rendering). createSkirtMesh fills it:
+    // when a skirt exists it shares the combined geometry's buffers (with the
+    // skirt cut off via drawRange), otherwise it takes the arrays as-is.
+    const terrainGeometry = new BufferGeometry();
 
     const aabb_center = new Vector3(
       mesh.aabb.center.x,
@@ -626,8 +611,10 @@ export class TileMesh
         const size = isUniform ? 1 : 256;
         // Single-channel R8 — the composite shader only reads `.r`. RedFormat
         // halves GPU memory vs. RGBA (256×256 = 64KB instead of 256KB).
+        // `watermask` is already an independent copy, and both the texture and
+        // `data` only read it, so the same array backs both.
         const texture = new DataTexture(
-          watermask.slice(),
+          watermask,
           size,
           size,
           RedFormat,
@@ -636,7 +623,7 @@ export class TileMesh
         texture.flipY = true;
         texture.needsUpdate = true;
         this.userData.watermask = {
-          data: watermask.slice(),
+          data: watermask,
           isUniform,
           texture,
         };
@@ -697,9 +684,10 @@ export class TileMesh
     meshes.set(id, this);
   }
 
-  // Create combined geometry (terrain + skirt) for rendering.
-  // Normals are computed dynamically in the fragment shader from vPosition,
-  // Shadow casting is handled separately by shadowMesh (terrain-only, no skirt).
+  // Create combined geometry (terrain + skirt) for rendering, and populate
+  // `terrainGeometry` (used by shadowMesh so the skirt casts no shadow) with
+  // the same buffers, restricted to the terrain via drawRange.
+  // Normals are computed dynamically in the fragment shader from vPosition.
   createSkirtMesh(
     mesh: EventMesh,
     terrainGeometry: BufferGeometry,
@@ -713,7 +701,6 @@ export class TileMesh
     const skirtVerticesHandle = mesh.skirt_vertices;
     const skirtIndicesHandle = mesh.skirt_indices;
     const skirtUvsHandle = mesh.skirt_uvs;
-    const skirtIndicesToEdgeHandle = mesh.skirt_indices_to_edge;
     const skirtNormalsHandle = mesh.skirt_normals;
 
     const hasSkirt = skirtVerticesHandle != null && skirtIndicesHandle != null;
@@ -722,10 +709,6 @@ export class TileMesh
     const skirtIndices =
       skirtIndicesHandle != null ? buf.u32(skirtIndicesHandle) : null;
     const skirtUv = skirtUvsHandle != null ? buf.f32(skirtUvsHandle) : null;
-    const skirtIndicesToEdge =
-      skirtIndicesToEdgeHandle != null
-        ? buf.u32(skirtIndicesToEdgeHandle)
-        : null;
     const skirtNormals =
       skirtNormalsHandle != null ? buf.f32(skirtNormalsHandle) : null;
 
@@ -734,16 +717,20 @@ export class TileMesh
     if (hasSkirt && skirtPosition && skirtIndices) {
       geometry = new BufferGeometry();
 
+      // The terrain data sits at the front of every combined buffer, so the
+      // terrain-only (shadow) geometry shares the combined attributes — one
+      // CPU array and one GPU buffer per attribute — and drawRange below cuts
+      // the skirt off.
+
       // Combine vertices: terrain vertices + skirt vertices
       const combinedPosition = new Float32Array(
-        position.length + (skirtPosition?.length ?? 0),
+        position.length + skirtPosition.length,
       );
       combinedPosition.set(position);
       combinedPosition.set(skirtPosition, position.length);
-      geometry.setAttribute(
-        "position",
-        new BufferAttribute(combinedPosition, 3),
-      );
+      const positionAttribute = new BufferAttribute(combinedPosition, 3);
+      geometry.setAttribute("position", positionAttribute);
+      terrainGeometry.setAttribute("position", positionAttribute);
 
       // Combine UVs
       if (uv) {
@@ -752,7 +739,9 @@ export class TileMesh
         if (skirtUv) {
           combinedUv.set(skirtUv, uv.length);
         }
-        geometry.setAttribute("uv", new BufferAttribute(combinedUv, 2));
+        const uvAttribute = new BufferAttribute(combinedUv, 2);
+        geometry.setAttribute("uv", uvAttribute);
+        terrainGeometry.setAttribute("uv", uvAttribute);
       }
 
       // Combine normals: terrain normals + skirt normals (computed in Rust as edge normals)
@@ -764,46 +753,36 @@ export class TileMesh
         if (skirtNormals) {
           combinedNormals.set(skirtNormals, normals.length);
         }
-        geometry.setAttribute(
-          "normal",
-          new BufferAttribute(combinedNormals, 3),
-        );
+        const normalAttribute = new BufferAttribute(combinedNormals, 3);
+        geometry.setAttribute("normal", normalAttribute);
+        terrainGeometry.setAttribute("normal", normalAttribute);
       }
 
       // Combine indices: terrain indices + skirt indices
       const combinedIndices = new Uint32Array(
-        indices.length + (skirtIndices?.length ?? 0),
+        indices.length + skirtIndices.length,
       );
       combinedIndices.set(indices);
       combinedIndices.set(skirtIndices, indices.length);
-      geometry.setIndex(new BufferAttribute(combinedIndices, 1));
+      const indexAttribute = new BufferAttribute(combinedIndices, 1);
+      geometry.setIndex(indexAttribute);
 
-      // Clean up
-      skirtPosition.set([]);
-      skirtIndices.set([]);
-      if (skirtUv) {
-        skirtUv.set([]);
-      }
-      if (skirtIndicesToEdge) {
-        skirtIndicesToEdge.set([]);
-      }
-      if (skirtNormals) {
-        skirtNormals.set([]);
-      }
+      terrainGeometry.setIndex(indexAttribute);
+      terrainGeometry.setDrawRange(0, indices.length);
     } else {
-      // No skirt data - use terrain geometry directly
+      // No skirt data - build the terrain geometry from the arrays as-is
+      terrainGeometry.setAttribute(
+        "position",
+        new BufferAttribute(position, 3),
+      );
+      if (uv) {
+        terrainGeometry.setAttribute("uv", new BufferAttribute(uv, 2));
+      }
+      if (normals) {
+        terrainGeometry.setAttribute("normal", new BufferAttribute(normals, 3));
+      }
+      terrainGeometry.setIndex(new BufferAttribute(indices, 1));
       geometry = terrainGeometry;
-    }
-
-    // Clean up original buffers
-    position.set([]);
-    indices.set([]);
-    if (uv) {
-      uv.set([]);
-      uv = null;
-    }
-    if (normals) {
-      normals.set([]);
     }
 
     return geometry;

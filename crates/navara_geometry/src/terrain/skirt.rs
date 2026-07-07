@@ -25,10 +25,6 @@ pub struct SkirtData {
     pub uvs: Vec<f32>,
     /// Skirt indices for triangles.
     pub indices: Vec<u32>,
-    /// Mapping from skirt vertex index to edge vertex index in main geometry.
-    /// For each skirt vertex pair (new_v0, new_v1), this stores the original
-    /// edge vertex indices (v0, v1) so normals can be copied from the edge.
-    pub indices_to_edge: Vec<u32>,
     /// Optional skirt normals (stride 3), copied from corresponding edge vertices.
     /// Only populated when the source geometry has normals.
     pub normals: Option<Vec<f32>>,
@@ -123,7 +119,7 @@ fn get_texcoord(vertex_index: usize, uvs: &[f32]) -> [f32; 2] {
 /// - `skirt_height`: distance to move vertices along "down" direction.
 /// - `down_dir_fn`: callback providing "down" vector for each vertex.
 ///
-/// Returns `SkirtData` containing the skirt geometry and edge mapping.
+/// Returns `SkirtData` containing the skirt geometry.
 pub fn generate_skirt(
     geometry: &Geometry,
     skirt_height: f32,
@@ -136,7 +132,6 @@ pub fn generate_skirt(
     let mut skirt_vertices = Vec::with_capacity(edge_count * 2 * 3);
     let mut skirt_uvs = Vec::with_capacity(edge_count * 2 * 2);
     let mut skirt_indices = Vec::with_capacity(edge_count * 2 * 3);
-    let mut indices_to_edge = Vec::with_capacity(edge_count * 2);
     let source_normals = geometry.normals.as_deref();
     let mut skirt_normals: Option<Vec<f32>> =
         source_normals.map(|_| Vec::with_capacity(edge_count * 2 * 3));
@@ -177,11 +172,6 @@ pub fn generate_skirt(
         skirt_uvs.extend_from_slice(&t0);
         skirt_uvs.extend_from_slice(&t1);
 
-        // --- Edge mapping for normals ---
-        // Each skirt vertex should copy normal from corresponding edge vertex
-        indices_to_edge.push(edge.v0);
-        indices_to_edge.push(edge.v1);
-
         // --- Normals (copy from edge vertex) ---
         if let (Some(src), Some(dst)) = (source_normals, skirt_normals.as_mut()) {
             let n0 = v0 * 3;
@@ -213,7 +203,6 @@ pub fn generate_skirt(
         vertices: skirt_vertices,
         uvs: skirt_uvs,
         indices: skirt_indices,
-        indices_to_edge,
         normals: skirt_normals,
     }
 }
@@ -229,7 +218,6 @@ pub fn add_skirt_separate(geometry: &mut Geometry, skirt_height: f32, down_dir_f
     geometry.skirt_vertices = Some(skirt_data.vertices);
     geometry.skirt_uvs = Some(skirt_data.uvs);
     geometry.skirt_indices = Some(skirt_data.indices);
-    geometry.skirt_indices_to_edge = Some(skirt_data.indices_to_edge);
     geometry.skirt_normals = skirt_data.normals;
 }
 
@@ -480,9 +468,6 @@ mod tests {
 
         // 3 edges * 2 triangles * 3 indices = 18 indices
         assert_eq!(skirt_data.indices.len(), 18);
-
-        // 6 skirt vertices, each maps to an edge vertex
-        assert_eq!(skirt_data.indices_to_edge.len(), 6);
     }
 
     #[test]
@@ -531,46 +516,14 @@ mod tests {
         assert!(geometry.skirt_vertices.is_some());
         assert!(geometry.skirt_uvs.is_some());
         assert!(geometry.skirt_indices.is_some());
-        assert!(geometry.skirt_indices_to_edge.is_some());
 
         let skirt_vertices = geometry.skirt_vertices.unwrap();
         let skirt_uvs = geometry.skirt_uvs.unwrap();
         let skirt_indices = geometry.skirt_indices.unwrap();
-        let indices_to_edge = geometry.skirt_indices_to_edge.unwrap();
 
         assert_eq!(skirt_vertices.len() / 3, 6);
         assert_eq!(skirt_uvs.len() / 2, 6);
         assert_eq!(skirt_indices.len(), 18);
-        assert_eq!(indices_to_edge.len(), 6);
-    }
-
-    #[test]
-    fn test_skirt_indices_to_edge_mapping() {
-        let geometry = Geometry {
-            vertices: vec![
-                0.0, 0.0, 0.0, // vertex 0
-                1.0, 0.0, 0.0, // vertex 1
-                0.5, 1.0, 0.0, // vertex 2
-            ],
-            uvs: vec![
-                0.0, 0.0, // uv 0
-                1.0, 0.0, // uv 1
-                0.5, 1.0, // uv 2
-            ],
-            indices: vec![0, 1, 2],
-            ..Default::default()
-        };
-
-        let down_dir_fn = |_: usize, _: &[f32]| [0.0, 0.0, -1.0];
-        let skirt_data = generate_skirt(&geometry, 0.5, &down_dir_fn);
-
-        // Each pair in indices_to_edge should correspond to valid main geometry vertices
-        for &idx in &skirt_data.indices_to_edge {
-            assert!(idx < 3, "Edge index should reference main geometry vertex");
-        }
-
-        // Should have pairs (one for each skirt vertex)
-        assert_eq!(skirt_data.indices_to_edge.len() % 2, 0);
     }
 
     #[test]

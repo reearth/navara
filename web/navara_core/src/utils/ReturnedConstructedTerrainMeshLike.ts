@@ -16,7 +16,6 @@ export class ReturnedConstructedTerrainMeshLike implements RemoveFreeRecursively
   skirt_vertices: Float32Array | undefined;
   skirt_uvs: Float32Array | undefined;
   skirt_indices: Uint32Array | undefined;
-  skirt_indices_to_edge: Uint32Array | undefined;
   skirt_normals: Float32Array | undefined;
   watermask: Uint8Array | undefined;
 
@@ -37,7 +36,6 @@ export class ReturnedConstructedTerrainMeshLike implements RemoveFreeRecursively
       this.skirt_vertices = t.transferSkirtVertices()?.slice();
       this.skirt_uvs = t.transferSkirtUvs()?.slice();
       this.skirt_indices = t.transferSkirtIndices()?.slice();
-      this.skirt_indices_to_edge = t.transferSkirtIndicesToEdge()?.slice();
       this.skirt_normals = t.transferSkirtNormals()?.slice();
     }
     if (t.hasWatermask()) {
@@ -69,9 +67,6 @@ export class ReturnedConstructedTerrainMeshLike implements RemoveFreeRecursively
   transferSkirtIndices(): Uint32Array | undefined {
     throw new Error();
   }
-  transferSkirtIndicesToEdge(): Uint32Array | undefined {
-    throw new Error();
-  }
   transferSkirtNormals(): Float32Array | undefined {
     throw new Error();
   }
@@ -82,8 +77,7 @@ export class ReturnedConstructedTerrainMeshLike implements RemoveFreeRecursively
     return (
       this.skirt_vertices !== undefined &&
       this.skirt_uvs !== undefined &&
-      this.skirt_indices !== undefined &&
-      this.skirt_indices_to_edge !== undefined
+      this.skirt_indices !== undefined
     );
   }
   hasNormals(): boolean {
