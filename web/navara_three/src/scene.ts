@@ -1,8 +1,6 @@
 import type { TileHandle } from "@navara/core";
 import { OrthographicCamera, Scene, WebGLRenderer, Mesh, Group } from "three";
 
-import type { BatchedFeatureMesh } from "./mesh";
-
 export type Scenes = {
   // Render light in all scenes.
   light: Group;
@@ -26,7 +24,6 @@ export class TileScene extends Scene {
   layerIndex: number;
   removed = false;
   revision = 0;
-  childrenObserver?: () => void;
 
   constructor(layerId: string, layerIndex: number) {
     super();
@@ -36,9 +33,6 @@ export class TileScene extends Scene {
 }
 
 export class SceneGroup extends Group {
-  needsUpdate = false;
-  childrenObserver?: () => void;
-
   get tileScenes(): TileScene[] {
     return this.children as TileScene[];
   }
@@ -71,25 +65,13 @@ export class TexturizedSceneByTileCoordinates {
     return this.map.get(handle)?.tileScenes.find((o) => o.layerId === layerId);
   }
 
-  add(
-    handle: TileHandle,
-    layerId: string,
-    mesh: Mesh,
-    layerIndex: number,
-    fromParent = false,
-  ) {
+  add(handle: TileHandle, layerId: string, mesh: Mesh, layerIndex: number) {
     const scenes = this.get(handle);
     let scene = this.findTileScene(handle, layerId);
     if (!scene) {
       scene = new TileScene(layerId, layerIndex);
       scenes.add(scene);
       scenes.tileScenes.sort((a, b) => a.layerIndex - b.layerIndex);
-    }
-    if (scene.children.length && fromParent) {
-      const existing = scene.children.find((o) => o.userData.fromParent);
-      if (existing) {
-        scene.remove(existing);
-      }
     }
 
     scene.removed = false;
@@ -100,63 +82,38 @@ export class TexturizedSceneByTileCoordinates {
     return scene;
   }
 
-  addFromParentScene(
-    handle: TileHandle,
-    layerId: string,
-    parentScene: TileScene,
-  ) {
-    const layerIndex = parentScene.layerIndex;
-    for (const child of parentScene.children) {
-      if (child.userData.fromParent) continue;
-
-      const m = child as BatchedFeatureMesh;
-      const nm = m.clone();
-
-      // Mark this mesh as inherited from the parent.
-      nm.userData.fromParent = true;
-      this.add(handle, layerId, nm, layerIndex, true);
-    }
-  }
-
-  showMeshFromParent(
-    handle: TileHandle,
-    layerId: string,
-    enabledParent: boolean,
-  ) {
-    const scene = this.findTileScene(handle, layerId);
-    if (!scene) return;
-    for (const child of scene.children) {
-      if (!child.userData.fromParent) {
-        // This mesh should be displayed if the parent tile is disabled.
-        // This mesh might be hidden by original mesh process(`event/feature.ts`), but this tile need to show this mesh.
-        // This forces to set `visible` according to the raster tile state.
-        child.visible = !enabledParent;
-        continue;
-      }
-      child.visible = enabledParent;
-    }
-  }
-
-  // Find a mesh that isn't marked as inherited from the parent.
-  hasCurrentMesh(handle: TileHandle, layerId: string) {
-    const scene = this.findTileScene(handle, layerId);
-    if (!scene) return;
-    return scene.children.find((o) => !o.userData.fromParent);
-  }
-
   findSceneByLayerId(handle: TileHandle, layerId: string) {
     return this.findTileScene(handle, layerId);
   }
 
-  remove(handle: TileHandle, layerId: string) {
+  /**
+   * Bump a layer scene's revision without changing its contents. Draped-feature
+   * material/visibility changes that don't add or remove a mesh use this so the
+   * consuming TileMesh's bake signature (which folds in `revision`) re-bakes.
+   */
+  markDirty(handle: TileHandle, layerId: string) {
     const scene = this.findTileScene(handle, layerId);
     if (!scene) return;
-    scene.removed = true;
-
-    scene.clear();
     scene.revision++;
+  }
 
-    this.setNeedsUpdate(handle, true);
+  /**
+   * Remove a single feature mesh from its (tile, layer) scene. Only when the scene's last
+   * mesh leaves do we mark it `removed` and prune the empty `TileScene` (and the
+   * `SceneGroup` if it too becomes empty). This keeps sibling draped features in the same
+   * tile+layer intact — unlike a whole-scene clear, which blanked them all on one removal.
+   */
+  removeMesh(handle: TileHandle, layerId: string, mesh: Mesh) {
+    const scene = this.findTileScene(handle, layerId);
+    if (!scene) return;
+    scene.remove(mesh);
+    scene.revision++;
+    if (scene.children.length === 0) {
+      scene.removed = true;
+      const group = this.map.get(handle);
+      group?.remove(scene);
+      if (group && group.tileScenes.length === 0) this.delete(handle);
+    }
   }
 
   delete(handle: TileHandle) {
@@ -166,17 +123,5 @@ export class TexturizedSceneByTileCoordinates {
     sceneGroup.clear();
 
     this.map.delete(handle);
-  }
-
-  getNeedsUpdate(handle: TileHandle) {
-    const scene = this.map.get(handle);
-    if (!scene) return false;
-    return scene.needsUpdate;
-  }
-
-  setNeedsUpdate(handle: TileHandle, v: boolean) {
-    const scene = this.map.get(handle);
-    if (!scene) return;
-    scene.needsUpdate = v;
   }
 }

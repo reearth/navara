@@ -3,7 +3,8 @@ use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, Order};
 use navara_core::{
     Aabb, Ellipsoid, Extent, LngLat, Radians, TileRegion, TileXYZ, TilingScheme, WGS84_64,
-    get_ellipsoid_terrain_level_zero_maximum_geometric_error, get_level_maximum_geometric_error,
+    get_ellipsoid_terrain_level_zero_maximum_geometric_error_with_root_tiles,
+    get_level_maximum_geometric_error,
 };
 use navara_data_requester::{DataRequester, DataRequesterStatus};
 use navara_geometry::{ReturnedConstructedTerrainMesh, UpsamplableTerrainGeometry};
@@ -477,7 +478,15 @@ impl Tile for TerrainTile {
         get_level_maximum_geometric_error(
             self.coords.z,
             // TODO: Store the result of the level zero maximum geometric error to avoid too many caclulation.
-            get_ellipsoid_terrain_level_zero_maximum_geometric_error(ellipsoid, height_map_width),
+            // Scheme-aware (Cesium `getNumberOfXTilesAtLevel(0)`): a Geographic terrain has 2
+            // level-zero tiles in X, so its error is halved and it subdivides one level coarser
+            // than WebMercator for the same ground area — keeping the draped WM tile zoom
+            // (derived from this tile's longitude span) consistent across terrain schemes.
+            get_ellipsoid_terrain_level_zero_maximum_geometric_error_with_root_tiles(
+                ellipsoid,
+                height_map_width,
+                self.tiling_scheme.root_tiles().len(),
+            ),
         )
     }
 
@@ -1161,6 +1170,55 @@ mod test {
             .unwrap()
             .extent;
         assert_eq!(terrain_height_for_extent(&qt, &extent), None);
+    }
+
+    /// Cross-scheme drape: a WebMercator vector tile reads the elevation of the
+    /// Geographic (quantized-mesh) terrain it overlaps. The vector traverse keys on
+    /// the extent's centre (point-in-tile), so it resolves even though the WM tile's
+    /// coordinates do not exist in the Geographic quadtree — the exact path that a
+    /// by-handle lookup got wrong, leaving the drape coarse.
+    #[test]
+    fn terrain_height_for_extent_reads_geographic_terrain_via_web_mercator_extent() {
+        use super::terrain_height_for_extent;
+
+        let geo = TilingScheme::Geographic { tms: true };
+        let mut qt = TerrainTileQuadtree::new_with_linear_qt();
+        for root in geo.root_tiles() {
+            qt.qt.initialize_leaf((root.x, root.y, root.z), &|v| {
+                TerrainTile::new_with_scheme(
+                    TileXYZ {
+                        x: v.0,
+                        y: v.1,
+                        z: v.2,
+                    },
+                    0.,
+                    0.,
+                    geo.clone(),
+                )
+            });
+        }
+        // East root (1,0,0) covers lng 0..180°, lat -90..90°; give it a known elevation.
+        mark_tile_ready(&mut qt, (1, 0, 0));
+        let geo_handle = qt.qt.leaf((1, 0, 0)).unwrap().handle();
+        {
+            let t = qt.qt.get_mut(geo_handle).unwrap();
+            t.max_height = 3776.;
+            t.min_height = 0.;
+        }
+
+        // A real WebMercator tile whose centre (~102°E, ~11°N) lands inside the
+        // eastern hemisphere. Its WM coordinates have no twin in the Geographic
+        // quadtree, so only the by-extent lookup can resolve it.
+        let wm_extent = TilingScheme::WebMercator { tms: false }.tile_extent(TileXYZ {
+            x: 200,
+            y: 120,
+            z: 8,
+        });
+
+        assert_eq!(
+            terrain_height_for_extent(&qt, &wm_extent),
+            Some((3776., 0.))
+        );
     }
 
     /// Initialize a leaf with the Geographic tiling scheme so its extent and

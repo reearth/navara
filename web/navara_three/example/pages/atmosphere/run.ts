@@ -27,10 +27,11 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
+import { AttributionPlugin } from "@navara/three_plugins";
 import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 
-import { showAttributions } from "../../helpers/attributions";
+import { datasetToSource } from "../../helpers/attribution-source";
 import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
@@ -56,6 +57,8 @@ type DefaultEffects = ReturnType<DefaultPlugin["addDefaultPhotorealScene"]>;
 export const run = async (view: ThreeView<CustomDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
+  const attribution = new AttributionPlugin();
+  view.addPlugin(attribution);
   await view.init();
 
   const defaultEffects = plugin.addDefaultPhotorealScene();
@@ -177,12 +180,12 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   addIBLControl(view, pane);
   addEffectsControl(view, pane, defaultEffects);
 
-  showAttributions([
-    TERRAIN_DATASETS.gsi,
-    TILE_DATASETS.gsiSeamlessphoto,
-    TILES_3D_DATASETS.plateauChiyoda,
-    TILES_3D_DATASETS.plateauChuo,
-    LOCAL_DATASETS.blueMarbleClouds,
+  attribution.show([
+    datasetToSource(TERRAIN_DATASETS.gsi),
+    datasetToSource(TILE_DATASETS.gsiSeamlessphoto),
+    datasetToSource(TILES_3D_DATASETS.plateauChiyoda),
+    datasetToSource(TILES_3D_DATASETS.plateauChuo),
+    datasetToSource(LOCAL_DATASETS.blueMarbleClouds),
   ]);
 };
 

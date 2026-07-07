@@ -1,8 +1,3 @@
-import ThreeView from "@navara/three";
+import { run } from "./run";
 
-import { run, type CustomDescriptions } from "./run";
-
-const view = new ThreeView<CustomDescriptions>({
-  debug: true,
-});
-run(view);
+run();

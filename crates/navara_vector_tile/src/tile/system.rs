@@ -14,12 +14,14 @@ use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 
 use navara_camera::{CameraFrustum, CameraMarker};
 use navara_layer::{LayerId, LayerStore, TerrainLayer};
-use navara_tile_component::{TerrainInformationQuadtree, VectorTile, VectorTileQuadtree};
+use navara_tile_component::{
+    TerrainInformationQuadtree, TerrainTileQuadtree, VectorTile, VectorTileQuadtree,
+};
 use navara_window::Window;
 use rustc_hash::FxHashSet;
 
 use crate::{
-    VectorTileFeatureMarker, VectorTileSourceResources,
+    VectorResolveRevision, VectorTileFeatureMarker, VectorTileSourceResources,
     data_requester::{ChangedVectorTileDataRequesterQuery, VectorTileDataRequesterQuery},
     layer::{resource::LayerResources, tile_cache_manager::TileCacheManager},
     source::TileSource,
@@ -38,7 +40,18 @@ use super::traverse::{
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_tiles(
     mut commands: Commands,
-    terrain_qt: Res<TerrainInformationQuadtree>,
+    // `.0` (TerrainInformationQuadtree) is kept only as the re-traversal change-detection
+    // trigger (see `needs_update`); `.1` (the real TerrainTileQuadtree) supplies terrain
+    // heights read by extent — the scheme-agnostic source the raster traverse uses, so the
+    // vector SSE follows the terrain's subdivision depth. `.2` is bumped whenever a traverse
+    // actually runs so the web side can skip its per-tile `getVectorTileStates` FFI when the
+    // resolution is unchanged. Bundled as one tuple param to stay within Bevy's per-system
+    // parameter limit.
+    mut terrain: (
+        Res<TerrainInformationQuadtree>,
+        Res<TerrainTileQuadtree>,
+        ResMut<VectorResolveRevision>,
+    ),
     mut qts: Query<&mut VectorTileQuadtree>,
     mut tcs: Query<&mut TileCacheManager>,
     mut buf: ResMut<BufferStore>,
@@ -100,10 +113,14 @@ pub fn update_tiles(
                 || are_features_changed
                 || are_renderable_features_rendered
                 || source.is_added()
-                || terrain_qt.is_changed();
+                || terrain.0.is_changed();
             if !needs_update {
                 continue;
             }
+
+            // A traverse is about to run, so the resolved vector tiles for some terrain
+            // tiles may change — signal the web side to re-fetch this frame.
+            terrain.2.bump();
 
             tc.needs_update = false;
 
@@ -155,7 +172,7 @@ pub fn update_tiles(
                 false,
                 false,
                 &terrain_layer,
-                &terrain_qt,
+                &terrain.1,
                 is_rendered.then_some(zero_tile_handle),
                 &globe,
                 &mut *tile_source.0,

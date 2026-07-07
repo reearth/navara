@@ -3,9 +3,10 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
+import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
-import { showAttributions } from "../../../helpers/attributions";
+import { datasetToSource } from "../../../helpers/attribution-source";
 import {
   LOCAL_DATASETS,
   TERRAIN_DATASETS,
@@ -21,6 +22,9 @@ const run = async () => {
 
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
+
+  const attribution = new AttributionPlugin();
+  view.addPlugin(attribution);
 
   await view.init();
 
@@ -148,10 +152,10 @@ const run = async () => {
     layer?.update({ polygon: { outlineShow: value } });
   });
 
-  showAttributions([
-    TILE_DATASETS.gsiSeamlessphoto,
-    TERRAIN_DATASETS.gsi,
-    LOCAL_DATASETS.interiorGeoJSON,
+  // interiorGeoJSON is local sample data with no attribution, so it is omitted.
+  attribution.show([
+    datasetToSource(TILE_DATASETS.gsiSeamlessphoto),
+    datasetToSource(TERRAIN_DATASETS.gsi),
   ]);
 };
 

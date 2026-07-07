@@ -311,11 +311,12 @@ void main() {
       if (abs(mDen) > 1e-3) {
         texUv0.y = (gReprojMLat - mRs) / mDen;
       }
-      // Polar cap fill: WM imagery stops at ±~85.05° but Geographic terrain reaches
-      // ±90°. When this slot is the band-edge raster tile (its north/south edge sits
-      // on the WM limit), clamp the polar overshoot onto that edge texel so the last
-      // available imagery row stretches across the cap instead of being dropped by
-      // the in-bounds test below. Non-edge tiles keep the normal drop.
+      // Polar cap fill: WebMercator content stops at ±~85.05° but Geographic
+      // terrain reaches ±90°. When this slot is the band-edge source (its
+      // north/south edge sits on the WM limit), clamp the polar overshoot onto
+      // that edge texel so the last available source row stretches across the cap
+      // instead of being dropped by the in-bounds test below. Non-edge tiles keep
+      // the normal drop.
       if (uReprojectMerc[0].z > 0.5) texUv0.y = min(texUv0.y, 1.0);
       if (uReprojectMerc[0].w > 0.5) texUv0.y = max(texUv0.y, 0.0);
       // Confine the slot to the sub-rect it actually covers. With N:M draping each
@@ -378,11 +379,12 @@ void main() {
       if (abs(mDen) > 1e-3) {
         texUv1.y = (gReprojMLat - mRs) / mDen;
       }
-      // Polar cap fill: WM imagery stops at ±~85.05° but Geographic terrain reaches
-      // ±90°. When this slot is the band-edge raster tile (its north/south edge sits
-      // on the WM limit), clamp the polar overshoot onto that edge texel so the last
-      // available imagery row stretches across the cap instead of being dropped by
-      // the in-bounds test below. Non-edge tiles keep the normal drop.
+      // Polar cap fill: WebMercator content stops at ±~85.05° but Geographic
+      // terrain reaches ±90°. When this slot is the band-edge source (its
+      // north/south edge sits on the WM limit), clamp the polar overshoot onto
+      // that edge texel so the last available source row stretches across the cap
+      // instead of being dropped by the in-bounds test below. Non-edge tiles keep
+      // the normal drop.
       if (uReprojectMerc[1].z > 0.5) texUv1.y = min(texUv1.y, 1.0);
       if (uReprojectMerc[1].w > 0.5) texUv1.y = max(texUv1.y, 0.0);
       // Confine the slot to the sub-rect it actually covers. With N:M draping each
@@ -420,6 +422,45 @@ void main() {
     // 1.0 unless the reproject branch below confines this slot to a sub-rect.
     float inBounds2 = 1.0;
 
+    if (uReproject[2] == 1) {
+      // Affine UV is correct in longitude but stretches latitude. Remap this
+      // fragment's latitude through Mercator so it samples the source correctly.
+      //
+      // The only per-fragment transcendental left is mLat: it depends solely on
+      // vUv.y and the (tile-wide, slot-invariant) terrain lat range, so it is
+      // identical for every reprojecting slot — computed once and reused. The
+      // per-slot source band (mRs, mDen) and polar-cap flags are constant per slot
+      // and precomputed on the CPU (see mutates.ts), so no log/tan runs per slot.
+      if (!gReprojMLatReady) {
+        float lat = uReprojectTerrainLat[2].x
+          + vUv.y * (uReprojectTerrainLat[2].y - uReprojectTerrainLat[2].x);
+        gReprojMLat = log(tan(PI * 0.25 + lat * 0.5));
+        gReprojMLatReady = true;
+      }
+      float mRs = uReprojectMerc[2].x;
+      float mDen = uReprojectMerc[2].y;
+      // Only reproject when the source's Mercator span is wide enough to be
+      // numerically safe. For deep/upsampled tiles the span shrinks to ~1e-6 while
+      // mLat/mRs are ~O(1), so (mLat-mRs)/(mRn-mRs) catastrophically cancels in
+      // float32 and produces vertical-stretch noise. There the Mercator correction
+      // is sub-pixel anyway, so the affine texUv.y is both correct and stable.
+      if (abs(mDen) > 1e-3) {
+        texUv2.y = (gReprojMLat - mRs) / mDen;
+      }
+      // Polar cap fill: WebMercator content stops at ±~85.05° but Geographic
+      // terrain reaches ±90°. When this slot is the band-edge source (its
+      // north/south edge sits on the WM limit), clamp the polar overshoot onto
+      // that edge texel so the last available source row stretches across the cap
+      // instead of being dropped by the in-bounds test below. Non-edge tiles keep
+      // the normal drop.
+      if (uReprojectMerc[2].z > 0.5) texUv2.y = min(texUv2.y, 1.0);
+      if (uReprojectMerc[2].w > 0.5) texUv2.y = max(texUv2.y, 0.0);
+      // Confine the slot to the sub-rect it actually covers. With N:M draping each
+      // source tile covers only part of the terrain tile; outside its [0,1] range
+      // the sampler would smear the edge texel across the rest, so drop it there.
+      inBounds2 = step(0.0, texUv2.x) * step(texUv2.x, 1.0)
+                   * step(0.0, texUv2.y) * step(texUv2.y, 1.0);
+    }
 
     vec4 texColor2;
     if (uIsElevationHeatmaps[2]) {
@@ -449,6 +490,45 @@ void main() {
     // 1.0 unless the reproject branch below confines this slot to a sub-rect.
     float inBounds3 = 1.0;
 
+    if (uReproject[3] == 1) {
+      // Affine UV is correct in longitude but stretches latitude. Remap this
+      // fragment's latitude through Mercator so it samples the source correctly.
+      //
+      // The only per-fragment transcendental left is mLat: it depends solely on
+      // vUv.y and the (tile-wide, slot-invariant) terrain lat range, so it is
+      // identical for every reprojecting slot — computed once and reused. The
+      // per-slot source band (mRs, mDen) and polar-cap flags are constant per slot
+      // and precomputed on the CPU (see mutates.ts), so no log/tan runs per slot.
+      if (!gReprojMLatReady) {
+        float lat = uReprojectTerrainLat[3].x
+          + vUv.y * (uReprojectTerrainLat[3].y - uReprojectTerrainLat[3].x);
+        gReprojMLat = log(tan(PI * 0.25 + lat * 0.5));
+        gReprojMLatReady = true;
+      }
+      float mRs = uReprojectMerc[3].x;
+      float mDen = uReprojectMerc[3].y;
+      // Only reproject when the source's Mercator span is wide enough to be
+      // numerically safe. For deep/upsampled tiles the span shrinks to ~1e-6 while
+      // mLat/mRs are ~O(1), so (mLat-mRs)/(mRn-mRs) catastrophically cancels in
+      // float32 and produces vertical-stretch noise. There the Mercator correction
+      // is sub-pixel anyway, so the affine texUv.y is both correct and stable.
+      if (abs(mDen) > 1e-3) {
+        texUv3.y = (gReprojMLat - mRs) / mDen;
+      }
+      // Polar cap fill: WebMercator content stops at ±~85.05° but Geographic
+      // terrain reaches ±90°. When this slot is the band-edge source (its
+      // north/south edge sits on the WM limit), clamp the polar overshoot onto
+      // that edge texel so the last available source row stretches across the cap
+      // instead of being dropped by the in-bounds test below. Non-edge tiles keep
+      // the normal drop.
+      if (uReprojectMerc[3].z > 0.5) texUv3.y = min(texUv3.y, 1.0);
+      if (uReprojectMerc[3].w > 0.5) texUv3.y = max(texUv3.y, 0.0);
+      // Confine the slot to the sub-rect it actually covers. With N:M draping each
+      // source tile covers only part of the terrain tile; outside its [0,1] range
+      // the sampler would smear the edge texel across the rest, so drop it there.
+      inBounds3 = step(0.0, texUv3.x) * step(texUv3.x, 1.0)
+                   * step(0.0, texUv3.y) * step(texUv3.y, 1.0);
+    }
 
     vec4 texColor3;
     if (uIsElevationHeatmaps[3]) {
@@ -854,11 +934,12 @@ void main() {
       if (abs(mDen) > 1e-3) {
         texUv0.y = (gReprojMLat - mRs) / mDen;
       }
-      // Polar cap fill: WM imagery stops at ±~85.05° but Geographic terrain reaches
-      // ±90°. When this slot is the band-edge raster tile (its north/south edge sits
-      // on the WM limit), clamp the polar overshoot onto that edge texel so the last
-      // available imagery row stretches across the cap instead of being dropped by
-      // the in-bounds test below. Non-edge tiles keep the normal drop.
+      // Polar cap fill: WebMercator content stops at ±~85.05° but Geographic
+      // terrain reaches ±90°. When this slot is the band-edge source (its
+      // north/south edge sits on the WM limit), clamp the polar overshoot onto
+      // that edge texel so the last available source row stretches across the cap
+      // instead of being dropped by the in-bounds test below. Non-edge tiles keep
+      // the normal drop.
       if (uReprojectMerc[0].z > 0.5) texUv0.y = min(texUv0.y, 1.0);
       if (uReprojectMerc[0].w > 0.5) texUv0.y = max(texUv0.y, 0.0);
       // Confine the slot to the sub-rect it actually covers. With N:M draping each
@@ -917,11 +998,12 @@ void main() {
       if (abs(mDen) > 1e-3) {
         texUv1.y = (gReprojMLat - mRs) / mDen;
       }
-      // Polar cap fill: WM imagery stops at ±~85.05° but Geographic terrain reaches
-      // ±90°. When this slot is the band-edge raster tile (its north/south edge sits
-      // on the WM limit), clamp the polar overshoot onto that edge texel so the last
-      // available imagery row stretches across the cap instead of being dropped by
-      // the in-bounds test below. Non-edge tiles keep the normal drop.
+      // Polar cap fill: WebMercator content stops at ±~85.05° but Geographic
+      // terrain reaches ±90°. When this slot is the band-edge source (its
+      // north/south edge sits on the WM limit), clamp the polar overshoot onto
+      // that edge texel so the last available source row stretches across the cap
+      // instead of being dropped by the in-bounds test below. Non-edge tiles keep
+      // the normal drop.
       if (uReprojectMerc[1].z > 0.5) texUv1.y = min(texUv1.y, 1.0);
       if (uReprojectMerc[1].w > 0.5) texUv1.y = max(texUv1.y, 0.0);
       // Confine the slot to the sub-rect it actually covers. With N:M draping each
@@ -1049,11 +1131,12 @@ void main() {
       if (abs(mDen) > 1e-3) {
         texUv0.y = (gReprojMLat - mRs) / mDen;
       }
-      // Polar cap fill: WM imagery stops at ±~85.05° but Geographic terrain reaches
-      // ±90°. When this slot is the band-edge raster tile (its north/south edge sits
-      // on the WM limit), clamp the polar overshoot onto that edge texel so the last
-      // available imagery row stretches across the cap instead of being dropped by
-      // the in-bounds test below. Non-edge tiles keep the normal drop.
+      // Polar cap fill: WebMercator content stops at ±~85.05° but Geographic
+      // terrain reaches ±90°. When this slot is the band-edge source (its
+      // north/south edge sits on the WM limit), clamp the polar overshoot onto
+      // that edge texel so the last available source row stretches across the cap
+      // instead of being dropped by the in-bounds test below. Non-edge tiles keep
+      // the normal drop.
       if (uReprojectMerc[0].z > 0.5) texUv0.y = min(texUv0.y, 1.0);
       if (uReprojectMerc[0].w > 0.5) texUv0.y = max(texUv0.y, 0.0);
       // Confine the slot to the sub-rect it actually covers. With N:M draping each
@@ -1108,11 +1191,12 @@ void main() {
       if (abs(mDen) > 1e-3) {
         texUv1.y = (gReprojMLat - mRs) / mDen;
       }
-      // Polar cap fill: WM imagery stops at ±~85.05° but Geographic terrain reaches
-      // ±90°. When this slot is the band-edge raster tile (its north/south edge sits
-      // on the WM limit), clamp the polar overshoot onto that edge texel so the last
-      // available imagery row stretches across the cap instead of being dropped by
-      // the in-bounds test below. Non-edge tiles keep the normal drop.
+      // Polar cap fill: WebMercator content stops at ±~85.05° but Geographic
+      // terrain reaches ±90°. When this slot is the band-edge source (its
+      // north/south edge sits on the WM limit), clamp the polar overshoot onto
+      // that edge texel so the last available source row stretches across the cap
+      // instead of being dropped by the in-bounds test below. Non-edge tiles keep
+      // the normal drop.
       if (uReprojectMerc[1].z > 0.5) texUv1.y = min(texUv1.y, 1.0);
       if (uReprojectMerc[1].w > 0.5) texUv1.y = max(texUv1.y, 0.0);
       // Confine the slot to the sub-rect it actually covers. With N:M draping each
@@ -1260,11 +1344,12 @@ void main() {
       if (abs(mDen) > 1e-3) {
         texUv0.y = (gReprojMLat - mRs) / mDen;
       }
-      // Polar cap fill: WM imagery stops at ±~85.05° but Geographic terrain reaches
-      // ±90°. When this slot is the band-edge raster tile (its north/south edge sits
-      // on the WM limit), clamp the polar overshoot onto that edge texel so the last
-      // available imagery row stretches across the cap instead of being dropped by
-      // the in-bounds test below. Non-edge tiles keep the normal drop.
+      // Polar cap fill: WebMercator content stops at ±~85.05° but Geographic
+      // terrain reaches ±90°. When this slot is the band-edge source (its
+      // north/south edge sits on the WM limit), clamp the polar overshoot onto
+      // that edge texel so the last available source row stretches across the cap
+      // instead of being dropped by the in-bounds test below. Non-edge tiles keep
+      // the normal drop.
       if (uReprojectMerc[0].z > 0.5) texUv0.y = min(texUv0.y, 1.0);
       if (uReprojectMerc[0].w > 0.5) texUv0.y = max(texUv0.y, 0.0);
       // Confine the slot to the sub-rect it actually covers. With N:M draping each
@@ -1316,11 +1401,12 @@ void main() {
       if (abs(mDen) > 1e-3) {
         texUv1.y = (gReprojMLat - mRs) / mDen;
       }
-      // Polar cap fill: WM imagery stops at ±~85.05° but Geographic terrain reaches
-      // ±90°. When this slot is the band-edge raster tile (its north/south edge sits
-      // on the WM limit), clamp the polar overshoot onto that edge texel so the last
-      // available imagery row stretches across the cap instead of being dropped by
-      // the in-bounds test below. Non-edge tiles keep the normal drop.
+      // Polar cap fill: WebMercator content stops at ±~85.05° but Geographic
+      // terrain reaches ±90°. When this slot is the band-edge source (its
+      // north/south edge sits on the WM limit), clamp the polar overshoot onto
+      // that edge texel so the last available source row stretches across the cap
+      // instead of being dropped by the in-bounds test below. Non-edge tiles keep
+      // the normal drop.
       if (uReprojectMerc[1].z > 0.5) texUv1.y = min(texUv1.y, 1.0);
       if (uReprojectMerc[1].w > 0.5) texUv1.y = max(texUv1.y, 0.0);
       // Confine the slot to the sub-rect it actually covers. With N:M draping each
@@ -1347,6 +1433,45 @@ void main() {
     // 1.0 unless the reproject branch below confines this slot to a sub-rect.
     float inBounds2 = 1.0;
 
+    if (uReproject[2] == 1) {
+      // Affine UV is correct in longitude but stretches latitude. Remap this
+      // fragment's latitude through Mercator so it samples the source correctly.
+      //
+      // The only per-fragment transcendental left is mLat: it depends solely on
+      // vUv.y and the (tile-wide, slot-invariant) terrain lat range, so it is
+      // identical for every reprojecting slot — computed once and reused. The
+      // per-slot source band (mRs, mDen) and polar-cap flags are constant per slot
+      // and precomputed on the CPU (see mutates.ts), so no log/tan runs per slot.
+      if (!gReprojMLatReady) {
+        float lat = uReprojectTerrainLat[2].x
+          + vUv.y * (uReprojectTerrainLat[2].y - uReprojectTerrainLat[2].x);
+        gReprojMLat = log(tan(PI * 0.25 + lat * 0.5));
+        gReprojMLatReady = true;
+      }
+      float mRs = uReprojectMerc[2].x;
+      float mDen = uReprojectMerc[2].y;
+      // Only reproject when the source's Mercator span is wide enough to be
+      // numerically safe. For deep/upsampled tiles the span shrinks to ~1e-6 while
+      // mLat/mRs are ~O(1), so (mLat-mRs)/(mRn-mRs) catastrophically cancels in
+      // float32 and produces vertical-stretch noise. There the Mercator correction
+      // is sub-pixel anyway, so the affine texUv.y is both correct and stable.
+      if (abs(mDen) > 1e-3) {
+        texUv2.y = (gReprojMLat - mRs) / mDen;
+      }
+      // Polar cap fill: WebMercator content stops at ±~85.05° but Geographic
+      // terrain reaches ±90°. When this slot is the band-edge source (its
+      // north/south edge sits on the WM limit), clamp the polar overshoot onto
+      // that edge texel so the last available source row stretches across the cap
+      // instead of being dropped by the in-bounds test below. Non-edge tiles keep
+      // the normal drop.
+      if (uReprojectMerc[2].z > 0.5) texUv2.y = min(texUv2.y, 1.0);
+      if (uReprojectMerc[2].w > 0.5) texUv2.y = max(texUv2.y, 0.0);
+      // Confine the slot to the sub-rect it actually covers. With N:M draping each
+      // source tile covers only part of the terrain tile; outside its [0,1] range
+      // the sampler would smear the edge texel across the rest, so drop it there.
+      inBounds2 = step(0.0, texUv2.x) * step(texUv2.x, 1.0)
+                   * step(0.0, texUv2.y) * step(texUv2.y, 1.0);
+    }
 
     vec4 texColor2 = texture2D(uTextures[2], texUv2) * vec4(uColors[2], 1.0);
 
@@ -1458,11 +1583,12 @@ void main() {
       if (abs(mDen) > 1e-3) {
         texUv0.y = (gReprojMLat - mRs) / mDen;
       }
-      // Polar cap fill: WM imagery stops at ±~85.05° but Geographic terrain reaches
-      // ±90°. When this slot is the band-edge raster tile (its north/south edge sits
-      // on the WM limit), clamp the polar overshoot onto that edge texel so the last
-      // available imagery row stretches across the cap instead of being dropped by
-      // the in-bounds test below. Non-edge tiles keep the normal drop.
+      // Polar cap fill: WebMercator content stops at ±~85.05° but Geographic
+      // terrain reaches ±90°. When this slot is the band-edge source (its
+      // north/south edge sits on the WM limit), clamp the polar overshoot onto
+      // that edge texel so the last available source row stretches across the cap
+      // instead of being dropped by the in-bounds test below. Non-edge tiles keep
+      // the normal drop.
       if (uReprojectMerc[0].z > 0.5) texUv0.y = min(texUv0.y, 1.0);
       if (uReprojectMerc[0].w > 0.5) texUv0.y = max(texUv0.y, 0.0);
       // Confine the slot to the sub-rect it actually covers. With N:M draping each
@@ -1514,11 +1640,12 @@ void main() {
       if (abs(mDen) > 1e-3) {
         texUv1.y = (gReprojMLat - mRs) / mDen;
       }
-      // Polar cap fill: WM imagery stops at ±~85.05° but Geographic terrain reaches
-      // ±90°. When this slot is the band-edge raster tile (its north/south edge sits
-      // on the WM limit), clamp the polar overshoot onto that edge texel so the last
-      // available imagery row stretches across the cap instead of being dropped by
-      // the in-bounds test below. Non-edge tiles keep the normal drop.
+      // Polar cap fill: WebMercator content stops at ±~85.05° but Geographic
+      // terrain reaches ±90°. When this slot is the band-edge source (its
+      // north/south edge sits on the WM limit), clamp the polar overshoot onto
+      // that edge texel so the last available source row stretches across the cap
+      // instead of being dropped by the in-bounds test below. Non-edge tiles keep
+      // the normal drop.
       if (uReprojectMerc[1].z > 0.5) texUv1.y = min(texUv1.y, 1.0);
       if (uReprojectMerc[1].w > 0.5) texUv1.y = max(texUv1.y, 0.0);
       // Confine the slot to the sub-rect it actually covers. With N:M draping each
@@ -1545,6 +1672,45 @@ void main() {
     // 1.0 unless the reproject branch below confines this slot to a sub-rect.
     float inBounds2 = 1.0;
 
+    if (uReproject[2] == 1) {
+      // Affine UV is correct in longitude but stretches latitude. Remap this
+      // fragment's latitude through Mercator so it samples the source correctly.
+      //
+      // The only per-fragment transcendental left is mLat: it depends solely on
+      // vUv.y and the (tile-wide, slot-invariant) terrain lat range, so it is
+      // identical for every reprojecting slot — computed once and reused. The
+      // per-slot source band (mRs, mDen) and polar-cap flags are constant per slot
+      // and precomputed on the CPU (see mutates.ts), so no log/tan runs per slot.
+      if (!gReprojMLatReady) {
+        float lat = uReprojectTerrainLat[2].x
+          + vUv.y * (uReprojectTerrainLat[2].y - uReprojectTerrainLat[2].x);
+        gReprojMLat = log(tan(PI * 0.25 + lat * 0.5));
+        gReprojMLatReady = true;
+      }
+      float mRs = uReprojectMerc[2].x;
+      float mDen = uReprojectMerc[2].y;
+      // Only reproject when the source's Mercator span is wide enough to be
+      // numerically safe. For deep/upsampled tiles the span shrinks to ~1e-6 while
+      // mLat/mRs are ~O(1), so (mLat-mRs)/(mRn-mRs) catastrophically cancels in
+      // float32 and produces vertical-stretch noise. There the Mercator correction
+      // is sub-pixel anyway, so the affine texUv.y is both correct and stable.
+      if (abs(mDen) > 1e-3) {
+        texUv2.y = (gReprojMLat - mRs) / mDen;
+      }
+      // Polar cap fill: WebMercator content stops at ±~85.05° but Geographic
+      // terrain reaches ±90°. When this slot is the band-edge source (its
+      // north/south edge sits on the WM limit), clamp the polar overshoot onto
+      // that edge texel so the last available source row stretches across the cap
+      // instead of being dropped by the in-bounds test below. Non-edge tiles keep
+      // the normal drop.
+      if (uReprojectMerc[2].z > 0.5) texUv2.y = min(texUv2.y, 1.0);
+      if (uReprojectMerc[2].w > 0.5) texUv2.y = max(texUv2.y, 0.0);
+      // Confine the slot to the sub-rect it actually covers. With N:M draping each
+      // source tile covers only part of the terrain tile; outside its [0,1] range
+      // the sampler would smear the edge texel across the rest, so drop it there.
+      inBounds2 = step(0.0, texUv2.x) * step(texUv2.x, 1.0)
+                   * step(0.0, texUv2.y) * step(texUv2.y, 1.0);
+    }
 
     vec4 texColor2 = texture2D(uTextures[2], texUv2) * vec4(uColors[2], 1.0);
 
@@ -1563,6 +1729,45 @@ void main() {
     // 1.0 unless the reproject branch below confines this slot to a sub-rect.
     float inBounds3 = 1.0;
 
+    if (uReproject[3] == 1) {
+      // Affine UV is correct in longitude but stretches latitude. Remap this
+      // fragment's latitude through Mercator so it samples the source correctly.
+      //
+      // The only per-fragment transcendental left is mLat: it depends solely on
+      // vUv.y and the (tile-wide, slot-invariant) terrain lat range, so it is
+      // identical for every reprojecting slot — computed once and reused. The
+      // per-slot source band (mRs, mDen) and polar-cap flags are constant per slot
+      // and precomputed on the CPU (see mutates.ts), so no log/tan runs per slot.
+      if (!gReprojMLatReady) {
+        float lat = uReprojectTerrainLat[3].x
+          + vUv.y * (uReprojectTerrainLat[3].y - uReprojectTerrainLat[3].x);
+        gReprojMLat = log(tan(PI * 0.25 + lat * 0.5));
+        gReprojMLatReady = true;
+      }
+      float mRs = uReprojectMerc[3].x;
+      float mDen = uReprojectMerc[3].y;
+      // Only reproject when the source's Mercator span is wide enough to be
+      // numerically safe. For deep/upsampled tiles the span shrinks to ~1e-6 while
+      // mLat/mRs are ~O(1), so (mLat-mRs)/(mRn-mRs) catastrophically cancels in
+      // float32 and produces vertical-stretch noise. There the Mercator correction
+      // is sub-pixel anyway, so the affine texUv.y is both correct and stable.
+      if (abs(mDen) > 1e-3) {
+        texUv3.y = (gReprojMLat - mRs) / mDen;
+      }
+      // Polar cap fill: WebMercator content stops at ±~85.05° but Geographic
+      // terrain reaches ±90°. When this slot is the band-edge source (its
+      // north/south edge sits on the WM limit), clamp the polar overshoot onto
+      // that edge texel so the last available source row stretches across the cap
+      // instead of being dropped by the in-bounds test below. Non-edge tiles keep
+      // the normal drop.
+      if (uReprojectMerc[3].z > 0.5) texUv3.y = min(texUv3.y, 1.0);
+      if (uReprojectMerc[3].w > 0.5) texUv3.y = max(texUv3.y, 0.0);
+      // Confine the slot to the sub-rect it actually covers. With N:M draping each
+      // source tile covers only part of the terrain tile; outside its [0,1] range
+      // the sampler would smear the edge texel across the rest, so drop it there.
+      inBounds3 = step(0.0, texUv3.x) * step(texUv3.x, 1.0)
+                   * step(0.0, texUv3.y) * step(texUv3.y, 1.0);
+    }
 
     vec4 texColor3 = texture2D(uTextures[3], texUv3) * vec4(uColors[3], 1.0);
 
@@ -1674,11 +1879,12 @@ void main() {
       if (abs(mDen) > 1e-3) {
         texUv0.y = (gReprojMLat - mRs) / mDen;
       }
-      // Polar cap fill: WM imagery stops at ±~85.05° but Geographic terrain reaches
-      // ±90°. When this slot is the band-edge raster tile (its north/south edge sits
-      // on the WM limit), clamp the polar overshoot onto that edge texel so the last
-      // available imagery row stretches across the cap instead of being dropped by
-      // the in-bounds test below. Non-edge tiles keep the normal drop.
+      // Polar cap fill: WebMercator content stops at ±~85.05° but Geographic
+      // terrain reaches ±90°. When this slot is the band-edge source (its
+      // north/south edge sits on the WM limit), clamp the polar overshoot onto
+      // that edge texel so the last available source row stretches across the cap
+      // instead of being dropped by the in-bounds test below. Non-edge tiles keep
+      // the normal drop.
       if (uReprojectMerc[0].z > 0.5) texUv0.y = min(texUv0.y, 1.0);
       if (uReprojectMerc[0].w > 0.5) texUv0.y = max(texUv0.y, 0.0);
       // Confine the slot to the sub-rect it actually covers. With N:M draping each
@@ -1705,6 +1911,45 @@ void main() {
     // 1.0 unless the reproject branch below confines this slot to a sub-rect.
     float inBounds1 = 1.0;
 
+    if (uReproject[1] == 1) {
+      // Affine UV is correct in longitude but stretches latitude. Remap this
+      // fragment's latitude through Mercator so it samples the source correctly.
+      //
+      // The only per-fragment transcendental left is mLat: it depends solely on
+      // vUv.y and the (tile-wide, slot-invariant) terrain lat range, so it is
+      // identical for every reprojecting slot — computed once and reused. The
+      // per-slot source band (mRs, mDen) and polar-cap flags are constant per slot
+      // and precomputed on the CPU (see mutates.ts), so no log/tan runs per slot.
+      if (!gReprojMLatReady) {
+        float lat = uReprojectTerrainLat[1].x
+          + vUv.y * (uReprojectTerrainLat[1].y - uReprojectTerrainLat[1].x);
+        gReprojMLat = log(tan(PI * 0.25 + lat * 0.5));
+        gReprojMLatReady = true;
+      }
+      float mRs = uReprojectMerc[1].x;
+      float mDen = uReprojectMerc[1].y;
+      // Only reproject when the source's Mercator span is wide enough to be
+      // numerically safe. For deep/upsampled tiles the span shrinks to ~1e-6 while
+      // mLat/mRs are ~O(1), so (mLat-mRs)/(mRn-mRs) catastrophically cancels in
+      // float32 and produces vertical-stretch noise. There the Mercator correction
+      // is sub-pixel anyway, so the affine texUv.y is both correct and stable.
+      if (abs(mDen) > 1e-3) {
+        texUv1.y = (gReprojMLat - mRs) / mDen;
+      }
+      // Polar cap fill: WebMercator content stops at ±~85.05° but Geographic
+      // terrain reaches ±90°. When this slot is the band-edge source (its
+      // north/south edge sits on the WM limit), clamp the polar overshoot onto
+      // that edge texel so the last available source row stretches across the cap
+      // instead of being dropped by the in-bounds test below. Non-edge tiles keep
+      // the normal drop.
+      if (uReprojectMerc[1].z > 0.5) texUv1.y = min(texUv1.y, 1.0);
+      if (uReprojectMerc[1].w > 0.5) texUv1.y = max(texUv1.y, 0.0);
+      // Confine the slot to the sub-rect it actually covers. With N:M draping each
+      // source tile covers only part of the terrain tile; outside its [0,1] range
+      // the sampler would smear the edge texel across the rest, so drop it there.
+      inBounds1 = step(0.0, texUv1.x) * step(texUv1.x, 1.0)
+                   * step(0.0, texUv1.y) * step(texUv1.y, 1.0);
+    }
 
     vec4 texColor1 = texture2D(uTextures[1], texUv1) * vec4(uColors[1], 1.0);
 
@@ -1723,6 +1968,45 @@ void main() {
     // 1.0 unless the reproject branch below confines this slot to a sub-rect.
     float inBounds2 = 1.0;
 
+    if (uReproject[2] == 1) {
+      // Affine UV is correct in longitude but stretches latitude. Remap this
+      // fragment's latitude through Mercator so it samples the source correctly.
+      //
+      // The only per-fragment transcendental left is mLat: it depends solely on
+      // vUv.y and the (tile-wide, slot-invariant) terrain lat range, so it is
+      // identical for every reprojecting slot — computed once and reused. The
+      // per-slot source band (mRs, mDen) and polar-cap flags are constant per slot
+      // and precomputed on the CPU (see mutates.ts), so no log/tan runs per slot.
+      if (!gReprojMLatReady) {
+        float lat = uReprojectTerrainLat[2].x
+          + vUv.y * (uReprojectTerrainLat[2].y - uReprojectTerrainLat[2].x);
+        gReprojMLat = log(tan(PI * 0.25 + lat * 0.5));
+        gReprojMLatReady = true;
+      }
+      float mRs = uReprojectMerc[2].x;
+      float mDen = uReprojectMerc[2].y;
+      // Only reproject when the source's Mercator span is wide enough to be
+      // numerically safe. For deep/upsampled tiles the span shrinks to ~1e-6 while
+      // mLat/mRs are ~O(1), so (mLat-mRs)/(mRn-mRs) catastrophically cancels in
+      // float32 and produces vertical-stretch noise. There the Mercator correction
+      // is sub-pixel anyway, so the affine texUv.y is both correct and stable.
+      if (abs(mDen) > 1e-3) {
+        texUv2.y = (gReprojMLat - mRs) / mDen;
+      }
+      // Polar cap fill: WebMercator content stops at ±~85.05° but Geographic
+      // terrain reaches ±90°. When this slot is the band-edge source (its
+      // north/south edge sits on the WM limit), clamp the polar overshoot onto
+      // that edge texel so the last available source row stretches across the cap
+      // instead of being dropped by the in-bounds test below. Non-edge tiles keep
+      // the normal drop.
+      if (uReprojectMerc[2].z > 0.5) texUv2.y = min(texUv2.y, 1.0);
+      if (uReprojectMerc[2].w > 0.5) texUv2.y = max(texUv2.y, 0.0);
+      // Confine the slot to the sub-rect it actually covers. With N:M draping each
+      // source tile covers only part of the terrain tile; outside its [0,1] range
+      // the sampler would smear the edge texel across the rest, so drop it there.
+      inBounds2 = step(0.0, texUv2.x) * step(texUv2.x, 1.0)
+                   * step(0.0, texUv2.y) * step(texUv2.y, 1.0);
+    }
 
     vec4 texColor2 = texture2D(uTextures[2], texUv2) * vec4(uColors[2], 1.0);
 
@@ -1809,6 +2093,45 @@ void main() {
     // 1.0 unless the reproject branch below confines this slot to a sub-rect.
     float inBounds0 = 1.0;
 
+    if (uReproject[0] == 1) {
+      // Affine UV is correct in longitude but stretches latitude. Remap this
+      // fragment's latitude through Mercator so it samples the source correctly.
+      //
+      // The only per-fragment transcendental left is mLat: it depends solely on
+      // vUv.y and the (tile-wide, slot-invariant) terrain lat range, so it is
+      // identical for every reprojecting slot — computed once and reused. The
+      // per-slot source band (mRs, mDen) and polar-cap flags are constant per slot
+      // and precomputed on the CPU (see mutates.ts), so no log/tan runs per slot.
+      if (!gReprojMLatReady) {
+        float lat = uReprojectTerrainLat[0].x
+          + vUv.y * (uReprojectTerrainLat[0].y - uReprojectTerrainLat[0].x);
+        gReprojMLat = log(tan(PI * 0.25 + lat * 0.5));
+        gReprojMLatReady = true;
+      }
+      float mRs = uReprojectMerc[0].x;
+      float mDen = uReprojectMerc[0].y;
+      // Only reproject when the source's Mercator span is wide enough to be
+      // numerically safe. For deep/upsampled tiles the span shrinks to ~1e-6 while
+      // mLat/mRs are ~O(1), so (mLat-mRs)/(mRn-mRs) catastrophically cancels in
+      // float32 and produces vertical-stretch noise. There the Mercator correction
+      // is sub-pixel anyway, so the affine texUv.y is both correct and stable.
+      if (abs(mDen) > 1e-3) {
+        texUv0.y = (gReprojMLat - mRs) / mDen;
+      }
+      // Polar cap fill: WebMercator content stops at ±~85.05° but Geographic
+      // terrain reaches ±90°. When this slot is the band-edge source (its
+      // north/south edge sits on the WM limit), clamp the polar overshoot onto
+      // that edge texel so the last available source row stretches across the cap
+      // instead of being dropped by the in-bounds test below. Non-edge tiles keep
+      // the normal drop.
+      if (uReprojectMerc[0].z > 0.5) texUv0.y = min(texUv0.y, 1.0);
+      if (uReprojectMerc[0].w > 0.5) texUv0.y = max(texUv0.y, 0.0);
+      // Confine the slot to the sub-rect it actually covers. With N:M draping each
+      // source tile covers only part of the terrain tile; outside its [0,1] range
+      // the sampler would smear the edge texel across the rest, so drop it there.
+      inBounds0 = step(0.0, texUv0.x) * step(texUv0.x, 1.0)
+                   * step(0.0, texUv0.y) * step(texUv0.y, 1.0);
+    }
 
     vec4 texColor0 = texture2D(uTextures[0], texUv0) * vec4(uColors[0], 1.0);
 
@@ -1827,6 +2150,45 @@ void main() {
     // 1.0 unless the reproject branch below confines this slot to a sub-rect.
     float inBounds1 = 1.0;
 
+    if (uReproject[1] == 1) {
+      // Affine UV is correct in longitude but stretches latitude. Remap this
+      // fragment's latitude through Mercator so it samples the source correctly.
+      //
+      // The only per-fragment transcendental left is mLat: it depends solely on
+      // vUv.y and the (tile-wide, slot-invariant) terrain lat range, so it is
+      // identical for every reprojecting slot — computed once and reused. The
+      // per-slot source band (mRs, mDen) and polar-cap flags are constant per slot
+      // and precomputed on the CPU (see mutates.ts), so no log/tan runs per slot.
+      if (!gReprojMLatReady) {
+        float lat = uReprojectTerrainLat[1].x
+          + vUv.y * (uReprojectTerrainLat[1].y - uReprojectTerrainLat[1].x);
+        gReprojMLat = log(tan(PI * 0.25 + lat * 0.5));
+        gReprojMLatReady = true;
+      }
+      float mRs = uReprojectMerc[1].x;
+      float mDen = uReprojectMerc[1].y;
+      // Only reproject when the source's Mercator span is wide enough to be
+      // numerically safe. For deep/upsampled tiles the span shrinks to ~1e-6 while
+      // mLat/mRs are ~O(1), so (mLat-mRs)/(mRn-mRs) catastrophically cancels in
+      // float32 and produces vertical-stretch noise. There the Mercator correction
+      // is sub-pixel anyway, so the affine texUv.y is both correct and stable.
+      if (abs(mDen) > 1e-3) {
+        texUv1.y = (gReprojMLat - mRs) / mDen;
+      }
+      // Polar cap fill: WebMercator content stops at ±~85.05° but Geographic
+      // terrain reaches ±90°. When this slot is the band-edge source (its
+      // north/south edge sits on the WM limit), clamp the polar overshoot onto
+      // that edge texel so the last available source row stretches across the cap
+      // instead of being dropped by the in-bounds test below. Non-edge tiles keep
+      // the normal drop.
+      if (uReprojectMerc[1].z > 0.5) texUv1.y = min(texUv1.y, 1.0);
+      if (uReprojectMerc[1].w > 0.5) texUv1.y = max(texUv1.y, 0.0);
+      // Confine the slot to the sub-rect it actually covers. With N:M draping each
+      // source tile covers only part of the terrain tile; outside its [0,1] range
+      // the sampler would smear the edge texel across the rest, so drop it there.
+      inBounds1 = step(0.0, texUv1.x) * step(texUv1.x, 1.0)
+                   * step(0.0, texUv1.y) * step(texUv1.y, 1.0);
+    }
 
     vec4 texColor1 = texture2D(uTextures[1], texUv1) * vec4(uColors[1], 1.0);
 
@@ -1938,11 +2300,12 @@ void main() {
       if (abs(mDen) > 1e-3) {
         texUv0.y = (gReprojMLat - mRs) / mDen;
       }
-      // Polar cap fill: WM imagery stops at ±~85.05° but Geographic terrain reaches
-      // ±90°. When this slot is the band-edge raster tile (its north/south edge sits
-      // on the WM limit), clamp the polar overshoot onto that edge texel so the last
-      // available imagery row stretches across the cap instead of being dropped by
-      // the in-bounds test below. Non-edge tiles keep the normal drop.
+      // Polar cap fill: WebMercator content stops at ±~85.05° but Geographic
+      // terrain reaches ±90°. When this slot is the band-edge source (its
+      // north/south edge sits on the WM limit), clamp the polar overshoot onto
+      // that edge texel so the last available source row stretches across the cap
+      // instead of being dropped by the in-bounds test below. Non-edge tiles keep
+      // the normal drop.
       if (uReprojectMerc[0].z > 0.5) texUv0.y = min(texUv0.y, 1.0);
       if (uReprojectMerc[0].w > 0.5) texUv0.y = max(texUv0.y, 0.0);
       // Confine the slot to the sub-rect it actually covers. With N:M draping each
@@ -1995,11 +2358,12 @@ void main() {
       if (abs(mDen) > 1e-3) {
         texUv1.y = (gReprojMLat - mRs) / mDen;
       }
-      // Polar cap fill: WM imagery stops at ±~85.05° but Geographic terrain reaches
-      // ±90°. When this slot is the band-edge raster tile (its north/south edge sits
-      // on the WM limit), clamp the polar overshoot onto that edge texel so the last
-      // available imagery row stretches across the cap instead of being dropped by
-      // the in-bounds test below. Non-edge tiles keep the normal drop.
+      // Polar cap fill: WebMercator content stops at ±~85.05° but Geographic
+      // terrain reaches ±90°. When this slot is the band-edge source (its
+      // north/south edge sits on the WM limit), clamp the polar overshoot onto
+      // that edge texel so the last available source row stretches across the cap
+      // instead of being dropped by the in-bounds test below. Non-edge tiles keep
+      // the normal drop.
       if (uReprojectMerc[1].z > 0.5) texUv1.y = min(texUv1.y, 1.0);
       if (uReprojectMerc[1].w > 0.5) texUv1.y = max(texUv1.y, 0.0);
       // Confine the slot to the sub-rect it actually covers. With N:M draping each
@@ -2120,11 +2484,12 @@ void main() {
       if (abs(mDen) > 1e-3) {
         texUv0.y = (gReprojMLat - mRs) / mDen;
       }
-      // Polar cap fill: WM imagery stops at ±~85.05° but Geographic terrain reaches
-      // ±90°. When this slot is the band-edge raster tile (its north/south edge sits
-      // on the WM limit), clamp the polar overshoot onto that edge texel so the last
-      // available imagery row stretches across the cap instead of being dropped by
-      // the in-bounds test below. Non-edge tiles keep the normal drop.
+      // Polar cap fill: WebMercator content stops at ±~85.05° but Geographic
+      // terrain reaches ±90°. When this slot is the band-edge source (its
+      // north/south edge sits on the WM limit), clamp the polar overshoot onto
+      // that edge texel so the last available source row stretches across the cap
+      // instead of being dropped by the in-bounds test below. Non-edge tiles keep
+      // the normal drop.
       if (uReprojectMerc[0].z > 0.5) texUv0.y = min(texUv0.y, 1.0);
       if (uReprojectMerc[0].w > 0.5) texUv0.y = max(texUv0.y, 0.0);
       // Confine the slot to the sub-rect it actually covers. With N:M draping each
@@ -2176,11 +2541,12 @@ void main() {
       if (abs(mDen) > 1e-3) {
         texUv1.y = (gReprojMLat - mRs) / mDen;
       }
-      // Polar cap fill: WM imagery stops at ±~85.05° but Geographic terrain reaches
-      // ±90°. When this slot is the band-edge raster tile (its north/south edge sits
-      // on the WM limit), clamp the polar overshoot onto that edge texel so the last
-      // available imagery row stretches across the cap instead of being dropped by
-      // the in-bounds test below. Non-edge tiles keep the normal drop.
+      // Polar cap fill: WebMercator content stops at ±~85.05° but Geographic
+      // terrain reaches ±90°. When this slot is the band-edge source (its
+      // north/south edge sits on the WM limit), clamp the polar overshoot onto
+      // that edge texel so the last available source row stretches across the cap
+      // instead of being dropped by the in-bounds test below. Non-edge tiles keep
+      // the normal drop.
       if (uReprojectMerc[1].z > 0.5) texUv1.y = min(texUv1.y, 1.0);
       if (uReprojectMerc[1].w > 0.5) texUv1.y = max(texUv1.y, 0.0);
       // Confine the slot to the sub-rect it actually covers. With N:M draping each

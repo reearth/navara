@@ -3,9 +3,10 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
+import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
-import { showAttributions } from "../../helpers/attributions";
+import { datasetToSource } from "../../helpers/attribution-source";
 import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
@@ -21,6 +22,10 @@ export async function run() {
 
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
+
+  const attribution = new AttributionPlugin();
+  view.addPlugin(attribution);
+
   await view.init();
 
   view.toneMappingExposure = 10;
@@ -124,10 +129,10 @@ export async function run() {
   addDateControl(view, pane);
   addGlobeControl(view, pane);
 
-  showAttributions([
-    TERRAIN_DATASETS.gsi,
-    TILE_DATASETS.gsiSeamlessphoto,
-    TILES_3D_DATASETS.ChiyodaSubway,
+  attribution.show([
+    datasetToSource(TERRAIN_DATASETS.gsi),
+    datasetToSource(TILE_DATASETS.gsiSeamlessphoto),
+    datasetToSource(TILES_3D_DATASETS.ChiyodaSubway),
   ]);
 }
 

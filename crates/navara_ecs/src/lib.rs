@@ -35,9 +35,9 @@ use navara_source::{Source, SourceStore};
 use navara_texture_fragment::{TextureFragmentLoadedEvent, TextureFragmentStatus};
 use navara_tile_component::{
     MartiniComponent, TerrainHeightObserver, TerrainTile, TerrainTileQuadtree, TileHandle,
-    TileTerrainDataRequesterQuery, VectorTile, VectorTileQuadtree, compute_terrain_height_at_point,
+    TileTerrainDataRequesterQuery, VectorTileQuadtree, compute_terrain_height_at_point,
 };
-use navara_vector_tile::LayerResources;
+use navara_vector_tile::{LayerResources, VectorResolveRevision, resolve_vector_tile_states};
 use navara_window::{Window, WindowResizeEvent};
 use navara_worker::{
     DelegatedWorkerTasksResult, WorkerTaskCompleted, WorkerTaskCompletedEvent, WorkerTaskMarker,
@@ -47,6 +47,7 @@ mod app;
 mod batch_property;
 
 pub use batch_property::*;
+pub use navara_vector_tile::ResolvedVectorTileState;
 
 pub struct App {
     app: bevy_app::App,
@@ -413,8 +414,18 @@ impl App {
                         });
                 }
             }
-            _ => {
-                return;
+            LayerDescription::Terrain(layer) => {
+                // `Appearance` has no terrain variant, so terrain material updates
+                // flow through a dedicated event. A source change is handled by
+                // rebuilding the layer in `Core::update_layer`, not here.
+                if let Some(material) = layer.appearance.clone() {
+                    self.app.world_mut().write_message(
+                        navara_layer_event::UpdateTerrainLayerEvent {
+                            layer_id: LayerId(layer_id.to_owned()),
+                            material,
+                        },
+                    );
+                }
             }
         }
 
@@ -442,9 +453,10 @@ impl App {
 
         self.app
             .world_mut()
-            .write_message(navara_layer_event::DeleteLayerEvent(LayerId(
-                layer_id.to_owned(),
-            )));
+            .write_message(navara_layer_event::DeleteLayerEvent {
+                layer_id: LayerId(layer_id.to_owned()),
+                reset: false,
+            });
     }
 
     /// Record that a layer references a source so the source is reference-counted
@@ -452,6 +464,15 @@ impl App {
     pub fn link_layer_source(&mut self, layer_id: &str, source_id: &str) {
         if let Some(mut source_store) = self.app.world_mut().get_resource_mut::<SourceStore>() {
             source_store.link_layer(layer_id.to_owned(), source_id);
+        }
+    }
+
+    /// Drop a layer's reference to its current source (decrementing that source's
+    /// count), without deleting the layer. Used when a layer is re-pointed at a
+    /// different source so the old source is dereferenced but kept.
+    pub fn unlink_layer_source(&mut self, layer_id: &str) {
+        if let Some(mut source_store) = self.app.world_mut().get_resource_mut::<SourceStore>() {
+            source_store.unlink_layer(layer_id);
         }
     }
 
@@ -476,22 +497,6 @@ impl App {
     pub fn update_source(&mut self, source_id: &str, source: Source) {
         if let Some(mut source_store) = self.app.world_mut().get_resource_mut::<SourceStore>() {
             source_store.update(source_id.to_owned(), source);
-        }
-    }
-
-    /// Force a single terrain re-traversal so terrain layers pick up a changed
-    /// source's fetch config, which they read live from `SourceStore`. Terrain has
-    /// no teardown marker, so — unlike other layer types (reset via delete+re-add
-    /// in `Core::update_source`) — it re-traverses only on camera/layer changes; a
-    /// static-camera source update would otherwise go unnoticed. Call this only
-    /// when a terrain layer actually references the updated source.
-    pub fn force_terrain_update(&mut self) {
-        if let Some(mut terrain_tc) =
-            self.app
-                .world_mut()
-                .get_resource_mut::<navara_tile::tile::tile_cache_manager::TileCacheManager>()
-        {
-            terrain_tc.force_update = true;
         }
     }
 
@@ -543,9 +548,10 @@ impl App {
 
         self.app
             .world_mut()
-            .write_message(navara_layer_event::DeleteLayerEvent(LayerId(
-                layer_id.to_owned(),
-            )));
+            .write_message(navara_layer_event::DeleteLayerEvent {
+                layer_id: LayerId(layer_id.to_owned()),
+                reset: true,
+            });
 
         if let Some(mut queue) = self
             .app
@@ -645,23 +651,68 @@ impl App {
         tile.get_parent_tile(qt)
     }
 
-    pub fn get_vector_tiles(&mut self, handle: TileHandle) -> Vec<(String, &VectorTile)> {
+    /// Resolve the WebMercator texturized-vector tiles to drape on a terrain tile,
+    /// flattened across clamp-to-ground vector layers for the wasm boundary. Gathers the
+    /// terrain extent/scheme and the per-layer vector quadtrees from the ECS world, then
+    /// delegates the N:M overlap + budget logic to
+    /// [`resolve_vector_tile_states`](navara_vector_tile::resolve_vector_tile_states).
+    pub fn get_vector_tiles(&mut self, handle: TileHandle) -> Vec<ResolvedVectorTileState> {
         let world = self.app.world_mut();
-        let mut layers = world.query::<&LayerResources>();
-        let mut qts = world.query::<&VectorTileQuadtree>();
 
-        let mut result = vec![];
-        for resource in layers.iter(world) {
-            let Ok(qt) = qts.get(world, resource.quadtree) else {
-                continue;
-            };
-            let Some(tile) = qt.qt.get(handle) else {
-                continue;
-            };
-            result.push((resource.layer_id.clone(), tile));
+        // Terrain tile extent + scheme, copied out so the resource borrow ends before the
+        // component queries below.
+        let Some((terrain_extent, terrain_is_geographic)) = world
+            .get_resource::<TerrainTileQuadtree>()
+            .and_then(|qt| qt.qt.get(handle))
+            .map(|tile| (tile.extent, tile.tiling_scheme.is_geographic()))
+        else {
+            return vec![];
+        };
+
+        // Snapshot (layer_id, quadtree entity), owned so the query borrow is released before
+        // the resource/quadtree borrows below.
+        let mut layer_refs: Vec<(String, Entity)> = {
+            let mut layers = world.query::<&LayerResources>();
+            layers
+                .iter(world)
+                .map(|r| (r.layer_id.clone(), r.quadtree))
+                .collect()
+        };
+
+        // Sort by the layer's declaration order (`LayerDescStore`, same source as
+        // `get_layer_index`) so the composite stacks vector layers like the raster path
+        // (lower order = bottom, later = on top), instead of the arbitrary ECS query
+        // iteration order the resolve would otherwise preserve.
+        {
+            let store = world.get_resource::<LayerDescStore>();
+            layer_refs.sort_by_key(|(layer_id, _)| {
+                store
+                    .and_then(|s| s.get_order(layer_id).copied())
+                    .unwrap_or(usize::MAX)
+            });
         }
 
-        result
+        let mut qts = world.query::<&VectorTileQuadtree>();
+        let pairs: Vec<(String, &VectorTileQuadtree)> = layer_refs
+            .into_iter()
+            .filter_map(|(layer_id, quadtree)| {
+                qts.get(world, quadtree).ok().map(|qt| (layer_id, qt))
+            })
+            .collect();
+
+        resolve_vector_tile_states(terrain_extent, terrain_is_geographic, &pairs)
+    }
+
+    /// Monotonic counter that changes only when the vector-tile resolution could have
+    /// changed (a traverse ran — readiness lives in the traverse now). The web side reads
+    /// this once per frame and skips the per-terrain-tile `get_vector_tiles` calls while it
+    /// is unchanged.
+    pub fn vector_revision(&self) -> u32 {
+        self.app
+            .world()
+            .get_resource::<VectorResolveRevision>()
+            .map(|r| r.0)
+            .unwrap_or(0)
     }
 
     pub fn get_tile_elevation_decoder(&mut self, handle: TileHandle) -> Option<ElevationDecoder> {

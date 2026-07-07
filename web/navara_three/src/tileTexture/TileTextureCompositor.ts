@@ -1,5 +1,4 @@
 import { type TileHandle } from "@navara/core";
-import { orthoCameraTransform } from "@navara/engine";
 import {
   Color,
   DataTexture,
@@ -27,10 +26,7 @@ import {
   type CompositeUniformTarget,
   type CoreUniformMutates,
 } from "../material/enhancer/tileComposite";
-import {
-  type SceneGroup,
-  type TexturizedSceneByTileCoordinates,
-} from "../scene";
+import { type TexturizedSceneByTileCoordinates } from "../scene";
 
 import type { SlotPlan } from "./SlotPlanner";
 import { TileTextureCache } from "./TileTextureCache";
@@ -112,7 +108,9 @@ export class TileTextureCompositor {
   readonly renderer: WebGLRenderer;
   readonly cache: TileTextureCache;
   private readonly texturizedScenes: TexturizedSceneByTileCoordinates;
-  private readonly cameraByHandle = new Map<TileHandle, OrthographicCamera>();
+  // Single fixed [-1, 1] camera shared by every vector-scene bake. Ancestor
+  // fallback is resolved in Rust, so no per-tile camera transform is needed.
+  private readonly vectorCamera = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
   // Composite-pass machinery (lazily created on first use so tests that
   // don't render don't pay the allocation).
@@ -133,6 +131,7 @@ export class TileTextureCompositor {
     this.quadMesh = new Mesh(new PlaneGeometry(2, 2));
     this.quadScene.add(this.quadMesh);
     this.quadCamera.position.z = 1;
+    this.vectorCamera.position.z = 1;
   }
 
   // ---------------------------------------------------------------------
@@ -140,17 +139,11 @@ export class TileTextureCompositor {
   // ---------------------------------------------------------------------
 
   acquire(handle: TileHandle): CompositeOutputs {
-    if (!this.cameraByHandle.has(handle)) {
-      const c = new OrthographicCamera();
-      c.copy(this.texturizedScenes.camera);
-      this.cameraByHandle.set(handle, c);
-    }
     return this.cache.acquire(handle);
   }
 
   release(handle: TileHandle): void {
     this.cache.release(handle);
-    this.cameraByHandle.delete(handle);
   }
 
   /** Refcount-neutral accessor for an already-acquired handle's atlas. */
@@ -169,104 +162,84 @@ export class TileTextureCompositor {
   }
 
   // ---------------------------------------------------------------------
-  // Vector-scene render (ported from TileMesh._onBeforeRender)
+  // Vector-scene render
   // ---------------------------------------------------------------------
 
-  getSceneGroup(handle: TileHandle): SceneGroup {
-    return this.texturizedScenes.get(handle);
-  }
-
   /**
-   * Render each per-layer texturized scene into its dedicated RT. The caller
-   * still owns the per-layer RT array; rendering loop + parent-tile camera
-   * adjustment + renderer state save/restore are ported verbatim from the
-   * previous TileMesh._onBeforeRender to preserve behaviour.
+   * Bake each resolved vector layer's WM source scenes into its per-layer render
+   * target (slot `i` → `renderTargets[i]`). A layer can be backed by several WM
+   * vector tiles when the terrain is Geographic (N:M); every source is drawn into
+   * the one render target, each framed by the Rust-supplied mercator affine
+   * `uvOffset`/`uvScale` so it lands in its sub-rect. Since the affine maps the
+   * terrain tile's `[0, 1]` UV into the source frame, the render-target UV ends up
+   * equal to the terrain UV — i.e. the RT spans the terrain tile's extent, ready
+   * for the composite paste's latitude reprojection. `(0,0)/(1,1)` (an exact
+   * same-tile drape, WebMercator terrain) maps a single source to the full RT.
    *
-   * Returns true when any render happened; TileMesh uses that to flag the
-   * composite atlas dirty.
+   * The render target is cleared once, then each source is drawn additively
+   * (autoClear off) so the sources mosaic instead of overwriting one another. A
+   * source whose scene hasn't reached the cache yet is skipped; its sub-rect stays
+   * transparent until it arrives (no flashing — coarser ancestors back the gaps
+   * via the Rust scene-ready walk-up). The caller owns the dirty gate and only
+   * calls this when the resolved slots or scenes change.
    */
   renderVectorScenes(
-    handle: TileHandle,
+    slots: {
+      layerId: string;
+      sources: {
+        tileHandle: TileHandle;
+        uvOffset: [number, number];
+        uvScale: [number, number];
+      }[];
+    }[],
     renderTargets: WebGLRenderTarget[],
-    layerStateResolver: (
-      layerId: string,
-    ) =>
-      | { candidateParent: TileHandle | undefined; isRendered: boolean }
-      | undefined,
-    onSceneVisibility: (layerId: string, visible: boolean) => void,
-  ): boolean {
-    const sceneGroup = this.texturizedScenes.get(handle);
-    if (!this.texturizedScenes.getNeedsUpdate(handle)) return false;
-    this.texturizedScenes.setNeedsUpdate(handle, false);
+  ): void {
+    const camera = this.vectorCamera;
+    const prevTarget = this.renderer.getRenderTarget();
+    const prevClear = this.renderer.getClearColor(PREV_CLEAR_COLOR);
+    const prevClearAlpha = this.renderer.getClearAlpha();
+    const prevAutoClear = this.renderer.autoClear;
+    // Accumulate multiple sources into one RT: clear once, never per render.
+    this.renderer.autoClear = false;
 
-    const camera =
-      this.cameraByHandle.get(handle) ??
-      (() => {
-        const c = new OrthographicCamera();
-        c.copy(this.texturizedScenes.camera);
-        this.cameraByHandle.set(handle, c);
-        return c;
-      })();
-
-    let rendered = false;
-    let i = -1;
-    for (const tileScene of sceneGroup.tileScenes) {
-      i++;
-      if (tileScene.removed || !tileScene.children.length) {
-        onSceneVisibility(tileScene.layerId, false);
-        continue;
-      }
-      onSceneVisibility(tileScene.layerId, true);
-
+    for (let i = 0; i < renderTargets.length; i++) {
       const renderTarget = renderTargets[i];
-      if (!renderTarget) break;
-
-      const prevTarget = this.renderer.getRenderTarget();
-      const prevClear = this.renderer.getClearColor(PREV_CLEAR_COLOR);
-
-      const layerId = tileScene.layerId;
-      const state = layerStateResolver(layerId);
-      const noOwnMesh = !this.texturizedScenes.hasCurrentMesh(handle, layerId);
-      const parentHandle =
-        state && (!state.isRendered || noOwnMesh)
-          ? state.candidateParent
-          : undefined;
-
-      this.texturizedScenes.showMeshFromParent(handle, layerId, !!parentHandle);
-
-      const originalLeft = camera.left;
-      const originalRight = camera.right;
-      const originalTop = camera.top;
-      const originalBottom = camera.bottom;
-
-      if (parentHandle) {
-        const r = orthoCameraTransform(handle, parentHandle);
-        camera.left = r.left;
-        camera.right = r.right;
-        camera.top = r.top;
-        camera.bottom = r.bottom;
-        camera.updateProjectionMatrix();
-      }
+      if (!renderTarget) continue;
 
       this.renderer.setRenderTarget(renderTarget);
       this.renderer.setClearColor(0x000, 0);
       this.renderer.clear();
-      this.renderer.render(tileScene, camera);
 
-      if (parentHandle) {
-        camera.left = originalLeft;
-        camera.right = originalRight;
-        camera.top = originalTop;
-        camera.bottom = originalBottom;
-        camera.updateProjectionMatrix();
+      const slot = slots[i];
+      if (slot) {
+        for (const source of slot.sources) {
+          const scene = this.texturizedScenes.findSceneByLayerId(
+            source.tileHandle,
+            slot.layerId,
+          );
+          if (!scene || scene.removed || !scene.children.length) continue;
+          // Frame the terrain tile's sub-rect of this source tile from the
+          // mercator uvOffset/uvScale: meshUv ∈ [0,1] → vectorUv = uvOffset +
+          // meshUv·uvScale, source scene NDC = 2·vectorUv − 1. A source finer than
+          // the terrain tile yields a camera wider than [-1, 1], so it draws into
+          // only its sub-rect and leaves the rest of the RT transparent.
+          const [ox, oy] = source.uvOffset;
+          const [sx, sy] = source.uvScale;
+          camera.left = 2 * ox - 1;
+          camera.right = 2 * (ox + sx) - 1;
+          camera.bottom = 2 * oy - 1;
+          camera.top = 2 * (oy + sy) - 1;
+          camera.updateProjectionMatrix();
+          this.renderer.render(scene, camera);
+        }
       }
 
-      this.renderer.setRenderTarget(prevTarget);
-      this.renderer.setClearColor(prevClear, 1);
       renderTarget.texture.needsUpdate = true;
-      rendered = true;
     }
-    return rendered;
+
+    this.renderer.autoClear = prevAutoClear;
+    this.renderer.setRenderTarget(prevTarget);
+    this.renderer.setClearColor(prevClear, prevClearAlpha);
   }
 
   // ---------------------------------------------------------------------
@@ -297,6 +270,7 @@ export class TileTextureCompositor {
 
     const prevTarget = this.renderer.getRenderTarget();
     const prevClear = this.renderer.getClearColor(PREV_CLEAR_COLOR);
+    const prevClearAlpha = this.renderer.getClearAlpha();
 
     // No active slots → either clear (nothing to bake) or fall through to the
     // shader path when a slot-independent feature still needs to write the
@@ -309,7 +283,7 @@ export class TileTextureCompositor {
       this.renderer.setClearColor(0x000000, 0);
       this.renderer.clear();
       this.renderer.setRenderTarget(prevTarget);
-      this.renderer.setClearColor(prevClear, 1);
+      this.renderer.setClearColor(prevClear, prevClearAlpha);
       entry.atlas.color.needsUpdate = true;
       entry.atlas.attr.needsUpdate = true;
       entry.atlas.normal.needsUpdate = true;
@@ -328,7 +302,7 @@ export class TileTextureCompositor {
     this.renderer.render(this.quadScene, this.quadCamera);
 
     this.renderer.setRenderTarget(prevTarget);
-    this.renderer.setClearColor(prevClear, 1);
+    this.renderer.setClearColor(prevClear, prevClearAlpha);
 
     entry.atlas.color.needsUpdate = true;
     entry.atlas.attr.needsUpdate = true;
@@ -421,7 +395,6 @@ export class TileTextureCompositor {
 
   dispose(): void {
     this.cache.disposeAll();
-    this.cameraByHandle.clear();
     for (const m of this.materialCache.values()) {
       m.material.dispose();
       m.placeholderTexture.dispose();

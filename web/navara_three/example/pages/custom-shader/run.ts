@@ -13,6 +13,7 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
+import { AttributionPlugin } from "@navara/three_plugins";
 import {
   Color,
   ShaderLib,
@@ -26,7 +27,7 @@ import {
 } from "three";
 import { ToonShaderHatching, MarchingCubes } from "three-stdlib";
 
-import { showAttributions } from "../../helpers/attributions";
+import { datasetToSource } from "../../helpers/attribution-source";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../helpers/constants";
 import { atZoneTime } from "../../helpers/control";
 
@@ -133,6 +134,8 @@ export type CustomDescriptions =
 export const run = async (view: ThreeView<CustomDescriptions>) => {
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
+  const attribution = new AttributionPlugin();
+  view.addPlugin(attribution);
 
   await view.init();
 
@@ -251,7 +254,10 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     }
   });
 
-  showAttributions([TERRAIN_DATASETS.gsi, TILE_DATASETS.gsiSeamlessphoto]);
+  attribution.show([
+    datasetToSource(TERRAIN_DATASETS.gsi),
+    datasetToSource(TILE_DATASETS.gsiSeamlessphoto),
+  ]);
 };
 
 // Ref: https://github.com/mrdoob/three.js/blob/master/examples/webgl_marchingcubes.html
