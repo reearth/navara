@@ -49,25 +49,28 @@ void main() {
     // Offset depth to make sure to be drawn over ellipsoid surface
     if (uOffsetDepth) { gl_FragDepth -= 0.01; }
 
-    float alpha = 1.0;
+    float alphaForTest = 1.0;
+    float alphaForColor = 1.0;
     #ifdef BILLBOARD
         // Sample the specific layer from the Texture Array
         vec4 color = texture(uTexture, vec3(vUv, vLayer));
         // Tint RGB only, preserve texture alpha (avoid squaring alpha)
         color.rgb *= vColor;
-        alpha = color.a * vOpacity; // Apply opacity
+        alphaForTest = color.a;
+        alphaForColor = color.a * vOpacity;
     #else
-        alpha = nvr_circle_alpha(vUv - vec2(0.5)) * vOpacity; // Apply opacity
+        alphaForTest = nvr_circle_alpha(vUv - vec2(0.5));
+        alphaForColor = vOpacity;
         vec4 color = vec4(vColor, 1.0);
     #endif
 
-    if (alpha <= uAlphaTest) { discard; };
+    if (alphaForTest <= uAlphaTest) { discard; };
     
-    if (nvr_uPickable > 0.0 && alpha > 0.0) {
+    if (nvr_uPickable > 0.0 && alphaForTest > 0.0) {
         vec3 pickColor = nvr_batchIdToColor(vBatchID);
         color = vec4(pickColor.xyz, 1.0);
     } else {
-        color.a = alpha;
+        color.a = alphaForColor;
     }
 
     gl_FragColor = color;
