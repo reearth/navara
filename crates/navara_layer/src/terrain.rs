@@ -13,6 +13,22 @@ pub struct TerrainLayer {
     pub appearance: Option<TerrainMaterial>,
 }
 
+/// Spawned when a terrain layer's appearance is updated. Consumed by the tile
+/// crate's `update_terrain_layer` system, which re-applies the render fields to
+/// the live tiles. A source change is handled by rebuilding the layer (see
+/// `Core::update_layer`), not through this marker.
+#[derive(Debug, Component)]
+pub struct UpdateTerrainLayerMarker {
+    pub layer_id: String,
+    pub material: TerrainMaterial,
+}
+
+/// Spawned when a terrain layer is deleted. Consumed by the tile crate's
+/// `sync_terrain_layer_changes` system, which despawns the `TerrainLayer` entity
+/// and re-flattens the globe.
+#[derive(Debug, Component)]
+pub struct DeleteTerrainLayerMarker(pub String);
+
 #[derive(Debug, Clone, PartialEq, Default)]
 pub enum TerrainDataType {
     RasterDEM,

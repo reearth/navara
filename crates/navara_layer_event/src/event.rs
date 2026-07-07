@@ -2,12 +2,12 @@ use bevy_ecs::prelude::*;
 
 use navara_layer::{
     DeleteB3dmLayerMarker, DeleteCesium3dTilesLayerMarker, DeleteGeoJsonLayerMarker,
-    DeleteMvtLayerMarker, DeletePntsLayerMarker, DeleteRasterTileLayerMarker, LayerDescStore,
-    LayerDescription, LayerId, UpdateB3dmLayerMarker, UpdateCesium3dTilesLayerMarker,
-    UpdateGeoJsonLayerMarker, UpdateMvtLayerMarker, UpdatePntsLayerMarker,
-    UpdateRasterTileLayerMarker,
+    DeleteMvtLayerMarker, DeletePntsLayerMarker, DeleteRasterTileLayerMarker,
+    DeleteTerrainLayerMarker, LayerDescStore, LayerDescription, LayerId, UpdateB3dmLayerMarker,
+    UpdateCesium3dTilesLayerMarker, UpdateGeoJsonLayerMarker, UpdateMvtLayerMarker,
+    UpdatePntsLayerMarker, UpdateRasterTileLayerMarker, UpdateTerrainLayerMarker,
 };
-use navara_material::{Appearance, ElevationHeatmapConfig, HillshadeConfig};
+use navara_material::{Appearance, ElevationHeatmapConfig, HillshadeConfig, TerrainMaterial};
 
 #[derive(Debug, Clone, PartialEq, Message)]
 pub struct AddLayerEvent(pub LayerDescription);
@@ -18,6 +18,16 @@ pub struct UpdateLayerEvent {
     pub appearance: Appearance,
     pub elevation_heatmap_config: Option<ElevationHeatmapConfig>,
     pub hillshade_config: Option<HillshadeConfig>,
+}
+
+/// Terrain-specific update event. `UpdateLayerEvent` carries an `Appearance`,
+/// which has no terrain variant, so terrain appearance updates flow through a
+/// dedicated event carrying a `TerrainMaterial`. Source changes are handled by
+/// rebuilding the layer (see `Core::update_layer`), not this event.
+#[derive(Debug, Clone, PartialEq, Message)]
+pub struct UpdateTerrainLayerEvent {
+    pub layer_id: LayerId,
+    pub material: TerrainMaterial,
 }
 
 #[derive(Debug, Clone, PartialEq, Message)]
@@ -147,6 +157,18 @@ pub fn process_update_events(
     }
 }
 
+pub fn process_update_terrain_events(
+    mut commands: Commands,
+    mut events: MessageReader<UpdateTerrainLayerEvent>,
+) {
+    for ev in events.read() {
+        commands.spawn(UpdateTerrainLayerMarker {
+            layer_id: ev.layer_id.0.clone(),
+            material: ev.material.clone(),
+        });
+    }
+}
+
 pub fn process_delete_events(
     mut commands: Commands,
     mut layer_desc_store: ResMut<LayerDescStore>,
@@ -178,7 +200,9 @@ pub fn process_delete_events(
             LayerDescription::Tiles(_) => {
                 commands.spawn(DeleteRasterTileLayerMarker(id));
             }
-            _ => {}
+            LayerDescription::Terrain(_) => {
+                commands.spawn(DeleteTerrainLayerMarker(id));
+            }
         };
         // delete stored value in LayerDescStore.
         layer_desc_store.delete(&layer_id.0);

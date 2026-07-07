@@ -45,7 +45,8 @@ use super::{
 };
 
 use navara_layer::{
-    DeleteRasterTileLayerMarker, TerrainLayer, TilesLayer, UpdateRasterTileLayerMarker,
+    DeleteRasterTileLayerMarker, DeleteTerrainLayerMarker, TerrainLayer, TilesLayer,
+    UpdateRasterTileLayerMarker, UpdateTerrainLayerMarker,
 };
 
 /// Raster texture slots a single terrain tile may fill with draped imagery,
@@ -66,28 +67,42 @@ pub struct DataResources<'w> {
     pub data_manager: ResMut<'w, DataManager>,
 }
 
-/// Initializes the quadtree roots. Driven by a newly added TerrainLayer when
-/// present (the layer's appearance dictates the tiling scheme); otherwise falls
-/// back to the default `Globe.tiling_scheme` so a terrain-less map still has
-/// roots to traverse.
+/// Ensures the quadtree roots exist for the current tiling scheme. A newly added
+/// TerrainLayer dictates the scheme (its source's scheme); on terrain delete
+/// `sync_terrain_layer_changes` restores the default `Globe.tiling_scheme` and
+/// drains the tiling, which this system then re-seeds. The seed loop is a cheap
+/// no-op once the roots for the current scheme are present.
 pub fn init_globe_tiling(
+    mut commands: Commands,
     terrain_layer: Query<&navara_layer::TerrainLayer, Added<navara_layer::TerrainLayer>>,
     mut globe: ResMut<navara_globe::Globe>,
     mut qt: ResMut<TerrainTileQuadtree>,
-    mut initialized: Local<bool>,
+    mut buf: ResMut<BufferStore>,
     source_store: Res<navara_source::SourceStore>,
 ) {
     if let Some(layer) = terrain_layer.iter().next() {
-        let Some(source) = layer
+        // A source-less (ellipsoid) terrain keeps the current globe scheme.
+        let scheme = layer
             .source_id
             .as_deref()
             .and_then(|id| source_store.get(id))
-        else {
-            return;
-        };
-        globe.tiling_scheme = source.tiling_scheme();
-    } else if *initialized {
-        return;
+            .map(|source| source.tiling_scheme());
+
+        if let Some(scheme) = scheme
+            && scheme != globe.tiling_scheme
+        {
+            // The new terrain source uses a different tiling scheme (e.g. geographic
+            // quantized-mesh vs WebMercator raster-dem). Each quadtree tile bakes its
+            // extent from the scheme at creation, so a scheme change requires
+            // rebuilding the tiling: drop every tile (freeing its buffers) and
+            // re-seed the roots below for the new scheme. Rendered-tile entities and
+            // caches were already cleared by `sync_terrain_layer_changes`, which runs
+            // earlier this frame on the same `Added<TerrainLayer>`.
+            for mut tile in qt.qt.drain() {
+                tile.destroy(&mut commands, &mut buf);
+            }
+            globe.tiling_scheme = scheme;
+        }
     }
 
     for root in globe.tiling_scheme.root_tiles() {
@@ -99,8 +114,6 @@ pub fn init_globe_tiling(
             });
         }
     }
-
-    *initialized = true;
 }
 
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
@@ -174,9 +187,9 @@ pub fn update_terrain(
     let tiles = &tiles_set.p0();
     let tiles_len = tiles.iter().len();
     let is_layers_len_changed = tiles_len != tc.prev_layers_len;
-    // A source update (e.g. `updateSource`) sets this so terrain re-traverses even
-    // with a static camera and picks up the new fetch config read live from the
-    // source. Consume it here.
+    // A terrain layer teardown (`sync_terrain_layer_changes`) sets this so
+    // terrain re-traverses even with a static camera and re-meshes the tiles back
+    // to the flat ellipsoid once the `TerrainLayer` is gone. Consume it here.
     let is_source_changed = tc.force_update;
     tc.force_update = false;
 
@@ -958,6 +971,185 @@ pub fn delete_layer(
     }
 }
 
+/// Applies a terrain layer appearance update to the live scene.
+///
+/// Terrain has no per-layer geometry: the tile meshes are the shared globe and
+/// the terrain material fields (`cast_shadow`/`receive_shadow`/`show_bounding_box`)
+/// are baked once into each tile's [`RasterTileInternalMaterial`] in
+/// [`transfer_mesh`]. `force_update` re-traversal does not re-bake existing tiles
+/// (its gate is `Added<RenderedTile> || Without<Rendered>`), so a material-only
+/// update must mutate the live tile materials directly here. Geometry-shaping
+/// fields (`skirt`/`skirt_exaggeration`) are stored on the layer for future tiles
+/// but are not re-applied to existing meshes. A source change is not handled here
+/// — it rebuilds the layer (see `Core::update_layer`).
+pub fn update_terrain_layer(
+    mut commands: Commands,
+    updated: Query<(Entity, &UpdateTerrainLayerMarker)>,
+    mut layers: Query<&mut TerrainLayer>,
+    mut tile_materials: Query<&mut RasterTileInternalMaterial, With<TileMeshMarker>>,
+) {
+    for (e, u) in &updated {
+        let mut matched = false;
+        for mut layer in &mut layers {
+            if layer.layer_id != u.layer_id {
+                continue;
+            }
+            // Store the new appearance so future tiles bake the updated config.
+            layer.appearance = Some(u.material.clone());
+            matched = true;
+        }
+
+        // Re-apply the render-only fields to every already-baked terrain tile.
+        // `Changed<RasterTileInternalMaterial>` (in `navara_mesh`) triggers the
+        // redraw, so only touch a material when a value actually differs —
+        // otherwise a no-op update marks every tile `Changed` and forces a
+        // whole-globe redraw that buys nothing.
+        if matched {
+            let cast_shadow = Some(u.material.cast_shadow);
+            let receive_shadow = Some(u.material.receive_shadow);
+            let show_bounding_box = Some(u.material.show_bounding_box);
+            for mut material in &mut tile_materials {
+                if material.cast_shadow != cast_shadow
+                    || material.receive_shadow != receive_shadow
+                    || material.show_bounding_box != show_bounding_box
+                {
+                    material.cast_shadow = cast_shadow;
+                    material.receive_shadow = receive_shadow;
+                    material.show_bounding_box = show_bounding_box;
+                }
+            }
+        }
+
+        commands.entity(e).despawn();
+    }
+}
+
+/// Keeps the globe in sync when the terrain layer set changes.
+///
+/// Terrain tiling is a single global (the tile meshes are the shared globe
+/// geometry, not owned by the terrain layer). Whenever a terrain layer is torn
+/// down OR (re-)added — an outright delete, a re-add after delete, or the
+/// delete+re-add halves of a source switch / `updateSource` reset — every
+/// already-rendered tile must be reset so it re-bakes against the current terrain.
+/// Handling both the delete marker AND `Added<TerrainLayer>` in one system means
+/// the reset runs exactly once per change (a same-frame delete+add resets once, a
+/// two-frame reset re-runs on the re-add frame; the re-add is also where
+/// `init_globe_tiling` rebuilds the tiling if the new source's scheme differs).
+///
+/// The reset is required because `transfer_mesh` bakes each tile's mesh exactly
+/// once (its gate is `Added<RenderedTile> || Without<Rendered>`, and `Rendered` is
+/// never otherwise removed), so an already-rendered tile keeps its stale geometry
+/// across a terrain change. We mirror how `clear_caches` evicts a stale tile —
+/// mark its mesh `Deleted`, despawn the `RenderedTile`, drop its cache entries, and
+/// free its cached mesh + DEM data — but KEEP the quadtree tile (removing roots
+/// would break traversal, since `init_globe_tiling` re-seeds the roots for the
+/// current scheme), clearing `terrain_data` so `request_terrain_data` re-issues
+/// instead of short-circuiting on the stale (destroyed) entry. In-flight
+/// (requested-but-not-yet-rendered) tiles are torn down the same way so a pending
+/// fetch against the old source can't complete and bake stale geometry.
+///
+/// When a delete removes the LAST terrain layer, the globe falls back to the
+/// default tiling scheme (WebMercator) so a terrain-less map traverses the correct
+/// roots; a differing scheme means rebuilding the tiling (drained here, re-seeded
+/// by `init_globe_tiling`).
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
+pub fn sync_terrain_layer_changes(
+    mut commands: Commands,
+    mut tc: ResMut<TileCacheManager>,
+    mut qt: ResMut<TerrainTileQuadtree>,
+    mut terrain_qt: ResMut<TerrainInformationQuadtree>,
+    mut buf: ResMut<BufferStore>,
+    mut globe: ResMut<navara_globe::Globe>,
+    deleted: Query<(Entity, &DeleteTerrainLayerMarker)>,
+    added: Query<(), Added<TerrainLayer>>,
+    layers: Query<(Entity, &TerrainLayer)>,
+    mut rendered_tiles: Query<(Entity, &mut RenderedTile)>,
+) {
+    if deleted.is_empty() && added.is_empty() {
+        return;
+    }
+
+    // Despawn the torn-down terrain layer(s) — dropping their `LiveLayer` tag so
+    // `flush_layer_reloads` can observe the teardown — and consume the markers.
+    // A source switch re-adds with the SAME `layer_id`, but the re-add is deferred
+    // until `flush_layer_reloads` sees this teardown complete (a later frame), so
+    // the re-added entity does not exist yet and cannot be matched here.
+    for (e, u) in &deleted {
+        for (le, layer) in &layers {
+            if layer.layer_id != u.0 {
+                continue;
+            }
+            commands.entity(le).despawn();
+            break;
+        }
+        commands.entity(e).despawn();
+    }
+
+    // Fall back to the default tiling scheme when a delete removes the last terrain
+    // layer (an outright delete, not a source switch — a switch re-adds and lets
+    // `init_globe_tiling` adopt the new source's scheme via `Added<TerrainLayer>`).
+    // The despawns above are deferred, so compute "no terrain remains" from the
+    // live layers minus the ids being deleted. Only rebuild when the scheme
+    // actually changes: each tile bakes its extent from the scheme at creation, so
+    // drop every tile here and let `init_globe_tiling` re-seed the default roots.
+    if added.is_empty() {
+        let terrain_remains = layers
+            .iter()
+            .any(|(_, l)| !deleted.iter().any(|(_, u)| u.0 == l.layer_id));
+        let default_scheme = navara_globe::Globe::default().tiling_scheme;
+        if !terrain_remains && default_scheme != globe.tiling_scheme {
+            for mut tile in qt.qt.drain() {
+                tile.destroy(&mut commands, &mut buf);
+            }
+            let _ = terrain_qt.qt.drain();
+            globe.tiling_scheme = default_scheme;
+        }
+    }
+
+    // Reset every rendered tile so the next (forced) traversal re-spawns it and
+    // `transfer_mesh` re-bakes it against the now-current terrain. (When the scheme
+    // fallback above drained the tiling, `qt`/`terrain_qt` lookups are already gone
+    // and this only cleans up the ECS-side rendered state and caches.)
+    for (rendered_tile_entity, mut rendered_tile) in rendered_tiles.iter_mut() {
+        let handle = rendered_tile.tile_handle;
+
+        if let Some(cache) = tc.rendered_tile_caches.get(&handle)
+            && let Some(mesh_entity) = cache.mesh_entity
+        {
+            commands.entity(mesh_entity).insert(Deleted);
+        }
+        commands.entity(rendered_tile_entity).despawn();
+        tc.rendered_tile_caches.remove(&handle);
+        tc.requested_tile_caches.remove(&handle);
+
+        // Drop pending terrain-mesh worker tasks tied to this tile.
+        rendered_tile.destroy(&mut commands);
+
+        if let Some(tile) = qt.qt.get_mut(handle) {
+            tile.destroy(&mut commands, &mut buf);
+            tile.terrain_data = None;
+        }
+        // Stale per-tile elevation metadata; re-seeded on the next bake.
+        terrain_qt.qt.remove(handle);
+    }
+
+    // Tear down in-flight (requested-but-not-yet-rendered) tiles the same way. The
+    // rendered-tile loop above already dropped its own handles from
+    // `requested_tile_caches`, leaving only the in-flight ones here. Without this,
+    // a pending fetch against the OLD source would complete after the reset and
+    // bake stale terrain. The quadtree tile is kept (roots must survive traversal)
+    // with `terrain_data` cleared so `request_terrain_data` re-issues.
+    let in_flight: Vec<_> = tc.requested_tile_caches.drain().collect();
+    for handle in in_flight {
+        if let Some(tile) = qt.qt.get_mut(handle) {
+            tile.destroy(&mut commands, &mut buf);
+            tile.terrain_data = None;
+        }
+    }
+
+    tc.force_update = true;
+}
+
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_mesh_material(
     mut tc: ResMut<TileCacheManager>,
@@ -1470,5 +1662,251 @@ mod delete_layer_tests {
 
         // Exactly one slot (A) removed; B and C remain intact and in order.
         assert_eq!(tex, &vec![Some(eb), Some(ec)]);
+    }
+
+    /// Deleting the terrain layer must reset every rendered tile so the forced
+    /// re-traversal re-bakes the globe against the current terrain (or the flat
+    /// ellipsoid): the `TerrainLayer` + `RenderedTile` are despawned, the tile's
+    /// cache entries are dropped, its old mesh is marked `Deleted`, the quadtree
+    /// tile is KEPT (roots must survive) with `terrain_data` cleared, the
+    /// per-tile terrain info is removed, and `force_update` is set.
+    #[test]
+    fn sync_terrain_layer_changes_resets_tiles_on_delete() {
+        use crate::tile::tile_cache_manager::RenderedTileCache;
+
+        let mut app = App::new();
+        app.insert_resource(BufferStore::default());
+        // Default (WebMercator) globe: deleting an ellipsoid terrain keeps the
+        // scheme, so the scheme-fallback path does not drain the tiling here.
+        app.insert_resource(navara_globe::Globe::default());
+
+        // A globe tile in the terrain quadtree.
+        let mut qt = TerrainTileQuadtree::new_with_linear_qt();
+        qt.qt
+            .initialize_zero(&|(x, y, z)| TerrainTile::new(TileXYZ { x, y, z }, 0., 0.));
+        let handle = qt.qt.zero().unwrap().handle();
+        app.insert_resource(qt);
+
+        // Per-tile terrain info present; the reset must drop it.
+        let mut terrain_qt = TerrainInformationQuadtree::new_with_linear_qt();
+        terrain_qt
+            .qt
+            .initialize_zero(&|_c| TerrainInformation::new());
+        app.insert_resource(terrain_qt);
+
+        // A rendered tile with a baked mesh entity tracked by the cache manager.
+        let mesh_entity = app.world_mut().spawn_empty().id();
+        let rendered_tile_entity = app
+            .world_mut()
+            .spawn(RenderedTile {
+                tile_handle: handle,
+                ..Default::default()
+            })
+            .id();
+        let mut tc = TileCacheManager::default();
+        tc.rendered_tile_caches.insert(
+            handle,
+            RenderedTileCache {
+                rendered_tile_entity,
+                ready_parent_tile_handle: None,
+                layer_parents: None,
+                mesh_entity: Some(mesh_entity),
+                mesh_prepared: true,
+                needs_material_update: false,
+            },
+        );
+        tc.requested_tile_caches.insert(handle);
+        app.insert_resource(tc);
+
+        // The terrain layer being torn down, plus its teardown marker.
+        app.world_mut().spawn(TerrainLayer {
+            layer_id: "t".into(),
+            source_id: None,
+            terrain_type: navara_layer::TerrainDataType::Ellipsoid,
+            appearance: None,
+        });
+        app.world_mut()
+            .spawn(DeleteTerrainLayerMarker("t".to_string()));
+
+        app.add_systems(Update, sync_terrain_layer_changes);
+        app.update();
+
+        // TerrainLayer + RenderedTile despawned.
+        assert_eq!(
+            app.world_mut()
+                .query::<&TerrainLayer>()
+                .iter(app.world())
+                .count(),
+            0,
+        );
+        assert_eq!(
+            app.world_mut()
+                .query::<&RenderedTile>()
+                .iter(app.world())
+                .count(),
+            0,
+        );
+
+        let tc = app.world().resource::<TileCacheManager>();
+        assert!(!tc.rendered_tile_caches.contains_key(&handle));
+        assert!(!tc.requested_tile_caches.contains(&handle));
+        assert!(tc.force_update, "a re-traversal must be forced");
+
+        // Quadtree tile kept (roots must survive); per-tile terrain info removed.
+        let qt = app.world().resource::<TerrainTileQuadtree>();
+        assert!(qt.qt.get(handle).is_some());
+        assert!(qt.qt.get(handle).unwrap().terrain_data.is_none());
+        let terrain_qt = app.world().resource::<TerrainInformationQuadtree>();
+        assert!(terrain_qt.qt.get(handle).is_none());
+
+        // Old mesh entity marked for removal.
+        assert!(app.world().get::<Deleted>(mesh_entity).is_some());
+    }
+
+    /// Adding (or re-adding) a terrain layer while flat tiles are already
+    /// rendered must ALSO reset them, so they re-bake against the newly-present
+    /// terrain instead of keeping their (flat) geometry. The layer itself is kept
+    /// (only a delete marker despawns a layer).
+    #[test]
+    fn sync_terrain_layer_changes_resets_tiles_on_add() {
+        use crate::tile::tile_cache_manager::RenderedTileCache;
+
+        let mut app = App::new();
+        app.insert_resource(BufferStore::default());
+        // An add keeps the scheme (fallback only fires on the last delete).
+        app.insert_resource(navara_globe::Globe::default());
+
+        let mut qt = TerrainTileQuadtree::new_with_linear_qt();
+        qt.qt
+            .initialize_zero(&|(x, y, z)| TerrainTile::new(TileXYZ { x, y, z }, 0., 0.));
+        let handle = qt.qt.zero().unwrap().handle();
+        app.insert_resource(qt);
+
+        let mut terrain_qt = TerrainInformationQuadtree::new_with_linear_qt();
+        terrain_qt
+            .qt
+            .initialize_zero(&|_c| TerrainInformation::new());
+        app.insert_resource(terrain_qt);
+
+        let mesh_entity = app.world_mut().spawn_empty().id();
+        let rendered_tile_entity = app
+            .world_mut()
+            .spawn(RenderedTile {
+                tile_handle: handle,
+                ..Default::default()
+            })
+            .id();
+        let mut tc = TileCacheManager::default();
+        tc.rendered_tile_caches.insert(
+            handle,
+            RenderedTileCache {
+                rendered_tile_entity,
+                ready_parent_tile_handle: None,
+                layer_parents: None,
+                mesh_entity: Some(mesh_entity),
+                mesh_prepared: true,
+                needs_material_update: false,
+            },
+        );
+        app.insert_resource(tc);
+
+        // A freshly-added terrain layer, with NO delete marker.
+        app.world_mut().spawn(TerrainLayer {
+            layer_id: "t".into(),
+            source_id: None,
+            terrain_type: navara_layer::TerrainDataType::Ellipsoid,
+            appearance: None,
+        });
+
+        app.add_systems(Update, sync_terrain_layer_changes);
+        app.update();
+
+        // The added layer is KEPT; the rendered tile is reset for a re-bake.
+        assert_eq!(
+            app.world_mut()
+                .query::<&TerrainLayer>()
+                .iter(app.world())
+                .count(),
+            1,
+        );
+        assert_eq!(
+            app.world_mut()
+                .query::<&RenderedTile>()
+                .iter(app.world())
+                .count(),
+            0,
+        );
+        let tc = app.world().resource::<TileCacheManager>();
+        assert!(!tc.rendered_tile_caches.contains_key(&handle));
+        assert!(tc.force_update);
+        assert!(app.world().get::<Deleted>(mesh_entity).is_some());
+    }
+
+    /// Adding a terrain layer whose source uses a DIFFERENT tiling scheme than the
+    /// current globe (e.g. switching to geographic quantized-mesh from a
+    /// WebMercator globe) must rebuild the tiling: drop the old-scheme tiles and
+    /// re-seed the roots for the new scheme. Each tile bakes its extent from the
+    /// scheme at creation, so kept tiles would otherwise render with wrong extents.
+    #[test]
+    fn init_globe_tiling_rebuilds_on_scheme_change() {
+        use navara_core::TilingScheme;
+
+        let mut app = App::new();
+        app.insert_resource(BufferStore::default());
+        // Globe starts at the default WebMercator scheme.
+        app.insert_resource(navara_globe::Globe::default());
+
+        // Seed a WebMercator root plus a subdivided child (proves the drain).
+        let mut qt = TerrainTileQuadtree::new_with_linear_qt();
+        qt.qt.initialize_leaf((0, 0, 0), &|(x, y, z)| {
+            TerrainTile::new(TileXYZ { x, y, z }, 0., 0.)
+        });
+        qt.qt.initialize_leaf((0, 0, 1), &|(x, y, z)| {
+            TerrainTile::new(TileXYZ { x, y, z }, 0., 0.)
+        });
+        app.insert_resource(qt);
+
+        // A geographic quantized-mesh source, referenced by a new terrain layer.
+        let mut source_store = navara_source::SourceStore::new();
+        source_store.add(
+            "s".to_string(),
+            navara_source::Source::QuantizedMesh(navara_source::QuantizedMeshSource {
+                source_id: "s".to_string(),
+                url: String::new(),
+                tiling_scheme: TilingScheme::Geographic { tms: true },
+                request_vertex_normals: false,
+                request_water_mask: false,
+                token: None,
+                min_zoom: 0,
+                max_zoom: 14,
+                overscaled_max_zoom: 14,
+            }),
+        );
+        app.insert_resource(source_store);
+
+        app.world_mut().spawn(navara_layer::TerrainLayer {
+            layer_id: "t".into(),
+            source_id: Some("s".into()),
+            terrain_type: navara_layer::TerrainDataType::QuantizedMesh,
+            appearance: None,
+        });
+
+        app.add_systems(Update, init_globe_tiling);
+        app.update();
+
+        // Globe adopts the geographic scheme.
+        assert!(
+            app.world()
+                .resource::<navara_globe::Globe>()
+                .tiling_scheme
+                .is_geographic()
+        );
+
+        let qt = app.world().resource::<TerrainTileQuadtree>();
+        // Geographic roots (0,0,0) + (1,0,0) are seeded...
+        assert!(qt.qt.leaf((0, 0, 0)).is_some());
+        assert!(qt.qt.leaf((1, 0, 0)).is_some());
+        // ...and the stale subdivided WebMercator tile was drained.
+        assert!(qt.qt.leaf((0, 0, 1)).is_none());
     }
 }
