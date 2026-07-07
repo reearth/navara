@@ -204,7 +204,7 @@ export type RasterTileSource = SourceBase &
     Layer<RasterTileSourceDescription & { type: "raster-tile" }>
   >;
 
-/** A `raster-dem` source: RGB-encoded elevation tiles fetched from a `url`. */
+/** A `raster-dem` source: RGB-encoded elevation tiles fetched from a `url` template. */
 export type RasterDemSource = SourceBase &
   WithColorSupport<Layer<RasterDemSourceDescription & { type: "raster-dem" }>>;
 
