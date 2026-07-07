@@ -53,8 +53,8 @@ export function encodeFloatToRGBA(
  */
 export function packShowOpacity(show: number, opacity: number): number {
   const showBit = show > 0.5 ? 1 : 0;
-  const opacityBits =
-    Math.floor(Math.max(0, Math.min(1, opacity)) * 127) & 0x7f;
+  const clampedOpacity = Math.max(0, Math.min(1, opacity));
+  const opacityBits = Math.round(clampedOpacity * 127) & 0x7f;
   const packed = (showBit << 7) | opacityBits;
   return packed / 255; // Normalize to 0-1 for texture
 }
