@@ -31,5 +31,12 @@ describe("polylineBaseEnhancer/material", () => {
       updateMaterialProps(material, { depthWrite: false });
       expect(material.depthWrite).toBe(false);
     });
+
+    it("should update opacity when provided", () => {
+      const material = new ShaderMaterial();
+      material.opacity = 1.0;
+      updateMaterialProps(material, { opacity: 0.5 });
+      expect(material.opacity).toBe(0.5);
+    });
   });
 });

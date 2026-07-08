@@ -48,6 +48,13 @@ describe("modelBaseEnhancer/material", () => {
       expect(material.transparent).toBe(true);
     });
 
+    it("should update opacity when provided", () => {
+      const material = new MeshStandardMaterial();
+      material.opacity = 1.0;
+      updateMaterialProps(material, { opacity: 0.5 });
+      expect(material.opacity).toBe(0.5);
+    });
+    
     it("should update depthWrite when provided", () => {
       const material = new MeshStandardMaterial();
       material.depthWrite = true;
