@@ -4,7 +4,6 @@ import type {
 } from "@navara/engine";
 import { expect, it, vi } from "vitest";
 
-
 import type { WorkerPoolPromise, WorkerPoolPromises } from "../type";
 
 import {
