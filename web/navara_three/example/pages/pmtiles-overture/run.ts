@@ -179,16 +179,37 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
 
   view.addLayer({ type: "terrain", ellipsoid: {} });
 
-  const baseUrl = PMTILES_DATASETS.overtureBase.url;
-  const divisionsUrl = PMTILES_DATASETS.overtureDivisions.url;
+  // One vector-tile source per `.pmtiles` archive (PMTiles is detected from the
+  // URL extension); every layer references its archive's source and selects
+  // which MVT sublayer to style via `sourceLayers`.
+  const baseSource = view.addSource({
+    type: "vector-tile",
+    url: PMTILES_DATASETS.overtureBase.url,
+    maxZoom: 13,
+  });
+  const divisionsSource = view.addSource({
+    type: "vector-tile",
+    url: PMTILES_DATASETS.overtureDivisions.url,
+    // Finer admin features (governorate/district) exist only in higher-zoom
+    // tiles, so fetch to z12 and let the altitude tiers keep the view uncluttered.
+    maxZoom: 12,
+  });
+  const buildingsSource = view.addSource({
+    type: "vector-tile",
+    url: PMTILES_DATASETS.overtureBuildings.url,
+    maxZoom: 14,
+  });
+  const placesSource = view.addSource({
+    type: "vector-tile",
+    url: PMTILES_DATASETS.overturePlaces.url,
+    maxZoom: 14,
+  });
 
   // Visibility is driven per-feature via each layer's evaluator, not the
   // material's `show` (which only seeds future features). The evaluator restyles
   // already-batched geometry, so toggling affects what's already on screen.
   const visible: Record<string, boolean> = {};
 
-  // Every layer reusing the same URL resolves through a single PmtilesSource;
-  // `vectorTile.layers` selects which MVT sublayer each one styles.
   const toggles: { title: string; layer: Layer }[] = [];
 
   // Precompute per-subtype Color instances (the evaluator runs per feature).
@@ -202,13 +223,13 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   for (const { title, source, color } of BASE_POLYGONS) {
     visible[title] = true;
     const layer = view.addLayer({
-      type: "mvt",
-      data: { url: baseUrl },
+      type: "vector",
+      source: baseSource,
+      sourceLayers: [source],
       polygon: {
         color: new Color().setStyle(color),
         clampToGround: true,
       },
-      vectorTile: { maxZoom: 13, layers: [source] },
     });
 
     // `land_cover` additionally colors each feature by its `subtype`.
@@ -238,15 +259,15 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   const boundaryTitle = "Boundaries";
   visible[boundaryTitle] = true;
   const boundaryLayer = view.addLayer({
-    type: "mvt",
-    data: { url: divisionsUrl },
+    type: "vector",
+    source: divisionsSource,
+    sourceLayers: ["division_boundary"],
     polyline: {
       color: new Color().setStyle("#757575"), // division.boundary gray.700
       width: 1.5,
       height: 1,
       clampToGround: true,
     },
-    vectorTile: { maxZoom: 12, layers: ["division_boundary"] },
   });
   {
     const apply = ({ evaluator }: { evaluator: FeatureEvaluator }) => {
@@ -273,8 +294,9 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
 
   // Bulk footprints. Hidden where `has_parts`, so detailed parts represent them.
   const buildingLayer = view.addLayer({
-    type: "mvt",
-    data: { url: PMTILES_DATASETS.overtureBuildings.url },
+    type: "vector",
+    source: buildingsSource,
+    sourceLayers: ["building"],
     polygon: {
       color: buildingColor,
       // Seeds the attribute slots; the evaluator overrides height per feature.
@@ -282,7 +304,6 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       extrudedHeight: 0,
       clampToGround: false,
     },
-    vectorTile: { maxZoom: 14, layers: ["building"] },
   });
   {
     const apply = ({ evaluator }: { evaluator: FeatureEvaluator }) => {
@@ -314,15 +335,15 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   // so base -> `height` attribute, top -> `extrudedHeight`; this keeps stacked
   // setbacks from overlapping and lets towers float above their podium.
   const buildingPartLayer = view.addLayer({
-    type: "mvt",
-    data: { url: PMTILES_DATASETS.overtureBuildings.url },
+    type: "vector",
+    source: buildingsSource,
+    sourceLayers: ["building_part"],
     polygon: {
       color: buildingColor,
       height: 0,
       extrudedHeight: 0,
       clampToGround: false,
     },
-    vectorTile: { maxZoom: 14, layers: ["building_part"] },
   });
   {
     const apply = ({ evaluator }: { evaluator: FeatureEvaluator }) => {
@@ -358,7 +379,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   // registered font family resolves the correct face per glyph.
   const labelTitle = "Labels";
   visible[labelTitle] = true;
-  const params = { size: 20 };
+  const params = { size: 15, maxWidth: 9.0 };
 
   // The evaluator reads this closure variable to decide which tiers are visible;
   // kept in sync with the camera below. Seed it from the initial viewpoint, not
@@ -366,8 +387,9 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   let currentHeight: number = VIEWPOINTS.World.height;
 
   const labelLayer = view.addLayer({
-    type: "mvt",
-    data: { url: divisionsUrl },
+    type: "vector",
+    source: divisionsSource,
+    sourceLayers: ["division"],
     text: {
       font: LABEL_FONT,
       color: new Color().setStyle("#000000"),
@@ -380,10 +402,8 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       outlineOpacity: 0.4,
       offsetDepth: true,
       depthTest: true,
+      maxWidth: params.maxWidth,
     },
-    // Finer admin features (governorate/district) exist only in higher-zoom
-    // tiles, so fetch to z12 and let the altitude tiers keep the view uncluttered.
-    vectorTile: { maxZoom: 12, layers: ["division"] },
   });
 
   {
@@ -392,7 +412,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
         ({ properties }) => {
           if (!visible[labelTitle]) return { show: false };
 
-          const name = properties?.["@name"] as string | undefined;
+          let name = properties?.["@name"] as string | undefined;
           if (!name) return { text: "", show: false };
 
           // Assign an altitude tier: prefer locale-specific `local_type`, fall
@@ -423,6 +443,9 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
             }
           }
 
+          // replace `/` with a line break
+          name = name.replace(/\s*\/\s*/g, "\n");
+
           return { text: name, show: true };
         },
         { filters: ["@name", "subtype", "local_type", "population"] },
@@ -434,7 +457,6 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   }
 
   // ---- Points of interest (places theme) -----------------------------------
-  const placesUrl = PMTILES_DATASETS.overturePlaces.url;
 
   // A billboard carries one icon texture for the whole layer (the evaluator sets
   // `show`/`height` per feature, but not a per-feature icon). So rather than one
@@ -463,8 +485,9 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   // text's LEFT edge to the same geographic point, both vertically centered, so
   // the icon sits just left of the point and the name extends right from it.
   const poiLayer = view.addLayer({
-    type: "mvt",
-    data: { url: placesUrl },
+    type: "vector",
+    source: placesSource,
+    sourceLayers: ["place"],
     billboard: {
       url: iconByKey.get("Restaurants") ?? "",
       size: 30,
@@ -489,8 +512,8 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       depthTest: true,
       offsetDepth: true,
       highQuality: true,
+      maxWidth: params.maxWidth,
     },
-    vectorTile: { maxZoom: 14, layers: ["place"] },
   });
   {
     const apply = ({ evaluator }: { evaluator: FeatureEvaluator }) => {
@@ -521,9 +544,13 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
           const labelable =
             currentHeight <= POI_LABEL_MAX_HEIGHT &&
             confidence >= POI_LABEL_MIN_CONFIDENCE;
-          const name = labelable
+          let name = labelable
             ? ((properties?.["@name"] as string | undefined) ?? "")
             : "";
+
+          // replace `/` with a line break
+          name = name.replace(/\s*\/\s*/g, "\n");
+
           return { show: true, text: name };
         },
         {
@@ -592,6 +619,19 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     })
     .on("change", ({ value }) => {
       labelLayer.update({ text: { size: value } });
+      view.forceUpdate();
+    });
+
+  layersFolder
+    .addBinding(params, "maxWidth", {
+      min: 0,
+      max: 20,
+      step: 0.5,
+      label: "label max width",
+    })
+    .on("change", ({ value }) => {
+      labelLayer.update({ text: { maxWidth: value } });
+      poiLayer.update({ text: { maxWidth: value } });
       view.forceUpdate();
     });
 

@@ -14,7 +14,6 @@ pub struct TransferableGeometry {
     pub skirt_vertices: Option<Handle>,
     pub skirt_uvs: Option<Handle>,
     pub skirt_indices: Option<Handle>,
-    pub skirt_indices_to_edge: Option<Handle>,
     pub skirt_normals: Option<Handle>,
 }
 
@@ -30,7 +29,6 @@ impl TransferableGeometry {
             skirt_vertices: None,
             skirt_uvs: None,
             skirt_indices: None,
-            skirt_indices_to_edge: None,
             skirt_normals: None,
         }
     }
@@ -46,7 +44,6 @@ impl From<TransferableGeometry> for navara_geometry::TransferableGeometry {
             skirt_vertices: val.skirt_vertices,
             skirt_uvs: val.skirt_uvs,
             skirt_indices: val.skirt_indices,
-            skirt_indices_to_edge: val.skirt_indices_to_edge,
             skirt_normals: val.skirt_normals,
         }
     }
@@ -61,7 +58,6 @@ impl<'a> From<&'a navara_geometry::TransferableGeometry> for TransferableGeometr
             skirt_vertices: val.skirt_vertices,
             skirt_uvs: val.skirt_uvs,
             skirt_indices: val.skirt_indices,
-            skirt_indices_to_edge: val.skirt_indices_to_edge,
             skirt_normals: val.skirt_normals,
         }
     }

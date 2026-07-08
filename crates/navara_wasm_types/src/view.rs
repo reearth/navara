@@ -67,6 +67,36 @@ pub fn transfer_f64_array(byte_length: usize, f: &js_sys::Function) -> Vec<f64> 
     buffer
 }
 
+// The `view_*` functions expose an existing Rust buffer to JS as a typed-array
+// view into wasm linear memory — zero-copy, built over the freshly-fetched
+// memory buffer exactly like the `transfer_*` functions above (grow-safe at
+// creation time). The view is only valid until the next wasm memory growth,
+// i.e. any wasm call that allocates: the JS caller must consume it immediately
+// and copy the data (e.g. `.slice()`) if it needs to retain it. Reading another
+// buffer via these functions does not allocate wasm memory, so consecutive
+// view reads keep earlier views valid.
+
+pub fn view_u8_array(buf: &[u8]) -> js_sys::Uint8Array {
+    let ptr = buf.as_ptr() as u32;
+    let mem = current_memory_buffer();
+    js_sys::Uint8Array::new_with_byte_offset_and_length(&mem, ptr, buf.len() as u32)
+}
+pub fn view_u32_array(buf: &[u32]) -> js_sys::Uint32Array {
+    let ptr = buf.as_ptr() as u32;
+    let mem = current_memory_buffer();
+    js_sys::Uint32Array::new_with_byte_offset_and_length(&mem, ptr, buf.len() as u32)
+}
+pub fn view_f32_array(buf: &[f32]) -> js_sys::Float32Array {
+    let ptr = buf.as_ptr() as u32;
+    let mem = current_memory_buffer();
+    js_sys::Float32Array::new_with_byte_offset_and_length(&mem, ptr, buf.len() as u32)
+}
+pub fn view_f64_array(buf: &[f64]) -> js_sys::Float64Array {
+    let ptr = buf.as_ptr() as u32;
+    let mem = current_memory_buffer();
+    js_sys::Float64Array::new_with_byte_offset_and_length(&mem, ptr, buf.len() as u32)
+}
+
 pub fn copy_u8_array(buf: &[u8]) -> js_sys::Uint8Array {
     let array = js_sys::Uint8Array::new(&JsValue::from(buf.len()));
     array.copy_from(buf);

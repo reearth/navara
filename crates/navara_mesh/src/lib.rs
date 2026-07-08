@@ -45,8 +45,6 @@ pub struct Mesh {
     pub skirt_uvs: Option<Handle>,
     /// Skirt indices.
     pub skirt_indices: Option<Handle>,
-    /// Mapping from skirt vertex index to edge vertex index in main geometry.
-    pub skirt_indices_to_edge: Option<Handle>,
     /// Skirt normals, copied from corresponding edge vertices. Stride 3.
     pub skirt_normals: Option<Handle>,
     /// Watermask payload (1 byte for uniform, 65536 bytes for 256x256 grid).

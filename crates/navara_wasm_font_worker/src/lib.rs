@@ -62,6 +62,8 @@ pub struct WasmShapedGlyph {
     pub y_advance: i32,
     pub x_offset: i32,
     pub y_offset: i32,
+    /// One of the `shaping::CHAR_CLASS_*` constants (line-break info).
+    pub char_class: u8,
 }
 
 #[wasm_bindgen(getter_with_clone)]
@@ -69,6 +71,10 @@ pub struct ShapeTextResult {
     pub glyphs: Vec<WasmShapedGlyph>,
     pub metrics: Vec<WasmGlyphMetrics>,
     pub units_per_em: u16,
+    /// Vertical line metrics in font units, for multi-line layout.
+    pub ascender: i16,
+    pub descender: i16,
+    pub line_gap: i16,
     pub font_index: u32,
     pub atlas_changed: bool,
     /// True when this font is COLRv1 — glyphs were packed into the color atlas.
@@ -155,11 +161,18 @@ impl FontCache {
         let entry = self.fonts.get(url)?;
         let shaped = shaping::shape_text(&entry.data, text)?;
         let units_per_em = entry.units_per_em;
+        let line_metrics = entry.line_metrics;
         let atlas_key = entry.atlas_key.clone();
         let font_index = entry.font_index;
         let is_color = entry.is_color;
 
-        let glyph_ids: Vec<u32> = shaped.iter().map(|g| g.glyph_id).collect();
+        // Synthetic newline markers carry glyph_id 0 but represent no real
+        // glyph — keep them out of the atlas (would rasterize .notdef).
+        let glyph_ids: Vec<u32> = shaped
+            .iter()
+            .filter(|g| g.char_class != shaping::CHAR_CLASS_NEWLINE)
+            .map(|g| g.glyph_id)
+            .collect();
 
         // Split-borrow: hand the immutable font bytes to a mutable atlas
         // method without cloning the (possibly multi-MB) buffer.
@@ -190,6 +203,7 @@ impl FontCache {
                 y_advance: g.y_advance,
                 x_offset: g.x_offset,
                 y_offset: g.y_offset,
+                char_class: g.char_class,
             })
             .collect();
 
@@ -224,6 +238,9 @@ impl FontCache {
             glyphs,
             metrics,
             units_per_em,
+            ascender: line_metrics.ascender,
+            descender: line_metrics.descender,
+            line_gap: line_metrics.line_gap,
             font_index,
             atlas_changed,
             is_color,

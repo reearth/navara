@@ -33,6 +33,21 @@ export type GlyphMetrics = {
   isColor: boolean;
 };
 
+/**
+ * Per-glyph character class used for line breaking during layout.
+ * Must match the `CHAR_CLASS_*` constants in
+ * `crates/navara_wasm_font_worker/src/shaping.rs`.
+ */
+export const GlyphCharClass = {
+  Normal: 0,
+  /** Breakable whitespace: a line may wrap here, dropping the glyph. */
+  Whitespace: 1,
+  /** Synthetic hard-break marker (zero advance, no atlas entry). */
+  Newline: 2,
+  /** CJK-style character: a line may break after this glyph. */
+  Ideographic: 3,
+} as const;
+
 /** A single shaped glyph with positioning info. */
 export type ShapedGlyph = {
   glyphId: number;
@@ -44,6 +59,8 @@ export type ShapedGlyph = {
   yAdvance: number;
   xOffset: number;
   yOffset: number;
+  /** One of `GlyphCharClass` (line-break info). */
+  charClass: number;
 };
 
 /** Result from shaping text: glyph positions + atlas metrics. */
@@ -52,6 +69,12 @@ export type ShapeTextResult = {
   metrics: GlyphMetrics[];
   /** Font units per em (needed for converting font-unit to pixel space) */
   unitsPerEm: number;
+  /** Ascender in font units (hhea), for multi-line layout. */
+  ascender: number;
+  /** Descender in font units (hhea, negative below baseline). */
+  descender: number;
+  /** Extra line gap in font units (hhea). */
+  lineGap: number;
   /** FontManager-internal: the atlas generation these metrics were built
    *  under. When the atlas evicts glyphs its generation bumps, marking older
    *  cached results stale so they are re-shaped on next use. Unset on results

@@ -109,7 +109,10 @@ async function processConstructTerrainMesh(
     workerTaskHandler,
     workerPoolPromises,
   } = ctx;
-  const bytes = bufHandler.u8(params.bytes_handle);
+  // buf.u8 returns a short-lived view into WASM memory; copy it since the
+  // bytes are transferred to the worker (a view's buffer is the whole WASM
+  // memory and is not detachable).
+  const bytes = bufHandler.u8(params.bytes_handle)?.slice();
   if (!bytes) {
     return;
   }
@@ -175,9 +178,6 @@ async function processConstructTerrainMesh(
     const skirtVertices = bufHandler.newF32(result.skirt_vertices);
     const skirtUvs = bufHandler.newF32(result.skirt_uvs);
     const skirtIndices = bufHandler.newU32(result.skirt_indices);
-    const skirtIndicesToEdge = result.skirt_indices_to_edge
-      ? bufHandler.newU32(result.skirt_indices_to_edge)
-      : undefined;
     const skirtNormals = result.skirt_normals
       ? bufHandler.newF32(result.skirt_normals)
       : undefined;
@@ -190,9 +190,6 @@ async function processConstructTerrainMesh(
     }
     if (skirtIndices != null) {
       geometry.skirt_indices = skirtIndices;
-    }
-    if (skirtIndicesToEdge != null) {
-      geometry.skirt_indices_to_edge = skirtIndicesToEdge;
     }
     if (skirtNormals != null) {
       geometry.skirt_normals = skirtNormals;
@@ -253,9 +250,12 @@ async function processUpsampleTerrainMesh(
     return;
   }
 
-  const parentUvs = bufHandler.f32(cachedMeshHandle.uvs);
-  const parentIndices = bufHandler.u32(cachedMeshHandle.indices);
-  const parentHeights = bufHandler.f32(cachedMeshHandle.heights);
+  // buf.* return short-lived views into WASM memory; copy them since the
+  // parent geometry is sent to the worker (a view's buffer is the whole WASM
+  // memory and is not transferable).
+  const parentUvs = bufHandler.f32(cachedMeshHandle.uvs)?.slice();
+  const parentIndices = bufHandler.u32(cachedMeshHandle.indices)?.slice();
+  const parentHeights = bufHandler.f32(cachedMeshHandle.heights)?.slice();
   if (!parentUvs || !parentIndices || !parentHeights) {
     return;
   }
@@ -263,7 +263,7 @@ async function processUpsampleTerrainMesh(
   const parentNormalsHandle = cachedMeshHandle.normals;
   const parentNormals =
     parentNormalsHandle != null
-      ? (bufHandler.f32(parentNormalsHandle) ?? undefined)
+      ? bufHandler.f32(parentNormalsHandle)?.slice()
       : undefined;
 
   const upsamplableTerrainGeometry = new UpsamplableTerrainGeometryLike(
@@ -331,9 +331,6 @@ async function processUpsampleTerrainMesh(
     const skirtVertices = bufHandler.newF32(result.skirt_vertices);
     const skirtUvs = bufHandler.newF32(result.skirt_uvs);
     const skirtIndices = bufHandler.newU32(result.skirt_indices);
-    const skirtIndicesToEdge = result.skirt_indices_to_edge
-      ? bufHandler.newU32(result.skirt_indices_to_edge)
-      : undefined;
     const skirtNormals = result.skirt_normals
       ? bufHandler.newF32(result.skirt_normals)
       : undefined;
@@ -346,9 +343,6 @@ async function processUpsampleTerrainMesh(
     }
     if (skirtIndices != null) {
       geometry.skirt_indices = skirtIndices;
-    }
-    if (skirtIndicesToEdge != null) {
-      geometry.skirt_indices_to_edge = skirtIndicesToEdge;
     }
     if (skirtNormals != null) {
       geometry.skirt_normals = skirtNormals;

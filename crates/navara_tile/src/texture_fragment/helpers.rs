@@ -11,11 +11,13 @@ use navara_tile_component::{TerrainTile, TileHandle, TileTextureFragmentMarker};
 use crate::hillshade::HillshadeTextureMarker;
 
 /// Request hillshade textures for a terrain tile, one `DataRequester` per in-zoom hillshade layer.
+/// `sorted_tiles` is the layer list sorted by `Order`, collected once per system
+/// run (this helper is called per terrain tile).
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn request_hillshade_data_requester(
     commands: &mut Commands,
     leaf: &mut TerrainTile,
-    tiles: &Query<(&TilesLayer, &Order)>,
+    sorted_tiles: &[(&TilesLayer, &Order)],
     source_store: &navara_source::SourceStore,
     handle: TileHandle,
     data_requesters: &Query<&DataRequester>,
@@ -23,7 +25,6 @@ pub(crate) fn request_hillshade_data_requester(
     buf: &mut BufferStore,
     data_manager: &mut DataManager,
 ) {
-    let sorted_tiles: Vec<_> = tiles.iter().sort::<&Order>().collect();
     let tiles_len = sorted_tiles.len();
     if tiles_len == 0 {
         return;
@@ -259,10 +260,11 @@ mod tests {
                 let prepare = prepare.lock().unwrap().take().unwrap();
                 prepare(&mut tile);
 
+                let sorted_tiles: Vec<_> = tiles.iter().sort::<&Order>().collect();
                 request_hillshade_data_requester(
                     &mut commands,
                     &mut tile,
-                    &tiles,
+                    &sorted_tiles,
                     &source_store,
                     0,
                     &data_requesters,
