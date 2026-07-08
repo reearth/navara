@@ -227,20 +227,6 @@ impl BatchTable {
         values.push(props)
     }
 
-    /// Add a feature's tags to the MVT batch property.
-    /// Only applicable when the batch was initialized with `init_mvt`.
-    pub fn add_mvt_feature_tags(&mut self, key: u32, tags: Vec<u32>) {
-        let Some(Some(table_value)) = self.map.get_mut(&key) else {
-            return;
-        };
-
-        let Some(BatchProperty::Mvt(mvt_data)) = &mut table_value.properties else {
-            return;
-        };
-
-        mvt_data.feature_tags.push(tags);
-    }
-
     pub fn get(&self, key: &u32) -> Option<&BatchTableValue> {
         self.map.get(key).and_then(|value| value.as_ref())
     }

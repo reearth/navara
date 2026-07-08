@@ -11,6 +11,7 @@ mod pmtiles_decoder;
 pub mod source;
 mod source_cache;
 
+pub use geometry::{MatchedLayerInfo, construct_geometry_multi_layer};
 pub use navara_vector_tile::LayerResources as MvtLayerResources;
 pub use pmtiles_decoder::MvtPmtilesDecoder;
 pub use source_cache::{
@@ -32,6 +33,15 @@ impl Plugin for MvtPlugin {
         .add_systems(
             Update,
             layer::system::prepare_layer_resource.in_set(VectorTileSet::Prepare),
+        );
+
+        #[cfg(feature = "delegated_worker")]
+        app.add_systems(
+            Update,
+            (
+                geometry::finalize_parsed_mvt,
+                geometry::cancel_evicted_parse_tasks,
+            ),
         );
     }
 }

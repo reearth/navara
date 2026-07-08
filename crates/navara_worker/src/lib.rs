@@ -32,6 +32,7 @@ impl bevy_app::Plugin for WorkerPlugin {
                 tasks::upsample_terrain_mesh::system::upsample_terrain_mesh,
                 tasks::construct_polygon_batched_feature::system::construct_polygon_batched_feature,
                 tasks::construct_polyline_batched_feature::system::construct_polyline_batched_feature,
+                tasks::parse_mvt_tile::system::parse_mvt_tile,
                 system::handle_completed_event,
                 system::commit,
                 system::remove_relation,

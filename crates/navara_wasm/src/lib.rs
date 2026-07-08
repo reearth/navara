@@ -470,6 +470,13 @@ impl Core {
                 } => navara_worker::DelegatedWorkerTasksResult::ConstructPolylineBatchedFeature(
                     navara_worker::DelegatedWorkerTask::with_bits(delegator_id.0, v.into()),
                 ),
+                DelegatedWorkerTasksResult {
+                    delegator_id,
+                    parse_mvt_tile: Some(v),
+                    ..
+                } => navara_worker::DelegatedWorkerTasksResult::ParseMvtTile(
+                    navara_worker::DelegatedWorkerTask::with_bits(delegator_id.0, v.into()),
+                ),
                 _ => unreachable!(),
             },
         );

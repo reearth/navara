@@ -5,7 +5,6 @@ use bevy_ecs::schedule::{IntoScheduleConfigs, SystemSet};
 pub mod component;
 pub mod data_requester;
 pub mod layer;
-pub mod pos_converter;
 pub mod resolve;
 pub mod source;
 pub mod source_cache;
@@ -14,7 +13,7 @@ pub mod tile;
 pub use component::*;
 pub use layer::resource::LayerResources;
 pub use layer::tile_cache_manager::TileCacheManager;
-pub use pos_converter::{AsXYZ, PosConverter};
+pub use navara_parser::mvt::{AsXYZ, PosConverter};
 pub use resolve::{
     ResolvedVectorTile, ResolvedVectorTileState, resolve_vector_tile_states, resolve_vector_tiles,
 };

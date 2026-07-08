@@ -23,3 +23,4 @@ navara_component.workspace = true
 navara_event_store.workspace = true
 navara_feature_component.workspace = true
 navara_material.workspace = true
+navara_parser.workspace = true

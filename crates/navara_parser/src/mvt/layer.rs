@@ -6,18 +6,69 @@ use rustc_hash::FxHashMap;
 
 /// Raw MVT layer data for lazy property parsing.
 /// Properties are only parsed when accessed via `get_property`.
+///
+/// Per-feature tags are stored flat (`feature_tags_flat`) with prefix-sum
+/// `feature_tag_offsets` (length = feature count + 1) rather than a jagged
+/// `Vec<Vec<u32>>`, so tag data stays in one contiguous buffer end-to-end (parse
+/// → Web Worker transfer → batch table) without per-feature allocations.
 #[derive(Debug, Clone)]
 pub struct MvtLayerData {
     /// Property key names (shared across all features in the layer)
     pub keys: Arc<Vec<String>>,
     /// Property values (shared across all features in the layer) - raw MVT format for lazy conversion
     pub values: Arc<Vec<tile::Value>>,
-    /// Per-feature tags: pairs of (key_index, value_index) into keys and values
-    pub feature_tags: Vec<Vec<u32>>,
+    /// All per-feature tag pairs (key_index, value_index) concatenated.
+    pub feature_tags_flat: Vec<u32>,
+    /// Prefix-sum offsets into `feature_tags_flat`; length = feature count + 1.
+    pub feature_tag_offsets: Vec<u32>,
 }
 
-/// A single MVT property value (mirrors protobuf tile::Value)
-#[derive(Debug, Clone)]
+/// Build prefix-sum offsets (length `sizes.len() + 1`) from per-feature sizes.
+fn offsets_from_sizes(sizes: &[u32]) -> Vec<u32> {
+    let mut offsets = Vec::with_capacity(sizes.len() + 1);
+    let mut acc = 0u32;
+    offsets.push(0);
+    for &s in sizes {
+        acc += s;
+        offsets.push(acc);
+    }
+    offsets
+}
+
+impl MvtLayerData {
+    /// Construct from already-shared keys/values plus flat tags + per-feature sizes.
+    pub fn from_raw(
+        keys: Arc<Vec<String>>,
+        values: Arc<Vec<tile::Value>>,
+        feature_tags_flat: Vec<u32>,
+        feature_tag_sizes: &[u32],
+    ) -> Self {
+        Self {
+            keys,
+            values,
+            feature_tags_flat,
+            feature_tag_offsets: offsets_from_sizes(feature_tag_sizes),
+        }
+    }
+
+    /// Number of features (batch entries) stored.
+    pub fn feature_count(&self) -> usize {
+        self.feature_tag_offsets.len().saturating_sub(1)
+    }
+
+    /// Tag pairs for a feature index, or `None` if out of range.
+    pub fn feature_tags(&self, feature_index: usize) -> Option<&[u32]> {
+        let start = *self.feature_tag_offsets.get(feature_index)? as usize;
+        let end = *self.feature_tag_offsets.get(feature_index + 1)? as usize;
+        self.feature_tags_flat.get(start..end)
+    }
+}
+
+/// A single MVT property value (mirrors protobuf tile::Value).
+///
+/// Unlike the prost-generated `tile::Value`, this is a plain, serializable enum,
+/// so it can cross the Web Worker boundary (`tile::Value` derives no serde).
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum MvtValue {
     String(String),
     Float(f32),
@@ -26,6 +77,7 @@ pub enum MvtValue {
     UInt(u64),
     SInt(i64),
     Bool(bool),
+    Null,
 }
 
 impl MvtValue {
@@ -38,7 +90,79 @@ impl MvtValue {
             MvtValue::UInt(u) => V::from_u64(*u),
             MvtValue::SInt(i) => V::from_i64(*i),
             MvtValue::Bool(b) => V::from_bool(*b),
+            MvtValue::Null => V::null(),
         }
+    }
+
+    /// Convert a raw protobuf `tile::Value` into a serializable `MvtValue`.
+    pub fn from_tile_value(value: &tile::Value) -> Self {
+        if let Some(s) = &value.string_value {
+            MvtValue::String(s.clone())
+        } else if let Some(f) = value.float_value {
+            MvtValue::Float(f)
+        } else if let Some(d) = value.double_value {
+            MvtValue::Double(d)
+        } else if let Some(i) = value.int_value {
+            MvtValue::Int(i)
+        } else if let Some(u) = value.uint_value {
+            MvtValue::UInt(u)
+        } else if let Some(i) = value.sint_value {
+            MvtValue::SInt(i)
+        } else if let Some(b) = value.bool_value {
+            MvtValue::Bool(b)
+        } else {
+            MvtValue::Null
+        }
+    }
+
+    /// Rebuild a protobuf `tile::Value` (as consumed by [`MvtLayerData`]),
+    /// moving the string payload rather than cloning it.
+    pub fn into_tile_value(self) -> tile::Value {
+        let mut v = tile::Value::default();
+        match self {
+            MvtValue::String(s) => v.string_value = Some(s),
+            MvtValue::Float(f) => v.float_value = Some(f),
+            MvtValue::Double(d) => v.double_value = Some(d),
+            MvtValue::Int(i) => v.int_value = Some(i),
+            MvtValue::UInt(u) => v.uint_value = Some(u),
+            MvtValue::SInt(i) => v.sint_value = Some(i),
+            MvtValue::Bool(b) => v.bool_value = Some(b),
+            MvtValue::Null => {}
+        }
+        v
+    }
+}
+
+/// The keys/values half of a layer's lazy property data, carried across the Web
+/// Worker boundary as a structured clone while `feature_tags` ride alongside as
+/// zero-copy flat buffers. Rebuilt into [`MvtLayerData`] via
+/// [`MvtLayerData::from_meta`].
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct ParsedLayerPropertiesMeta {
+    pub keys: Vec<String>,
+    pub values: Vec<MvtValue>,
+}
+
+impl ParsedLayerPropertiesMeta {
+    /// Snapshot from shared layer data (clones keys, converts values to a
+    /// serializable form).
+    pub fn from_parts(keys: &[String], values: &[tile::Value]) -> Self {
+        Self {
+            keys: keys.to_vec(),
+            values: values.iter().map(MvtValue::from_tile_value).collect(),
+        }
+    }
+
+    /// Convert into the `Arc`-shared keys/values consumed by
+    /// [`MvtLayerData::from_raw`], moving the strings (no clone). Built once
+    /// per layer on worker completion and shared by all of the layer's groups.
+    pub fn into_shared_parts(self) -> (Arc<Vec<String>>, Arc<Vec<tile::Value>>) {
+        let values: Vec<tile::Value> = self
+            .values
+            .into_iter()
+            .map(MvtValue::into_tile_value)
+            .collect();
+        (Arc::new(self.keys), Arc::new(values))
     }
 }
 
@@ -67,7 +191,7 @@ impl MvtLayerData {
     /// Get properties for a specific feature index.
     /// Properties are converted lazily from raw MVT format.
     pub fn get_properties<V: PropertyValue>(&self, feature_index: usize) -> Option<V> {
-        let tags = self.feature_tags.get(feature_index)?;
+        let tags = self.feature_tags(feature_index)?;
         let mut props = V::empty_map();
 
         for pair in tags.chunks(2) {
@@ -88,7 +212,7 @@ impl MvtLayerData {
         feature_index: usize,
         keys: &[String],
     ) -> Option<Vec<Option<V>>> {
-        let tags = self.feature_tags.get(feature_index)?;
+        let tags = self.feature_tags(feature_index)?;
 
         let mut result: Vec<Option<V>> = keys.iter().map(|_| None).collect();
         let mut indexed_keys = FxHashMap::default();
@@ -145,14 +269,11 @@ mod tests {
                 ..Default::default()
             },
         ]);
-        // Feature 0: name=building_a, height=42.5, visible=true
-        // Feature 1: name=building_b, height=100 (no visible)
-        let feature_tags = vec![vec![0, 0, 1, 1, 2, 2], vec![0, 3, 1, 4]];
-        MvtLayerData {
-            keys,
-            values,
-            feature_tags,
-        }
+        // Feature 0: name=building_a, height=42.5, visible=true (6 tag ints)
+        // Feature 1: name=building_b, height=100 (no visible) (4 tag ints)
+        let feature_tags_flat = vec![0, 0, 1, 1, 2, 2, 0, 3, 1, 4];
+        let feature_tag_sizes = [6, 4];
+        MvtLayerData::from_raw(keys, values, feature_tags_flat, &feature_tag_sizes)
     }
 
     #[test]

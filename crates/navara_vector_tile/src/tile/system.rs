@@ -279,6 +279,7 @@ pub fn transfer_mesh(
                 &mut buf,
                 tile,
                 rendered_tile.tile_handle,
+                rendered_tile_id,
                 order,
                 data_req,
             ) {
