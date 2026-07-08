@@ -71,7 +71,7 @@ export const defaultAtlasFactory =
 export type TileTextureCompositorOptions = {
   renderer: WebGLRenderer;
   texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates;
-  /** Atlas RT side length. 512 by default; 256 on mobile to cut GPU cost 4x. */
+  /** Atlas RT side length (defaults to 512). */
   size?: number;
   /** Test seam: replace MRT RT creation. */
   atlasFactory?: AtlasFactory;
