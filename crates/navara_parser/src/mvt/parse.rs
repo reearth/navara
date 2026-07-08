@@ -94,7 +94,17 @@ pub fn flatten_vec3(coords: Vec<Vec3>) -> Vec<f64> {
 }
 
 /// Unpack a packed `[x, y, z, ...]` buffer into `Vec3`s. Inverse of [`flatten_vec3`].
+///
+/// `flat.len()` must be a multiple of 3 — always true for buffers produced by
+/// [`flatten_vec3`]; a remainder means the packed streams and their meta got out
+/// of sync (version skew or a corrupt tile), which would otherwise surface only
+/// as silently mismatched coordinate/batch-index lengths downstream.
 pub fn unflatten_vec3(flat: &[f64]) -> Vec<Vec3> {
+    debug_assert!(
+        flat.len().is_multiple_of(3),
+        "packed vec3 stream length {} is not a multiple of 3",
+        flat.len()
+    );
     flat.chunks_exact(3)
         .map(|c| Vec3::new(c[0], c[1], c[2]))
         .collect()
@@ -928,5 +938,21 @@ mod test {
         let bin = encode_tile(vec![make_layer("l", vec![point_feature(1, 1, vec![])])]);
         let groups = parse_mvt_tile(&bin, xyz(), Vec3::ZERO, &[]);
         assert!(groups.is_empty());
+    }
+
+    #[test]
+    fn unflatten_vec3_round_trips_flatten_vec3() {
+        let coords = vec![Vec3::new(1., 2., 3.), Vec3::new(4., 5., 6.)];
+        assert_eq!(unflatten_vec3(&flatten_vec3(coords.clone())), coords);
+    }
+
+    /// A stream whose length isn't a multiple of 3 means the packed streams and
+    /// meta got out of sync; fail fast in debug instead of silently dropping the
+    /// remainder.
+    #[test]
+    #[should_panic(expected = "not a multiple of 3")]
+    #[cfg(debug_assertions)]
+    fn unflatten_vec3_rejects_truncated_stream() {
+        unflatten_vec3(&[1., 2., 3., 4.]);
     }
 }

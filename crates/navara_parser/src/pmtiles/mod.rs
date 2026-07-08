@@ -15,17 +15,21 @@ pub fn compression_to_code(c: Compression) -> u8 {
         Compression::Gzip => 1,
         Compression::Brotli => 2,
         Compression::Zstd => 3,
-        Compression::Unknown => 0,
+        // Distinct from `None`: an unknown compression must fail decompression
+        // on the other side, not be parsed as plain bytes.
+        Compression::Unknown => 255,
     }
 }
 
-/// Inverse of [`compression_to_code`]; unknown codes fall back to `None`.
+/// Inverse of [`compression_to_code`]; unrecognized codes map to `Unknown` so
+/// they are rejected by `decompress` instead of being treated as passthrough.
 pub fn compression_from_code(code: u8) -> Compression {
     match code {
+        0 => Compression::None,
         1 => Compression::Gzip,
         2 => Compression::Brotli,
         3 => Compression::Zstd,
-        _ => Compression::None,
+        _ => Compression::Unknown,
     }
 }
 
@@ -36,4 +40,38 @@ pub fn decompress_by_code(code: u8, data: Vec<u8>) -> Option<Vec<u8>> {
         return Some(data);
     }
     decompress(compression_from_code(code), &data).ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Every supported variant survives the code round trip; `Unknown` must not
+    /// collapse onto `None`, or compressed bytes would be parsed as plain data.
+    #[test]
+    fn compression_codes_round_trip() {
+        for c in [
+            Compression::None,
+            Compression::Gzip,
+            Compression::Brotli,
+            Compression::Zstd,
+            Compression::Unknown,
+        ] {
+            assert_eq!(compression_from_code(compression_to_code(c)), c);
+        }
+    }
+
+    #[test]
+    fn unrecognized_codes_map_to_unknown() {
+        assert_eq!(compression_from_code(42), Compression::Unknown);
+    }
+
+    /// An unknown compression fails decompression instead of passing the bytes
+    /// through; only code 0 is a passthrough.
+    #[test]
+    fn decompress_by_code_rejects_unknown_and_passes_through_none() {
+        let unknown = compression_to_code(Compression::Unknown);
+        assert!(decompress_by_code(unknown, vec![1, 2, 3]).is_none());
+        assert_eq!(decompress_by_code(0, vec![1, 2, 3]), Some(vec![1, 2, 3]));
+    }
 }

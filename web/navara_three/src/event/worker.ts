@@ -813,13 +813,25 @@ async function processParseMvtTile(
     return;
   }
 
-  const parseResult = new ParseMvtTileResult(
-    f64Handle,
-    f32Handle,
-    u32Handle,
-    u8Handle,
-    result.meta,
-  );
+  // The wasm-bindgen constructor deserializes `meta` and can throw (it returns
+  // Result on the Rust side). The four handles registered above are owned by
+  // nobody until the result reaches the engine, so free them before rethrowing
+  // or they stay in the BufferStore forever.
+  let parseResult: ParseMvtTileResult;
+  try {
+    parseResult = new ParseMvtTileResult(
+      f64Handle,
+      f32Handle,
+      u32Handle,
+      u8Handle,
+      result.meta,
+    );
+  } catch (err) {
+    for (const handle of [f64Handle, f32Handle, u32Handle, u8Handle]) {
+      bufHandler.remove(handle);
+    }
+    throw err;
+  }
 
   const delegatedTaskResult = DelegatedWorkerTasksResult.withParseMvtTile(
     delegator_id,
