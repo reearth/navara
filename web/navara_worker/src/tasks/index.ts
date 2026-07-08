@@ -6,7 +6,7 @@ import { getImageDataFromBlob } from "./getImageDataFromBlob";
 import { getImageDataFromImageBitmap } from "./getImageDataFromImageBitmap";
 import { upsampleQuantizedMeshTerrainMesh } from "./upsampleQuantizedMeshTerrainMesh";
 import { upsampleTerrainMesh } from "./upsampleTerrainMesh";
-import { waitWasm } from "./waitWasm";
+import { getWasmMemoryUsage, waitWasm } from "./waitWasm";
 
 /** Pre-warm worker by initializing WASM module */
 export async function warmUp(): Promise<void> {
@@ -23,6 +23,7 @@ export const commonTasks = {
   constructPolygonBatchedFeature,
   constructPolylineBatchedFeature,
   warmUp,
+  getWasmMemoryUsage,
 };
 
 export type CommonTasks = typeof commonTasks;

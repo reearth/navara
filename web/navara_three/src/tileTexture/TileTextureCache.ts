@@ -8,7 +8,7 @@ import type {
 } from "./types";
 
 export type TileTextureCacheOptions = {
-  /** Side length of the composite RTs. Fixed at 512 per design. */
+  /** Side length of the composite RTs (512 desktop / 256 mobile). */
   size: number;
   /** Builds the MRT trio. Injected so unit tests pass fakes. */
   atlasFactory: AtlasFactory;

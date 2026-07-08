@@ -1,11 +1,9 @@
-import { BufferGeometry, Cache, ImageLoader, TextureLoader } from "three";
+import { BufferGeometry, ImageLoader, TextureLoader } from "three";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { DRACOLoader as DRACODecoder } from "three/addons/loaders/DRACOLoader.js";
 import { DRACOLoader, GLTFLoader } from "three-stdlib";
 
 import { AbortableTextureLoader } from "../loaders/AbortableTextureLoader";
-
-Cache.enabled = true;
 
 export const TEXTURE_LOADER = new TextureLoader();
 export const ABORTABLE_TEXTURE_LOADER = new AbortableTextureLoader();

@@ -71,7 +71,7 @@ export const defaultAtlasFactory =
 export type TileTextureCompositorOptions = {
   renderer: WebGLRenderer;
   texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates;
-  /** Atlas RT side length. Plan fixes this at 512. */
+  /** Atlas RT side length. 512 by default; 256 on mobile to cut GPU cost 4x. */
   size?: number;
   /** Test seam: replace MRT RT creation. */
   atlasFactory?: AtlasFactory;
@@ -118,6 +118,11 @@ export class TileTextureCompositor {
   private readonly quadCamera = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
   private readonly quadMesh: Mesh;
   private readonly materialCache = new Map<string, CachedMaterial>();
+  // Vector render targets this compositor has ever rendered to. three.js
+  // allocates a render target's GL framebuffer on first setRenderTarget, so
+  // an empty slot whose target was never touched must be skipped entirely —
+  // clearing it would allocate size² × 4 bytes of GPU memory for nothing.
+  private readonly touchedVectorTargets = new WeakSet<WebGLRenderTarget>();
 
   constructor(opts: TileTextureCompositorOptions) {
     this.renderer = opts.renderer;
@@ -206,11 +211,17 @@ export class TileTextureCompositor {
       const renderTarget = renderTargets[i];
       if (!renderTarget) continue;
 
+      const slot = slots[i];
+      // An empty slot only needs a clear when the target holds stale content
+      // from a previous bake; a never-touched target has no GL storage yet
+      // and must not be render-targeted (that would allocate it).
+      if (!slot && !this.touchedVectorTargets.has(renderTarget)) continue;
+      this.touchedVectorTargets.add(renderTarget);
+
       this.renderer.setRenderTarget(renderTarget);
       this.renderer.setClearColor(0x000, 0);
       this.renderer.clear();
 
-      const slot = slots[i];
       if (slot) {
         for (const source of slot.sources) {
           const scene = this.texturizedScenes.findSceneByLayerId(

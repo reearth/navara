@@ -38,6 +38,7 @@ vi.spyOn(workerpool, "pool").mockImplementation(
           },
         );
       },
+      terminate: () => undefined,
     }) as Pool,
 );
 
