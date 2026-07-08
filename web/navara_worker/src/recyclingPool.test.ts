@@ -201,6 +201,24 @@ it("recycles after the task-count backstop even when probes stay under budget", 
   expect(pools[1].executions[0]?.method).toBe("warmUp");
 });
 
+it("recycles once a late probe settles on a slot drained by the backstop", async () => {
+  const pool = new RecyclingWorkerPool("https://example.com", 1);
+
+  // The probe from the first settle stays pending for the whole loop, so
+  // when the backstop drains the slot, the probe is the only in-flight work.
+  for (let i = 0; i < RECYCLE_AFTER_TASKS_BACKSTOP; i++) {
+    const task = pool.exec("test");
+    settleTask(pools[0]);
+    await task;
+  }
+  expect(pools[0].terminate).not.toHaveBeenCalled();
+
+  // Even an under-budget probe result must trigger the deferred recycle.
+  respondToProbe(pools[0], 1);
+  expect(pools[0].terminate).toHaveBeenCalledTimes(1);
+  expect(pools[1].executions[0]?.method).toBe("warmUp");
+});
+
 it("recycles used slots after the pool goes idle", async () => {
   const pool = new RecyclingWorkerPool("https://example.com", 2);
 

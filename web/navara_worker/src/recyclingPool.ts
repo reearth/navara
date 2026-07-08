@@ -224,6 +224,11 @@ export class RecyclingWorkerPool {
     slot.inflight++;
     const settle = () => {
       slot.inflight--;
+      // Same as the probe: if the slot drained while this warm-up was in
+      // flight, its settlement is the last task boundary, so recycle here.
+      if (!this.terminated && slot.draining && slot.inflight === 0) {
+        this.recycleSlot(slot);
+      }
     };
     // Wrapped in a native promise so that a synchronous exec failure rejects
     // instead of throwing through the recycle path.
@@ -261,7 +266,12 @@ export class RecyclingWorkerPool {
       if (this.terminated) return;
       if (overBudget) {
         slot.draining = true;
-        if (slot.inflight === 0) this.recycleSlot(slot);
+      }
+      // Also covers a slot drained by the backstop while this probe was in
+      // flight: the probe is then the last thing keeping the slot alive, so
+      // its settlement must trigger the recycle even when under budget.
+      if (slot.draining && slot.inflight === 0) {
+        this.recycleSlot(slot);
       }
     };
     try {
