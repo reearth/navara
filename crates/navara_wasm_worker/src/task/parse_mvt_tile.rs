@@ -4,6 +4,7 @@ use navara_parser::mvt::{
     LayerParseConfig, pack_parsed_mvt_groups, parse_mvt_tile as parse_mvt_tile_core,
 };
 use navara_wasm_types::{ExtentRadianF32, mvt::TransferableParsedMvtResult};
+use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
 /// Parse an MVT tile off the main thread.
@@ -46,7 +47,13 @@ pub fn parse_mvt_tile(
     };
     let packed = pack_parsed_mvt_groups(groups);
 
-    let meta = serde_wasm_bindgen::to_value(&packed.meta)?;
+    // i64/u64 property values (e.g. 64-bit feature ids) can exceed the JS
+    // safe-integer range; the default serializer errors on those, which would
+    // reject the whole tile. BigInts round-trip losslessly (the deserializer
+    // on the main-thread side accepts both Number and BigInt).
+    let meta = packed.meta.serialize(
+        &serde_wasm_bindgen::Serializer::new().serialize_large_number_types_as_bigints(true),
+    )?;
     Ok(TransferableParsedMvtResult::new(
         packed.f64_stream,
         packed.f32_stream,

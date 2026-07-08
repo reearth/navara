@@ -24,7 +24,7 @@ use navara_tile_component::{
 };
 use navara_window::Window;
 use navara_worker::{
-    WorkerTaskCompleted,
+    WorkerTaskCompleted, WorkerTaskResultConsumed,
     construct_terrain_mesh::{
         ConstructTerrainMeshMarker, ConstructTerrainMeshParameters, ConstructTerrainMeshResult,
         ConstructTerrainMeshWorkerTaskBundle,
@@ -687,7 +687,11 @@ pub fn transfer_mesh(
                 };
 
             rendered_tile.terrain_mesh_upsampler = None;
-            commands.entity(terrain_mesh_upsampler_id).insert(Deleted);
+            // The result's handles move into the tile mesh below, so mark the
+            // task consumed or its `on_remove` hook would free live buffers.
+            commands
+                .entity(terrain_mesh_upsampler_id)
+                .insert((Deleted, WorkerTaskResultConsumed));
 
             let min_height = terrain_mesh_upsampler.min_height;
             let max_height = terrain_mesh_upsampler.max_height;
@@ -790,7 +794,11 @@ pub fn transfer_mesh(
             };
 
         rendered_tile.terrain_mesh_constructor = None;
-        commands.entity(terrain_mesh_constructor_id).insert(Deleted);
+        // The result's handles move into the tile mesh below, so mark the
+        // task consumed or its `on_remove` hook would free live buffers.
+        commands
+            .entity(terrain_mesh_constructor_id)
+            .insert((Deleted, WorkerTaskResultConsumed));
 
         let min_height = terrain_mesh_constructor.min_height;
         let max_height = terrain_mesh_constructor.max_height;

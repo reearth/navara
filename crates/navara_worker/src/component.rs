@@ -9,6 +9,14 @@ pub struct WorkerTaskDelegateeMarker(pub Entity);
 #[derive(Component)]
 pub struct WorkerTaskCompleted;
 
+/// Marks a task result whose BufferStore handles were transferred to their
+/// final owner (e.g. a tile mesh) by the consuming system. Result components
+/// whose `on_remove` hook frees unconsumed buffers skip entities carrying this
+/// marker, so consumers that take over handle ownership must insert it
+/// together with `Deleted`.
+#[derive(Component)]
+pub struct WorkerTaskResultConsumed;
+
 #[derive(Bundle)]
 pub struct WorkerTaskBundle<Marker: Component, Parameters: Component> {
     pub marker: Marker,

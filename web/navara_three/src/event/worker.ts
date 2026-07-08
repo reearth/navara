@@ -747,6 +747,21 @@ async function processParseMvtTile(
 ) {
   const { buf: bufHandler, workerTaskHandler, workerPoolPromises } = ctx;
 
+  // A parse that fails after dispatch must still complete the task: a
+  // delegator that never completes stays Requested forever and permanently
+  // occupies one of the engine's pending parse slots. Completing with an
+  // empty result finalizes the tile with zero features, matching the
+  // synchronous path's behavior for an unparseable tile.
+  const completeWithEmptyResult = () => {
+    workerTaskHandler.triggerWorkerTaskCompleted(
+      bits,
+      DelegatedWorkerTasksResult.withParseMvtTile(
+        delegator_id,
+        ParseMvtTileResult.empty(),
+      ),
+    );
+  };
+
   // Move the pbf out of the BufferStore as we hand a copy to the worker: the
   // main thread never reuses it (geometry comes back from the worker), so this
   // avoids keeping the tile's bytes resident on the main thread for the whole
@@ -755,6 +770,7 @@ async function processParseMvtTile(
   const bytes = bufHandler.removeU8(params.pbf_handle);
   if (!bytes) {
     params.free();
+    completeWithEmptyResult();
     return;
   }
 
@@ -775,10 +791,13 @@ async function processParseMvtTile(
     result = await promise;
   } catch (err) {
     // The pool rejects the promise when the task is cancelled (tile evicted
-    // while parsing); there is nothing to deliver then. Other errors keep
-    // propagating, but only after the cleanup in `finally` has run.
+    // while parsing); there is nothing to deliver then — the engine already
+    // marked the task Deleted. Any other worker failure still completes the
+    // task, with zero features.
     if (err instanceof Error && err.name === "CancellationError") return;
-    throw err;
+    console.error("Failed to parse MVT tile in worker:", err);
+    completeWithEmptyResult();
+    return;
   } finally {
     // Run on every path (resolve, cancel, worker error) so the boundary
     // params object is never leaked.
@@ -810,13 +829,14 @@ async function processParseMvtTile(
         bufHandler.remove(handle);
       }
     }
+    completeWithEmptyResult();
     return;
   }
 
   // The wasm-bindgen constructor deserializes `meta` and can throw (it returns
   // Result on the Rust side). The four handles registered above are owned by
-  // nobody until the result reaches the engine, so free them before rethrowing
-  // or they stay in the BufferStore forever.
+  // nobody until the result reaches the engine, so free them on failure or
+  // they stay in the BufferStore forever.
   let parseResult: ParseMvtTileResult;
   try {
     parseResult = new ParseMvtTileResult(
@@ -830,7 +850,9 @@ async function processParseMvtTile(
     for (const handle of [f64Handle, f32Handle, u32Handle, u8Handle]) {
       bufHandler.remove(handle);
     }
-    throw err;
+    console.error("Failed to deserialize MVT tile meta:", err);
+    completeWithEmptyResult();
+    return;
   }
 
   const delegatedTaskResult = DelegatedWorkerTasksResult.withParseMvtTile(

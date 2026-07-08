@@ -74,6 +74,26 @@ impl ParseMvtTileResult {
             meta,
         })
     }
+
+    /// A zero-feature placeholder for completing the task lifecycle when the
+    /// JS side fails after dispatch (worker error, BufferStore exhaustion,
+    /// corrupt meta). The sentinel handles resolve to empty streams
+    /// (`take_streams` falls back to empty vecs; `BufferStore::remove` on an
+    /// absent handle is a no-op) and the empty meta finalizes zero groups, so
+    /// the delegator is torn down normally instead of staying `Requested`
+    /// forever and occupying one of the engine's pending parse slots.
+    #[wasm_bindgen(js_name = empty)]
+    pub fn empty() -> ParseMvtTileResult {
+        // BufferStore handles start at 1, so a negative value is never live.
+        const INVALID_HANDLE: i32 = -1;
+        Self {
+            f64_handle: INVALID_HANDLE,
+            f32_handle: INVALID_HANDLE,
+            u32_handle: INVALID_HANDLE,
+            u8_handle: INVALID_HANDLE,
+            meta: ParsedMvtTileMeta::default(),
+        }
+    }
 }
 
 impl From<ParseMvtTileResult> for navara_worker::parse_mvt_tile::ParseMvtTileResult {
@@ -97,5 +117,34 @@ impl<'a> From<&'a navara_worker::parse_mvt_tile::ParseMvtTileResult> for ParseMv
             u8_handle: v.u8_handle,
             meta: v.meta.clone(),
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use navara_buffer_store::BufferStore;
+
+    use super::ParseMvtTileResult;
+
+    /// The failure placeholder must flow through the engine's finalize path
+    /// without side effects: its sentinel handles resolve to empty streams,
+    /// free nothing that is live, and its meta finalizes zero groups.
+    #[test]
+    fn it_should_resolve_the_failure_placeholder_to_empty_streams() {
+        let mut buf = BufferStore::new();
+        let live = buf.new_f64(vec![1.0]);
+
+        let result: navara_worker::parse_mvt_tile::ParseMvtTileResult =
+            ParseMvtTileResult::empty().into();
+        let (f64s, f32s, u32s, u8s) = result.take_streams(&mut buf);
+
+        assert!(f64s.is_empty());
+        assert!(f32s.is_empty());
+        assert!(u32s.is_empty());
+        assert!(u8s.is_empty());
+        assert!(result.meta.headers.is_empty());
+        assert!(result.meta.layer_properties.is_empty());
+        // Sentinel handles must never collide with a live entry.
+        assert!(buf.get_f64(&live).is_some());
     }
 }

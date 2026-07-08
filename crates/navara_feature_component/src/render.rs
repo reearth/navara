@@ -361,6 +361,16 @@ impl TransferablePolylineGeometry {
     }
 
     pub fn remove_from_buf(&mut self, buf: &mut BufferStore, batch_table: &mut BatchTable) {
+        for id in self.remove_buffers(buf) {
+            batch_table.remove(&id);
+        }
+    }
+
+    /// Free the geometry's BufferStore entries and return the global batch ids
+    /// found in the batch_ids attribute. The caller must remove the returned
+    /// ids from the `BatchTable`; the split lets component `on_remove` hooks
+    /// free the two resources without borrowing them at the same time.
+    pub fn remove_buffers(&mut self, buf: &mut BufferStore) -> Vec<u32> {
         buf.remove(&self.position.data);
         if let Some(position_high) = &self.position_high {
             buf.remove(&position_high.data);
@@ -397,19 +407,19 @@ impl TransferablePolylineGeometry {
                 .right_normal_and_texture_coordinate_normalization_y
                 .data,
         );
-        if let Some(batch_ids) = &self.batch_ids {
-            let Some(vec_ids) = buf.remove_f32(&batch_ids.data) else {
-                return;
-            };
-
+        let mut removed_batch_ids = Vec::new();
+        if let Some(batch_ids) = &self.batch_ids
+            && let Some(vec_ids) = buf.remove_f32(&batch_ids.data)
+        {
             for i in (0..vec_ids.len()).step_by(batch_ids.size as usize) {
-                batch_table.remove(&(vec_ids[i] as u32));
+                removed_batch_ids.push(vec_ids[i] as u32);
             }
         }
         if let Some(batch_index) = &self.batch_index {
             buf.remove(&batch_index.data);
         }
         buf.remove(&self.indices);
+        removed_batch_ids
     }
 }
 
@@ -488,6 +498,16 @@ impl TransferablePolygonGeometry {
 
 impl TransferablePolygonGeometry {
     pub fn remove_from_buf(&mut self, buf: &mut BufferStore, batch_table: &mut BatchTable) {
+        for id in self.remove_buffers(buf) {
+            batch_table.remove(&id);
+        }
+    }
+
+    /// Free the geometry's BufferStore entries and return the global batch ids
+    /// found in the batch_ids attribute. The caller must remove the returned
+    /// ids from the `BatchTable`; the split lets component `on_remove` hooks
+    /// free the two resources without borrowing them at the same time.
+    pub fn remove_buffers(&mut self, buf: &mut BufferStore) -> Vec<u32> {
         if let Some(position) = &self.position {
             buf.remove(&position.data);
         }
@@ -505,18 +525,18 @@ impl TransferablePolygonGeometry {
         if let Some(normal) = &self.scale_normal_and_cap {
             buf.remove(&normal.data);
         }
-        if let Some(batch_ids) = &self.batch_ids {
-            let Some(vec_ids) = buf.remove_f32(&batch_ids.data) else {
-                return;
-            };
-
+        let mut removed_batch_ids = Vec::new();
+        if let Some(batch_ids) = &self.batch_ids
+            && let Some(vec_ids) = buf.remove_f32(&batch_ids.data)
+        {
             for i in (0..vec_ids.len()).step_by(batch_ids.size as usize) {
-                batch_table.remove(&(vec_ids[i] as u32));
+                removed_batch_ids.push(vec_ids[i] as u32);
             }
         }
         if let Some(batch_index) = &self.batch_index {
             buf.remove(&batch_index.data);
         }
+        removed_batch_ids
     }
 }
 
