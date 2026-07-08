@@ -78,10 +78,13 @@ attribution.dispose();
 ## コンストラクタ
 
 ```typescript
-new AttributionPlugin(options?: { style?: AttributionStyle });
+new AttributionPlugin(options?: {
+  style?: AttributionStyle;
+  position?: "bottom-left" | "bottom-right";
+});
 ```
 
-`options.style` は初期の色を設定します（[AttributionStyle](#attributionstyle) を参照。省略すると既定値）。プラグインは `view.init()` の**前に** `view.addPlugin()` で登録してください。
+`options.style` は初期の色を設定します（[AttributionStyle](#attributionstyle) を参照。省略すると既定値）。`options.position` は ⓘ トリガーとクレジットカードを置く下部の角を選びます（既定 `"bottom-right"`）。右下がページ独自の HUD などで埋まっている場合は `"bottom-left"` を使ってください。常時表示のロゴ枠はどちらのモードでも左下のままです。プラグインは `view.init()` の**前に** `view.addPlugin()` で登録してください。
 
 ## メソッド
 
@@ -91,7 +94,7 @@ new AttributionPlugin(options?: { style?: AttributionStyle });
 show(items: AttributionItem[]): void
 ```
 
-指定した出典を表示します。再度呼ぶと内容を置き換えるため、表示中のデータが変わったときにクレジットを更新できます。`creditLayerId` を設定したソースは、そのレイヤーのフィーチャー単位のクレジットが動的に追跡されます。レイヤーは id から view 内で解決されるため、別途渡す必要はありません。
+指定した出典を表示します。再度呼ぶと内容を置き換えるため、表示中のデータが変わったときにクレジットを更新できます。`creditLayerId` を設定したソースは、そのレイヤーのフィーチャー単位のクレジットが動的に追跡されます。レイヤーは id から view 内で解決されるため、別途渡す必要はありません。完全に重複するエントリは除外されるため、同じクレジットを共有する複数のデータソースは 1 行にまとまります。
 
 ### hide()
 

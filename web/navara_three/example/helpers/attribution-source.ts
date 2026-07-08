@@ -13,7 +13,7 @@ import type { Dataset } from "./constants";
  *
  * `attribution` is required at the type level: a dataset without it (e.g. an
  * `attributionHtml`-only one) is rejected at compile time rather than rendering
- * a blank top-level entry.
+ * a blank top-level entry — use {@link datasetToHtmlSource} for those.
  */
 export const datasetToSource = (
   dataset: Dataset & { attribution: string },

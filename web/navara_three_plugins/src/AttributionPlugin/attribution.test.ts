@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import {
   aggregateCredits,
   appendSanitizedHtml,
+  dedupeAttributionItems,
   isAttributionHtml,
   matchesZoom,
   safeHref,
@@ -175,5 +176,50 @@ describe("appendSanitizedHtml", () => {
     expect(el.querySelectorAll("a")).toHaveLength(1);
     expect(el.querySelector("a")?.getAttribute("href")).toBe("https://x.test");
     expect(el.querySelector("a")?.textContent).toBe("https://y.test");
+  });
+});
+
+describe("dedupeAttributionItems", () => {
+  it("drops exact-duplicate sources, keeping first-seen order", () => {
+    const overture = {
+      attribution: "© OpenStreetMap contributors, © Overture Maps Foundation",
+      url: "https://overturemaps.org",
+    };
+    expect(
+      dedupeAttributionItems([
+        { ...overture },
+        { ...overture },
+        { attribution: "© Overture Maps Foundation" },
+      ]),
+    ).toEqual([overture, { attribution: "© Overture Maps Foundation" }]);
+  });
+
+  it("keeps sources that differ only in creditLayerId", () => {
+    const items = [
+      { attribution: "Overture", creditLayerId: "buildings" },
+      { attribution: "Overture", creditLayerId: "divisions" },
+    ];
+    expect(dedupeAttributionItems(items)).toEqual(items);
+  });
+
+  it("keeps sources that differ only in zoom-banded children", () => {
+    const items = [
+      { attribution: "GSI", children: [{ attribution: "photo", minZoom: 14 }] },
+      { attribution: "GSI", children: [{ attribution: "photo", minZoom: 15 }] },
+    ];
+    expect(dedupeAttributionItems(items)).toEqual(items);
+  });
+
+  it("dedups identical HTML credits but keeps distinct ones", () => {
+    expect(
+      dedupeAttributionItems([
+        { attributionHtml: "<a>x</a>" },
+        { attributionHtml: "<a>x</a>" },
+        { attributionHtml: "<a>y</a>" },
+      ]),
+    ).toEqual([
+      { attributionHtml: "<a>x</a>" },
+      { attributionHtml: "<a>y</a>" },
+    ]);
   });
 });

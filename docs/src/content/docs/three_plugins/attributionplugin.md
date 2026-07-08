@@ -78,10 +78,13 @@ attribution.dispose();
 ## Constructor
 
 ```typescript
-new AttributionPlugin(options?: { style?: AttributionStyle });
+new AttributionPlugin(options?: {
+  style?: AttributionStyle;
+  position?: "bottom-left" | "bottom-right";
+});
 ```
 
-`options.style` sets the initial colors (see [AttributionStyle](#attributionstyle)); omit it for the defaults. Register the plugin with `view.addPlugin()` **before** `view.init()`.
+`options.style` sets the initial colors (see [AttributionStyle](#attributionstyle)); omit it for the defaults. `options.position` chooses the bottom corner for the ⓘ trigger and its credit card (default `"bottom-right"`); use `"bottom-left"` when the bottom-right corner is occupied, e.g. a page with its own HUD there. The always-visible logo frame stays bottom-left in both modes. Register the plugin with `view.addPlugin()` **before** `view.init()`.
 
 ## Methods
 
@@ -91,7 +94,7 @@ new AttributionPlugin(options?: { style?: AttributionStyle });
 show(items: AttributionItem[]): void
 ```
 
-Displays the given attributions. Calling it again replaces the content, so you can update credits when the displayed data changes. Sources that set `creditLayerId` have that layer's per-feature credits tracked dynamically — the layer is resolved from the view by id, so you don't pass it separately.
+Displays the given attributions. Calling it again replaces the content, so you can update credits when the displayed data changes. Sources that set `creditLayerId` have that layer's per-feature credits tracked dynamically — the layer is resolved from the view by id, so you don't pass it separately. Exact-duplicate entries are dropped, so several data sources that share one credit render a single line.
 
 ### hide()
 

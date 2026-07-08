@@ -96,6 +96,54 @@ export function isAttributionHtml(
 }
 
 /**
+ * Stable identity of an item for deduplication: everything that affects how it
+ * renders. Sources that differ in `creditLayerId` or `children` produce
+ * different keys, so distinct per-layer / zoom-banded credits are preserved.
+ */
+function attributionItemKey(item: AttributionItem): string {
+  if (isAttributionHtml(item)) {
+    return JSON.stringify(["html", item.attributionHtml]);
+  }
+  // Explicit, ordered field list so JSON.stringify yields a collision-free key.
+  return JSON.stringify([
+    "src",
+    item.attribution,
+    item.url ?? null,
+    item.logo ?? null,
+    item.logoUrl ?? null,
+    item.creditLayerId ?? null,
+    (item.children ?? []).map((c) => [
+      c.attribution,
+      c.minZoom ?? null,
+      c.maxZoom ?? null,
+    ]),
+  ]);
+}
+
+/**
+ * Drop exact-duplicate entries, preserving first-seen order. Two items are
+ * duplicates only when they would render identically (same text, link, logo,
+ * tracked layer, and zoom-banded children).
+ *
+ * Callers often list several distinct data sources that happen to share one
+ * credit (e.g. multiple Overture themes); without this the same line would
+ * render once per source.
+ */
+export function dedupeAttributionItems(
+  items: AttributionItem[],
+): AttributionItem[] {
+  const seen = new Set<string>();
+  const result: AttributionItem[] = [];
+  for (const item of items) {
+    const key = attributionItemKey(item);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(item);
+  }
+  return result;
+}
+
+/**
  * Aggregate `;`-separated credit strings (e.g. a 3D-tile's `asset.copyright`)
  * into a deduplicated list, ordered by frequency (desc) with a deterministic
  * code-point tie-break, so the order is stable across updates and environments.
