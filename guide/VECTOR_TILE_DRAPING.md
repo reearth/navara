@@ -132,7 +132,7 @@ flowchart TD
   C --> D{"self or finer<br/>descendants rendered?"}
   D -->|"yes"| E["use them<br/>(vector rendered = or finer)"]
   D -->|"no"| F["use recorded ancestor<br/>(ready_parent_tile_handle)"]
-  B -->|"no"| G["walk UP to nearest existing tile,<br/>use its recorded source<br/>(vector rendered coarser)"]
+  B -->|"no"| G["walk UP to the nearest ancestor<br/>with a bakeable recorded source<br/>(vector rendered coarser)"]
 ```
 
 - **Rendered self** → the matching tile.
@@ -143,6 +143,16 @@ flowchart TD
 - **Coarser ancestor** (children not ready, or the vector rendered shallower):
   the tile's recorded `ready_parent_tile_handle` — the "show the parent while
   children prepare" fallback.
+
+The recorded field is trusted only as far as it can be: a source is used only
+while it still records *itself* as its own source (its features are active); a
+stale pointer — the source deactivated or was evicted on a path the traverse
+skipped that frame — is rejected. And a node that exists but never recorded a
+source at all (an early-returned traverse path, typically tiles past
+`overscaled_max_zoom` under deeply upsampled terrain) is climbed *past*, not
+stopped at. Both rules keep the walk-up landing on the nearest genuinely
+bakeable ancestor; without them such nodes swallowed the fallback and left the
+terrain tile blank.
 
 The descendant fan-out is bounded by `VECTOR_DRAPE_MAX_SOURCES` (all sources for a
 layer draw into that layer's one render target, so the bake cost is bounded).
