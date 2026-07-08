@@ -40,7 +40,6 @@ export type SdfTextBaseProps = {
   // Material properties (set directly on material, not via uniforms)
   depthTest?: boolean;
   transparent?: boolean;
-  depthWrite?: boolean;
 
   // External uniform refs / values (may change over time)
   rtcCenter?: [number, number, number];
@@ -75,7 +74,6 @@ export type SdfTextBaseState = Readonly<{
   // Material properties
   depthTest: boolean;
   transparent: boolean;
-  depthWrite: boolean;
 }>;
 
 /**

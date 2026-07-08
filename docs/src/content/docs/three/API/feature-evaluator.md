@@ -143,7 +143,7 @@ The callback function can return an object containing the following properties:
 | `height` | `number` | Feature height (meters) |
 | `extrudedHeight` | `number` | Polygon extrusion height (meters) |
 | `text` | `string` | Label text content (for text/label features) |
-| `width` | `number` | Line width (meters, for polyline features) |
+| `width` | `number` | Line width (pixels, for polyline features) |
 | `size` | `number` | Point/text size (meters or pixels, for point/text features) |
 | `opacity` | `number` | Feature opacity, range 0.0-1.0 (for polygons/points/billboards/models/text) |
 
@@ -262,7 +262,7 @@ type EvaluatedValue = {
   height?: number;
   /** Label text content */
   text?: string;
-  /** Line width (meters, for polyline features) */
+  /** Line width (pixels, for polyline features) */
   width?: number;
   /** Point/text size (meters or pixels, for point/text features) */
   size?: number;

@@ -325,10 +325,6 @@ pub struct TextMaterial {
     pub opacity: Option<f32>,
     /// Enable transparency and alpha blending
     pub transparent: Option<bool>,
-    /// Enable writing to depth buffer
-    #[wasm_bindgen(js_name = depthWrite)]
-    #[serde(rename = "depthWrite")]
-    pub depth_write: Option<bool>,
 
     /// Maximum line width in ems (multiples of `size`) before text wraps at
     /// word boundaries. `0.0` (the default) disables wrapping; explicit `\n`
@@ -381,7 +377,6 @@ impl From<TextMaterial> for navara_material::TextMaterial {
 
             opacity: val.opacity.unwrap_or(default.opacity),
             transparent: val.transparent.unwrap_or(default.transparent),
-            depth_write: val.depth_write.unwrap_or(default.depth_write),
 
             max_width: val.max_width.unwrap_or(default.max_width),
             line_height: val.line_height.unwrap_or(default.line_height),
@@ -418,7 +413,6 @@ impl<'a> From<&'a navara_material::TextMaterial> for TextMaterial {
 
             opacity: Some(value.opacity),
             transparent: Some(value.transparent),
-            depth_write: Some(value.depth_write),
 
             max_width: Some(value.max_width),
             line_height: Some(value.line_height),
@@ -459,7 +453,6 @@ impl TextMaterial {
 
             opacity: self.opacity.unwrap_or(other.opacity),
             transparent: self.transparent.unwrap_or(other.transparent),
-            depth_write: self.depth_write.unwrap_or(other.depth_write),
 
             max_width: self.max_width.unwrap_or(other.max_width),
             line_height: self.line_height.unwrap_or(other.line_height),
@@ -514,6 +507,8 @@ pub struct PolylineMaterial {
     pub emissive_color: Option<u32>,
     /// Enable transparency and alpha blending
     pub transparent: Option<bool>,
+    /// Opacity value
+    pub opacity: Option<f32>,
     /// Enable writing to depth buffer
     #[wasm_bindgen(js_name = depthWrite)]
     #[serde(rename = "depthWrite")]
@@ -551,6 +546,7 @@ impl PolylineMaterial {
             emissive_intensity: None,
             emissive_color: None,
             transparent: None,
+            opacity: None,
             depth_write: None,
         }
     }
@@ -580,6 +576,7 @@ impl PolylineMaterial {
             emissive_intensity: self.emissive_intensity.or(other.emissive_intensity),
             emissive_color: self.emissive_color.or(other.emissive_color),
             transparent: self.transparent.unwrap_or(other.transparent),
+            opacity: self.opacity.unwrap_or(other.opacity),
             depth_write: self.depth_write.unwrap_or(other.depth_write),
         }
     }
@@ -603,6 +600,7 @@ impl From<PolylineMaterial> for navara_material::PolylineMaterial {
             emissive_intensity: val.emissive_intensity.or(default.emissive_intensity),
             emissive_color: val.emissive_color.or(default.emissive_color),
             transparent: val.transparent.unwrap_or(default.transparent),
+            opacity: val.opacity.unwrap_or(default.opacity),
             depth_write: val.depth_write.unwrap_or(default.depth_write),
         }
     }
@@ -624,6 +622,7 @@ impl<'a> From<&'a navara_material::PolylineMaterial> for PolylineMaterial {
             emissive_intensity: value.emissive_intensity,
             emissive_color: value.emissive_color,
             transparent: Some(value.transparent),
+            opacity: Some(value.opacity),
             depth_write: Some(value.depth_write),
         }
     }
@@ -646,6 +645,7 @@ impl From<navara_material::PolylineMaterial> for PolylineMaterial {
             emissive_intensity: value.emissive_intensity,
             emissive_color: value.emissive_color,
             transparent: Some(value.transparent),
+            opacity: Some(value.opacity),
             depth_write: Some(value.depth_write),
         }
     }
@@ -1130,6 +1130,8 @@ pub struct ModelMaterial {
     pub emissive_color: Option<u32>,
     /// Enable transparency and alpha blending
     pub transparent: Option<bool>,
+    /// Opacity value
+    pub opacity: Option<f32>,
     /// Enable writing to depth buffer
     #[wasm_bindgen(js_name = depthWrite)]
     #[serde(rename = "depthWrite")]
@@ -1175,6 +1177,7 @@ impl From<ModelMaterial> for navara_material::ModelMaterial {
             emissive_intensity: val.emissive_intensity.or(default.emissive_intensity),
             emissive_color: val.emissive_color.or(default.emissive_color),
             transparent: val.transparent.unwrap_or(default.transparent),
+            opacity: val.opacity.unwrap_or(default.opacity),
             depth_write: val.depth_write.unwrap_or(default.depth_write),
         }
     }
@@ -1216,6 +1219,7 @@ impl<'a> From<&'a navara_material::ModelMaterial> for ModelMaterial {
             emissive_intensity: value.emissive_intensity,
             emissive_color: value.emissive_color,
             transparent: Some(value.transparent),
+            opacity: Some(value.opacity),
             depth_write: Some(value.depth_write),
         }
     }
@@ -1262,6 +1266,7 @@ impl ModelMaterial {
             emissive_intensity: self.emissive_intensity.or(other.emissive_intensity),
             emissive_color: self.emissive_color.or(other.emissive_color),
             transparent: self.transparent.unwrap_or(other.transparent),
+            opacity: self.opacity.unwrap_or(other.opacity),
             depth_write: self.depth_write.unwrap_or(other.depth_write),
         }
     }

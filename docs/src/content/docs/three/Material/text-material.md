@@ -141,24 +141,6 @@ import { Color } from "@navara/three";
 }
 ```
 
-### depthWrite
-
-**Type:** `boolean | undefined`
-
-**Description:** Enables writing to the depth buffer. For SDF text, disabling `depthWrite` may reintroduce outline overlap artifacts; set to `false` only if you accept that tradeoff for improved transparency blending.
-
-**Default:** `true`
-
-**Example:**
-
-```typescript
-{
-  text: {
-    depthWrite: false
-  }
-}
-```
-
 ### font
 
 **Type:** `string | undefined`

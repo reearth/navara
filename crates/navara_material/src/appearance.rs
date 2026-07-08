@@ -207,8 +207,6 @@ pub struct TextMaterial {
     pub opacity: f32,
     /// Enable transparency and alpha blending
     pub transparent: bool,
-    /// Enable writing to depth buffer (default: true; set false for transparent materials)
-    pub depth_write: bool,
 
     /// Maximum line width in ems (multiples of `size`) before text wraps at
     /// word boundaries. `0.0` (the default) disables wrapping; explicit `\n`
@@ -252,7 +250,6 @@ impl Default for TextMaterial {
 
             opacity: 1.0,
             transparent: true,
-            depth_write: true,
 
             max_width: 0.0,
             line_height: 1.0,
@@ -285,6 +282,8 @@ pub struct PolylineMaterial {
     pub emissive_color: Option<u32>,
     /// Enable transparency and alpha blending
     pub transparent: bool,
+    /// Opacity value
+    pub opacity: f32,
     /// Enable writing to depth buffer
     pub depth_write: bool,
 }
@@ -307,6 +306,7 @@ impl Default for PolylineMaterial {
             emissive_intensity: None,
             emissive_color: None,
             transparent: false,
+            opacity: 1.0,
             depth_write: true,
         }
     }
@@ -460,6 +460,8 @@ pub struct ModelMaterial {
     pub emissive_color: Option<u32>,
     /// Enable transparency and alpha blending
     pub transparent: bool,
+    /// Opacity value
+    pub opacity: f32,
     /// Enable writing to depth buffer
     pub depth_write: bool,
 }
@@ -501,6 +503,7 @@ impl Default for ModelMaterial {
             emissive_intensity: None,
             emissive_color: None,
             transparent: false,
+            opacity: 1.0,
             depth_write: true,
         }
     }

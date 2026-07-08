@@ -141,24 +141,6 @@ import { Color } from "@navara/three";
 }
 ```
 
-### depthWrite
-
-**Type:** `boolean | undefined`
-
-**Description:** 深度バッファへの書き込みを有効にします。SDF テキストでは `depthWrite` を `false` にするとアウトラインの重なり補正が効かなくなる可能性があります。透明度ブレンディングを優先してそのトレードオフを許容する場合のみ `false` を設定してください。
-
-**Default:** `true`
-
-**Example:**
-
-```typescript
-{
-  text: {
-    depthWrite: false
-  }
-}
-```
-
 ### font
 
 **Type:** `string | undefined`

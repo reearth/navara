@@ -292,7 +292,6 @@ export class SDFTextMesh
         backgroundOutlineWidth: material.borderWidth ?? 0.1,
         depthTest: material.depthTest ?? true,
         transparent: material.transparent ?? true,
-        depthWrite: material.depthWrite ?? true,
         rtcCenter: [transform.tx, transform.ty, transform.tz],
       },
     });
@@ -711,14 +710,6 @@ export class SDFTextMesh
       const nextTransparent = material.transparent;
       if (nextTransparent !== state.transparent) {
         baseProps.transparent = nextTransparent;
-        hasUpdate = true;
-      }
-    }
-
-    if (material.depthWrite !== undefined) {
-      const nextDepthWrite = material.depthWrite;
-      if (nextDepthWrite !== state.depthWrite) {
-        baseProps.depthWrite = nextDepthWrite;
         hasUpdate = true;
       }
     }

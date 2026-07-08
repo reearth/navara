@@ -18,6 +18,7 @@ export type ModelBaseProps = {
   roughness?: number;
 
   transparent?: boolean;
+  opacity?: number;
   depthWrite?: boolean;
 
   // Emissive (for selective effects)

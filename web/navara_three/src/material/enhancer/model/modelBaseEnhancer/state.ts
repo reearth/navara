@@ -7,6 +7,7 @@ export const DEFAULT_BASE_PROPS: Required<
   metalness: 0,
   roughness: 0,
   transparent: false,
+  opacity: 1.0,
   depthWrite: true,
   emissiveColor: 0,
   emissiveIntensity: 0,

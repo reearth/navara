@@ -359,6 +359,7 @@ export class ModelMesh
         emissiveColor: material.emissiveColor,
         emissiveIntensity: material.emissiveIntensity,
         transparent: material.transparent,
+        opacity: material.opacity,
         depthWrite: material.depthWrite,
         effectIdsMask:
           this.ctx.viewContext.selectiveEffectRegistry?.computeMask(

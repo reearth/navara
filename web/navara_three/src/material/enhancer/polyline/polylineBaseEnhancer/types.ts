@@ -16,6 +16,7 @@ export type PolylineBaseProps = {
   color?: number;
 
   transparent?: boolean;
+  opacity?: number;
   depthWrite?: boolean;
 
   // Height/width

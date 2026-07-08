@@ -12,6 +12,7 @@ export const DEFAULT_BASE_PROPS: Required<
 > = {
   color: 0xffffff,
   transparent: false,
+  opacity: 1.0,
   depthWrite: true,
   addHeight: 0,
   width: 1,

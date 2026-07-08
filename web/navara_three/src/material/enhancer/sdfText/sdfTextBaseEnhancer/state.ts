@@ -32,7 +32,6 @@ export const DEFAULT_BASE_PROPS: Required<
   pickable: false,
   depthTest: true,
   transparent: true,
-  depthWrite: true,
 };
 
 /** Default state derived from DEFAULT_BASE_PROPS */
@@ -57,7 +56,6 @@ export const DEFAULT_BASE_STATE: SdfTextBaseState = {
   pickable: DEFAULT_BASE_PROPS.pickable,
   depthTest: DEFAULT_BASE_PROPS.depthTest,
   transparent: DEFAULT_BASE_PROPS.transparent,
-  depthWrite: DEFAULT_BASE_PROPS.depthWrite,
 };
 
 /**
@@ -105,6 +103,5 @@ export const updateState = (
     pickable: props.pickable ?? currentState.pickable,
     depthTest: props.depthTest ?? currentState.depthTest,
     transparent: props.transparent ?? currentState.transparent,
-    depthWrite: props.depthWrite ?? currentState.depthWrite,
   };
 };

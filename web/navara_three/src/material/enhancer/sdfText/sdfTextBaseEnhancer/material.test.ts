@@ -9,13 +9,11 @@ describe("sdfTextBaseEnhancer/material", () => {
       const material = new ShaderMaterial();
       material.depthTest = false;
       material.transparent = true;
-      material.depthWrite = false;
 
       updateMaterialProps(material, {});
 
       expect(material.depthTest).toBe(false);
       expect(material.transparent).toBe(true);
-      expect(material.depthWrite).toBe(false);
     });
 
     it("should update depthTest when provided", () => {
@@ -32,14 +30,6 @@ describe("sdfTextBaseEnhancer/material", () => {
 
       updateMaterialProps(material, { transparent: true });
       expect(material.transparent).toBe(true);
-    });
-
-    it("should update depthWrite when provided", () => {
-      const material = new ShaderMaterial();
-      material.depthWrite = true;
-
-      updateMaterialProps(material, { depthWrite: false });
-      expect(material.depthWrite).toBe(false);
     });
   });
 });
