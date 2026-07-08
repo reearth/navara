@@ -16,32 +16,33 @@ export class ReturnedConstructedTerrainMeshLike implements RemoveFreeRecursively
   skirt_vertices: Float32Array | undefined;
   skirt_uvs: Float32Array | undefined;
   skirt_indices: Uint32Array | undefined;
-  skirt_indices_to_edge: Uint32Array | undefined;
   skirt_normals: Float32Array | undefined;
   watermask: Uint8Array | undefined;
 
+  // The transfer* methods return arrays copied out of WASM memory (owned by
+  // JS, backed by their own ArrayBuffer), so they are retained and transferred
+  // as-is — a further copy (`.slice()`) would be redundant.
   constructor(t: ReturnedConstructedTerrainMesh) {
-    this.vertices = t.transferVertices().slice();
-    this.uvs = t.transferUvs().slice();
-    this.indices = t.transferIndices().slice();
-    this.heights = t.transferHeights().slice();
+    this.vertices = t.transferVertices();
+    this.uvs = t.transferUvs();
+    this.indices = t.transferIndices();
+    this.heights = t.transferHeights();
     this.max_height = t.max_height;
     this.min_height = t.min_height;
     this.rtc_translation = t.rtc_translation
       ? new Vec3Like(t.rtc_translation)
       : undefined;
     if (t.hasNormals()) {
-      this.normals = t.transferNormals()?.slice();
+      this.normals = t.transferNormals();
     }
     if (t.hasSkirt()) {
-      this.skirt_vertices = t.transferSkirtVertices()?.slice();
-      this.skirt_uvs = t.transferSkirtUvs()?.slice();
-      this.skirt_indices = t.transferSkirtIndices()?.slice();
-      this.skirt_indices_to_edge = t.transferSkirtIndicesToEdge()?.slice();
-      this.skirt_normals = t.transferSkirtNormals()?.slice();
+      this.skirt_vertices = t.transferSkirtVertices();
+      this.skirt_uvs = t.transferSkirtUvs();
+      this.skirt_indices = t.transferSkirtIndices();
+      this.skirt_normals = t.transferSkirtNormals();
     }
     if (t.hasWatermask()) {
-      this.watermask = t.transferWatermask()?.slice();
+      this.watermask = t.transferWatermask();
     }
   }
 
@@ -69,9 +70,6 @@ export class ReturnedConstructedTerrainMeshLike implements RemoveFreeRecursively
   transferSkirtIndices(): Uint32Array | undefined {
     throw new Error();
   }
-  transferSkirtIndicesToEdge(): Uint32Array | undefined {
-    throw new Error();
-  }
   transferSkirtNormals(): Float32Array | undefined {
     throw new Error();
   }
@@ -82,8 +80,7 @@ export class ReturnedConstructedTerrainMeshLike implements RemoveFreeRecursively
     return (
       this.skirt_vertices !== undefined &&
       this.skirt_uvs !== undefined &&
-      this.skirt_indices !== undefined &&
-      this.skirt_indices_to_edge !== undefined
+      this.skirt_indices !== undefined
     );
   }
   hasNormals(): boolean {

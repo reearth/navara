@@ -1,4 +1,4 @@
-use bevy_ecs::system::{Commands, Query};
+use bevy_ecs::system::Commands;
 
 use navara_component::{Order, OrderByDistance, Priority};
 use navara_core::TilingScheme;
@@ -13,17 +13,18 @@ use navara_tile_component::{
 ///
 /// Raster tiles always live in a WebMercator quadtree, so the tile URL is built
 /// directly from the tile's own coordinates.
+/// `sorted_tiles` is the layer list sorted by `Order`, collected once per system
+/// run (this helper is called per raster tile).
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn request_raster_texture_fragment(
     commands: &mut Commands,
     leaf: &mut RasterTile,
-    tiles: &Query<(&TilesLayer, &Order)>,
+    sorted_tiles: &[(&TilesLayer, &Order)],
     source_store: &navara_source::SourceStore,
     handle: TileHandle,
     texture_fragment: &TileTextureFragmentQuery,
     priority: Priority,
 ) {
-    let sorted_tiles: Vec<_> = tiles.iter().sort::<&Order>().collect();
     let tiles_len = sorted_tiles.len();
     if tiles_len == 0 {
         return;

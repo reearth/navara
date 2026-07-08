@@ -89,8 +89,6 @@ pub struct Mesh {
     pub skirt_uvs: Option<i32>,
     /// Skirt indices handle.
     pub skirt_indices: Option<i32>,
-    /// Mapping from skirt vertex index to edge vertex index in main geometry.
-    pub skirt_indices_to_edge: Option<i32>,
     /// Skirt per-vertex normals handle.
     pub skirt_normals: Option<i32>,
     /// Watermask handle (1 byte uniform or 65536 byte grid).
@@ -399,7 +397,6 @@ impl<'a> From<&'a navara_mesh::Mesh> for Mesh {
             skirt_vertices: m.skirt_vertices,
             skirt_uvs: m.skirt_uvs,
             skirt_indices: m.skirt_indices,
-            skirt_indices_to_edge: m.skirt_indices_to_edge,
             skirt_normals: m.skirt_normals,
             watermask: m.watermask,
         }

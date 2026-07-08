@@ -2,6 +2,7 @@ use navara_core::{Extent, Radians, TileXYZ, TilingScheme, overlapping_tiles_with
 use navara_geometry::{TileUvTransform, uv_rect_from_extents};
 use navara_math::FloatType;
 use navara_tile_component::{RasterTileQuadtree, TileTextureFragmentQuery};
+use rustc_hash::FxHashSet;
 
 /// One WebMercator raster texture draped on a terrain tile: the texture fragment
 /// entity, the affine UV mapping the terrain tile's `[0, 1]` UV into this raster
@@ -31,7 +32,7 @@ pub fn resolve_raster_textures(
     texture_fragment: &TileTextureFragmentQuery,
 ) -> Vec<ResolvedRasterTexture> {
     let mut out = Vec::new();
-    let mut resolved_coords: Vec<TileXYZ> = Vec::new();
+    let mut resolved_coords: FxHashSet<TileXYZ> = FxHashSet::default();
 
     for coords in overlapping_tiles_within_budget(*terrain_extent, target_z, max_tiles) {
         let Some((entity, resolved)) =
@@ -40,10 +41,9 @@ pub fn resolve_raster_textures(
             continue;
         };
         // A coarser ancestor can back several of the requested tiles; drape it once.
-        if resolved_coords.contains(&resolved) {
+        if !resolved_coords.insert(resolved) {
             continue;
         }
-        resolved_coords.push(resolved);
 
         let raster_extent = TilingScheme::WebMercator { tms: false }.tile_extent(resolved);
         out.push(ResolvedRasterTexture {

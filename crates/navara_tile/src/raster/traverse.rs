@@ -1,4 +1,4 @@
-use bevy_ecs::system::{Commands, Query};
+use bevy_ecs::system::Commands;
 
 use navara_camera::CameraFrustum;
 use navara_component::{Order, Priority};
@@ -33,7 +33,9 @@ use super::tile_cache_manager::RasterTileCacheManager;
 #[allow(clippy::too_many_arguments)]
 pub fn traverse_raster(
     command: &mut Commands,
-    tiles: &Query<(&TilesLayer, &Order)>,
+    // The layer list sorted by `Order`, collected once per system run — this
+    // function runs per traversed tile, so it must not sort per call.
+    sorted_layers: &[(&TilesLayer, &Order)],
     source_store: &SourceStore,
     handle: TileHandle,
     qt: &mut RasterTileQuadtree,
@@ -91,7 +93,7 @@ pub fn traverse_raster(
     tile.distance_from_camera = distance_from_camera;
 
     let coords_z = tile.coords.z;
-    let is_over_min_z = tiles
+    let is_over_min_z = sorted_layers
         .iter()
         .filter(|(t, _)| t.hillshade_config.is_none())
         .filter_map(|(t, _)| t.source_id.as_deref().and_then(|id| source_store.get(id)))
@@ -106,7 +108,7 @@ pub fn traverse_raster(
         request_raster_texture_fragment(
             command,
             tile,
-            tiles,
+            sorted_layers,
             source_store,
             handle,
             texture_fragment,
@@ -119,7 +121,7 @@ pub fn traverse_raster(
     // Once the screen-space error is satisfied, stop: no need for finer tiles.
     // Beyond max zoom, the layer overscales (parent texture stretched), so we
     // also stop fetching new tiles there.
-    let any_under_max = tiles
+    let any_under_max = sorted_layers
         .iter()
         .filter(|(t, _)| t.hillshade_config.is_none())
         .filter_map(|(t, _)| t.source_id.as_deref().and_then(|id| source_store.get(id)))
@@ -137,7 +139,7 @@ pub fn traverse_raster(
         for child in children {
             traverse_raster(
                 command,
-                tiles,
+                sorted_layers,
                 source_store,
                 child,
                 qt,
@@ -163,7 +165,7 @@ mod tests {
     use super::*;
 
     use bevy_app::{App, Update};
-    use bevy_ecs::prelude::{Res, ResMut, Resource};
+    use bevy_ecs::prelude::{Query, Res, ResMut, Resource};
 
     use navara_core::{Angle, TileXYZ, WGS84_64, WGS84_A_64};
     use navara_material::{Appearance, HillshadeConfig, RasterMaterial};
@@ -232,9 +234,10 @@ mod tests {
             density: 0.,
             sse_factor: 1.0,
         };
+        let sorted_layers: Vec<_> = tiles.iter().sort::<&Order>().collect();
         traverse_raster(
             &mut commands,
-            &tiles,
+            &sorted_layers,
             &source_store,
             target.0,
             &mut qt,

@@ -175,6 +175,34 @@ import { Window } from "@navara/three";  // Error: Window is a type, not a class
 const win = new Window(800, 600, 2);  // Error!
 ```
 
+## Buffer Transfer Policy: Views vs Copies
+
+Typed-array data crossing the WASM→JS boundary follows three patterns. Pick by
+ownership, not convenience — an unnecessary copy of a vertex buffer costs
+megabytes per tile.
+
+| API | Returns | Contract |
+|-----|---------|----------|
+| `getBuffer*` (non-removing getters) | **View** into WASM linear memory | Consume immediately; `.slice()` to retain |
+| `removeBuffer*` | **Owned copy** | The WASM-side buffer is freed; the copy is the ownership transfer |
+| `transfer*` (worker result objects) | **Owned copy** | Retained and moved to the main thread as a transferable; do not `.slice()` again |
+
+### View rules (`getBuffer*`)
+
+1. **Consume immediately.** A view is detached by any WASM call that grows
+   memory (i.e. anything that allocates). Consecutive `getBuffer*` calls do not
+   allocate, so reading several buffers in a row is safe.
+2. **Copy to retain.** If the data outlives the current synchronous block
+   (stored in a `BufferAttribute`, passed to an async decoder, kept on
+   `userData`), copy it once with `.slice()` — and only once.
+3. **Never leak `.buffer`.** A view's `.buffer` is the *entire* WASM memory.
+   Passing it to a decoder, `postMessage` transfer list, or `new Float32Array(view.buffer)`
+   is a bug; transferring it detaches the whole WASM module's memory.
+
+The Rust-side helpers live in `navara_wasm_types::view` (`view_*` for views,
+`copy_*` for copies, `transfer_*` for zero-copy JS→WASM writes); all fetch the
+memory object fresh so they are grow-safe at creation time.
+
 ## Enforcement
 
 - WASM classes are exported as `type` only, not as values

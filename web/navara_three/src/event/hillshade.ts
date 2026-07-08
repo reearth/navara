@@ -140,6 +140,8 @@ function processInitialHillshadeTexture(
   // When multiple consumers (terrain, hillshade) share the same URL, the data is shared.
   // Reference count is decremented when each consumer entity is deleted.
   // Only when ref count reaches 0 (last consumer removed) is the data actually deleted.
+  // buf.u8 returns a short-lived view into WASM memory; createPaddedDemData
+  // copies it synchronously below, so no further copy is needed.
   const originalBytes = buf.u8(originalHandle);
   if (!originalBytes) {
     return;
@@ -315,7 +317,8 @@ function processHillshadeEdgeUpdate(
     event.edge_direction,
   );
 
-  // Re-read the original DEM from WASM buffer (reference-counted, still valid)
+  // Re-read the original DEM from WASM buffer (reference-counted, still valid).
+  // The returned view is consumed synchronously by createPaddedDemData below.
   const originalBytes = buf.u8(originalHandle);
   if (originalBytes) {
     // Rebuild the padded DEM transiently, apply all received edges, generate normal map

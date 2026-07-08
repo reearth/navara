@@ -112,8 +112,10 @@ export class ModelMesh
     const { buf } = this.ctx;
     const batchIdsData = m.geometry.batch_ids;
     const dataSize = batchIdsData?.size ?? 0;
+    // buf.u32 returns a short-lived view into WASM memory; copy to retain it
+    // across the traversal below.
     const batchIds = batchIdsData
-      ? buf.u32(batchIdsData.data)
+      ? (buf.u32(batchIdsData.data)?.slice() ?? null)
       : new Uint32Array(dataSize);
 
     const meshMaterial = m.material;
