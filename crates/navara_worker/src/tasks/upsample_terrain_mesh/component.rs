@@ -1,11 +1,11 @@
-use bevy_ecs::{component::Component, lifecycle::HookContext, world::DeferredWorld};
+use bevy_ecs::component::Component;
 use navara_buffer_store::{BufferStore, Handle};
 use navara_geometry::TransferableGeometry;
 use navara_math::{FloatType, Vec3};
 use navara_tile_component::TileHandle;
 use serde::Serialize;
 
-use crate::component::{WorkerTaskBundle, WorkerTaskResultConsumed};
+use crate::component::{FreeResultBuffers, WorkerTaskBundle, free_unconsumed_buffers};
 
 #[derive(Component)]
 pub struct UpsampleTerrainMeshMarker;
@@ -28,7 +28,7 @@ pub struct UpsampleTerrainMeshParameters {
 /// its tile was torn down before transfer) frees its buffers via the
 /// `on_remove` hook.
 #[derive(Component, Clone, Debug, Serialize)]
-#[component(on_remove = free_unconsumed_buffers)]
+#[component(on_remove = free_unconsumed_buffers::<UpsampleTerrainMeshResult>)]
 pub struct UpsampleTerrainMeshResult {
     pub geometry: TransferableGeometry,
     pub heights: Handle,
@@ -37,24 +37,12 @@ pub struct UpsampleTerrainMeshResult {
     pub rtc_translation: Option<Vec3>,
 }
 
-/// `on_remove` hook: free the result's buffers unless a consumer took over
-/// handle ownership (`WorkerTaskResultConsumed`). Consumption transfers the
-/// live handles to the tile mesh instead of removing the entries, so freeing
-/// unconditionally would destroy in-use mesh data.
-fn free_unconsumed_buffers(mut world: DeferredWorld, ctx: HookContext) {
-    if world.get::<WorkerTaskResultConsumed>(ctx.entity).is_some() {
-        return;
+impl FreeResultBuffers for UpsampleTerrainMeshResult {
+    fn remove_from_buf(&self, buf: &mut BufferStore) -> Vec<u32> {
+        self.geometry.remove_from_buf(buf);
+        buf.remove(&self.heights);
+        Vec::new()
     }
-    let Some(result) = world.get::<UpsampleTerrainMeshResult>(ctx.entity) else {
-        return;
-    };
-    let geometry = result.geometry.clone();
-    let heights = result.heights;
-    let Some(mut buf) = world.get_resource_mut::<BufferStore>() else {
-        return;
-    };
-    geometry.remove_from_buf(&mut buf);
-    buf.remove(&heights);
 }
 
 pub type UpsampleTerrainMeshWorkerTaskBundle =

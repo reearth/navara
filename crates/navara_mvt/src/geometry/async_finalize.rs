@@ -258,11 +258,10 @@ pub(crate) fn cancel_evicted_parse_tasks(
             // Free the pbf in case it was never dispatched (the dispatch frees it
             // otherwise; this is a no-op then), and cancel the task.
             buf.remove(&ctx.pbf_handle);
-            // Mark the delegatee directly rather than relying on the worker
-            // plugin's `remove_relation`: that system runs after `remove` in the
-            // worker chain, so when this Deleted lands at a frame boundary the
-            // delegator is despawned before the propagation can read it and the
-            // delegatee entity would linger forever.
+            // Marking the delegator is enough for cleanup (the worker plugin's
+            // `remove` propagates to the delegatee at the despawn point), but
+            // marking the delegatee here too aborts the in-flight worker-pool
+            // promise one frame sooner.
             if let Some(delegatee) = delegatee {
                 commands.entity(delegatee.0).insert(Deleted);
             }
@@ -357,12 +356,10 @@ mod test {
 
     use super::*;
 
-    /// A cancelled parse must mark both the delegator and its delegatee
-    /// `Deleted` in the same pass. Relying on the worker plugin's
-    /// `remove_relation` for the delegatee is not enough: `remove` precedes it
-    /// in the worker chain, so when the cancel lands at a frame boundary the
-    /// delegator is despawned before the propagation runs and the delegatee
-    /// entity (with its parameter payload) would leak.
+    /// A cancelled parse marks both the delegator and its delegatee `Deleted`
+    /// in the same pass. The worker plugin's `remove` would propagate to the
+    /// delegatee at the delegator's despawn anyway; marking it here directly
+    /// aborts the in-flight worker-pool promise one frame sooner.
     #[test]
     fn it_should_cancel_the_delegatee_together_with_the_delegator() {
         let mut world = World::new();

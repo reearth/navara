@@ -40,6 +40,16 @@ export const MAX_WORKER_HEAP_BYTES_DEFAULT = 256 * 1024 * 1024;
  */
 export const RECYCLE_AFTER_TASKS_BACKSTOP = 128;
 export const RECYCLE_IDLE_MS = 5_000;
+/**
+ * How long workerpool waits for a worker to acknowledge a cleanup message
+ * (sent on cancel-while-running) before force-terminating it. A worker busy
+ * in a synchronous WASM task cannot respond until the task finishes, so the
+ * default (1s) would terminate exactly the long-running tasks the worker-side
+ * abort listener is meant to keep alive (see `keepWorkerAliveOnAbort`). Must
+ * comfortably exceed the longest expected task; a genuinely wedged worker
+ * still gets terminated once this elapses.
+ */
+export const WORKER_TERMINATE_TIMEOUT_MS = 30_000;
 
 export type RecyclingWorkerPoolOptions = {
   /** Overrides {@link MAX_WORKER_HEAP_BYTES_DEFAULT}. */
@@ -68,6 +78,7 @@ const createPool = (url: string) =>
     maxWorkers: 1,
     // Avoid oversubscribing CPU when combined with other systems (e.g., DRACO loader).
     minWorkers: 0,
+    workerTerminateTimeout: WORKER_TERMINATE_TIMEOUT_MS,
     workerOpts: {
       type: import.meta.env.PROD ? undefined : "module",
     },

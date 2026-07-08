@@ -490,6 +490,15 @@ impl Core {
         );
     }
 
+    /// Release the delegator of a task that ended without a deliverable
+    /// result (worker error, missing input, ...). Consumes `delegator_id`.
+    /// Safe to call for a task the engine already cancelled: a despawned
+    /// delegator makes this a no-op.
+    #[wasm_bindgen(js_name = triggerWorkerTaskFailed)]
+    pub fn trigger_worker_task_failed(&mut self, delegator_id: ReconstructableEntity) {
+        self.app.trigger_worker_task_failed(delegator_id.0);
+    }
+
     #[wasm_bindgen(js_name = getMartini)]
     pub fn get_martini(
         &mut self,

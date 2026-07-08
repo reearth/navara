@@ -4,7 +4,7 @@ use navara_core::{Extent, Radians};
 use navara_math::FloatType;
 use navara_parser::mvt::{LayerParseConfig, ParsedMvtTileMeta};
 
-use crate::component::WorkerTaskBundle;
+use crate::component::{FreeResultBuffers, WorkerTaskBundle};
 
 #[derive(Component)]
 pub struct ParseMvtTileMarker;
@@ -62,14 +62,18 @@ impl ParseMvtTileResult {
             buf.remove_u8(&self.u8_handle).unwrap_or_default(),
         )
     }
+}
 
+impl FreeResultBuffers for ParseMvtTileResult {
     /// Free the stream buffers without reading them (leak-prevention path for
-    /// results whose delegator disappeared before finalization).
-    pub fn remove_from_buf(&self, buf: &mut BufferStore) {
+    /// results whose delegator disappeared before finalization). The packed
+    /// streams carry no batch ids, so nothing is returned for purging.
+    fn remove_from_buf(&self, buf: &mut BufferStore) -> Vec<u32> {
         buf.remove(&self.f64_handle);
         buf.remove(&self.f32_handle);
         buf.remove(&self.u32_handle);
         buf.remove(&self.u8_handle);
+        Vec::new()
     }
 }
 

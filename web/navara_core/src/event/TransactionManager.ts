@@ -29,11 +29,18 @@ export class Transaction {
     if (!this.currentPending && this.continuable) {
       this.continuable = false;
       this.next.continuable = false;
-      this.currentPending = cb().then(() => {
+      // A rejected callback must be contained here: leaving `currentPending`
+      // set (and `next.continuable` false) would wedge this transaction id
+      // forever, silently stopping every event that flows through it.
+      const settle = () => {
         this.currentPending = undefined;
         if (this.next) {
           this.next.continuable = true;
         }
+      };
+      this.currentPending = cb().then(settle, (err) => {
+        console.error(`Transaction "${this.id}" callback failed:`, err);
+        settle();
       });
     }
     return this.next;

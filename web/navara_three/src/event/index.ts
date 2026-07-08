@@ -161,7 +161,7 @@ export function processEvent(ctx: EventContext, event: Events | undefined) {
           await processWorkerTaskDelegatedEvent(ctx, event);
           break;
         case "remove":
-          await processWorkerTaskRemovedEvent(ctx, event);
+          processWorkerTaskRemovedEvent(ctx, event);
           break;
       }
     },
@@ -176,8 +176,8 @@ export function processEvent(ctx: EventContext, event: Events | undefined) {
             return true;
         }
       },
-      onAbort: async (event) => {
-        await processWorkerTaskRemovedEvent(ctx, event);
+      onAbort: (event) => {
+        processWorkerTaskRemovedEvent(ctx, event);
       },
     },
   );

@@ -92,7 +92,10 @@ export class EventManager {
     hillshade_backfilled: [],
     hillshade_canceled: [],
   };
-  addedEventIds = new Set();
+  // In-flight "add" event ids per transaction key, used to abort adds whose
+  // matching remove arrives while they are still pending. Keyed by transaction
+  // so one transaction's remove phase cannot wipe another's tracking.
+  addedEventIds = new Map<string, Set<unknown>>();
   private transactionManager = new TransactionManager();
 
   needsUpdate() {
@@ -173,7 +176,15 @@ export class EventManager {
       offset++;
     }
 
-    await Promise.all(promises);
+    // A single failing handler must not reject the whole batch: the other
+    // handlers' results still count and the processed events below must be
+    // freed exactly once regardless.
+    const settled = await Promise.allSettled(promises);
+    for (const s of settled) {
+      if (s.status === "rejected") {
+        console.error(`Event handler for "${key}" failed:`, s.reason);
+      }
+    }
 
     for (const e of removedEvs) {
       maybeFree(e);
@@ -274,7 +285,7 @@ export class EventManager {
       generateEventId?: (
         ev: TransactionCallbackParams<AddKey, RemoveKey, ChangeKey>,
       ) => string;
-      onAbort?: (ev: GetJsEventValue<RemoveKey>) => void;
+      onAbort?: (ev: GetJsEventValue<RemoveKey>) => void | Promise<void>;
     },
   ) {
     const {
@@ -285,6 +296,9 @@ export class EventManager {
 
     this.removeDuplicatedTransactionEvents(options);
 
+    const addedEventIds = this.addedEventIds.get(transactionKey) ?? new Set();
+    this.addedEventIds.set(transactionKey, addedEventIds);
+
     const transaction = this.transactionManager
       .getOrInsert(transactionKey)
       .then(() =>
@@ -292,7 +306,7 @@ export class EventManager {
           options.add.key,
           (event) => {
             if (onAbort) {
-              this.addedEventIds.add(generateEventId({ type: "add", event }));
+              addedEventIds.add(generateEventId({ type: "add", event }));
             }
             return cb({ type: "add", event });
           },
@@ -304,7 +318,7 @@ export class EventManager {
       )
       .then(() => {
         if (onAbort) {
-          this.addedEventIds.clear();
+          addedEventIds.clear();
         }
         return this.forEachStackAsync(
           options.remove.key,
@@ -317,14 +331,29 @@ export class EventManager {
       });
 
     // Handle an abort process to an add event.
-    if (onAbort && this.addedEventIds.size) {
+    if (onAbort && addedEventIds.size) {
       for (const event of this.stacks[options.remove.key]) {
         if (!event) continue;
         const removeEv = event as GetJsEventValue<RemoveKey>;
         const id = generateEventId({ type: "remove", event: removeEv });
-        if (id && this.addedEventIds.has(id)) {
-          onAbort(removeEv);
-          this.addedEventIds.delete(id);
+        if (id && addedEventIds.has(id)) {
+          // Contain both sync throws and async rejections: an abort handler
+          // failure must not escape into the caller (or become an unhandled
+          // rejection) and must not stop the remaining aborts.
+          try {
+            Promise.resolve(onAbort(removeEv)).catch((err) => {
+              console.error(
+                `onAbort handler for "${transactionKey}" failed:`,
+                err,
+              );
+            });
+          } catch (err) {
+            console.error(
+              `onAbort handler for "${transactionKey}" failed:`,
+              err,
+            );
+          }
+          addedEventIds.delete(id);
         }
       }
     }
