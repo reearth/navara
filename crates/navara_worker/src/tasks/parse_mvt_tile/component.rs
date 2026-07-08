@@ -1,10 +1,10 @@
-use bevy_ecs::{component::Component, lifecycle::HookContext, world::DeferredWorld};
+use bevy_ecs::component::Component;
 use navara_buffer_store::{BufferStore, Handle};
 use navara_core::{Extent, Radians};
 use navara_math::FloatType;
 use navara_parser::mvt::{LayerParseConfig, ParsedMvtTileMeta};
 
-use crate::component::{FreeResultBuffers, WorkerTaskBundle};
+use crate::component::{FreeResultBuffers, WorkerTaskBundle, free_unconsumed_buffers};
 
 #[derive(Component)]
 pub struct ParseMvtTileMarker;
@@ -38,11 +38,12 @@ pub struct ParseMvtTileParameters {
 /// `on_remove` hook frees whatever is still resident when the component is
 /// dropped unconsumed (e.g. its tile was evicted in the same frame the result
 /// arrived, so finalize never matched). After a normal finalize the entries
-/// are already gone and handles are never reused, so the hook is a no-op then.
+/// are already gone and handles are never reused, so the hook is a no-op then
+/// (finalize never marks `WorkerTaskResultConsumed`; it doesn't need to).
 ///
 /// [`take_streams`]: ParseMvtTileResult::take_streams
 #[derive(Component, Clone, Debug)]
-#[component(on_remove = free_unconsumed_streams)]
+#[component(on_remove = free_unconsumed_buffers::<ParseMvtTileResult>)]
 pub struct ParseMvtTileResult {
     pub f64_handle: Handle,
     pub f32_handle: Handle,
@@ -74,28 +75,6 @@ impl FreeResultBuffers for ParseMvtTileResult {
         buf.remove(&self.u32_handle);
         buf.remove(&self.u8_handle);
         Vec::new()
-    }
-}
-
-/// `on_remove` hook: free the packed streams whenever the component leaves the
-/// world (despawn or removal), so no lifecycle path can leak them. Runs
-/// unconditionally — a finalized result holds stale handles (its entries were
-/// taken and handles are never reused), so freeing again is a no-op.
-fn free_unconsumed_streams(mut world: DeferredWorld, ctx: HookContext) {
-    let Some(result) = world.get::<ParseMvtTileResult>(ctx.entity) else {
-        return;
-    };
-    let handles = [
-        result.f64_handle,
-        result.f32_handle,
-        result.u32_handle,
-        result.u8_handle,
-    ];
-    let Some(mut buf) = world.get_resource_mut::<BufferStore>() else {
-        return;
-    };
-    for handle in handles {
-        buf.remove(&handle);
     }
 }
 

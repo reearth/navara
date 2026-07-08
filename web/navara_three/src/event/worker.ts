@@ -160,27 +160,45 @@ function intoExtentRadianLike(
 }
 
 /**
+ * Track BufferStore registrations made while assembling one task result so a
+ * bail-out can free everything registered so far: handles are never reused,
+ * so an entry orphaned by an early return stays in the BufferStore forever.
+ * On the success path the handles move into the delivered result and must
+ * NOT be freed.
+ */
+function trackRegisteredHandles(bufHandler: EventContext["buf"]) {
+  const handles: number[] = [];
+  return {
+    register<T extends number | undefined>(handle: T): T {
+      if (handle != null) handles.push(handle);
+      return handle;
+    },
+    free() {
+      for (const handle of handles) {
+        bufHandler.remove(handle);
+      }
+    },
+  };
+}
+
+/**
  * Register a worker terrain result's arrays in the BufferStore and assemble
  * the `TransferableGeometry` (with optional normals and skirt data), returned
  * together with the separately delivered heights handle. When a required
- * registration fails, the entries registered before it are freed (handles are
- * never reused, so an orphaned entry would stay in the BufferStore forever)
- * and `undefined` is returned.
+ * registration fails, the entries registered before it are freed and
+ * `undefined` is returned.
  */
 function buildTerrainTransferableGeometry(
   bufHandler: EventContext["buf"],
   result: ReturnedConstructedTerrainMeshLike,
 ): { geometry: TransferableGeometry; heights: number } | undefined {
-  const vertices = bufHandler.newF32(result.vertices);
-  const uvs = bufHandler.newF32(result.uvs);
-  const indices = bufHandler.newU32(result.indices);
-  const heights = bufHandler.newF32(result.heights);
+  const registered = trackRegisteredHandles(bufHandler);
+  const vertices = registered.register(bufHandler.newF32(result.vertices));
+  const uvs = registered.register(bufHandler.newF32(result.uvs));
+  const indices = registered.register(bufHandler.newU32(result.indices));
+  const heights = registered.register(bufHandler.newF32(result.heights));
   if (vertices == null || uvs == null || indices == null || heights == null) {
-    for (const handle of [vertices, uvs, indices, heights]) {
-      if (handle != null) {
-        bufHandler.remove(handle);
-      }
-    }
+    registered.free();
     return undefined;
   }
 
@@ -476,33 +494,36 @@ async function processConstructPolygonBatchedFeature(
 
       if (!workerTaskHandler.hasWorkerTask(delegator_id[0])) return;
 
+      const registered = trackRegisteredHandles(bufHandler);
       const batchId = result.batch_id
-        ? bufHandler.newF32(result.batch_id)
+        ? registered.register(bufHandler.newF32(result.batch_id))
         : undefined;
       const batchIndex = result.batch_index
-        ? bufHandler.newU32(result.batch_index)
+        ? registered.register(bufHandler.newU32(result.batch_index))
         : undefined;
       const normal = result.normal
-        ? bufHandler.newF32(result.normal)
+        ? registered.register(bufHandler.newF32(result.normal))
         : undefined;
       const position = result.position
-        ? bufHandler.newF32(result.position)
+        ? registered.register(bufHandler.newF32(result.position))
         : undefined;
       const position3dHigh = result.position_3d_high
-        ? bufHandler.newF32(result.position_3d_high)
+        ? registered.register(bufHandler.newF32(result.position_3d_high))
         : undefined;
       const position3dLow = result.position_3d_low
-        ? bufHandler.newF32(result.position_3d_low)
+        ? registered.register(bufHandler.newF32(result.position_3d_low))
         : undefined;
       const scaleNormalAndCap = result.scale_normal_and_cap
-        ? bufHandler.newF32(result.scale_normal_and_cap)
+        ? registered.register(bufHandler.newF32(result.scale_normal_and_cap))
         : undefined;
-      const indices = bufHandler.newU32(result.indices);
+      const indices = registered.register(bufHandler.newU32(result.indices));
       if (!indices) {
+        registered.free();
         return;
       }
       // Either position or (position_3d_high and position_3d_low) must be present
       if (!position && (!position3dHigh || !position3dLow)) {
+        registered.free();
         return;
       }
 
@@ -668,44 +689,53 @@ async function processConstructPolylineBatchedFeature(
 
       if (!workerTaskHandler.hasWorkerTask(delegator_id[0])) return;
 
-      const position = bufHandler.newF32(result.position);
+      const registered = trackRegisteredHandles(bufHandler);
+      const position = registered.register(bufHandler.newF32(result.position));
       const positionHigh = result.position_high
-        ? bufHandler.newF32(result.position_high)
+        ? registered.register(bufHandler.newF32(result.position_high))
         : undefined;
       const positionLow = result.position_low
-        ? bufHandler.newF32(result.position_low)
+        ? registered.register(bufHandler.newF32(result.position_low))
         : undefined;
-      const start = result.start ? bufHandler.newF32(result.start) : undefined;
+      const start = result.start
+        ? registered.register(bufHandler.newF32(result.start))
+        : undefined;
       const startHigh = result.start_high
-        ? bufHandler.newF32(result.start_high)
+        ? registered.register(bufHandler.newF32(result.start_high))
         : undefined;
       const startLow = result.start_low
-        ? bufHandler.newF32(result.start_low)
+        ? registered.register(bufHandler.newF32(result.start_low))
         : undefined;
       const startNormals = result.start_normals
-        ? bufHandler.newF32(result.start_normals)
+        ? registered.register(bufHandler.newF32(result.start_normals))
         : undefined;
       const forwardOffset = result.forward_offset
-        ? bufHandler.newF32(result.forward_offset)
+        ? registered.register(bufHandler.newF32(result.forward_offset))
         : undefined;
       const endHigh = result.end_high
-        ? bufHandler.newF32(result.end_high)
+        ? registered.register(bufHandler.newF32(result.end_high))
         : undefined;
       const endLow = result.end_low
-        ? bufHandler.newF32(result.end_low)
+        ? registered.register(bufHandler.newF32(result.end_low))
         : undefined;
       const endNormalAndTextureCoordinateNormalizationX =
         result.end_normal_and_texture_coordinate_normalization_x
-          ? bufHandler.newF32(
-              result.end_normal_and_texture_coordinate_normalization_x,
+          ? registered.register(
+              bufHandler.newF32(
+                result.end_normal_and_texture_coordinate_normalization_x,
+              ),
             )
           : undefined;
-      const rightNormalAndTextureCoordinateNormalizationY = bufHandler.newF32(
-        result.right_normal_and_texture_coordinate_normalization_y,
+      const rightNormalAndTextureCoordinateNormalizationY = registered.register(
+        bufHandler.newF32(
+          result.right_normal_and_texture_coordinate_normalization_y,
+        ),
       );
-      const batchId = bufHandler.newF32(result.batch_id);
-      const batchIndex = bufHandler.newU32(result.batch_index);
-      const indices = bufHandler.newU32(result.indices);
+      const batchId = registered.register(bufHandler.newF32(result.batch_id));
+      const batchIndex = registered.register(
+        bufHandler.newU32(result.batch_index),
+      );
+      const indices = registered.register(bufHandler.newU32(result.indices));
       if (
         !batchId ||
         !batchIndex ||
@@ -713,6 +743,7 @@ async function processConstructPolylineBatchedFeature(
         !rightNormalAndTextureCoordinateNormalizationY ||
         !indices
       ) {
+        registered.free();
         return;
       }
 
@@ -886,23 +917,24 @@ async function processParseMvtTile(
       // into WASM memory) and hand the engine only their handles; the
       // delegated-task system frees them on every path, including a deleted
       // delegator.
-      const f64Handle = bufHandler.newF64(result.f64_stream);
-      const f32Handle = bufHandler.newF32(result.f32_stream);
-      const u32Handle = bufHandler.newU32(result.u32_stream);
-      const u8Handle = bufHandler.newU8(result.u8_stream);
+      const registered = trackRegisteredHandles(bufHandler);
+      const f64Handle = registered.register(
+        bufHandler.newF64(result.f64_stream),
+      );
+      const f32Handle = registered.register(
+        bufHandler.newF32(result.f32_stream),
+      );
+      const u32Handle = registered.register(
+        bufHandler.newU32(result.u32_stream),
+      );
+      const u8Handle = registered.register(bufHandler.newU8(result.u8_stream));
       if (
         f64Handle == null ||
         f32Handle == null ||
         u32Handle == null ||
         u8Handle == null
       ) {
-        // Handles are never reused, so any stream registered before the
-        // failure must be freed here or it stays in the BufferStore forever.
-        for (const handle of [f64Handle, f32Handle, u32Handle, u8Handle]) {
-          if (handle != null) {
-            bufHandler.remove(handle);
-          }
-        }
+        registered.free();
         completeWithEmptyResult();
         return;
       }
@@ -921,9 +953,7 @@ async function processParseMvtTile(
           result.meta,
         );
       } catch (err) {
-        for (const handle of [f64Handle, f32Handle, u32Handle, u8Handle]) {
-          bufHandler.remove(handle);
-        }
+        registered.free();
         console.error("Failed to deserialize MVT tile meta:", err);
         completeWithEmptyResult();
         return;
