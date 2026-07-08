@@ -84,7 +84,7 @@ new AttributionPlugin(options?: {
 });
 ```
 
-`options.style` は初期の色を設定します（[AttributionStyle](#attributionstyle) を参照。省略すると既定値）。`options.position` は ⓘ トリガーとクレジットカードを置く下部の角を選びます（既定 `"bottom-right"`）。右下がページ独自の HUD などで埋まっている場合は `"bottom-left"` を使ってください。常時表示のロゴ枠はどちらのモードでも左下のままです。プラグインは `view.init()` の**前に** `view.addPlugin()` で登録してください。
+`options.style` は初期の色を設定します（[AttributionStyle](#attributionstyle) を参照。省略すると既定値）。`options.position` は ⓘ トリガーとクレジットカードを置く下部の角を選びます（既定 `"bottom-right"`）。右下がページ独自の HUD などで埋まっている場合は `"bottom-left"` を使ってください。ロゴ枠はどちらのモードでも左下エリアに置かれますが、`"bottom-left"` では ⓘ が左端に入り、ロゴはその右隣にずれて並びます。プラグインは `view.init()` の**前に** `view.addPlugin()` で登録してください。
 
 ## メソッド
 

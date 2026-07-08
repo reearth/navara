@@ -88,8 +88,9 @@ export type AttributionPluginOptions = {
   /**
    * Bottom corner for the ⓘ trigger and its credit card. Defaults to
    * `"bottom-right"`; use `"bottom-left"` when the bottom-right corner is
-   * occupied (e.g. a page with its own HUD there). The always-visible logo
-   * frame stays bottom-left, so in `"bottom-left"` the ⓘ sits to its left.
+   * occupied (e.g. a page with its own HUD there). The logo frame lives in the
+   * bottom-left area in both modes; in `"bottom-left"` the ⓘ takes the far-left
+   * corner and the logos shift right to sit beside it.
    */
   position?: AttributionPosition;
 };
