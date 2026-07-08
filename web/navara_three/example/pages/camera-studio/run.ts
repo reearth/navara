@@ -17,11 +17,19 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import { PersonViewPlugin, type ViewMode } from "@navara/three_plugins";
+import {
+  AttributionPlugin,
+  type AttributionItem,
+  PersonViewPlugin,
+  type ViewMode,
+} from "@navara/three_plugins";
 import { Vector2 } from "three";
 import { Pane } from "tweakpane";
 
-import { showAttributions } from "../../helpers/attributions";
+import {
+  datasetToHtmlSource,
+  datasetToSource,
+} from "../../helpers/attribution-source";
 import {
   LOCAL_DATASETS,
   TERRAIN_DATASETS,
@@ -241,8 +249,20 @@ export const run = async () => {
   let firstSetup = true;
   let view: ThreeView<CustomDescriptions> | null = null;
   let personView: PersonViewPlugin | null = null;
+  let attribution: AttributionPlugin | null = null;
   let pane: Pane | null = null;
   let switching = false;
+
+  // show() replaces the whole list, so compose the current base's credits with
+  // the Soldier model credit (person view only) in one call — otherwise person
+  // view would drop mandated base credits (e.g. Google Photorealistic 3D Tiles).
+  const applyAttribution = (base: AttributionItem[]) => {
+    attribution?.show(
+      currentKind === "person"
+        ? [...base, datasetToSource(LOCAL_DATASETS.soldierGLTF)]
+        : base,
+    );
+  };
   let defaultScene: ReturnType<
     DefaultPlugin["addDefaultPhotorealScene"]
   > | null = null;
@@ -253,7 +273,9 @@ export const run = async () => {
   let baseLayers: Layer[] = [];
   let baseSources: Source[] = [];
 
-  const buildMapterhorn = (v: ThreeView<CustomDescriptions>) => {
+  const buildMapterhorn = (
+    v: ThreeView<CustomDescriptions>,
+  ): AttributionItem[] => {
     const eoxSource = v.addSource({
       type: "raster-tile",
       url: TILE_DATASETS.eox.url,
@@ -285,10 +307,13 @@ export const run = async () => {
       }),
     );
 
-    showAttributions([TERRAIN_DATASETS.mapterhorn, TILE_DATASETS.eox]);
+    return [
+      datasetToSource(TERRAIN_DATASETS.mapterhorn),
+      datasetToHtmlSource(TILE_DATASETS.eox),
+    ];
   };
 
-  const buildGoogle = (v: ThreeView<CustomDescriptions>) => {
+  const buildGoogle = (v: ThreeView<CustomDescriptions>): AttributionItem[] => {
     const source = v.addSource({
       type: "3d-tiles",
       url: `${TILES_3D_DATASETS.googlePhotorealTiles.url}?key=${encodeURIComponent(
@@ -303,17 +328,20 @@ export const run = async () => {
     });
     baseLayers.push(tiles);
 
-    showAttributions([TILES_3D_DATASETS.googlePhotorealTiles], [tiles]);
+    return [
+      datasetToSource(TILES_3D_DATASETS.googlePhotorealTiles, {
+        creditLayerId: tiles.id,
+      }),
+    ];
   };
 
-  const buildBase = (v: ThreeView<CustomDescriptions>, mode: BaseMode) => {
+  const buildBase = (
+    v: ThreeView<CustomDescriptions>,
+    mode: BaseMode,
+  ): AttributionItem[] => {
     baseLayers = [];
     baseSources = [];
-    if (mode === "mapterhorn") {
-      buildMapterhorn(v);
-    } else {
-      buildGoogle(v);
-    }
+    return mode === "mapterhorn" ? buildMapterhorn(v) : buildGoogle(v);
   };
 
   // Tear down the current base on the live view: delete every layer first, then
@@ -339,6 +367,9 @@ export const run = async () => {
 
     const plugin = new DefaultPlugin();
     v.addPlugin(plugin);
+
+    attribution = new AttributionPlugin();
+    v.addPlugin(attribution);
 
     // PersonViewPlugin must be registered before init(). Seed it from the
     // current camera state so the position carries over from normal mode.
@@ -397,11 +428,7 @@ export const run = async () => {
     }
     v.camera.fov = cameraState.fov;
 
-    buildBase(v, mode);
-
-    if (kind === "person") {
-      showAttributions([LOCAL_DATASETS.soldierGLTF]);
-    }
+    applyAttribution(buildBase(v, mode));
 
     // Clouds are kept alive (creating/deleting them is expensive); toggle by
     // driving `coverage` between 0 and the default value instead.
@@ -447,6 +474,10 @@ export const run = async () => {
     // requestAnimationFrame loop are torn down (the view does not own them).
     personView?.dispose();
     personView = null;
+    // ThreeView.dispose() does not dispose plugins; release the attribution
+    // plugin's DOM explicitly or it leaks across view-kind rebuilds.
+    attribution?.dispose();
+    attribution = null;
     view?.dispose();
     view = null;
   };
@@ -469,7 +500,7 @@ export const run = async () => {
     if (switching || mode === currentMode || !view) return;
     currentMode = mode;
     teardownBase();
-    buildBase(view, mode);
+    applyAttribution(buildBase(view, mode));
     defaultScene?.aerialPerspective.update({
       aerialPerspective: { irradiance: mode === "google" },
     });
