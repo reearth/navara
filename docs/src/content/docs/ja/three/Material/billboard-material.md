@@ -193,6 +193,25 @@ import { Color } from "@navara/three";
 }
 ```
 
+### opacity
+
+**Type:** `number | undefined`
+
+**Description:** ビルボードの不透明度を指定します。有効範囲は 0.0（完全に透明）から 1.0（完全に不透明）です。
+
+**Default:** `1.0`
+
+**Example:**
+
+```typescript
+{
+  billboard: {
+    transparent: true,
+    opacity: 0.5 // 50%の不透明度
+  }
+}
+```
+
 ### sizeInMeters
 
 **Type:** `boolean | undefined`

@@ -193,6 +193,25 @@ import { Color } from "@navara/three";
 }
 ```
 
+### opacity
+
+**Type:** `number | undefined`
+
+**Description:** Specifies the opacity of the billboard. Valid range is 0.0 (fully transparent) to 1.0 (fully opaque).
+
+**Default:** `1.0`
+
+**Example:**
+
+```typescript
+{
+  billboard: {
+    transparent: true,
+    opacity: 0.5 // 50% opacity
+  }
+}
+```
+
 ### sizeInMeters
 
 **Type:** `boolean | undefined`

@@ -306,6 +306,25 @@ import { Color } from "@navara/three";
 }
 ```
 
+### opacity
+
+**Type:** `number | undefined`
+
+**Description:** Specifies the opacity of the model. Valid range is 0.0 (fully transparent) to 1.0 (fully opaque). This property controls the alpha value when the material is rendered with transparency enabled.
+
+**Default:** `1.0`
+
+**Example:**
+
+```typescript
+{
+  model: {
+    transparent: true,
+    opacity: 0.5 // 50% opacity
+  }
+}
+```
+
 ### pointSize
 
 **Type:** `number | undefined`
