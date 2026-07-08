@@ -8,10 +8,11 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
+import { AttributionPlugin } from "@navara/three_plugins";
 import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 
-import { showAttributions } from "../../helpers/attributions";
+import { datasetToSource } from "../../helpers/attribution-source";
 import { TERRAIN_DATASETS, VECTOR_DATASETS } from "../../helpers/constants";
 import { addCameraControl } from "../../helpers/control";
 import { SH_COEFFICIENTS } from "../../helpers/sh";
@@ -47,6 +48,9 @@ export const run = async () => {
   });
 
   view.addPlugin(new DefaultPlugin());
+
+  const attribution = new AttributionPlugin();
+  view.addPlugin(attribution);
 
   await view.init();
 
@@ -132,12 +136,15 @@ export const run = async () => {
       mode === "quantizedMesh"
         ? TERRAIN_DATASETS.reearthQuantizedMesh
         : TERRAIN_DATASETS.gsi;
-    showAttributions([terrainDataset, VECTOR_DATASETS.gsiExperimentalVector]);
+    attribution.show([
+      datasetToSource(terrainDataset),
+      datasetToSource(VECTOR_DATASETS.gsiExperimentalVector),
+    ]);
   };
 
-  showAttributions([
-    TERRAIN_DATASETS.reearthQuantizedMesh,
-    VECTOR_DATASETS.gsiExperimentalVector,
+  attribution.show([
+    datasetToSource(TERRAIN_DATASETS.reearthQuantizedMesh),
+    datasetToSource(VECTOR_DATASETS.gsiExperimentalVector),
   ]);
 
   // A single vector-tile source shared by multiple vector layers; each layer
