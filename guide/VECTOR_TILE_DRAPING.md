@@ -131,7 +131,9 @@ flowchart TD
   B -->|"yes"| C["walk DOWN its subtree<br/>(collect_from_subtree)"]
   C --> D{"self or finer<br/>descendants rendered?"}
   D -->|"yes"| E["use them<br/>(vector rendered = or finer)"]
-  D -->|"no"| F["use recorded ancestor<br/>(ready_parent_tile_handle)"]
+  D -->|"no"| F{"recorded ancestor<br/>(ready_parent_tile_handle)<br/>still bakeable?"}
+  F -->|"yes"| H["use it"]
+  F -->|"no / none"| G
   B -->|"no"| G["walk UP to the nearest ancestor<br/>with a bakeable recorded source<br/>(vector rendered coarser)"]
 ```
 
