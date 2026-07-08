@@ -196,7 +196,7 @@ An array of available animation clip names
 **Example:**
 
 ```typescript
-const clips = modelDesc.getAnimationAvailable();
+const clips = modelDesc.ref.getAnimationAvailable();
 console.log(clips); // ["Walk", "Run", "Jump"]
 ```
 
@@ -215,7 +215,7 @@ Animation detail information
 **Example:**
 
 ```typescript
-const details = modelDesc.getAnimationDetails("Walk");
+const details = modelDesc.ref.getAnimationDetails("Walk");
 console.log(details);
 // { name: "Walk", duration: 2.5, tracks: 45, isLooping: true, timeScale: 1.0 }
 ```
@@ -231,7 +231,7 @@ The current animation playback state
 **Example:**
 
 ```typescript
-const state = modelDesc.getAnimationCurrentState();
+const state = modelDesc.ref.getAnimationCurrentState();
 console.log(state);
 // {
 //   isPlaying: true,
@@ -258,7 +258,7 @@ true if successful
 **Example:**
 
 ```typescript
-modelDesc.playAnimation("Run");
+modelDesc.ref.playAnimation("Run");
 ```
 
 ### crossFadeAnimation(from: string, to: string, duration: number)
@@ -278,7 +278,7 @@ true if successful
 **Example:**
 
 ```typescript
-modelDesc.crossFadeAnimation("Walk", "Run", 0.5);
+modelDesc.ref.crossFadeAnimation("Walk", "Run", 0.5);
 ```
 
 ### blendAnimations(animations: { name: string, weight: number }[])
@@ -292,7 +292,7 @@ modelDesc.crossFadeAnimation("Walk", "Run", 0.5);
 **Example:**
 
 ```typescript
-modelDesc.blendAnimations([
+modelDesc.ref.blendAnimations([
   { name: "Walk", weight: 0.7 },
   { name: "Run", weight: 0.3 }
 ]);
@@ -305,7 +305,7 @@ modelDesc.blendAnimations([
 **Example:**
 
 ```typescript
-modelDesc.stopAnimation();
+modelDesc.ref.stopAnimation();
 ```
 
 ### pauseAnimation()
@@ -315,7 +315,7 @@ modelDesc.stopAnimation();
 **Example:**
 
 ```typescript
-modelDesc.pauseAnimation();
+modelDesc.ref.pauseAnimation();
 ```
 
 ### resumeAnimation()
@@ -325,7 +325,7 @@ modelDesc.pauseAnimation();
 **Example:**
 
 ```typescript
-modelDesc.resumeAnimation();
+modelDesc.ref.resumeAnimation();
 ```
 
 ### setAnimationSpeed(speed: number)
@@ -339,7 +339,7 @@ modelDesc.resumeAnimation();
 **Example:**
 
 ```typescript
-modelDesc.setAnimationSpeed(2.0); // 2x speed
+modelDesc.ref.setAnimationSpeed(2.0); // 2x speed
 ```
 
 ### setAnimationLoop(loop: boolean)
@@ -353,7 +353,7 @@ modelDesc.setAnimationSpeed(2.0); // 2x speed
 **Example:**
 
 ```typescript
-modelDesc.setAnimationLoop(false);
+modelDesc.ref.setAnimationLoop(false);
 ```
 
 ### setAnimationWeight(name: string, weight: number)
@@ -368,7 +368,7 @@ modelDesc.setAnimationLoop(false);
 **Example:**
 
 ```typescript
-modelDesc.setAnimationWeight("Walk", 0.5);
+modelDesc.ref.setAnimationWeight("Walk", 0.5);
 ```
 
 ## Events
@@ -380,7 +380,7 @@ modelDesc.setAnimationWeight("Walk", 0.5);
 **Example:**
 
 ```typescript
-modelDesc.on("load", () => {
+modelDesc.ref.on("load", () => {
   console.log("Model loaded!");
 });
 ```
@@ -392,9 +392,9 @@ modelDesc.on("load", () => {
 **Example:**
 
 ```typescript
-modelDesc.on("animationReady", () => {
+modelDesc.ref.on("animationReady", () => {
   console.log("Animations ready!");
-  const clips = modelDesc.getAnimationAvailable();
+  const clips = modelDesc.ref.getAnimationAvailable();
   console.log("Available clips:", clips);
 });
 ```
@@ -408,6 +408,7 @@ import ThreeView from "@navara/three";
 import { GLTFModelDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
+view.registerMesh("gltfModel", GLTFModelDesc);
 await view.init();
 
 // Add a GLTFModelDesc

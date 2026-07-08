@@ -49,7 +49,7 @@ DEM タイルをデコードするため、[`raster-dem`](../../../three/source/
 
 ### logBoundary
 
-**型:** `number | undefined` — **デフォルト:** `10`
+**型:** `number | undefined` — **デフォルト:** `0`
 
 **説明:** `logarithmic` が有効なときに、対数計算の基準として使用される境界値。
 

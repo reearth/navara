@@ -71,13 +71,13 @@ The instance that manages the atmosphere system. Handles sun and moon position c
 
 ```tsx
 // Set the date to change the sun position
-view.atmosphere.setDate(new Date("2024-06-21T12:00:00"));
+view.atmosphere.date = new Date("2024-06-21T12:00:00");
 
 // Get the sun direction vector
 const sunDirection = view.atmosphere.getSunDirection();
 
 // Determine if the current location is at night
-const isNight = view.atmosphere.isAtNight(view.camera.position);
+const isNight = view.atmosphere.isAtNight(view.camera.positionECEF);
 
 // Monitor sun direction changes
 view.atmosphere.on("sunChanged", (sunDirection) => {

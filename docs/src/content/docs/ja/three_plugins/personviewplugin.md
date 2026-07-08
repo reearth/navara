@@ -274,7 +274,7 @@ dispose(): void
 | `lat`            | `number`         | 現在の緯度（度）。                                          |
 | `alt`            | `number`         | 現在の高度（メートル）。                                    |
 | `heading`        | `number`         | 現在の方位（ラジアン、0 = 北、時計回りに増加）。            |
-| `speed`          | `number`         | 現在の速度（m/s、静止時は 0）。                             |
+| `speed`          | `number`         | 設定された移動速度（m/s。`moveSpeed`。ダッシュ中は 2.5 倍）。 |
 | `animationState` | `string \| null` | 現在再生中のクリップ名。キャラクター未設定の場合は `null`。 |
 | `mode`           | `"tpv" \| "fpv"` | 現在の視点モード。                                          |
 

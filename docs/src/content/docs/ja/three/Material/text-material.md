@@ -69,7 +69,7 @@ import { Color } from "@navara/three";
 
 ### center
 
-**Type:** [`Vec2`](#vec2) | undefined
+**Type:** [`Vec2`](../../api/types/#vec2) | undefined
 
 **Description:** 中心からのシフト量を指定します。範囲は 0 から 1 の間です。
 
@@ -473,20 +473,3 @@ import { Color } from "@navara/three";
 }
 ```
 
-## Vec2
-
-2D ベクトルを表すクラスです。
-
-### Properties
-
-#### x
-
-**Type:** `number`
-
-**Description:** X 座標値。
-
-#### y
-
-**Type:** `number`
-
-**Description:** Y 座標値。

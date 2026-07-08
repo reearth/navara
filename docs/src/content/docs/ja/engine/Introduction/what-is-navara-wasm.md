@@ -35,7 +35,7 @@ navara_wasm は、Rust 製の GIS エンジンを WebAssembly（WASM）化し、
 
 - レンダリングエンジンに依存しない構成
 
-  - レンダリングエンジンエンジン（Three.js や Babylon.js）に依存せず、汎用性が高い
+  - 特定のレンダリングエンジン（Three.js や Babylon.js など）に依存せず、汎用性が高い
   - GISエンジンのAPIを独立して使用可能
 
 - マルチプラットフォーム対応が可能

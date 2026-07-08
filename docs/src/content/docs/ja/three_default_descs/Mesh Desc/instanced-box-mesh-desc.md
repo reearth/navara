@@ -59,7 +59,7 @@ import { Color } from "@navara/three";
 
 **Description:** エミッシブの強度を指定します。
 
-**Default:** `1`
+**Default:** `0`
 
 **Example:**
 
@@ -325,26 +325,6 @@ import { Matrix4 } from "three";
 {
   boxes: {
     effectIds: ["bloom-effect", "outline-effect"],
-  }
-}
-```
-
-### selectiveEffectOcclusion
-
-**Type:** `SelectiveEffectOcclusion` (optional)
-
-**Description:** セレクティブエフェクト（Bloom、Outlineなど）のオクルージョンモードを指定します。
-
-- `"normal"`: 通常のオクルージョン。他のオブジェクトに遮蔽された部分にはエフェクトが適用されません
-- `"silhouette"`: シルエットモード。遮蔽された部分にもエフェクトが適用されます
-
-**Example:**
-
-```typescript
-{
-  boxes: {
-    effectIds: ["bloom-effect"],
-    selectiveEffectOcclusion: "normal",
   }
 }
 ```

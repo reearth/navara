@@ -19,7 +19,7 @@ The `SelectiveOutlineEffectDesc` class is a Descriptor that applies a selective 
 
 ### color
 
-**Type:** `number | undefined`
+**Type:** `Color | undefined`
 
 **Description:** Specifies the outline color as a `Color`.
 
@@ -91,24 +91,6 @@ import { Color } from "@navara/three";
 }
 ```
 
-### debugViews
-
-**Type:** `boolean | undefined`
-
-**Description:** Specifies whether to enable debug views. When enabled, views of mask textures are displayed.
-
-**Default:** `false`
-
-**Example:**
-
-```typescript
-{
-  selectiveOutline: {
-    debugViews: true,
-  }
-}
-```
-
 ## Applying the Effect to Objects
 
 To apply the selective outline effect to specific objects, specify the outline effect descriptor's ID in the target object's `effectIds` property.
@@ -116,15 +98,6 @@ To apply the selective outline effect to specific objects, specify the outline e
 ### effectIds
 
 An array of selective effect descriptor IDs to apply to the target object. When an outline effect descriptor is added, a unique ID is assigned, and the effect is applied by specifying this ID in the target object's `effectIds`.
-
-### selectiveEffectOcclusion
-
-Specifies the occlusion processing mode when applying the effect.
-
-| Value | Description |
-|----|------|
-| `"normal"` | Normal mode. Enables depth testing and the effect is not applied to parts occluded by other objects (default) |
-| `"silhouette"` | Silhouette mode. Disables depth testing and the effect is displayed even when the object is occluded |
 
 ## Usage Examples
 
@@ -157,7 +130,6 @@ const cubeDesc = view.addMesh<BoxMeshDesc>({
     depth: 100,
     color: new Color().setHex(0x0088ff),
     effectIds: [outlineDesc.id], // Apply outline effect
-    selectiveEffectOcclusion: "normal",
   },
   position: { x: 0, y: 0, z: 1000 },
 });
@@ -261,42 +233,7 @@ const buildingsLayer = view.addLayer({
     show: true,
     color: new Color().setHex(0xffffff),
     effectIds: [outlineDesc.id],
-    selectiveEffectOcclusion: "normal",
   },
-});
-```
-
-### Using silhouette mode
-
-An example of highlighting objects behind buildings:
-
-```typescript
-import ThreeView, { Color } from "@navara/three";
-import {
-  BoxMeshDesc,
-  SelectiveOutlineEffectDesc,
-} from "@navara/three_default_descs";
-
-const view = new ThreeView();
-await view.init();
-
-const outlineDesc = view.addEffect<SelectiveOutlineEffectDesc>({
-  selectiveOutline: {
-    color: new Color().setHex(0x00ff00),
-    thickness: 2.0,
-  },
-});
-
-// Silhouette mode: outline is visible even behind buildings
-const highlightedCube = view.addMesh<BoxMeshDesc>({
-  box: {
-    width: 100,
-    height: 100,
-    depth: 100,
-    effectIds: [outlineDesc.id],
-    selectiveEffectOcclusion: "silhouette", // Visible even when occluded
-  },
-  position: { x: 0, y: 0, z: 500 },
 });
 ```
 
@@ -335,7 +272,6 @@ const cubeDesc = view.addMesh<BoxMeshDesc>({
     color: new Color().setHex(0xff0000),
     emissiveIntensity: 1.0,
     effectIds: [bloomDesc.id, outlineDesc.id], // Apply both
-    selectiveEffectOcclusion: "normal",
   },
   position: { x: 0, y: 0, z: 1000 },
 });
@@ -345,5 +281,3 @@ const cubeDesc = view.addMesh<BoxMeshDesc>({
 
 - The selective outline effect draws object contours using edge detection with a Sobel filter.
 - It is suitable for highlighting or focusing on selected objects.
-- The default value of `selectiveEffectOcclusion` is `"normal"`. The `"silhouette"` mode is used when you intentionally want to display occluded objects.
-- Rendering is done in two passes: DepthEnabled objects (with depth clipping) and Silhouette objects (without depth clipping), to correctly handle occlusion.

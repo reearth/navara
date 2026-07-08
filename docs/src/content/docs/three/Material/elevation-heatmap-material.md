@@ -49,7 +49,7 @@ Because it decodes DEM tiles, it requires a [`raster-dem`](../../../three/source
 
 ### logBoundary
 
-**Type:** `number | undefined` — **Default:** `10`
+**Type:** `number | undefined` — **Default:** `0`
 
 **Description:** Boundary value used as the base for logarithmic calculations when `logarithmic` is enabled.
 

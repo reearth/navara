@@ -56,7 +56,7 @@ Resolves a Cesium Ion asset endpoint at `init()` time and registers it as a quan
 
 ## Usage
 
-Both plugins follow the standard plugin lifecycle: create an instance, register it with `view.addPlugin()` before `view.init()`, and then use plugin-specific methods after initialization.
+All plugins follow the standard plugin lifecycle: create an instance, register it with `view.addPlugin()` before `view.init()`, and then use plugin-specific methods after initialization.
 
 ```typescript
 import ThreeView from "@navara/three";

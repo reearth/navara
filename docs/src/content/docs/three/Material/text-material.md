@@ -69,7 +69,7 @@ import { Color } from "@navara/three";
 
 ### center
 
-**Type:** [`Vec2`](#vec2) | undefined
+**Type:** [`Vec2`](../../api/types/#vec2) | undefined
 
 **Description:** Specifies the shift amount from the center. The range is between 0 and 1.
 
@@ -472,21 +472,3 @@ import { Color } from "@navara/three";
   }
 }
 ```
-
-## Vec2
-
-A class representing a 2D vector.
-
-### Properties
-
-#### x
-
-**Type:** `number`
-
-**Description:** X coordinate value.
-
-#### y
-
-**Type:** `number`
-
-**Description:** Y coordinate value.

@@ -193,24 +193,6 @@ import { Color } from "@navara/three";
 }
 ```
 
-### selectiveEffectOcclusion
-
-**Type:** `string | undefined`
-
-**Description:** Specifies the depth behavior for the selective effect mask pass. Can be set to "normal" or "silhouette".
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  polyline: {
-    selectiveEffectOcclusion: "normal"
-  }
-}
-```
-
 ### show
 
 **Type:** `boolean | undefined`

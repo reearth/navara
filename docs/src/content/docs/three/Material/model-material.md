@@ -28,7 +28,7 @@ sidebar:
 ```
 
 :::tip[Full Animation Control]
-For advanced animation features such as `animationAutoPlay`, `animationClips`, `animationCrossfadeDuration`, `animationEnabled`, and `animationLoop`, use [GLTFModelDesc](/three_default_descs/mesh-desc/gltf-model-desc/) which provides full animation control as a mesh Descriptor.
+For advanced animation features such as `animationAutoPlay`, `animationClips`, `animationCrossfadeDuration`, `animationEnabled`, and `animationLoop`, use [GLTFModelDesc](../../../three_default_descs/mesh-desc/gltf-model-desc/) which provides full animation control as a mesh Descriptor.
 :::
 
 ### animationSpeed
@@ -397,24 +397,6 @@ import { Color } from "@navara/three";
 }
 ```
 
-### selectiveEffectOcclusion
-
-**Type:** `string | undefined`
-
-**Description:** Specifies the depth behavior for the selective effect mask pass. Can be set to "normal" or "silhouette".
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  model: {
-    selectiveEffectOcclusion: "normal"
-  }
-}
-```
-
 ### shininess
 
 **Type:** `number | undefined`
@@ -591,24 +573,6 @@ import { Color } from "@navara/three";
 {
   model: {
     water: true
-  }
-}
-```
-
-### waterNormalUrl
-
-**Type:** `string | undefined`
-
-**Description:** Specifies the URL of the water surface normal map.
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  model: {
-    waterNormalUrl: "/textures/water_normal.png"
   }
 }
 ```

@@ -71,35 +71,13 @@ The `SelectiveBloomEffectDesc` class is a Descriptor that applies a selective bl
 }
 ```
 
-### debugMode
-
-**Type:** `number | undefined`
-
-**Description:** Specifies the debug mode.
-- `0`: Normal mode
-- `1`: Show base only
-- `2`: Show bloom only
-- `3`: Show bloom emphasized (100x)
-
-**Default:** `0`
-
-**Example:**
-
-```typescript
-{
-  selectiveBloom: {
-    debugMode: 2,
-  }
-}
-```
-
 ### resolutionScale
 
 **Type:** `number | undefined`
 
 **Description:** Specifies the rendering resolution scale factor. Lower values improve performance.
 
-**Default:** `1.0`
+**Default:** `0.5`
 
 **Example:**
 
@@ -107,24 +85,6 @@ The `SelectiveBloomEffectDesc` class is a Descriptor that applies a selective bl
 {
   selectiveBloom: {
     resolutionScale: 0.5,
-  }
-}
-```
-
-### debugViews
-
-**Type:** `boolean | undefined`
-
-**Description:** Specifies whether to enable debug views. When enabled, views of mask textures are displayed.
-
-**Default:** `false`
-
-**Example:**
-
-```typescript
-{
-  selectiveBloom: {
-    debugViews: true,
   }
 }
 ```
@@ -144,15 +104,6 @@ Specifies the bloom source color. When not set, the material's surface color (di
 ### emissiveIntensity
 
 Controls the intensity of the bloom source. Higher values produce brighter bloom.
-
-### selectiveEffectOcclusion
-
-Specifies the occlusion processing mode when applying the effect.
-
-| Value | Description |
-|----|------|
-| `"normal"` | Normal mode. Enables depth testing and the effect is not applied to parts occluded by other objects (default) |
-| `"silhouette"` | Silhouette mode. Disables depth testing and the effect is displayed even when the object is occluded |
 
 ## Usage Examples
 
@@ -187,7 +138,6 @@ const cubeDesc = view.addMesh<BoxMeshDesc>({
     color: new Color().setHex(0xff0000),
     emissiveIntensity: 1.0, // Controls bloom brightness
     effectIds: [bloomDesc.id],
-    selectiveEffectOcclusion: "normal",
   },
   position: { x: 0, y: 0, z: 1000 },
 });
@@ -292,7 +242,6 @@ const buildingsLayer = view.addLayer({
     color: new Color().setHex(0xffffff),
     effectIds: [bloomDesc.id],
     emissiveIntensity: 0.3,
-    selectiveEffectOcclusion: "normal",
   },
 });
 ```
@@ -328,7 +277,6 @@ const modelLayer = view.addLayer({
     url: "model.glb",
     effectIds: [bloomDesc.id],
     emissiveIntensity: 0.5,
-    selectiveEffectOcclusion: "normal",
   },
 });
 ```
@@ -369,5 +317,3 @@ cubeDesc.update({
 - The selective bloom effect uses mask-based filtering to apply bloom only to specific objects.
 - When `emissiveColor` is not set, the material's surface color (diffuseColor) is automatically used as the bloom source. This includes per-instance colors for InstancedMesh and texture colors for textured materials.
 - To use the bloom effect effectively, it is important to set the object's `emissiveIntensity` appropriately.
-- The default value of `selectiveEffectOcclusion` is `"normal"`. The `"silhouette"` mode is used when you intentionally want to display occluded objects.
-- Rendering is done in two passes: DepthEnabled objects (with depth clipping) and Silhouette objects (without depth clipping), to correctly handle occlusion.

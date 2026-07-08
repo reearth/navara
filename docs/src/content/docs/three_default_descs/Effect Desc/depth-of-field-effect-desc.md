@@ -23,7 +23,7 @@ The `DepthOfFieldEffectDesc` class is a Descriptor that applies a depth of field
 
 **Description:** Specifies the normalized distance to the focus plane. Range is [0.0, 1.0].
 
-**Default:** `0.000006`
+**Default:** `1000`
 
 **Example:**
 
@@ -41,7 +41,7 @@ The `DepthOfFieldEffectDesc` class is a Descriptor that applies a depth of field
 
 **Description:** Controls the focal length of the virtual lens. It controls how quickly sharpness falls off around the focus plane. Range is [0.0, 1.0].
 
-**Default:** `0.000013`
+**Default:** `1000`
 
 **Example:**
 

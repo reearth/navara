@@ -29,7 +29,7 @@ sidebar:
 
 ### center
 
-**Type:** [`Vec2`](./point-material#vec2)
+**Type:** [`Vec2`](../../api/types/#vec2)
 
 **Description:** Specifies the shift amount from the center. The range is between 0 and 1.
 
@@ -226,24 +226,6 @@ import { Color } from "@navara/three";
 {
   billboard: {
     sizeInMeters: true
-  }
-}
-```
-
-### selectiveEffectOcclusion
-
-**Type:** `string | undefined`
-
-**Description:** Specifies the depth behavior for the selective effect mask pass. Can be set to "normal" or "silhouette".
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  billboard: {
-    selectiveEffectOcclusion: "normal"
   }
 }
 ```

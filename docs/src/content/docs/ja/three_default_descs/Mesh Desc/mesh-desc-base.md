@@ -18,7 +18,7 @@ sidebar:
 | `scale`       | `{ x: number, y: number, z: number }` | -          | スケール、`matrix`/`matrixWorld` 設定時はローカルオフセット                                 |
 | `matrix`      | `Matrix4`                             | -          | ローカル変換行列。設定時は `position`/`rotation`/`scale` がこのフレーム内のオフセットになる |
 | `matrixWorld` | `Matrix4`                             | -          | ワールド変換行列。設定時は `position`/`rotation`/`scale` がこのフレーム内のオフセットになる |
-| `pickable`    | `boolean`                             | `false`    | GPU ベースのクリックピッキングを有効にする                                                  |
+| `pickable`    | `boolean`                             | `false`    | GPU ベースのクリックピッキングを有効にする。ピッキング対応のメッシュ Descriptor が Descriptor ごとに定義するもので、基底の設定には存在しない |
 
 ## トランスフォーム合成
 
@@ -156,7 +156,7 @@ type PickedFeature = {
 };
 ```
 
-カスタム Descriptor でのピッキング実装については、[Custom Descriptor — ピッキングの実装](../../three/core/custom-desc/#カスタム-descriptor-でのピッキング実装) を参照してください。
+カスタム Descriptor でのピッキング実装については、[Custom Descriptor — ピッキングの実装](../../../three/core/custom-desc/#カスタム-descriptor-でのピッキング実装) を参照してください。
 
 ## 座標変換
 
@@ -208,11 +208,10 @@ const sphereDesc = view.addMesh<SphereMeshDesc>({
 ```typescript
 import {
   geodeticToVector3,
-  geodeticSurfaceNormal,
+  eastNorthUpToFixedFrame,
   degreeToRadian,
 } from "@navara/three";
 import { GLTFModelDesc } from "@navara/three_default_descs";
-import { Vector3, Quaternion, Euler } from "three";
 
 // GLTFModelDesc が登録済みであること
 

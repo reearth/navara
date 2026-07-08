@@ -29,7 +29,7 @@ sidebar:
 
 ### center
 
-**Type:** [`Vec2`](./point-material#vec2)
+**Type:** [`Vec2`](../../api/types/#vec2)
 
 **Description:** 中心からのシフト量を指定します。範囲は 0 から 1 の間です。
 
@@ -226,24 +226,6 @@ import { Color } from "@navara/three";
 {
   billboard: {
     sizeInMeters: true
-  }
-}
-```
-
-### selectiveEffectOcclusion
-
-**Type:** `string | undefined`
-
-**Description:** セレクティブエフェクトマスクパスの深度動作を指定します。"normal" または "silhouette" を指定できます。
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  billboard: {
-    selectiveEffectOcclusion: "normal"
   }
 }
 ```

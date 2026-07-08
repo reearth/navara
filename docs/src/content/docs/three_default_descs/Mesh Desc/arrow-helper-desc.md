@@ -7,7 +7,7 @@ sidebar:
 
 `ArrowHelperDesc` is a helper Descriptor for adding a Three.js `ArrowHelper` to the scene. It is suitable for visualizing direction vectors, representing wind direction or travel direction, and debugging purposes.
 
-In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-desc-base) for details.
+In addition to the properties below, the common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `visible`) are available. See [MeshDesc](./mesh-desc-base) for details.
 
 ## Properties
 
@@ -19,13 +19,13 @@ In addition to the properties below, all common properties from the base class (
 
 #### direction
 
-**Type:** `XYZ` (required)
+**Type:** [`XYZ`](../../../three/api/types/#xyz) (required)
 
 **Description:** The direction vector of the arrow. Automatically normalized.
 
 #### origin
 
-**Type:** `XYZ | undefined`
+**Type:** [`XYZ`](../../../three/api/types/#xyz) | undefined
 
 **Description:** The origin coordinates of the arrow. Defaults to `{ x: 0, y: 0, z: 0 }` when omitted.
 
@@ -64,6 +64,7 @@ import ThreeView, { Color } from "@navara/three";
 import { ArrowHelperDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
+view.registerMesh("arrowHelper", ArrowHelperDesc);
 await view.init();
 
 // A green arrow of length 5 pointing east

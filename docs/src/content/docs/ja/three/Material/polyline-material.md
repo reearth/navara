@@ -193,24 +193,6 @@ import { Color } from "@navara/three";
 }
 ```
 
-### selectiveEffectOcclusion
-
-**Type:** `string | undefined`
-
-**Description:** セレクティブエフェクトマスクパスの深度動作を指定します。"normal" または "silhouette" を指定できます。
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  polyline: {
-    selectiveEffectOcclusion: "normal"
-  }
-}
-```
-
 ### show
 
 **Type:** `boolean | undefined`

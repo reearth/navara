@@ -125,7 +125,7 @@ isAtNight(position: XYZ): boolean
 **Example:**
 
 ```typescript
-const cameraPosition = view.camera.position;
+const cameraPosition = view.camera.positionECEF;
 const isNight = view.atmosphere.isAtNight({
   x: cameraPosition.x,
   y: cameraPosition.y,

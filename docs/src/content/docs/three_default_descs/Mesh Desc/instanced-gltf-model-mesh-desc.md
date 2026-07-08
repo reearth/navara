@@ -22,7 +22,7 @@ Picking is only supported on the non-skinned path. On the skinned path, `batchId
 
 ## Shared Properties (InstancedModelsDescription)
 
-Specified in the `models` config object.
+Specified in the `gltfModels` config object.
 
 ### url
 

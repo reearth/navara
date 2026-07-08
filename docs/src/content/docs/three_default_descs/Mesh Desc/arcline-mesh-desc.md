@@ -20,11 +20,13 @@ In addition to the properties below, all common properties from the base class (
 **Example:**
 
 ```typescript
+import { Color } from "@navara/three";
+
 {
   arcLines: {
     thickness: 2,
-    srcColor: 0xff0000,
-    tgtColor: 0x0000ff,
+    srcColor: new Color().setHex(0xff0000),
+    tgtColor: new Color().setHex(0x0000ff),
     geometry: [
       { lng: 139.7, lat: 35.7 },
       { lng: -74.0, lat: 40.7 }
@@ -107,36 +109,40 @@ In addition to the properties below, all common properties from the base class (
 
 ### srcColor
 
-**Type:** `number`
+**Type:** `Color`
 
-**Description:** Specifies the color of the arc line's starting point as a hexadecimal color code (0x + hex).
+**Description:** Specifies the color of the arc line's starting point using a `Color` instance.
 
-**Default:** `0xffffff`
+**Default:** `new Color().setHex(0xffffff)`
 
 **Example:**
 
 ```typescript
+import { Color } from "@navara/three";
+
 {
   arcLines: {
-    srcColor: 0xff0000,
+    srcColor: new Color().setHex(0xff0000),
   }
 }
 ```
 
 ### tgtColor
 
-**Type:** `number`
+**Type:** `Color`
 
-**Description:** Specifies the color of the arc line's ending point as a hexadecimal color code (0x + hex).
+**Description:** Specifies the color of the arc line's ending point using a `Color` instance.
 
-**Default:** `0xffffff`
+**Default:** `new Color().setHex(0xffffff)`
 
 **Example:**
 
 ```typescript
+import { Color } from "@navara/three";
+
 {
   arcLines: {
-    tgtColor: 0x0000ff,
+    tgtColor: new Color().setHex(0x0000ff),
   }
 }
 ```
@@ -269,7 +275,7 @@ In addition to the properties below, all common properties from the base class (
 
 ### geometry
 
-**Type:** `LngLat[]`
+**Type:** [`LatLng`](../../../three/api/navara_three_api/#latlng)`[]`
 
 **Description:** Specifies the points that make up the arc line as an array of longitude and latitude. Two points create one arc line.
 
@@ -293,18 +299,19 @@ In addition to the properties below, all common properties from the base class (
 ### Basic Usage
 
 ```typescript
-import ThreeView from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
 import { ArclineMeshDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
+view.registerMesh("arcLines", ArclineMeshDesc);
 await view.init();
 
 // Add an ArclineMeshDesc
 const arclineDesc = view.addMesh<ArclineMeshDesc>({
   arcLines: {
     thickness: 2,
-    srcColor: 0xff0000,
-    tgtColor: 0x0000ff,
+    srcColor: new Color().setHex(0xff0000),
+    tgtColor: new Color().setHex(0x0000ff),
     arcHeightScale: 0.3,
     segments: 128,
     geometry: [
@@ -322,8 +329,8 @@ const arclineDesc = view.addMesh<ArclineMeshDesc>({
   arcLines: [
     {
       thickness: 2,
-      srcColor: 0xff0000,
-      tgtColor: 0x00ff00,
+      srcColor: new Color().setHex(0xff0000),
+      tgtColor: new Color().setHex(0x00ff00),
       geometry: [
         { lng: 139.7, lat: 35.7 },
         { lng: -0.1, lat: 51.5 },
@@ -331,8 +338,8 @@ const arclineDesc = view.addMesh<ArclineMeshDesc>({
     },
     {
       thickness: 3,
-      srcColor: 0x0000ff,
-      tgtColor: 0xffff00,
+      srcColor: new Color().setHex(0x0000ff),
+      tgtColor: new Color().setHex(0xffff00),
       dashed: true,
       dashSize: 5000,
       gapSize: 2000,

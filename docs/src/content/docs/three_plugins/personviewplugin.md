@@ -274,7 +274,7 @@ The state object emitted by `onStateChange()`:
 | `lat`            | `number`         | Current latitude in degrees.                                  |
 | `alt`            | `number`         | Current altitude in meters.                                   |
 | `heading`        | `number`         | Current heading in radians (0 = north, increasing clockwise). |
-| `speed`          | `number`         | Current speed in m/s (0 when stationary).                     |
+| `speed`          | `number`         | Configured movement speed in m/s (`moveSpeed`, multiplied by 2.5 while dashing). |
 | `animationState` | `string \| null` | Name of the currently playing clip; `null` when no character. |
 | `mode`           | `"tpv" \| "fpv"` | Current view mode.                                            |
 
