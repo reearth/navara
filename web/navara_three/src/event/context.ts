@@ -39,10 +39,16 @@ import type { TextureSlot } from "../utils";
 import type { HillshadeContext } from "./HillshadeContext";
 
 export type BufferLoader = {
+  // The non-removing getters (u8/f32/f64/u32) return short-lived VIEWS into
+  // WASM linear memory: consume them immediately and `.slice()` to retain —
+  // any WASM call that allocates may grow the memory and detach the view.
+  // Never hand their `.buffer` (the whole WASM memory) to another consumer.
+  // Consecutive getter calls do not allocate, so earlier views stay valid.
   u8: (handle: number) => Uint8Array | null;
   f32: (handle: number) => Float32Array | null;
   f64: (handle: number) => Float64Array | null;
   u32: (handle: number) => Uint32Array | null;
+  // The remove* variants return owned copies (the WASM-side buffer is freed).
   removeU8: (handle: number) => Uint8Array | null;
   removeF32: (handle: number) => Float32Array | null;
   removeF64: (handle: number) => Float64Array | null;

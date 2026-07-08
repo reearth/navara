@@ -1,39 +1,49 @@
 import invariant from "tiny-invariant";
-import workerpool, { Promise } from "workerpool";
-import type Pool from "workerpool/types/Pool";
+import type { Promise } from "workerpool";
 import type { ExecOptions } from "workerpool/types/types";
 
 import type { ConcurrencyManager } from "./manager";
+import {
+  RecyclingWorkerPool,
+  type RecyclingWorkerPoolOptions,
+} from "./recyclingPool";
 import { type CommonTasks } from "./worker";
 
 export type { Promise } from "workerpool";
+export type {
+  RecyclingWorkerPoolOptions,
+  WorkerPoolStats,
+} from "./recyclingPool";
 
-const { initializeWorkerPool, terminateWorkerPool, worker } = (() => {
+const {
+  initializeWorkerPool,
+  terminateWorkerPool,
+  warmUpWorkerPool,
+  worker,
+  workerPoolStats,
+} = (() => {
   // Restrict access to this object.
   let worker:
     | {
-        pool: Pool;
+        pool: RecyclingWorkerPool;
         manager: ConcurrencyManager;
       }
     | undefined;
 
   return {
-    initializeWorkerPool: (url: string, manager: ConcurrencyManager) => {
+    initializeWorkerPool: (
+      url: string,
+      manager: ConcurrencyManager,
+      options?: RecyclingWorkerPoolOptions,
+    ) => {
       if (worker) {
         throw new Error("Worker pool has already been initialized.");
       }
 
-      const pool = workerpool.pool(url, {
-        maxWorkers: manager.total,
-        // Avoid oversubscribing CPU when combined with other systems (e.g., DRACO loader).
-        minWorkers: 0,
-        workerOpts: {
-          type: import.meta.env.PROD ? undefined : "module",
-        },
-      });
-
       worker = {
-        pool,
+        // Recycles worker threads to bound WASM linear memory growth; see
+        // recyclingPool.ts for the policy.
+        pool: new RecyclingWorkerPool(url, manager.total, options),
         manager,
       };
     },
@@ -43,6 +53,14 @@ const { initializeWorkerPool, terminateWorkerPool, worker } = (() => {
         worker = undefined;
       }
     },
+    /**
+     * Pre-initializes WASM on every worker so that upcoming tasks don't pay
+     * the initialization latency. Resolves when all workers are warm.
+     */
+    warmUpWorkerPool: () => {
+      invariant(worker, "initializeWorkerPool() must be invoked first.");
+      return worker.pool.warmUp();
+    },
     worker: () => {
       invariant(worker, "initializeWorkerPool() must be invoked first.");
       return {
@@ -50,13 +68,22 @@ const { initializeWorkerPool, terminateWorkerPool, worker } = (() => {
         manager: worker.manager,
       };
     },
+    workerPoolStats: () => worker?.pool.stats(),
   };
 })();
 
-export { initializeWorkerPool, terminateWorkerPool };
+export {
+  initializeWorkerPool,
+  terminateWorkerPool,
+  warmUpWorkerPool,
+  workerPoolStats,
+};
 
 export const canWorkerProcessImmediately = () => {
-  return worker().manager.canIncrement();
+  const { pool, manager } = worker();
+  // Also pauses intake while every worker is over its WASM heap budget
+  // (draining); a recycled worker restores capacity moments later.
+  return manager.canIncrement() && pool.canAcceptTasks();
 };
 
 export type { ExecOptions } from "workerpool/types/types";

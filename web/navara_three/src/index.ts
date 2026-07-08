@@ -19,7 +19,11 @@ import initCore, {
 import { FontManager, type FontFamily } from "@navara/font";
 import FontWorkerURL from "@navara/font/fontWorker?worker&url";
 import { initNavaraApi } from "@navara/three_api";
-import { initializeWorkerPool, terminateWorkerPool } from "@navara/worker";
+import {
+  initializeWorkerPool,
+  terminateWorkerPool,
+  warmUpWorkerPool,
+} from "@navara/worker";
 import {
   Scene,
   WebGLRenderer,
@@ -91,7 +95,6 @@ import { TexturizedSceneByTileCoordinates, type Scenes } from "./scene";
 import { ShadowMapViewers } from "./ShadowMapViewers";
 import { Source } from "./source";
 import { RendererStats } from "./stats";
-import { warmUp } from "./tasks/warmUp";
 import type { TextureOptions } from "./textures";
 import { TileTextureCompositor } from "./tileTexture";
 import {
@@ -880,16 +883,15 @@ export default class ThreeView<
       this._hillshadeContext.normalMapScale = 0.5;
     }
 
-    initializeWorkerPool(WorkerURL, concurrencyManager);
+    initializeWorkerPool(WorkerURL, concurrencyManager, {
+      // A worker over this WASM heap budget is recycled; tighter on mobile,
+      // where the process is killed at much lower memory pressure.
+      maxWorkerHeapBytes: (mobileOptimized ? 128 : 256) * 1024 * 1024,
+    });
 
-    // Pre-warm all workers with WASM initialization
-    const warmUpPromises: Promise<void>[] = [];
-    for (let i = 0; i < concurrencyManager.total; i++) {
-      warmUpPromises.push(warmUp());
-    }
-
-    // Asynchronous initialization in parallel.
-    await Promise.all([...warmUpPromises, initCore(), initNavaraApi()]);
+    // Asynchronous initialization in parallel, pre-warming all workers with
+    // WASM initialization.
+    await Promise.all([warmUpWorkerPool(), initCore(), initNavaraApi()]);
 
     this._core = new Core(newId());
     this._core.start();

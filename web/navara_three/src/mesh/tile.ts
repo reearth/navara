@@ -578,9 +578,12 @@ export class TileMesh
     const uv = buf.f32(mesh.uvs);
     const normals = mesh.normals != null ? buf.f32(mesh.normals) : null;
 
+    // The buf.* arrays are short-lived views into WASM memory: they must be
+    // consumed before any further WASM call. createSkirtMesh copies them once —
+    // into the combined buffers when a skirt exists, or via slice() otherwise.
     // Terrain-only geometry (for shadow rendering). createSkirtMesh fills it:
     // when a skirt exists it shares the combined geometry's buffers (with the
-    // skirt cut off via drawRange), otherwise it takes the arrays as-is.
+    // skirt cut off via drawRange).
     const terrainGeometry = new BufferGeometry();
 
     const aabb_center = new Vector3(
@@ -611,10 +614,11 @@ export class TileMesh
         const size = isUniform ? 1 : 256;
         // Single-channel R8 — the composite shader only reads `.r`. RedFormat
         // halves GPU memory vs. RGBA (256×256 = 64KB instead of 256KB).
-        // `watermask` is already an independent copy, and both the texture and
-        // `data` only read it, so the same array backs both.
+        // `watermask` is a short-lived view into WASM memory; copy it once and
+        // share the copy between the texture and `data` (both only read it).
+        const data = watermask.slice();
         const texture = new DataTexture(
-          watermask,
+          data,
           size,
           size,
           RedFormat,
@@ -623,7 +627,7 @@ export class TileMesh
         texture.flipY = true;
         texture.needsUpdate = true;
         this.userData.watermask = {
-          data: watermask,
+          data,
           isUniform,
           texture,
         };
@@ -770,18 +774,22 @@ export class TileMesh
       terrainGeometry.setIndex(indexAttribute);
       terrainGeometry.setDrawRange(0, indices.length);
     } else {
-      // No skirt data - build the terrain geometry from the arrays as-is
+      // No skirt data - build the terrain geometry from the arrays. slice()
+      // copies out of the WASM-memory views since BufferAttribute retains them.
       terrainGeometry.setAttribute(
         "position",
-        new BufferAttribute(position, 3),
+        new BufferAttribute(position.slice(), 3),
       );
       if (uv) {
-        terrainGeometry.setAttribute("uv", new BufferAttribute(uv, 2));
+        terrainGeometry.setAttribute("uv", new BufferAttribute(uv.slice(), 2));
       }
       if (normals) {
-        terrainGeometry.setAttribute("normal", new BufferAttribute(normals, 3));
+        terrainGeometry.setAttribute(
+          "normal",
+          new BufferAttribute(normals.slice(), 3),
+        );
       }
-      terrainGeometry.setIndex(new BufferAttribute(indices, 1));
+      terrainGeometry.setIndex(new BufferAttribute(indices.slice(), 1));
       geometry = terrainGeometry;
     }
 

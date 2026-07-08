@@ -48,7 +48,9 @@ async function applyCreasedNormals(
 export async function renderModel(ctx: EventContext, m: NavaraModelMesh) {
   const { rawScene, credit } = await (async () => {
     if (m.bin) {
-      const bin = ctx.buf.u8(m.bin);
+      // buf.u8 returns a short-lived view into WASM memory; copy it since the
+      // bin is consumed asynchronously (Draco / GLTFLoader) via its `.buffer`.
+      const bin = ctx.buf.u8(m.bin)?.slice();
       if (!bin) {
         return {};
       }
@@ -131,7 +133,6 @@ export async function renderModel(ctx: EventContext, m: NavaraModelMesh) {
           }
         });
       }
-      bin.set([]);
 
       return {
         rawScene: model.scene,
