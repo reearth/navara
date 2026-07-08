@@ -175,6 +175,7 @@ layer.on("featureUpdated", ({ evaluator }) => {
 | Property | Type | Description |
 |----------|------|-------------|
 | `featureSetId` | `FeatureSetId` | Identifier of the feature set whose visibility changed |
+| `visible` | `boolean` | Whether the feature set is now visible |
 
 #### featureRemoved
 
@@ -261,7 +262,7 @@ skyHandle.visible = false;
 const skyHandle = view.addMesh<SkyMeshDesc>({ sky: {} });
 
 // Access the underlying Descriptor instance
-const skyHandle = skyHandle.ref;
+const skyDesc = skyHandle.ref;
 ```
 
 ### Methods
@@ -287,7 +288,7 @@ update(updates: UpdateConfig): void
 const skyHandle = view.addMesh<SkyMeshDesc>({ sky: {} });
 
 // Update settings
-skyHandle.update({ sunAngularRadius: 0.05 });
+skyHandle.update({ sky: { sunAngularRadius: 0.05 } });
 ```
 
 #### delete()

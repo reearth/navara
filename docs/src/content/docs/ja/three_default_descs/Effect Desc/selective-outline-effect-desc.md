@@ -19,7 +19,7 @@ sidebar:
 
 ### color
 
-**Type:** `number | undefined`
+**Type:** `Color | undefined`
 
 **Description:** アウトラインの色を`Color`で指定します。
 
@@ -91,24 +91,6 @@ import { Color } from "@navara/three";
 }
 ```
 
-### debugViews
-
-**Type:** `boolean | undefined`
-
-**Description:** デバッグビューを有効にするかどうかを指定します。有効にすると、マスクテクスチャのビューが表示されます。
-
-**Default:** `false`
-
-**Example:**
-
-```typescript
-{
-  selectiveOutline: {
-    debugViews: true,
-  }
-}
-```
-
 ## オブジェクトへのエフェクト適用
 
 選択的アウトラインエフェクトを特定のオブジェクトに適用するには、対象オブジェクトの`effectIds`プロパティにアウトラインエフェクトのIDを指定します。
@@ -117,25 +99,16 @@ import { Color } from "@navara/three";
 
 対象オブジェクトに適用するセレクティブエフェクトのIDの配列です。アウトラインエフェクトを追加すると一意のIDが割り当てられ、このIDを対象オブジェクトの`effectIds`に指定することでエフェクトが適用されます。
 
-### selectiveEffectOcclusion
-
-エフェクト適用時のオクルージョン（遮蔽）処理モードを指定します。
-
-| 値             | 説明                                                                                                               |
-| -------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `"normal"`     | 通常モード。深度テストを有効にし、他のオブジェクトに遮蔽されている部分にはエフェクトが適用されません（デフォルト） |
-| `"silhouette"` | シルエットモード。深度テストを無効にし、オブジェクトが遮蔽されていてもエフェクトが表示されます                     |
-
 ## Usage Examples
 
 ### 基本的な選択的アウトラインの追加
 
 ```typescript
-import ThreeView, {
-  SelectiveOutlineEffectDesc,
+import ThreeView, { Color } from "@navara/three";
+import {
   BoxMeshDesc,
-  Color,
-} from "@navara/three";
+  SelectiveOutlineEffectDesc,
+} from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -157,7 +130,6 @@ const cubeDesc = view.addMesh<BoxMeshDesc>({
     depth: 100,
     color: new Color().setHex(0x0088ff),
     effectIds: [outlineDesc.id], // アウトラインエフェクトを適用
-    selectiveEffectOcclusion: "normal",
   },
   position: { x: 0, y: 0, z: 1000 },
 });
@@ -262,54 +234,19 @@ const buildingsLayer = view.addLayer({
     show: true,
     color: new Color().setHex(0xffffff),
     effectIds: [outlineDesc.id],
-    selectiveEffectOcclusion: "normal",
   },
-});
-```
-
-### シルエットモードの使用
-
-建物の背後にあるオブジェクトをハイライト表示する例：
-
-```typescript
-import ThreeView, {
-  SelectiveOutlineEffectDesc,
-  BoxMeshDesc,
-  Color,
-} from "@navara/three";
-
-const view = new ThreeView();
-await view.init();
-
-const outlineDesc = view.addEffect<SelectiveOutlineEffectDesc>({
-  selectiveOutline: {
-    color: new Color().setHex(0x00ff00),
-    thickness: 2.0,
-  },
-});
-
-// シルエットモード：建物の背後でもアウトラインが見える
-const highlightedCube = view.addMesh<BoxMeshDesc>({
-  box: {
-    width: 100,
-    height: 100,
-    depth: 100,
-    effectIds: [outlineDesc.id],
-    selectiveEffectOcclusion: "silhouette", // 遮蔽されていても表示
-  },
-  position: { x: 0, y: 0, z: 500 },
 });
 ```
 
 ### ブルームとアウトラインを組み合わせる
 
 ```typescript
-import ThreeView, {
+import ThreeView, { Color } from "@navara/three";
+import {
+  BoxMeshDesc,
   SelectiveBloomEffectDesc,
   SelectiveOutlineEffectDesc,
-  BoxMeshDesc,
-  Color,
-} from "@navara/three";
+} from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -336,7 +273,6 @@ const cubeDesc = view.addMesh<BoxMeshDesc>({
     color: new Color().setHex(0xff0000),
     emissiveIntensity: 1.0,
     effectIds: [bloomDesc.id, outlineDesc.id], // 両方を適用
-    selectiveEffectOcclusion: "normal",
   },
   position: { x: 0, y: 0, z: 1000 },
 });
@@ -346,5 +282,3 @@ const cubeDesc = view.addMesh<BoxMeshDesc>({
 
 - 選択的アウトラインエフェクトは、Sobel フィルタを使用したエッジ検出により、オブジェクトの輪郭を描画します。
 - 選択したオブジェクトのハイライト表示やフォーカス表示に適しています。
-- `selectiveEffectOcclusion`のデフォルト値は`"normal"`です。`"silhouette"`モードは、遮蔽されているオブジェクトを意図的に表示したい場合に使用します。
-- DepthEnabled オブジェクト（深度クリップあり）と Silhouette オブジェクト（深度クリップなし）の2パスでレンダリングされ、オクルージョンを正しく処理します。

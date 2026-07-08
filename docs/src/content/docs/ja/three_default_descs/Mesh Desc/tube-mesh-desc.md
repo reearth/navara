@@ -13,7 +13,7 @@ sidebar:
 
 ### points
 
-**Type:** `XYZ[]`
+**Type:** [`XYZ`](../../../three/api/types/#xyz)`[]`
 
 **Description:** チューブの経路を定義する3D座標の配列を指定します。最低2点が必要です。
 
@@ -203,7 +203,7 @@ import { Color } from "@navara/three";
 
 **Description:** 発光の強度を指定します。
 
-**Default:** `1`
+**Default:** `0`
 
 **Example:**
 
@@ -271,26 +271,6 @@ import { Color } from "@navara/three";
 }
 ```
 
-### selectiveEffectOcclusion
-
-**Type:** `SelectiveEffectOcclusion` (optional)
-
-**Description:** セレクティブエフェクト（Bloom、Outline など）のオクルージョンモードを指定します。
-
-- `"normal"`: 通常のオクルージョンで、他のオブジェクトに遮られた部分はエフェクトが適用されません
-- `"silhouette"`: シルエットモードで、遮られた部分もエフェクトが適用されます
-
-**Example:**
-
-```typescript
-{
-  tube: {
-    effectIds: ["bloom-effect"],
-    selectiveEffectOcclusion: "normal",
-  }
-}
-```
-
 ## Usage Examples
 
 ```typescript
@@ -298,6 +278,7 @@ import ThreeView, { Color } from "@navara/three";
 import { TubeMeshDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
+view.registerMesh("tube", TubeMeshDesc);
 await view.init();
 
 // TubeMeshDescを追加

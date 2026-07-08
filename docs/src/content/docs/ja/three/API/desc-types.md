@@ -175,6 +175,7 @@ layer.on("featureUpdated", ({ evaluator }) => {
 | Property       | Type           | Description                                  |
 | -------------- | -------------- | -------------------------------------------- |
 | `featureSetId` | `FeatureSetId` | 可視性が変更されたフィーチャーセットの識別子 |
+| `visible`      | `boolean`      | フィーチャーセットが現在可視かどうか         |
 
 #### featureRemoved
 
@@ -261,7 +262,7 @@ skyHandle.visible = false;
 const skyHandle = view.addMesh<SkyMeshDesc>({ sky: {} });
 
 // 基底 Descriptor インスタンスにアクセス
-const skyHandle = skyHandle.ref;
+const skyDesc = skyHandle.ref;
 ```
 
 ### Methods
@@ -287,7 +288,7 @@ update(updates: UpdateConfig): void
 const skyHandle = view.addMesh<SkyMeshDesc>({ sky: {} });
 
 // 設定を更新
-skyHandle.update({ sunAngularRadius: 0.05 });
+skyHandle.update({ sky: { sunAngularRadius: 0.05 } });
 ```
 
 #### delete()

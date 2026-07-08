@@ -75,7 +75,7 @@ const layers = plugin.addDefaultPhotorealScene();
 
 ## DefaultPlugin
 
-[three_default_plugin](../../../three_default_plugin/about/) パッケージが提供する `DefaultPlugin` は、[three_default_descs](../../../three_default_descs/about/) の全 32 Descriptor（メッシュ 16 種、エフェクト 12 種、ライト 4 種）を一括登録するプラグインです。ほとんどのプロジェクトではこれだけで十分です。
+[three_default_plugin](../../../three_default_plugin/about/) パッケージが提供する `DefaultPlugin` は、[three_default_descs](../../../three_default_descs/about/) の全 40 Descriptor（メッシュ 22 種、エフェクト 14 種、ライト 4 種）を一括登録するプラグインです。ほとんどのプロジェクトではこれだけで十分です。
 
 ```typescript
 import ThreeView from "@navara/three";

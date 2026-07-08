@@ -59,7 +59,7 @@ import { Color } from "@navara/three";
 
 **Description:** Specifies the emissive intensity.
 
-**Default:** `1`
+**Default:** `0`
 
 **Example:**
 
@@ -325,26 +325,6 @@ import { Matrix4 } from "three";
 {
   boxes: {
     effectIds: ["bloom-effect", "outline-effect"],
-  }
-}
-```
-
-### selectiveEffectOcclusion
-
-**Type:** `SelectiveEffectOcclusion` (optional)
-
-**Description:** Specifies the occlusion mode for selective effects (Bloom, Outline, etc.).
-
-- `"normal"`: Normal occlusion where effects are not applied to parts occluded by other objects
-- `"silhouette"`: Silhouette mode where effects are applied even to occluded parts
-
-**Example:**
-
-```typescript
-{
-  boxes: {
-    effectIds: ["bloom-effect"],
-    selectiveEffectOcclusion: "normal",
   }
 }
 ```

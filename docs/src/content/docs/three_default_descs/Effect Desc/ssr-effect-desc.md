@@ -245,7 +245,7 @@ This property can only be set when creating the Descriptor. It cannot be changed
 
 **Description:** Specifies the kernel size for the Gaussian blur used in cone tracing.
 
-**Default:** `7`
+**Default:** `5`
 
 :::note[Can only be set at initialization]
 This property can only be set when creating the Descriptor. It cannot be changed via the `update()` method.

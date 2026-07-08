@@ -7,7 +7,7 @@ sidebar:
 
 `AxesHelperDesc` is a helper Descriptor for adding a Three.js `AxesHelper` to the scene. It visualizes the 3 axes as X (red) / Y (green) / Z (blue), which is useful for verifying coordinate systems and debugging.
 
-In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-desc-base) for details.
+In addition to the properties below, the common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `visible`) are available. See [MeshDesc](./mesh-desc-base) for details.
 
 ## Properties
 
@@ -34,6 +34,7 @@ import ThreeView from "@navara/three";
 import { AxesHelperDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
+view.registerMesh("axesHelper", AxesHelperDesc);
 await view.init();
 
 // Add a 3-axis helper

@@ -71,35 +71,13 @@ sidebar:
 }
 ```
 
-### debugMode
-
-**Type:** `number | undefined`
-
-**Description:** デバッグモードを指定します。
-- `0`: 通常モード
-- `1`: ベースのみ表示
-- `2`: ブルームのみ表示
-- `3`: ブルーム強調表示(100倍)
-
-**Default:** `0`
-
-**Example:**
-
-```typescript
-{
-  selectiveBloom: {
-    debugMode: 2,
-  }
-}
-```
-
 ### resolutionScale
 
 **Type:** `number | undefined`
 
 **Description:** レンダリング解像度のスケール係数を指定します。低い値でパフォーマンスが向上します。
 
-**Default:** `1.0`
+**Default:** `0.5`
 
 **Example:**
 
@@ -107,24 +85,6 @@ sidebar:
 {
   selectiveBloom: {
     resolutionScale: 0.5,
-  }
-}
-```
-
-### debugViews
-
-**Type:** `boolean | undefined`
-
-**Description:** デバッグビューを有効にするかどうかを指定します。有効にすると、マスクテクスチャのビューが表示されます。
-
-**Default:** `false`
-
-**Example:**
-
-```typescript
-{
-  selectiveBloom: {
-    debugViews: true,
   }
 }
 ```
@@ -137,25 +97,24 @@ sidebar:
 
 対象オブジェクトに適用するセレクティブエフェクトのIDの配列です。ブルームエフェクトを追加すると一意のIDが割り当てられ、このIDを対象オブジェクトの`effectIds`に指定することでエフェクトが適用されます。
 
-### selectiveEffectOcclusion
+### emissiveColor（オプション）
 
-エフェクト適用時のオクルージョン（遮蔽）処理モードを指定します。
+ブルームのソースカラーを指定します。設定しない場合、マテリアルの表面色（diffuseColor）が自動的にブルームのソースとして使用されます。つまり、色を明示的に指定しなくても、`effectIds`と`emissiveIntensity`だけでブルームを有効にできます。
 
-| 値             | 説明                                                                                                               |
-| -------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `"normal"`     | 通常モード。深度テストを有効にし、他のオブジェクトに遮蔽されている部分にはエフェクトが適用されません（デフォルト） |
-| `"silhouette"` | シルエットモード。深度テストを無効にし、オブジェクトが遮蔽されていてもエフェクトが表示されます                     |
+### emissiveIntensity
+
+ブルームソースの強度を制御します。高い値ほど明るいブルームになります。
 
 ## Usage Examples
 
 ### 基本的な選択的ブルームの追加
 
 ```typescript
-import ThreeView, {
-  SelectiveBloomEffectDesc,
+import ThreeView, { Color } from "@navara/three";
+import {
   BoxMeshDesc,
-  Color,
-} from "@navara/three";
+  SelectiveBloomEffectDesc,
+} from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -170,15 +129,15 @@ const bloomDesc = view.addEffect<SelectiveBloomEffectDesc>({
 });
 
 // オブジェクトにブルームエフェクトを適用
+// emissiveColor を設定しない場合、マテリアルの色がブルームのソースとして使用されます
 const cubeDesc = view.addMesh<BoxMeshDesc>({
   box: {
     width: 100,
     height: 100,
     depth: 100,
     color: new Color().setHex(0xff0000),
-    emissiveIntensity: 1.0,
-    effectIds: [bloomDesc.id], // ブルームエフェクトを適用
-    selectiveEffectOcclusion: "normal",
+    emissiveIntensity: 1.0, // ブルームの明るさを制御
+    effectIds: [bloomDesc.id],
   },
   position: { x: 0, y: 0, z: 1000 },
 });
@@ -282,9 +241,7 @@ const buildingsLayer = view.addLayer({
     show: true,
     color: new Color().setHex(0xffffff),
     effectIds: [bloomDesc.id],
-    emissiveColor: new Color().setHex(0xffffff),
     emissiveIntensity: 0.3,
-    selectiveEffectOcclusion: "normal",
   },
 });
 ```
@@ -292,7 +249,7 @@ const buildingsLayer = view.addLayer({
 ### GeoJSON モデルへのブルーム適用
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
+import ThreeView from "@navara/three";
 import { SelectiveBloomEffectDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
@@ -305,6 +262,7 @@ const bloomDesc = view.addEffect<SelectiveBloomEffectDesc>({
 });
 
 // GeoJSON レイヤーのモデルにブルームを適用
+// emissiveColor はオプション — 省略するとモデル自身の色が使用されます
 const modelSource = view.addSource({
   type: "geojson",
   data: featureCollection,
@@ -318,9 +276,7 @@ const modelLayer = view.addLayer({
     size: 100,
     url: "model.glb",
     effectIds: [bloomDesc.id],
-    emissiveColor: new Color().setHex(0xffffff),
     emissiveIntensity: 0.5,
-    selectiveEffectOcclusion: "normal",
   },
 });
 ```
@@ -359,6 +315,5 @@ cubeDesc.update({
 ## 備考
 
 - 選択的ブルームエフェクトは、マスクベースのフィルタリングを使用して特定のオブジェクトにのみブルームを適用します。
+- `emissiveColor`が設定されていない場合、マテリアルの表面色（diffuseColor）が自動的にブルームのソースとして使用されます。これには、InstancedMesh のインスタンスごとの色や、テクスチャ付きマテリアルのテクスチャ色が含まれます。
 - ブルームエフェクトを効果的に使用するには、オブジェクトの`emissiveIntensity`を適切に設定することが重要です。
-- `selectiveEffectOcclusion`のデフォルト値は`"normal"`です。`"silhouette"`モードは、遮蔽されているオブジェクトを意図的に表示したい場合に使用します。
-- DepthEnabled オブジェクト（深度クリップあり）と Silhouette オブジェクト（深度クリップなし）の2パスでレンダリングされ、オクルージョンを正しく処理します。

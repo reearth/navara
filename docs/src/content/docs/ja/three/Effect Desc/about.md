@@ -9,8 +9,6 @@ sidebar:
 
 ## 利用可能なコア EffectDesc タイプ
 
-| Descriptor タイプ                                              | 説明                                         |
-| -------------------------------------------------------------- | -------------------------------------------- |
-| [SelectiveBloomEffectDesc](./selective-bloom-effect-desc)     | セレクティブブルームを適用するエフェクト     |
-| [SelectiveOutlineEffectDesc](./selective-outline-effect-desc) | セレクティブアウトラインを適用するエフェクト |
-| [SkyEnvMapEffectDesc](./sky-env-map-effect-desc)              | スカイ環境マップをレンダリングするパス       |
+| Descriptor タイプ                                | 説明                                   |
+| ------------------------------------------------ | -------------------------------------- |
+| [SkyEnvMapEffectDesc](./sky-env-map-effect-desc) | スカイ環境マップをレンダリングするパス |

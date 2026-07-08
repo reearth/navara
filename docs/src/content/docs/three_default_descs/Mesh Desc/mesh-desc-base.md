@@ -18,7 +18,7 @@ sidebar:
 | `scale`       | `{ x: number, y: number, z: number }`  | -              | Scale, or local offset when `matrix`/`matrixWorld` is set                                      |
 | `matrix`      | `Matrix4`                              | -              | Local transform matrix. When set, `position`/`rotation`/`scale` become offsets within this frame |
 | `matrixWorld` | `Matrix4`                              | -              | World transform matrix. When set, `position`/`rotation`/`scale` become offsets within this frame |
-| `pickable`    | `boolean`                              | `false`        | Enable GPU-based click picking for this mesh                                                   |
+| `pickable`    | `boolean`                              | `false`        | Enable GPU-based click picking. Defined per Descriptor by picking-capable mesh Descriptors, not on the base config |
 
 ## Transform Composition
 
@@ -156,7 +156,7 @@ type PickedFeature = {
 };
 ```
 
-For implementing picking in custom Descriptors, see [Custom Descriptor — Mesh Picking](../../three/core/custom-desc/#mesh-picking).
+For implementing picking in custom Descriptors, see [Custom Descriptor — Implementing Picking](../../../three/core/custom-desc/#implementing-picking-in-custom-descriptors).
 
 ## Coordinate Transformation
 
@@ -208,11 +208,10 @@ To place meshes using a local coordinate system (ENU: East-North-Up), use `eastN
 ```typescript
 import {
   geodeticToVector3,
-  geodeticSurfaceNormal,
+  eastNorthUpToFixedFrame,
   degreeToRadian,
 } from "@navara/three";
 import { GLTFModelDesc } from "@navara/three_default_descs";
-import { Vector3, Quaternion, Euler } from "three";
 
 // GLTFModelDesc must be registered
 

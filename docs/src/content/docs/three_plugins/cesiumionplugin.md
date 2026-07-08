@@ -2,7 +2,7 @@
 title: CesiumIonPlugin
 description: Cesium Ion quantized-mesh terrain plugin for navara_three.
 sidebar:
-  order: 4
+  order: 5
 ---
 
 ## Overview
@@ -69,7 +69,7 @@ Returns the `Layer` handle returned by `view.addLayer()`.
 
 ### CesiumIonTerrainOptions
 
-`CesiumIonTerrainOptions` is the set of `quantizedMesh` material options forwarded to `view.addLayer()`, with the `token` field removed — the plugin supplies the token from the resolved Cesium Ion endpoint.
+`CesiumIonTerrainOptions` is a flat object combining the `quantized-mesh` source's fetch/decode options (with `type`, `url`, and `token` removed — the plugin supplies those from the resolved Cesium Ion endpoint) with the terrain layer's mesh render options. The plugin routes each field to `view.addSource()` or `view.addLayer()` internally.
 
 Commonly used options:
 
@@ -89,7 +89,7 @@ Commonly used options:
 | `show`                 | `boolean` | Whether the terrain is visible.                                                                          |
 | `showBoundingBox`      | `boolean` | Render per-tile bounding boxes (debug).                                                                  |
 
-See the `quantizedMesh` field on the terrain layer description for the complete list.
+See the `quantized-mesh` source and the terrain layer's `terrain` render options for the complete list.
 
 ## Related Resources
 
