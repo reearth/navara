@@ -1,12 +1,4 @@
-/**
- * A data source used by the examples: the tile/asset `url` plus the attribution
- * fields. The attribution fields mirror `AttributionSource` / `AttributionHtml`
- * from `@navara/three_plugins` (same names — `attribution`, `attributionUrl`,
- * `attributionHtml`, `logo`, `logoUrl`), so a dataset can be passed straight to
- * `AttributionPlugin.show()` without a conversion step. The tile endpoint keeps
- * the plain `url` name; `AttributionSource`'s own link is `attributionUrl`, so
- * the two never collide.
- */
+/** A tile/asset data source used by the examples, with its attribution fields. */
 export type Dataset = {
   url: string;
   attribution?: string;
