@@ -120,7 +120,7 @@ ctx.onmessage = async (e: MessageEvent) => {
         // On success the worker returns the font's cmap coverage as
         // flattened [from, to, ...] ranges so the FontManager can correct a
         // face's declared unicode ranges once per file.
-        const cmapRanges =
+        const wasmRanges =
           fontCache.loadFont(
             url,
             bytes.length,
@@ -130,6 +130,9 @@ ctx.onmessage = async (e: MessageEvent) => {
             atlasKey,
             mode,
           ) ?? null;
+        // Copy before transferring: if the returned array is a view into
+        // WASM memory, transferring its buffer would detach the whole heap.
+        const cmapRanges = wasmRanges ? new Uint32Array(wasmRanges) : null;
         ctx.postMessage(
           {
             id,

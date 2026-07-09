@@ -220,9 +220,13 @@ export function parseFontFamilyFromCss(
     // Some stylesheets (e.g. the Google Fonts CSS API) order @font-face
     // blocks alphabetically, so restore the priority the caller asked for.
     const priority = options.fontFamily.map((name) => name.toLowerCase());
-    faces.sort(
-      (a, b) => priority.indexOf(a.cssFamily) - priority.indexOf(b.cssFamily),
-    );
+    // Families absent from the list rank last, not first (indexOf's -1
+    // would otherwise give them top priority).
+    const rank = (cssFamily: string) => {
+      const index = priority.indexOf(cssFamily);
+      return index === -1 ? priority.length : index;
+    };
+    faces.sort((a, b) => rank(a.cssFamily) - rank(b.cssFamily));
   }
   return { family, faces: faces.map(({ face }) => face) };
 }
