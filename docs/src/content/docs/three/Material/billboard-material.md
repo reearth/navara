@@ -29,7 +29,7 @@ sidebar:
 
 ### center
 
-**Type:** [`Vec2`](./point-material#vec2)
+**Type:** [`Vec2`](../../api/types/#vec2)
 
 **Description:** Specifies the shift amount from the center. The range is between 0 and 1.
 
@@ -193,6 +193,25 @@ import { Color } from "@navara/three";
 }
 ```
 
+### opacity
+
+**Type:** `number | undefined`
+
+**Description:** Specifies the opacity of the billboard. Valid range is 0.0 (fully transparent) to 1.0 (fully opaque).
+
+**Default:** `1.0`
+
+**Example:**
+
+```typescript
+{
+  billboard: {
+    transparent: true,
+    opacity: 0.5 // 50% opacity
+  }
+}
+```
+
 ### sizeInMeters
 
 **Type:** `boolean | undefined`
@@ -207,24 +226,6 @@ import { Color } from "@navara/three";
 {
   billboard: {
     sizeInMeters: true
-  }
-}
-```
-
-### selectiveEffectOcclusion
-
-**Type:** `string | undefined`
-
-**Description:** Specifies the depth behavior for the selective effect mask pass. Can be set to "normal" or "silhouette".
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  billboard: {
-    selectiveEffectOcclusion: "normal"
   }
 }
 ```

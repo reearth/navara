@@ -21,16 +21,16 @@ sidebar:
 
 **Type:** `number | undefined`
 
-**Description:** フォーカス平面の正規化された距離を指定します。範囲は[0.0, 1.0]です。
+**Description:** カメラからフォーカス平面までの距離をワールド単位(メートル)で指定します。この距離にあるオブジェクトはシャープに表示され、それより手前や奥にあるオブジェクトほど徐々にぼけていきます。
 
-**Default:** `0.000006`
+**Default:** `1000`
 
 **Example:**
 
 ```typescript
 {
   depthOfField: {
-    focusDistance: 0.5,
+    focusDistance: 500,
   }
 }
 ```
@@ -39,16 +39,16 @@ sidebar:
 
 **Type:** `number | undefined`
 
-**Description:** 仮想レンズの焦点距離を制御します。フォーカス平面周辺でのシャープネスの落ち方を制御します。範囲は[0.0, 1.0]です。
+**Description:** フォーカス範囲をワールド単位(メートル)で指定します。フォーカス平面周辺でのシャープネスの落ち方を制御します。値が小さいほどフォーカス距離付近の狭い範囲だけがシャープになり、値が大きいほど広い範囲がシャープに保たれます。
 
-**Default:** `0.000013`
+**Default:** `1000`
 
 **Example:**
 
 ```typescript
 {
   depthOfField: {
-    focalLength: 0.00001,
+    focalLength: 300,
   }
 }
 ```
@@ -114,8 +114,8 @@ defaultLayers.sun.update({
 const depthOfFieldDesc = view.addEffect<DepthOfFieldEffectDesc>({
   depthOfField: {
     bokehScale: 7,
-    focusDistance: 0.000006,
-    focalLength: 0.000013,
+    focusDistance: 500,
+    focalLength: 300,
   },
   visible: true,
 });

@@ -1,9 +1,10 @@
 use std::any::Any;
 
 use bevy_ecs::{entity::Entity, system::Commands};
-use navara_buffer_store::BufferStore;
+use navara_buffer_store::{BufferStore, Handle};
 use navara_component::OrderByDistance;
 use navara_feature_component::batch::BatchTable;
+use navara_parser::pmtiles::Compression;
 use navara_tile_component::{TileHandle, VectorTile};
 
 /// Turns a resolved, already-decompressed PMTiles tile payload into ECS geometry
@@ -26,17 +27,23 @@ pub trait TilePayloadDecoder: Send + Sync + 'static {
     /// [`VectorTileSource::as_any_mut`](navara_vector_tile::VectorTileSource::as_any_mut).
     fn as_any_mut(&mut self) -> &mut dyn Any;
 
-    /// Decode `payload` (plain, decompressed tile bytes) into feature entities,
-    /// or `None` if the tile yields no geometry.
+    /// Decode the tile whose (possibly compressed) bytes are stored in `buf`
+    /// under `pbf_handle`, with the container's `compression`. The decoder owns
+    /// decompression so it can either decompress + parse inline or hand the raw
+    /// bytes + compression to a worker. `rendered_tile` identifies the target
+    /// tile entity for asynchronous completion. Returns `None` if the tile
+    /// yields no synchronous geometry.
     #[allow(clippy::too_many_arguments)]
     fn decode(
         &self,
         commands: &mut Commands,
         batch_table: &mut BatchTable,
         buf: &mut BufferStore,
-        payload: Vec<u8>,
+        pbf_handle: Handle,
+        compression: Compression,
         tile: &VectorTile,
         tile_handle: TileHandle,
+        rendered_tile: Entity,
         order: &OrderByDistance,
     ) -> Option<Vec<Entity>>;
 }

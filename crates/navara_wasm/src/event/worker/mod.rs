@@ -31,6 +31,8 @@ pub struct DelegatedWorkerTasksParameters {
     #[wasm_bindgen(getter_with_clone)]
     pub construct_polyline_batched_feature:
         Option<task::construct_polyline_batched_feature::ConstructPolylineBatchedFeatureParameters>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub parse_mvt_tile: Option<task::parse_mvt_tile::ParseMvtTileParameters>,
 }
 
 impl<'a>
@@ -99,6 +101,16 @@ impl<'a> From<&'a navara_worker::DelegatedWorkerTasksParameters>
                 construct_polyline_batched_feature: Some(value.into()),
                 ..Default::default()
             },
+            navara_worker::DelegatedWorkerTasksParameters::ParseMvtTile(
+                navara_worker::DelegatedWorkerTask {
+                    delegator_id,
+                    value,
+                },
+            ) => Self {
+                delegator_id: ReconstructableEntity(delegator_id.to_bits()),
+                parse_mvt_tile: Some(value.into()),
+                ..Default::default()
+            },
         }
     }
 }
@@ -118,6 +130,10 @@ pub struct DelegatedWorkerTasksResult {
     #[wasm_bindgen(getter_with_clone)]
     pub construct_polyline_batched_feature:
         Option<task::construct_polyline_batched_feature::ConstructPolylineBatchedFeatureResult>,
+    // Holds plain geometry Vecs (not Serialize); it only ever flows JS -> Rust.
+    #[serde(skip)]
+    #[wasm_bindgen(getter_with_clone)]
+    pub parse_mvt_tile: Option<task::parse_mvt_tile::ParseMvtTileResult>,
 }
 
 #[wasm_bindgen]
@@ -133,6 +149,7 @@ impl DelegatedWorkerTasksResult {
             upsample_terrain_mesh: None,
             construct_polygon_batched_feature: None,
             construct_polyline_batched_feature: None,
+            parse_mvt_tile: None,
         }
     }
 
@@ -147,6 +164,7 @@ impl DelegatedWorkerTasksResult {
             upsample_terrain_mesh,
             construct_polygon_batched_feature: None,
             construct_polyline_batched_feature: None,
+            parse_mvt_tile: None,
         }
     }
 
@@ -163,6 +181,7 @@ impl DelegatedWorkerTasksResult {
             upsample_terrain_mesh: None,
             construct_polygon_batched_feature,
             construct_polyline_batched_feature: None,
+            parse_mvt_tile: None,
         }
     }
 
@@ -179,6 +198,22 @@ impl DelegatedWorkerTasksResult {
             upsample_terrain_mesh: None,
             construct_polygon_batched_feature: None,
             construct_polyline_batched_feature,
+            parse_mvt_tile: None,
+        }
+    }
+
+    #[wasm_bindgen(js_name = "withParseMvtTile")]
+    pub fn with_parse_mvt_tile(
+        delegator_id: ReconstructableEntity,
+        parse_mvt_tile: Option<task::parse_mvt_tile::ParseMvtTileResult>,
+    ) -> Self {
+        Self {
+            delegator_id,
+            construct_terrain_mesh: None,
+            upsample_terrain_mesh: None,
+            construct_polygon_batched_feature: None,
+            construct_polyline_batched_feature: None,
+            parse_mvt_tile,
         }
     }
 }
@@ -224,6 +259,16 @@ impl<'a> From<&'a navara_worker::DelegatedWorkerTasksResult> for DelegatedWorker
             ) => Self {
                 delegator_id: ReconstructableEntity(delegator_id.to_bits()),
                 construct_polyline_batched_feature: Some(value.into()),
+                ..Default::default()
+            },
+            navara_worker::DelegatedWorkerTasksResult::ParseMvtTile(
+                navara_worker::DelegatedWorkerTask {
+                    delegator_id,
+                    value,
+                },
+            ) => Self {
+                delegator_id: ReconstructableEntity(delegator_id.to_bits()),
+                parse_mvt_tile: Some(value.into()),
                 ..Default::default()
             },
         }

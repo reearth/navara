@@ -78,6 +78,7 @@ pub struct PointMaterial {
     pub offset_depth: bool,
     // Allow transparency and anti-aliasing.
     pub transparent: bool,
+    pub opacity: f32,
     // post effect
     pub effect_ids: Option<Vec<String>>,
     pub emissive_intensity: Option<f32>,
@@ -97,6 +98,7 @@ impl Default for PointMaterial {
             depth_test: true,
             offset_depth: true,
             transparent: true,
+            opacity: 1.0,
             // post effect
             effect_ids: None,
             emissive_intensity: None,
@@ -128,6 +130,7 @@ pub struct BillboardMaterial {
     pub offset_depth: bool,
     // Allow transparency and anti-aliasing.
     pub transparent: bool,
+    pub opacity: f32,
     pub alpha_test: f32,
     // post effect
     pub effect_ids: Option<Vec<String>>,
@@ -149,6 +152,7 @@ impl Default for BillboardMaterial {
             depth_test: true,
             offset_depth: true,
             transparent: false,
+            opacity: 1.0,
             alpha_test: 0.1,
             // post effect
             effect_ids: None,
@@ -198,6 +202,12 @@ pub struct TextMaterial {
     /// default), single-channel SDF (Felzenszwalb on a fontdue bitmap) is used
     /// — ~100× faster per glyph, slightly soft corners at extreme zoom.
     pub high_quality: bool,
+
+    /// Opacity of the text
+    pub opacity: f32,
+    /// Enable transparency and alpha blending
+    pub transparent: bool,
+
     /// Maximum line width in ems (multiples of `size`) before text wraps at
     /// word boundaries. `0.0` (the default) disables wrapping; explicit `\n`
     /// characters in `text` always break lines. Em units keep the wrap width
@@ -237,6 +247,10 @@ impl Default for TextMaterial {
             outline_width: 0.0,
             lang: "".to_string(),
             high_quality: false,
+
+            opacity: 1.0,
+            transparent: true,
+
             max_width: 0.0,
             line_height: 1.0,
             text_align: "center".to_string(),
@@ -266,6 +280,12 @@ pub struct PolylineMaterial {
     pub effect_ids: Option<Vec<String>>,
     pub emissive_intensity: Option<f32>,
     pub emissive_color: Option<u32>,
+    /// Enable transparency and alpha blending
+    pub transparent: bool,
+    /// Opacity value
+    pub opacity: f32,
+    /// Enable writing to depth buffer
+    pub depth_write: bool,
 }
 
 impl Default for PolylineMaterial {
@@ -285,6 +305,9 @@ impl Default for PolylineMaterial {
             effect_ids: None,
             emissive_intensity: None,
             emissive_color: None,
+            transparent: false,
+            opacity: 1.0,
+            depth_write: true,
         }
     }
 }
@@ -435,6 +458,12 @@ pub struct ModelMaterial {
     pub effect_ids: Option<Vec<String>>,
     pub emissive_intensity: Option<f32>,
     pub emissive_color: Option<u32>,
+    /// Enable transparency and alpha blending
+    pub transparent: bool,
+    /// Opacity value
+    pub opacity: f32,
+    /// Enable writing to depth buffer
+    pub depth_write: bool,
 }
 
 impl Default for ModelMaterial {
@@ -473,6 +502,9 @@ impl Default for ModelMaterial {
             effect_ids: None,
             emissive_intensity: None,
             emissive_color: None,
+            transparent: false,
+            opacity: 1.0,
+            depth_write: true,
         }
     }
 }

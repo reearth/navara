@@ -69,7 +69,7 @@ import { Color } from "@navara/three";
 
 ### center
 
-**Type:** [`Vec2`](#vec2) | undefined
+**Type:** [`Vec2`](../../api/types/#vec2) | undefined
 
 **Description:** 中心からのシフト量を指定します。範囲は 0 から 1 の間です。
 
@@ -274,6 +274,24 @@ view.addFontFamily({
 }
 ```
 
+### opacity
+
+**Type:** `number | undefined`
+
+**Description:** テキストの不透明度を指定します。範囲は 0.0（完全に透明）から 1.0（完全に不透明）です。
+
+**Default:** `1.0`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    opacity: 0.5
+  }
+}
+```
+
 ### outlineColor
 
 **Type:** `Color | undefined`
@@ -438,20 +456,22 @@ import { Color } from "@navara/three";
 }
 ```
 
-## Vec2
+### transparent
 
-2D ベクトルを表すクラスです。
+**Type:** `boolean | undefined`
 
-### Properties
+**Description:** 透明度とアルファブレンディングを有効にします。有効にすると、`opacity` プロパティを使用して透明度を制御できます。
 
-#### x
+**Default:** `true`
 
-**Type:** `number`
+**Example:**
 
-**Description:** X 座標値。
+```typescript
+{
+  text: {
+    transparent: true,
+    opacity: 0.5
+  }
+}
+```
 
-#### y
-
-**Type:** `number`
-
-**Description:** Y 座標値。

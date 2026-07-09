@@ -1,4 +1,4 @@
-import { ShaderMaterial } from "three";
+import { ShaderMaterial, type WebGLProgramParametersWithUniforms } from "three";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import type { PolylineBaseProps } from "./types";
@@ -21,7 +21,7 @@ describe("polylineBaseEnhancer", () => {
         vertexShader: "",
         fragmentShader: "",
         defines: {},
-      } as any;
+      } as WebGLProgramParametersWithUniforms;
 
       expect(() => freshEnhancer.transformShader(shader)).toThrow(
         "mount() must be called before transformShader",
@@ -92,11 +92,11 @@ describe("polylineBaseEnhancer", () => {
       enhancer.mount({ width: 2 });
 
       const shader = {
-        uniforms: {} as any,
+        uniforms: {},
         vertexShader: "",
         fragmentShader: "",
         defines: {},
-      } as any;
+      } as WebGLProgramParametersWithUniforms;
 
       // Should not throw
       expect(() => enhancer.transformShader(shader)).not.toThrow();
@@ -114,7 +114,7 @@ describe("polylineBaseEnhancer", () => {
         useBatchTexture: true,
         useBatchColorShow: false,
         useBatchHeight: true,
-        useBatchExtrudedHeight: false,
+        useBatchLineWidth: false,
         isTexturized: true,
         useRTE: true,
       });
@@ -126,7 +126,7 @@ describe("polylineBaseEnhancer", () => {
         useBatchTexture: true,
         useBatchColorShow: false,
         useBatchHeight: true,
-        useBatchExtrudedHeight: false,
+        useBatchLineWidth: false,
         isTexturized: true,
         useRTE: true,
       });

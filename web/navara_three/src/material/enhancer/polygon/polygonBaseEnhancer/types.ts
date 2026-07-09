@@ -4,8 +4,10 @@ import type { UniformValue } from "../../../types";
 import type { BatchTextureFlags } from "../../batchTexture";
 import type { Mutates } from "../../MaterialEnhancer";
 
-// Helper type to make BatchTextureFlags required (remove optional modifiers)
-type RequiredBatchTextureFlags = Required<BatchTextureFlags>;
+type PolygonBatchTextureFlags = Required<
+  Omit<BatchTextureFlags, "useBatchLineWidth" | "useBatchSize">
+>;
+// Note: opacity is bundled with show in useBatchColorShow
 
 /**
  * Props for the polygon core enhancer.
@@ -52,7 +54,7 @@ export type PolygonBaseProps = {
 
   // RTE (Relative To Eye) support
   useRTE?: boolean;
-} & BatchTextureFlags;
+} & Partial<PolygonBatchTextureFlags>;
 
 /**
  * Immutable state for the polygon base enhancer.
@@ -75,7 +77,7 @@ export type PolygonBaseState = Readonly<
     roughness: number;
     // Batch texture state - when true, material.color is white and colors come from batch texture
     batchColorEnabled: boolean;
-  } & RequiredBatchTextureFlags
+  } & PolygonBatchTextureFlags
 >;
 
 /**

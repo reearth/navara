@@ -260,11 +260,22 @@ export class SDFTextMesh
     this._enhancer = createSdfTextMaterialEnhancer(mat);
 
     // Mount enhancer with initial props
+    // Validate and clamp opacity values to prevent invalid alpha in shader
+    const initialOpacity = Number.isFinite(material.opacity ?? 1.0)
+      ? Math.max(0, Math.min(1, material.opacity ?? 1.0))
+      : 1.0;
+    const initialOutlineOpacity = Number.isFinite(
+      material.outlineOpacity ?? 1.0,
+    )
+      ? Math.max(0, Math.min(1, material.outlineOpacity ?? 1.0))
+      : 1.0;
+
     this._enhancer.mount({
       base: {
         useRTE: RTE,
         useMsdf: this._highQuality,
         color: material.color ?? 0xffffff,
+        opacity: initialOpacity,
         fontSize: material.size ?? 16.0,
         center: material.center
           ? [material.center.x, material.center.y]
@@ -274,12 +285,13 @@ export class SDFTextMesh
         offsetDepth: material.offsetDepth ?? true,
         outlineWidth: material.outlineWidth ?? 0,
         outlineColor: material.outlineColor ?? 0x000000,
-        outlineOpacity: material.outlineOpacity ?? 1.0,
+        outlineOpacity: initialOutlineOpacity,
         showBackground: material.backgroundColor !== undefined,
         backgroundColor: material.backgroundColor,
         backgroundOutlineColor: material.borderColor ?? 0x000000,
         backgroundOutlineWidth: material.borderWidth ?? 0.1,
         depthTest: material.depthTest ?? true,
+        transparent: material.transparent ?? true,
         rtcCenter: [transform.tx, transform.ty, transform.tz],
       },
     });
@@ -519,6 +531,32 @@ export class SDFTextMesh
     this._enhancer.update({ base: { addHeight: height } });
   }
 
+  setSize(size: number): void {
+    const currentFontSize = this._enhancer.states().fontSize;
+    const sanitizedSize = Number.isFinite(size)
+      ? Math.max(0.0, size)
+      : currentFontSize;
+    this._enhancer.update({ base: { fontSize: sanitizedSize } });
+  }
+
+  setOpacity(opacity: number): void {
+    const clampedOpacity = Number.isFinite(opacity)
+      ? Math.max(0, Math.min(1, opacity))
+      : 1.0;
+    this._enhancer.update({ base: { opacity: clampedOpacity } });
+  }
+
+  _setFeatureWidth(_width: number): void {
+    // Width is not applicable to text meshes.
+    // This method is intentionally a no-op to satisfy the FeatureMesh guard.
+  }
+  _setFeatureOpacity(opacity: number): void {
+    const clampedOpacity = Number.isFinite(opacity)
+      ? Math.max(0, Math.min(1, opacity))
+      : 1.0;
+    this._enhancer.update({ base: { opacity: clampedOpacity } });
+  }
+
   setPosition(
     position: Float32Array | { high: Float32Array; low: Float32Array },
     RTE: boolean,
@@ -574,6 +612,15 @@ export class SDFTextMesh
       hasUpdate = true;
     }
 
+    const nextOpacityRaw = material.opacity ?? 1.0;
+    const nextOpacity = Number.isFinite(nextOpacityRaw)
+      ? Math.max(0.0, Math.min(1.0, nextOpacityRaw))
+      : 1.0;
+    if (nextOpacity !== state.opacity) {
+      baseProps.opacity = nextOpacity;
+      hasUpdate = true;
+    }
+
     const nextFontSize = material.size ?? 16.0;
     if (nextFontSize !== state.fontSize) {
       baseProps.fontSize = nextFontSize;
@@ -623,7 +670,10 @@ export class SDFTextMesh
       hasUpdate = true;
     }
 
-    const nextOutlineOpacity = material.outlineOpacity ?? 1.0;
+    const nextOutlineOpacityRaw = material.outlineOpacity ?? 1.0;
+    const nextOutlineOpacity = Number.isFinite(nextOutlineOpacityRaw)
+      ? Math.max(0.0, Math.min(1.0, nextOutlineOpacityRaw))
+      : 1.0;
     if (nextOutlineOpacity !== state.outlineOpacity) {
       baseProps.outlineOpacity = nextOutlineOpacity;
       hasUpdate = true;
@@ -654,6 +704,14 @@ export class SDFTextMesh
     if (nextBGOutlineWidth !== state.backgroundOutlineWidth) {
       baseProps.backgroundOutlineWidth = nextBGOutlineWidth;
       hasUpdate = true;
+    }
+
+    if (material.transparent !== undefined) {
+      const nextTransparent = material.transparent;
+      if (nextTransparent !== state.transparent) {
+        baseProps.transparent = nextTransparent;
+        hasUpdate = true;
+      }
     }
 
     if (hasUpdate) {

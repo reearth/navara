@@ -28,7 +28,7 @@ sidebar:
 ```
 
 :::tip[Full Animation Control]
-For advanced animation features such as `animationAutoPlay`, `animationClips`, `animationCrossfadeDuration`, `animationEnabled`, and `animationLoop`, use [GLTFModelDesc](/three_default_descs/mesh-desc/gltf-model-desc/) which provides full animation control as a mesh Descriptor.
+For advanced animation features such as `animationAutoPlay`, `animationClips`, `animationCrossfadeDuration`, `animationEnabled`, and `animationLoop`, use [GLTFModelDesc](../../../three_default_descs/mesh-desc/gltf-model-desc/) which provides full animation control as a mesh Descriptor.
 :::
 
 ### animationSpeed
@@ -138,6 +138,24 @@ import { Color } from "@navara/three";
   model: {
     normals: true,
     creaseNormalAngle: Math.PI / 3, // 60°
+  }
+}
+```
+
+### depthWrite
+
+**Type:** `boolean | undefined`
+
+**Description:** Enables writing to the depth buffer. Set to `false` for transparent materials to prevent depth sorting issues.
+
+**Default:** `true`
+
+**Example:**
+
+```typescript
+{
+  model: {
+    depthWrite: false
   }
 }
 ```
@@ -288,6 +306,25 @@ import { Color } from "@navara/three";
 }
 ```
 
+### opacity
+
+**Type:** `number | undefined`
+
+**Description:** Specifies the opacity of the model. Valid range is 0.0 (fully transparent) to 1.0 (fully opaque). This property controls the alpha value when the material is rendered with transparency enabled.
+
+**Default:** `1.0`
+
+**Example:**
+
+```typescript
+{
+  model: {
+    transparent: true,
+    opacity: 0.5 // 50% opacity
+  }
+}
+```
+
 ### pointSize
 
 **Type:** `number | undefined`
@@ -356,24 +393,6 @@ import { Color } from "@navara/three";
 {
   model: {
     roughness: 0.1
-  }
-}
-```
-
-### selectiveEffectOcclusion
-
-**Type:** `string | undefined`
-
-**Description:** Specifies the depth behavior for the selective effect mask pass. Can be set to "normal" or "silhouette".
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  model: {
-    selectiveEffectOcclusion: "normal"
   }
 }
 ```
@@ -504,6 +523,24 @@ import { Color } from "@navara/three";
 }
 ```
 
+### transparent
+
+**Type:** `boolean | undefined`
+
+**Description:** Enables transparency and alpha blending. When enabled, the material can be rendered with transparency based on the model's alpha channel.
+
+**Default:** `false`
+
+**Example:**
+
+```typescript
+{
+  model: {
+    transparent: true
+  }
+}
+```
+
 ### url
 
 **Type:** `string | undefined`
@@ -536,24 +573,6 @@ import { Color } from "@navara/three";
 {
   model: {
     water: true
-  }
-}
-```
-
-### waterNormalUrl
-
-**Type:** `string | undefined`
-
-**Description:** Specifies the URL of the water surface normal map.
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  model: {
-    waterNormalUrl: "/textures/water_normal.png"
   }
 }
 ```

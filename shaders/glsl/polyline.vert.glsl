@@ -33,6 +33,7 @@ uniform vec3 viewportAndPixelRatio;
 uniform vec2 frustumNearFar;
 uniform vec4 frustumRatio;
 uniform float maxWidth;
+uniform float uAddHeight;
 
 flat out vec4 v_startPlaneNormalEcAndHalfWidth;
 flat out vec3 v_endPlaneNormalEc;
@@ -55,6 +56,9 @@ void main() {
     #endif
 
     #include <color_vertex>
+
+    #include chunks/height_vertex;
+    #include chunks/line_width_vertex;
 
     #include chunks/batch_texture_vertex;
 
@@ -148,13 +152,22 @@ void main() {
         positionEC.xyz += height;
     #endif
 
+    // Apply per-feature height offset from batch texture or uniform
+    positionEC.xyz += heightNormal * addHeight;
+
     vec3 transformedNormal = vec3( heightNormal );
 
 	#include <normal_vertex>
  
     v_texcoordNormalizationAndStartEcYZ.y = nvr_branchFreeTernary(v_texcoordNormalizationAndStartEcYZ.y > 1.0, 0.0, abs(v_texcoordNormalizationAndStartEcYZ.y));
 
-    float lineWidth = minMaxHeightAndWidth.z;
+    // Use batchLineWidth when >= 0.0, otherwise fall back to default width.
+    // Negative batchLineWidth indicates "use default width from minMaxHeightAndWidth.z"
+    #ifdef USE_BATCH_LINE_WIDTH
+        float lineWidth = batchLineWidth >= 0.0 ? batchLineWidth : minMaxHeightAndWidth.z;
+    #else
+        float lineWidth = minMaxHeightAndWidth.z;
+    #endif
 
     v_startPlaneNormalEcAndHalfWidth.xyz = startPlaneEC.xyz;
     v_startPlaneNormalEcAndHalfWidth.w = lineWidth * 0.5;

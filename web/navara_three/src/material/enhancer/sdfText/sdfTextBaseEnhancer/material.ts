@@ -26,4 +26,7 @@ export function updateMaterialProps(
   if (props.depthTest !== undefined) {
     material.depthTest = props.depthTest;
   }
+  if (props.transparent !== undefined) {
+    material.transparent = props.transparent;
+  }
 }

@@ -175,6 +175,25 @@ import { Color } from "@navara/three";
 }
 ```
 
+### opacity
+
+**Type:** `number | undefined`
+
+**Description:** ポイントの不透明度を指定します。有効範囲は 0.0（完全に透明）から 1.0（完全に不透明）です。
+
+**Default:** `1.0`
+
+**Example:**
+
+```typescript
+{
+  point: {
+    transparent: true,
+    opacity: 0.5 // 50%の不透明度
+  }
+}
+```
+
 ### sizeInMeters
 
 **Type:** `boolean | undefined`
@@ -189,24 +208,6 @@ import { Color } from "@navara/three";
 {
   point: {
     sizeInMeters: true
-  }
-}
-```
-
-### selectiveEffectOcclusion
-
-**Type:** `string | undefined`
-
-**Description:** セレクティブエフェクトマスクパスの深度動作を指定します。"normal" または "silhouette" を指定できます。
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  point: {
-    selectiveEffectOcclusion: "normal"
   }
 }
 ```

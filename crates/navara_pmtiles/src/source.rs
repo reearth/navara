@@ -396,32 +396,29 @@ impl VectorTileSource for PmtilesSource {
         buf: &mut BufferStore,
         tile: &VectorTile,
         tile_handle: TileHandle,
+        rendered_tile: Entity,
         order: &OrderByDistance,
         data_requester: Option<&DataRequester>,
     ) -> Option<Vec<Entity>> {
         let data_req = data_requester?;
-        let raw = buf.remove_u8(&data_req.handle)?;
 
-        // Tiles inside the archive may be individually gzip-compressed. Keep this
-        // container concern here so the decoder only ever sees plain payload bytes.
+        // Hand the raw (possibly gzip-compressed) tile bytes and the container's
+        // compression to the decoder. The decoder owns decompression so it can
+        // offload it (with parsing) to a worker instead of blocking here.
         let compression = self
             .archive
             .header()
             .map_or(Compression::None, |h| h.tile_compression);
-        // Reuse the owned buffer when there is nothing to decompress;
-        // `decompress` would otherwise clone the whole tile on this hot path.
-        let payload = match compression {
-            Compression::None => raw,
-            _ => navara_parser::pmtiles::decompress(compression, &raw).ok()?,
-        };
 
         self.decoder.decode(
             commands,
             batch_table,
             buf,
-            payload,
+            data_req.handle,
+            compression,
             tile,
             tile_handle,
+            rendered_tile,
             order,
         )
     }

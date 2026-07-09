@@ -12,6 +12,7 @@ wasm-bindgen.workspace = true
 js-sys.workspace = true
 serde.workspace = true
 serde-wasm-bindgen.workspace = true
+serde_json.workspace = true
 gloo-utils.workspace = true
 web-sys.workspace = true
 navara_wasm_utils.workspace = true
@@ -23,6 +24,7 @@ navara_math.workspace = true
 navara_geometry.workspace = true
 navara_feature_component.workspace = true
 navara_material.workspace = true
+navara_parser.workspace = true
 
 [package.metadata.wasm-pack.profile.profiling]
 wasm-opt = false

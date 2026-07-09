@@ -4,8 +4,9 @@ import type { UniformValue } from "../../../types";
 import type { BatchTextureFlags } from "../../batchTexture";
 import type { Mutates } from "../../MaterialEnhancer";
 
-// Helper type to make BatchTextureFlags required (remove optional modifiers)
-type RequiredBatchTextureFlags = Required<BatchTextureFlags>;
+type PolylineBatchTextureFlags = Required<
+  Omit<BatchTextureFlags, "useBatchExtrudedHeight" | "useBatchSize">
+>;
 
 /**
  * Props for the polyline base enhancer.
@@ -14,8 +15,13 @@ export type PolylineBaseProps = {
   // Basic material props
   color?: number;
 
+  transparent?: boolean;
+  opacity?: number;
+  depthWrite?: boolean;
+
   // Height/width
   minMaxHeight?: [number, number];
+  addHeight?: number;
   width?: number;
   maxWidth?: number;
 
@@ -47,7 +53,7 @@ export type PolylineBaseProps = {
 
   // RTE (Relative To Eye) support
   useRTE?: boolean;
-} & BatchTextureFlags;
+} & Partial<PolylineBatchTextureFlags>;
 
 /**
  * Immutable state for the polyline base enhancer.
@@ -63,12 +69,13 @@ export type PolylineBaseState = Readonly<
     emissiveColor: number;
     emissiveIntensity: number;
     minMaxHeight: [number, number];
+    addHeight: number;
     width: number;
     maxWidth: number;
     color: number;
     // Batch texture state - when true, material.color is white and colors come from batch texture
     batchColorEnabled: boolean;
-  } & RequiredBatchTextureFlags
+  } & PolylineBatchTextureFlags
 >;
 
 /**
@@ -82,6 +89,7 @@ export type PolylineBaseRefs = {
   // Core uniforms
   minMaxHeightAndWidth: UniformValue<[number, number, number]>;
   maxWidth: UniformValue<number>;
+  uAddHeight: UniformValue<number>;
   color: UniformValue<Color>;
   nvr_uPickable: UniformValue<number>;
   uEffectIdsMask: UniformValue<number>;

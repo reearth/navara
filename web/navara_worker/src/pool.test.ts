@@ -38,7 +38,8 @@ vi.spyOn(workerpool, "pool").mockImplementation(
           },
         );
       },
-    }) as Pool,
+      terminate: () => undefined,
+    }) as unknown as Pool,
 );
 
 // Worker pool is initialized globally.

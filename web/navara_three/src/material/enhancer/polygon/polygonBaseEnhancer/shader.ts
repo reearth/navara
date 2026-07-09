@@ -184,6 +184,16 @@ void main() {
 `,
     )
     .replace(
+      "#include <color_fragment>",
+      `
+#include <color_fragment>
+
+#ifdef USE_BATCH_COLOR_SHOW
+  diffuseColor.a *= nvr_vOpacity;
+#endif
+`,
+    )
+    .replace(
       "#include <normal_fragment_maps>",
       `
 ${POLYGON_BASE_SHADER_MARKERS.fragment.NORMAL_START}

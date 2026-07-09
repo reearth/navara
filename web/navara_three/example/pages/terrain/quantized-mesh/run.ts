@@ -3,10 +3,13 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import { CesiumIonPlugin } from "@navara/three_plugins";
+import { AttributionPlugin, CesiumIonPlugin } from "@navara/three_plugins";
 import { ButtonApi, Pane } from "tweakpane";
 
-import { showAttributions } from "../../../helpers/attributions";
+import {
+  datasetToHtmlSource,
+  datasetToSource,
+} from "../../../helpers/attribution-source";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 import { addDateControl, atZoneDate } from "../../../helpers/control";
 
@@ -53,6 +56,9 @@ export const run = async (
   });
   view.addPlugin(cesiumIon);
 
+  const attribution = new AttributionPlugin();
+  view.addPlugin(attribution);
+
   await view.init();
 
   view.globe.color = new Color().setHex(0xcccccc);
@@ -95,7 +101,10 @@ export const run = async (
       type === "cesiumIon"
         ? TERRAIN_DATASETS.cesiumIon
         : TERRAIN_DATASETS.reearthQuantizedMesh;
-    showAttributions([dataset, TILE_DATASETS.eox]);
+    attribution.show([
+      datasetToSource(dataset),
+      datasetToHtmlSource(TILE_DATASETS.eox),
+    ]);
   };
 
   // Delete the current terrain layer and its explicit source (if any) on the

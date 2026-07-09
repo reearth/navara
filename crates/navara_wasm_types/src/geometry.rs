@@ -22,8 +22,6 @@ pub struct Geometry {
     skirt_uvs: Option<Vec<f32>>,
     /// Vector of skirt index that constructs a triangle.
     skirt_indices: Option<Vec<u32>>,
-    /// Mapping from skirt vertex index to edge vertex index in main geometry.
-    skirt_indices_to_edge: Option<Vec<u32>>,
     /// Per-vertex skirt normals copied from corresponding edge vertices. Stride is 3.
     skirt_normals: Option<Vec<f32>>,
 }
@@ -40,7 +38,6 @@ impl Geometry {
             skirt_vertices: None,
             skirt_uvs: None,
             skirt_indices: None,
-            skirt_indices_to_edge: None,
             skirt_normals: None,
         }
     }
@@ -75,13 +72,6 @@ impl Geometry {
         self.skirt_indices.as_ref().map(|v| copy_u32_array(v))
     }
 
-    #[wasm_bindgen(js_name = "transferSkirtIndicesToEdge")]
-    pub fn transfer_skirt_indices_to_edge(&self) -> Option<Uint32Array> {
-        self.skirt_indices_to_edge
-            .as_ref()
-            .map(|v| copy_u32_array(v))
-    }
-
     #[wasm_bindgen(js_name = "transferNormals")]
     pub fn transfer_normals(&self) -> Option<Float32Array> {
         self.normals.as_ref().map(|v| copy_f32_array(v))
@@ -113,7 +103,6 @@ impl From<navara_geometry::Geometry> for Geometry {
             skirt_vertices: d.skirt_vertices,
             skirt_uvs: d.skirt_uvs,
             skirt_indices: d.skirt_indices,
-            skirt_indices_to_edge: d.skirt_indices_to_edge,
             skirt_normals: d.skirt_normals,
         }
     }
@@ -129,7 +118,6 @@ impl From<Geometry> for navara_geometry::Geometry {
             skirt_vertices: d.skirt_vertices,
             skirt_uvs: d.skirt_uvs,
             skirt_indices: d.skirt_indices,
-            skirt_indices_to_edge: d.skirt_indices_to_edge,
             skirt_normals: d.skirt_normals,
         }
     }
@@ -198,11 +186,6 @@ impl ReturnedConstructedTerrainMesh {
     #[wasm_bindgen(js_name = "transferSkirtIndices")]
     pub fn transfer_skirt_indices(&self) -> Option<Uint32Array> {
         self.geometry.transfer_skirt_indices()
-    }
-
-    #[wasm_bindgen(js_name = "transferSkirtIndicesToEdge")]
-    pub fn transfer_skirt_indices_to_edge(&self) -> Option<Uint32Array> {
-        self.geometry.transfer_skirt_indices_to_edge()
     }
 
     #[wasm_bindgen(js_name = "transferNormals")]

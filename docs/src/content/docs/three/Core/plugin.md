@@ -155,7 +155,7 @@ const { sky, sun } = plugin.setupScene();
 
 ### Plugin with Custom Descriptors
 
-You can also create plugins that register custom descriptors you have implemented (see [Custom Descriptor](../../../three/api/custom-desc/)).
+You can also create plugins that register custom descriptors you have implemented (see [Custom Descriptor](../../../three/core/custom-desc/)).
 
 ```typescript
 import ThreeView, { Plugin, type ViewContext } from "@navara/three";

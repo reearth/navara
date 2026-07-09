@@ -497,16 +497,20 @@ import { Vector2 } from "three";
 
 ### localWeatherRepeat
 
-**Type:** `number | undefined`
+**Type:** `Vector2 | undefined`
 
 **Description:** ローカル天候テクスチャのリピート回数を指定します。
+
+**Default:** `Vector2(100, 100)`
 
 **Example:**
 
 ```typescript
+import { Vector2 } from "three";
+
 {
   clouds: {
-    localWeatherRepeat: 2.0,
+    localWeatherRepeat: new Vector2(2, 2),
   }
 }
 ```
@@ -531,16 +535,20 @@ import { Vector2 } from "three";
 
 ### shapeRepeat
 
-**Type:** `number | undefined`
+**Type:** `Vector3 | undefined`
 
 **Description:** 雲の形状テクスチャのリピート回数を指定します。
+
+**Default:** `Vector3(0.0003, 0.0003, 0.0003)`
 
 **Example:**
 
 ```typescript
+import { Vector3 } from "three";
+
 {
   clouds: {
-    shapeRepeat: 1.5,
+    shapeRepeat: new Vector3(0.0005, 0.0005, 0.0005),
   }
 }
 ```
@@ -565,16 +573,20 @@ import { Vector3 } from "three";
 
 ### shapeDetailRepeat
 
-**Type:** `number | undefined`
+**Type:** `Vector3 | undefined`
 
 **Description:** 雲の詳細形状テクスチャのリピート回数を指定します。
+
+**Default:** `Vector3(0.006, 0.006, 0.006)`
 
 **Example:**
 
 ```typescript
+import { Vector3 } from "three";
+
 {
   clouds: {
-    shapeDetailRepeat: 2.0,
+    shapeDetailRepeat: new Vector3(0.008, 0.008, 0.008),
   }
 }
 ```
@@ -599,16 +611,20 @@ import { Vector3 } from "three";
 
 ### turbulenceRepeat
 
-**Type:** `number | undefined`
+**Type:** `Vector2 | undefined`
 
 **Description:** 乱流テクスチャのリピート回数を指定します。
+
+**Default:** `Vector2(20, 20)`
 
 **Example:**
 
 ```typescript
+import { Vector2 } from "three";
+
 {
   clouds: {
-    turbulenceRepeat: 1.0,
+    turbulenceRepeat: new Vector2(30, 30),
   }
 }
 ```

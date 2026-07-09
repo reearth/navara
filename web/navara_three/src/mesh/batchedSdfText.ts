@@ -448,6 +448,23 @@ export class BatchedSdfTextMesh
     }
   }
 
+  setFeatureSizeByBatchIndex(batchIndex: number, size: number) {
+    const mesh = this.meshes()[batchIndex];
+    if (mesh) {
+      mesh.setSize(size);
+    }
+  }
+
+  setFeatureOpacityByBatchIndex(batchIndex: number, opacity: number) {
+    const mesh = this.meshes()[batchIndex];
+    if (mesh) {
+      const clampedOpacity = Number.isFinite(opacity)
+        ? Math.max(0, Math.min(1, opacity))
+        : 1.0;
+      mesh.setOpacity(clampedOpacity);
+    }
+  }
+
   dispose() {
     this._unsubscribeEvict?.();
     this._unsubscribeEvict = undefined;

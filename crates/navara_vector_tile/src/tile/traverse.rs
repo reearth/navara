@@ -100,6 +100,15 @@ pub fn traverse_tile(
         && tile.coords.z <= traversal_config.overscaled_max_zoom;
 
     if tile.coords.z > traversal_config.max_zoom && !is_overscaled {
+        // Record the inherited drape source even on this early exit: the vector
+        // draping resolve reads the field, and a node that never records one (e.g.
+        // past `overscaled_max_zoom` on deeply subdivided/upsampled terrain) would
+        // otherwise sit in the quadtree with a stale value forever.
+        tile.ready_parent_tile_handle = if source.should_upscale(tile) {
+            ready_parent_tile_handle
+        } else {
+            None
+        };
         return TraversalResult::NotFound;
     }
 

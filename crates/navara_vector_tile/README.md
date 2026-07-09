@@ -83,6 +83,7 @@ Performs quadtree traversal for each source. For every tile node:
 4. Calls `source.prepare_tile()` to initiate data requests
 5. Recursively traverses children when SSE threshold is not met
 6. Activates/deactivates `RenderableFeature` components for smooth LOD transitions
+7. Records each tile's nearest bakeable drape source in `ready_parent_tile_handle`, consumed by the clamp-to-ground draping resolve (see below)
 
 ### `transfer_mesh`
 
@@ -100,6 +101,12 @@ Removes tiles that are no longer in the viewport:
 1. Despawns tile entities and their features
 2. Calls `source.evict_tile()` for source-specific cleanup
 3. Removes pending requests for tiles no longer needed
+
+## Clamp-to-Ground Draping Resolve
+
+For clamp-to-ground layers, `resolve.rs` decides which rendered WebMercator vector tiles back each **terrain** tile's offscreen bake. `resolve_vector_tile_states` is called per terrain tile through the wasm boundary; it enumerates the WM tiles overlapping the terrain extent at the terrain-driven zoom and, for each, finds a bakeable source by walking the quadtree **down** to finer rendered descendants or **up** to the nearest rendered ancestor. The traverse maintains the field it reads: `ready_parent_tile_handle` is `Some(self)` while a tile's own draped features are active, otherwise the inherited nearest-active ancestor.
+
+The recorded field is trusted only as far as it can be: a source is used only while it still records *itself* as its own source (stale pointers to deactivated or evicted tiles are rejected), and a node that exists without any recorded source — an early-returned traverse path, e.g. beyond `overscaled_max_zoom` under deeply upsampled terrain — is climbed past rather than stopped at. Both rules guarantee the walk lands on a genuinely bakeable ancestor whenever one exists, so a terrain tile is never left blank. See [guide/VECTOR_TILE_DRAPING.md](../../guide/VECTOR_TILE_DRAPING.md) for the full pipeline including the web-side bake and composite paste.
 
 ## Collaboration with Other Crates
 

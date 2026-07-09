@@ -39,5 +39,28 @@ describe("modelBaseEnhancer/material", () => {
       expect(material.emissive.getHex()).toBe(0xff0000);
       expect(material.emissiveIntensity).toBe(0.5);
     });
+
+    it("should update transparent when provided", () => {
+      const material = new MeshStandardMaterial();
+      material.transparent = false;
+
+      updateMaterialProps(material, { transparent: true });
+      expect(material.transparent).toBe(true);
+    });
+
+    it("should update opacity when provided", () => {
+      const material = new MeshStandardMaterial();
+      material.opacity = 1.0;
+      updateMaterialProps(material, { opacity: 0.5 });
+      expect(material.opacity).toBe(0.5);
+    });
+
+    it("should update depthWrite when provided", () => {
+      const material = new MeshStandardMaterial();
+      material.depthWrite = true;
+
+      updateMaterialProps(material, { depthWrite: false });
+      expect(material.depthWrite).toBe(false);
+    });
   });
 });

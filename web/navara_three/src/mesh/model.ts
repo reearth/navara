@@ -44,7 +44,7 @@ import type { PickableMesh } from "./pickableMesh";
 export type ModelMaterial = MeshStandardMaterial | MeshPhysicalMaterial;
 
 // TODO: Height to adjust the height based on its property.
-export type ModelBatchedAttributeName = "color" | "show";
+export type ModelBatchedAttributeName = "color" | "show" | "opacity";
 
 export const MODEL_BATCH_TEXTURE_CONFIG: BatchTextureConfig = {
   rows: ["COLOR_SHOW"],
@@ -112,8 +112,10 @@ export class ModelMesh
     const { buf } = this.ctx;
     const batchIdsData = m.geometry.batch_ids;
     const dataSize = batchIdsData?.size ?? 0;
+    // buf.u32 returns a short-lived view into WASM memory; copy to retain it
+    // across the traversal below.
     const batchIds = batchIdsData
-      ? buf.u32(batchIdsData.data)
+      ? (buf.u32(batchIdsData.data)?.slice() ?? null)
       : new Uint32Array(dataSize);
 
     const meshMaterial = m.material;
@@ -212,6 +214,11 @@ export class ModelMesh
           break;
         }
         case "show": {
+          enhancer.update({ base: { useBatchColorShow: true } });
+          break;
+        }
+        case "opacity": {
+          // Opacity is bundled with show in COLOR_SHOW alpha channel
           enhancer.update({ base: { useBatchColorShow: true } });
           break;
         }
@@ -353,6 +360,9 @@ export class ModelMesh
         roughness: material.roughness,
         emissiveColor: material.emissiveColor,
         emissiveIntensity: material.emissiveIntensity,
+        transparent: material.transparent,
+        opacity: material.opacity,
+        depthWrite: material.depthWrite,
         effectIdsMask:
           this.ctx.viewContext.selectiveEffectRegistry?.computeMask(
             material.effectIds ?? [],
@@ -426,6 +436,17 @@ export class ModelMesh
   _setFeatureHeight(_height: number) {
     // Height adjustment via batch textures is currently not implemented.
     // This method is intentionally a no-op to avoid breaking existing callers.
+  }
+
+  _setFeatureWidth(_width: number): void {
+    // Width is not applicable to 3D models.
+    // This method is intentionally a no-op to satisfy the FeatureMesh interface.
+  }
+
+  _setFeatureOpacity(opacity: number): void {
+    this.traverseMesh((m) => {
+      this._updateBatchAttribute(m, 0, "opacity", opacity);
+    });
   }
 
   dispose() {

@@ -13,6 +13,7 @@ use crate::{
     construct_terrain_mesh::{
         DelegatableConstructTerrainMeshParameters, DelegatableConstructTerrainMeshResult,
     },
+    parse_mvt_tile::{DelegatableParseMvtTileParameters, DelegatableParseMvtTileResult},
     upsample_terrain_mesh::{
         DelegatableUpsampleTerrainMeshParameters, DelegatableUpsampleTerrainMeshResult,
     },
@@ -58,6 +59,7 @@ pub enum DelegatedWorkerTasksParameters {
     ConstructPolylineBatchedFeature(
         DelegatedWorkerTask<DelegatableConstructPolylineBatchedFeatureParameters>,
     ),
+    ParseMvtTile(DelegatedWorkerTask<DelegatableParseMvtTileParameters>),
     // Polyline(...),
 }
 
@@ -91,6 +93,7 @@ pub enum DelegatedWorkerTasksResult {
     ConstructPolylineBatchedFeature(
         DelegatedWorkerTask<DelegatableConstructPolylineBatchedFeatureResult>,
     ),
+    ParseMvtTile(DelegatedWorkerTask<DelegatableParseMvtTileResult>),
     // Polyline(...),
     // Polygon(...),
 }

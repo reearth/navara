@@ -21,6 +21,10 @@ void main() {
 
     #include <color_fragment>
 
+#ifdef USE_BATCH_COLOR_SHOW
+    diffuseColor.a *= nvr_vOpacity;
+#endif
+
     gl_FragColor = diffuseColor;
     #include <colorspace_fragment>
 

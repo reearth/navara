@@ -29,6 +29,11 @@ export const STYLE_TEXT = `
   gap: 10px;
   font-family: system-ui, sans-serif;
 }
+.navara-attr-dock--left {
+  right: auto;
+  left: 8px;
+  align-items: flex-start;
+}
 .navara-attr-logoframe {
   position: fixed;
   left: 8px;
@@ -37,6 +42,11 @@ export const STYLE_TEXT = `
   display: flex;
   align-items: center;
   gap: 8px;
+}
+/* Bottom-left mode: the ⓘ trigger (24px) occupies the far-left corner, so the
+   logo frame starts to its right, keeping the two in a single row. */
+.navara-attr-logoframe--left {
+  left: 40px;
 }
 .navara-attr-logo {
   height: 24px;

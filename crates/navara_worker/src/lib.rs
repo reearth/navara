@@ -24,17 +24,20 @@ impl bevy_app::Plugin for WorkerPlugin {
             );
         }
 
-        app.add_message::<WorkerTaskCompletedEvent>().add_systems(
+        app.add_message::<WorkerTaskCompletedEvent>()
+            .add_message::<WorkerTaskFailedEvent>()
+            .add_systems(
             Update,
             (
+                system::handle_failed_event,
                 system::remove,
                 tasks::construct_terrain_mesh::system::construct_terrain_mesh,
                 tasks::upsample_terrain_mesh::system::upsample_terrain_mesh,
                 tasks::construct_polygon_batched_feature::system::construct_polygon_batched_feature,
                 tasks::construct_polyline_batched_feature::system::construct_polyline_batched_feature,
+                tasks::parse_mvt_tile::system::parse_mvt_tile,
                 system::handle_completed_event,
                 system::commit,
-                system::remove_relation,
             )
                 .chain(),
         );

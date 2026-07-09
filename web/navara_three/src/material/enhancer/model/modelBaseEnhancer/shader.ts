@@ -106,6 +106,16 @@ void main() {
 `,
     )
     .replace(
+      "#include <color_fragment>",
+      `
+#include <color_fragment>
+
+#ifdef USE_BATCH_COLOR_SHOW
+  diffuseColor.a *= nvr_vOpacity;
+#endif
+`,
+    )
+    .replace(
       "#include <lights_physical_pars_fragment>",
       `
 #include <lights_physical_pars_fragment>

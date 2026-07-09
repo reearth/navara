@@ -24,7 +24,7 @@ use navara_tile_component::{
 };
 use navara_window::Window;
 use navara_worker::{
-    WorkerTaskCompleted,
+    WorkerTaskCompleted, WorkerTaskResultConsumed,
     construct_terrain_mesh::{
         ConstructTerrainMeshMarker, ConstructTerrainMeshParameters, ConstructTerrainMeshResult,
         ConstructTerrainMeshWorkerTaskBundle,
@@ -216,10 +216,13 @@ pub fn update_terrain(
 
     let root_coords: Vec<TileXYZ> = globe.tiling_scheme.root_tiles();
 
-    let is_over_min_z = if !tiles.is_empty() {
-        tiles
+    // Sort the layer list once per run; the traversal touches every visited tile.
+    let sorted_layers: Vec<_> = tiles.iter().sort::<&Order>().collect();
+
+    let is_over_min_z = if !sorted_layers.is_empty() {
+        sorted_layers
             .iter()
-            .filter_map(|t| t.0.source_id.as_deref().and_then(|id| source_store.get(id)))
+            .filter_map(|(t, _)| t.source_id.as_deref().and_then(|id| source_store.get(id)))
             .any(|s| s.is_over_min_zoom(0))
     } else {
         true
@@ -233,13 +236,13 @@ pub fn update_terrain(
 
         let is_texture_ready = qt.qt.get_mut(root_handle).unwrap().is_hillshade_ready(
             &data_requesters,
-            tiles,
+            &sorted_layers,
             &source_store,
         );
 
         let traversal_result = traverse_terrain(
             &mut commands,
-            tiles,
+            &sorted_layers,
             &terrain_layer,
             &source_store,
             root_handle,
@@ -293,7 +296,7 @@ pub fn update_terrain(
                     &terrain_layer,
                     root_handle,
                     &mut tc,
-                    tiles,
+                    &sorted_layers,
                     &source_store,
                     &data_requesters,
                     &terrain_data_requester,
@@ -303,7 +306,7 @@ pub fn update_terrain(
                 request_hillshade_data_requester(
                     &mut commands,
                     tile,
-                    tiles,
+                    &sorted_layers,
                     &source_store,
                     root_handle,
                     &data_requesters,
@@ -358,6 +361,9 @@ pub fn transfer_mesh(
 
     let tile_size = terrain_source.map(|s| s.tile_size());
 
+    // Sort the layer list once per run; the loop below runs per rendered tile.
+    let sorted_layers: Vec<_> = tile_layers.iter().sort::<&Order>().collect();
+
     for (rendered_tile_id, mut rendered_tile, order) in
         rendered_tiles.iter_mut().sort::<&OrderByDistance>()
     {
@@ -402,7 +408,7 @@ pub fn transfer_mesh(
         let qm_geographic = terrain_source.is_some_and(|s| s.tiling_scheme().is_geographic());
         let qm_tms = terrain_source.is_some_and(|s| s.tiling_scheme().tms());
 
-        let tile_layers_len = tile_layers.iter().len();
+        let tile_layers_len = sorted_layers.len();
         let mut shows = Vec::with_capacity(tile_layers_len);
         let mut opacities = Vec::with_capacity(tile_layers_len);
         let mut colors = Vec::with_capacity(tile_layers_len);
@@ -428,7 +434,7 @@ pub fn transfer_mesh(
                 .and_then(|s| s.elevation_decoder().copied())
         };
 
-        for (i, (l, _)) in tile_layers.iter().sort::<&Order>().enumerate() {
+        for (i, (l, _)) in sorted_layers.iter().enumerate() {
             // The initial material only reflects terrain-owned hillshade readiness;
             // regular raster textures are draped later in `update_mesh_material`.
             let mut should_show = false;
@@ -566,7 +572,6 @@ pub fn transfer_mesh(
             let v_skirt_handle = triangles.skirt_vertices.map(|b| buf.new_f32(b));
             let i_skirt_handle = triangles.skirt_indices.map(|b| buf.new_u32(b));
             let u_skirt_handle = triangles.skirt_uvs.map(|b| buf.new_f32(b));
-            let e_skirt_handle = triangles.skirt_indices_to_edge.map(|b| buf.new_u32(b));
 
             let vhandle = buf.new_f32(triangles.vertices);
             let ihandle = buf.new_u32(triangles.indices);
@@ -607,7 +612,6 @@ pub fn transfer_mesh(
                         skirt_vertices: v_skirt_handle,
                         skirt_uvs: u_skirt_handle,
                         skirt_indices: i_skirt_handle,
-                        skirt_indices_to_edge: e_skirt_handle,
                         skirt_normals: None,
                         watermask: None,
                     },
@@ -683,7 +687,11 @@ pub fn transfer_mesh(
                 };
 
             rendered_tile.terrain_mesh_upsampler = None;
-            commands.entity(terrain_mesh_upsampler_id).insert(Deleted);
+            // The result's handles move into the tile mesh below, so mark the
+            // task consumed or its `on_remove` hook would free live buffers.
+            commands
+                .entity(terrain_mesh_upsampler_id)
+                .insert((Deleted, WorkerTaskResultConsumed));
 
             let min_height = terrain_mesh_upsampler.min_height;
             let max_height = terrain_mesh_upsampler.max_height;
@@ -729,9 +737,6 @@ pub fn transfer_mesh(
                         skirt_vertices: terrain_mesh_upsampler.geometry.skirt_vertices,
                         skirt_uvs: terrain_mesh_upsampler.geometry.skirt_uvs,
                         skirt_indices: terrain_mesh_upsampler.geometry.skirt_indices,
-                        skirt_indices_to_edge: terrain_mesh_upsampler
-                            .geometry
-                            .skirt_indices_to_edge,
                         skirt_normals: terrain_mesh_upsampler.geometry.skirt_normals,
                         watermask: None,
                     },
@@ -789,7 +794,11 @@ pub fn transfer_mesh(
             };
 
         rendered_tile.terrain_mesh_constructor = None;
-        commands.entity(terrain_mesh_constructor_id).insert(Deleted);
+        // The result's handles move into the tile mesh below, so mark the
+        // task consumed or its `on_remove` hook would free live buffers.
+        commands
+            .entity(terrain_mesh_constructor_id)
+            .insert((Deleted, WorkerTaskResultConsumed));
 
         let min_height = terrain_mesh_constructor.min_height;
         let max_height = terrain_mesh_constructor.max_height;
@@ -834,7 +843,6 @@ pub fn transfer_mesh(
                     skirt_vertices: terrain_mesh_constructor.geometry.skirt_vertices,
                     skirt_uvs: terrain_mesh_constructor.geometry.skirt_uvs,
                     skirt_indices: terrain_mesh_constructor.geometry.skirt_indices,
-                    skirt_indices_to_edge: terrain_mesh_constructor.geometry.skirt_indices_to_edge,
                     skirt_normals: terrain_mesh_constructor.geometry.skirt_normals,
                     watermask: terrain_mesh_constructor.watermask,
                 },
@@ -1211,21 +1219,27 @@ pub fn update_mesh_material(
     let texture_fragment = texture_fragment.p0();
     let data_requesters = data_requesters.p0();
 
+    // Sort the layer list once per run; the loop below runs per rendered tile.
+    let sorted_layers: Vec<_> = tile_layers.iter().sort::<&Order>().collect();
+
     // Split the raster slot budget evenly across the draped (non-hillshade) layers.
     // Hillshade layers are terrain-side and contribute exactly one slot each, so
     // they're subtracted from the budget rather than sharing the per-layer cap.
     // Each draped layer then coarsens its WM zoom to stay within its share, keeping
     // the per-tile texture count under the GPU slots the composite shader binds.
-    let num_hillshade_layers = tile_layers
+    let num_hillshade_layers = sorted_layers
         .iter()
         .filter(|(l, _)| l.hillshade_config.is_some())
         .count();
-    let num_draped_layers = tile_layers.iter().count() - num_hillshade_layers;
+    let num_draped_layers = sorted_layers.len() - num_hillshade_layers;
     let max_tiles_per_layer = if num_draped_layers == 0 {
         1
     } else {
         (RASTER_DRAPE_SLOT_BUDGET.saturating_sub(num_hillshade_layers) / num_draped_layers).max(1)
     };
+    // Upper bound of composite slots a tile can emit: one per hillshade layer
+    // plus up to `max_tiles_per_layer` per draped layer.
+    let max_slots = num_hillshade_layers + num_draped_layers * max_tiles_per_layer;
 
     for (rendered_tile, _) in rendered_tiles.iter().sort::<&OrderByDistance>() {
         let Some(tile) = qt.qt.get(rendered_tile.tile_handle) else {
@@ -1260,14 +1274,14 @@ pub fn update_mesh_material(
         // reprojected (Mercator) on the latitude axis in the composite shader;
         // the linear affine UV alone stretches it.
         let terrain_is_geographic = tile.tiling_scheme.is_geographic();
-        let mut shows = Vec::new();
-        let mut opacities = Vec::new();
-        let mut colors = Vec::new();
-        let mut is_elevation_heatmaps = Vec::new();
-        let mut is_hillshades = Vec::new();
-        let mut layer_fragments: Vec<Option<Entity>> = Vec::new();
-        let mut layer_uv_transforms: Vec<Option<TileUvTransform>> = Vec::new();
-        let mut layer_reproject = Vec::new();
+        let mut shows = Vec::with_capacity(max_slots);
+        let mut opacities = Vec::with_capacity(max_slots);
+        let mut colors = Vec::with_capacity(max_slots);
+        let mut is_elevation_heatmaps = Vec::with_capacity(max_slots);
+        let mut is_hillshades = Vec::with_capacity(max_slots);
+        let mut layer_fragments: Vec<Option<Entity>> = Vec::with_capacity(max_slots);
+        let mut layer_uv_transforms: Vec<Option<TileUvTransform>> = Vec::with_capacity(max_slots);
+        let mut layer_reproject = Vec::with_capacity(max_slots);
         let mut elevation_heatmap_config = None;
         let mut hillshade_config = None;
         // DEM decoder is fetch config: read live from the source, not the layer.
@@ -1282,7 +1296,7 @@ pub fn update_mesh_material(
                 .and_then(|s| s.elevation_decoder().copied())
         };
 
-        for (i, (l, _)) in tile_layers.iter().sort::<&Order>().enumerate() {
+        for (i, (l, _)) in sorted_layers.iter().enumerate() {
             let a = l.appearance().unwrap();
             let is_heatmap = l.elevation_heatmap_config.is_some();
 

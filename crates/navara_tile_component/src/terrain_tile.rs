@@ -133,10 +133,11 @@ impl TerrainTile {
         data_requesters: &Query<&navara_data_requester::DataRequester>,
         terrain_data_requester: &TileTerrainDataRequesterQuery,
         terrain_layer: &Option<&TerrainLayer>,
-        tiles: &Query<(&TilesLayer, &Order)>,
+        sorted_layers: &[(&TilesLayer, &Order)],
         source_store: &navara_source::SourceStore,
     ) -> ReadyState {
-        let is_texture_loaded = self.is_hillshade_ready(data_requesters, tiles, source_store);
+        let is_texture_loaded =
+            self.is_hillshade_ready(data_requesters, sorted_layers, source_store);
 
         // Terrain fetch/zoom config is read live from the referenced source.
         let terrain_source = terrain_layer
@@ -261,20 +262,20 @@ impl TerrainTile {
     /// Terrain-side texture readiness. Regular raster textures are owned by the
     /// raster pipeline and pulled separately (with ancestor fallback), so this
     /// only gates on hillshade layers, which derive from the terrain DEM.
+    /// `sorted_layers` is the layer list sorted by `Order`, collected once per
+    /// system run (this is called per traversed tile).
     pub fn is_hillshade_ready(
         &self,
         data_requesters: &Query<&navara_data_requester::DataRequester>,
-        tiles: &Query<'_, '_, (&TilesLayer, &Order)>,
+        sorted_layers: &[(&TilesLayer, &Order)],
         source_store: &navara_source::SourceStore,
     ) -> bool {
-        if tiles.is_empty() {
+        if sorted_layers.is_empty() {
             return true;
         }
 
-        let sorted_tiles: Vec<_> = tiles.iter().sort::<&Order>().collect();
-
         // Check if there are any hillshade layers in the sorted tiles
-        let has_hillshade_layers = sorted_tiles
+        let has_hillshade_layers = sorted_layers
             .iter()
             .any(|(layer, _)| layer.hillshade_config.is_some());
 
@@ -287,7 +288,7 @@ impl TerrainTile {
         self.hillshade_entity_ids.as_ref().is_none_or(|hill_ids| {
             hill_ids
                 .iter()
-                .zip(sorted_tiles.iter())
+                .zip(sorted_layers.iter())
                 .any(|(&entity_opt, (layer, _))| {
                     if let Some(entity) = entity_opt {
                         // Entity exists, check if it's ready
@@ -1386,7 +1387,12 @@ mod terrain_tile_tests {
                     let mut tile = TerrainTile::new(TileXYZ { x: 0, y: 0, z: 5 }, 0., 0.);
                     tile.hillshade_entity_ids = Some(hill_ids.lock().unwrap().take().unwrap());
                     let source_store = navara_source::SourceStore::new();
-                    out.0 = Some(tile.is_hillshade_ready(&data_requesters, &tiles, &source_store));
+                    let sorted_layers: Vec<_> = tiles.iter().sort::<&Order>().collect();
+                    out.0 = Some(tile.is_hillshade_ready(
+                        &data_requesters,
+                        &sorted_layers,
+                        &source_store,
+                    ));
                 },
             );
             app.update();
@@ -1633,12 +1639,13 @@ mod terrain_tile_tests {
                     let terrain_layer = terrain_layers.iter().next();
                     let child = child.lock().unwrap().take().unwrap();
                     let source_store = source_store.lock().unwrap().take().unwrap();
+                    let sorted_layers: Vec<_> = tiles.iter().sort::<&Order>().collect();
                     let rs = child.is_ready(
                         &qt,
                         &data_requesters,
                         &terrain_data_requester,
                         &terrain_layer,
-                        &tiles,
+                        &sorted_layers,
                         &source_store,
                     );
                     out.0 = Some(ReadyStateSnapshot {

@@ -76,6 +76,7 @@ impl VectorTileSource for GeoJsonTileSource {
         buf: &mut BufferStore,
         tile: &VectorTile,
         tile_handle: TileHandle,
+        _rendered_tile: Entity,
         order: &OrderByDistance,
         _data_requester: Option<&DataRequester>,
     ) -> Option<Vec<Entity>> {

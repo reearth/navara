@@ -9,7 +9,7 @@ The `SkyMeshDesc` class is a mesh descriptor that draws the sky, sun, and moon u
 
 The sun and moon positions are automatically calculated based on `view.atmosphere.date` and updated every frame.
 
-In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-desc-base) for details.
+In addition to the properties below, the common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `visible`) are available. See [MeshDesc](./mesh-desc-base) for details.
 
 :::tip[Related Documentation]
 For details on the atmosphere system, see the [Atmosphere class](../../../three/api/atmosphere/).
@@ -144,6 +144,7 @@ import ThreeView from "@navara/three";
 import { SkyMeshDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
+view.registerMesh("sky", SkyMeshDesc);
 await view.init();
 
 // Add a SkyMeshDesc

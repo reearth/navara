@@ -142,6 +142,24 @@ import { Color } from "@navara/three";
 }
 ```
 
+### depthWrite
+
+**Type:** `boolean | undefined`
+
+**Description:** 深度バッファへの書き込みを有効にします。透明なマテリアルの場合は `false` に設定して、深度ソートの問題を防ぎます。
+
+**Default:** `true`
+
+**Example:**
+
+```typescript
+{
+  model: {
+    depthWrite: false
+  }
+}
+```
+
 ### effectIds
 
 **Type:** `string[] | undefined`
@@ -288,6 +306,25 @@ import { Color } from "@navara/three";
 }
 ```
 
+### opacity
+
+**Type:** `number | undefined`
+
+**Description:** モデルの不透明度を指定します。有効範囲は 0.0（完全に透明）から 1.0（完全に不透明）です。このプロパティは、マテリアルを透明にしてレンダリングする際のアルファ値を制御します。
+
+**Default:** `1.0`
+
+**Example:**
+
+```typescript
+{
+  model: {
+    transparent: true,
+    opacity: 0.5 // 50%の不透明度
+  }
+}
+```
+
 ### pointSize
 
 **Type:** `number | undefined`
@@ -356,24 +393,6 @@ import { Color } from "@navara/three";
 {
   model: {
     roughness: 0.1
-  }
-}
-```
-
-### selectiveEffectOcclusion
-
-**Type:** `string | undefined`
-
-**Description:** セレクティブエフェクトマスクパスの深度動作を指定します。"normal" または "silhouette" を指定できます。
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  model: {
-    selectiveEffectOcclusion: "normal"
   }
 }
 ```
@@ -504,6 +523,24 @@ import { Color } from "@navara/three";
 }
 ```
 
+### transparent
+
+**Type:** `boolean | undefined`
+
+**Description:** 透明度とアルファブレンディングを有効にします。有効にすると、モデルのアルファチャンネルに基づいて透明度付きでレンダリングできます。
+
+**Default:** `false`
+
+**Example:**
+
+```typescript
+{
+  model: {
+    transparent: true
+  }
+}
+```
+
 ### url
 
 **Type:** `string | undefined`
@@ -536,24 +573,6 @@ import { Color } from "@navara/three";
 {
   model: {
     water: true
-  }
-}
-```
-
-### waterNormalUrl
-
-**Type:** `string | undefined`
-
-**Description:** 水面の法線マップの URL を指定します。
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  model: {
-    waterNormalUrl: "/textures/water_normal.png"
   }
 }
 ```

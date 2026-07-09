@@ -13,7 +13,7 @@ sidebar:
 
 ```
 navara_three (core: ThreeView, Plugin, addPlugin, registerMesh/Effect/Light)
-  ├── three_default_descs (descriptor implementations: 17 meshes, 12 effects, 4 lights)
+  ├── three_default_descs (descriptor implementations: 22 meshes, 14 effects, 4 lights)
   └── three_default_plugin (DefaultPlugin: bulk descriptor registration + utilities)
 ```
 
@@ -37,9 +37,9 @@ await view.init({ canvas: document.getElementById("canvas") });
 
 The following descriptors are automatically registered during the plugin's `init()`:
 
-**Mesh descriptors (17 types):** `rain`, `snow`, `sky`, `skyBox`, `stars`, `box`, `boxes`, `sphere`, `glowGlobe`, `cylinder`, `tube`, `plane`, `gltfModel`, `axesHelper`, `arrowHelper`, `arcLines`, `smoothLines`
+**Mesh descriptors (22 types):** `rain`, `snow`, `sky`, `skyBox`, `stars`, `box`, `sphere`, `glowGlobe`, `cylinder`, `tube`, `plane`, `gltfModel`, `splat`, `axesHelper`, `arrowHelper`, `arcLines`, `smoothLines`, `boxes`, `spheres`, `planes`, `cylinders`, `gltfModels`
 
-**Effect descriptors (12 types):** `aerialPerspective`, `rainDrop`, `clouds`, `fogLight`, `lensFlare`, `ssao`, `ssr`, `depthOfField`, `colorGradingLUT`, `toneMapping`, `smaa`, `fxaa`
+**Effect descriptors (14 types):** `aerialPerspective`, `rainDrop`, `selectiveBloom`, `selectiveOutline`, `clouds`, `fogLight`, `lensFlare`, `ssao`, `ssr`, `depthOfField`, `colorGradingLUT`, `toneMapping`, `smaa`, `fxaa`
 
 **Light descriptors (4 types):** `sun`, `ambient`, `skyLightProbe`, `lightProbe`
 
@@ -63,7 +63,6 @@ Descriptors added:
 | Descriptor | Type | Description |
 |---------|------|------|
 | `sky` | mesh | Sky rendering |
-| `skyEnv` | mesh | Sky for environment maps |
 | `stars` | mesh | Star rendering |
 | `skyLightProbe` | light | Environment light based on the sky |
 | `sun` | light | Sunlight |

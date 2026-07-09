@@ -69,7 +69,7 @@ import { Color } from "@navara/three";
 
 ### center
 
-**Type:** [`Vec2`](#vec2) | undefined
+**Type:** [`Vec2`](../../api/types/#vec2) | undefined
 
 **Description:** Specifies the shift amount from the center. The range is between 0 and 1.
 
@@ -274,6 +274,24 @@ view.addFontFamily({
 }
 ```
 
+### opacity
+
+**Type:** `number | undefined`
+
+**Description:** Specifies the opacity of the text. The range is 0.0 (fully transparent) to 1.0 (fully opaque).
+
+**Default:** `1.0`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    opacity: 0.5
+  }
+}
+```
+
 ### outlineColor
 
 **Type:** `Color | undefined`
@@ -438,20 +456,21 @@ import { Color } from "@navara/three";
 }
 ```
 
-## Vec2
+### transparent
 
-A class representing a 2D vector.
+**Type:** `boolean | undefined`
 
-### Properties
+**Description:** Enables transparency and alpha blending. When enabled, the `opacity` property can be used to control transparency.
 
-#### x
+**Default:** `true`
 
-**Type:** `number`
+**Example:**
 
-**Description:** X coordinate value.
-
-#### y
-
-**Type:** `number`
-
-**Description:** Y coordinate value.
+```typescript
+{
+  text: {
+    transparent: true,
+    opacity: 0.5
+  }
+}
+```

@@ -10,6 +10,7 @@ in vec4 right_normal_and_texture_coordinate_normalization_y;
 #include <common>
 #include <color_pars_vertex>
 #include chunks/batch_texture_pars_vertex;
+#include chunks/height_pars_vertex;
 
 uniform vec3 minMaxHeightAndWidth;
 
@@ -18,6 +19,9 @@ out float nvr_vBatchId;
 void main() {
     #include <begin_vertex>
     #include <color_vertex>
+
+    #include chunks/height_vertex;
+    #include chunks/line_width_vertex;
 
     #include chunks/batch_texture_vertex;
 
@@ -29,7 +33,14 @@ void main() {
 
     // Line width in normalized coordinates (width is in pixels, need to scale)
     // For a 512x512 render target, convert pixels to normalized coords
-    float lineWidth = minMaxHeightAndWidth.z / 512.0;
+    // Use batchLineWidth when >= 0.0, otherwise fall back to default width.
+    // Negative batchLineWidth indicates "use default width from minMaxHeightAndWidth.z"
+    #ifdef USE_BATCH_LINE_WIDTH
+        float baseWidth = batchLineWidth >= 0.0 ? batchLineWidth : minMaxHeightAndWidth.z;
+    #else
+        float baseWidth = minMaxHeightAndWidth.z;
+    #endif
+    float lineWidth = baseWidth / 512.0;
 
     // Compensate for parent tile zoom-in: when a parent tile's mesh is rendered
     // for a child tile, the ortho camera narrows its bounds, magnifying the geometry.

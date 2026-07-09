@@ -30,7 +30,8 @@ pub struct RenderedTileCache {
     /// Per-layer parent entities computed during traversal.
     /// Index corresponds to layer index (sorted by `Order`).
     /// `None` slot means the layer's own entity is ready (no parent reuse).
-    pub layer_parents: Option<Vec<Option<LayerParent>>>,
+    /// Shared (Arc) with the traversal, which hands the same list to every child.
+    pub layer_parents: Option<std::sync::Arc<Vec<Option<LayerParent>>>>,
     pub rendered_tile_entity: Entity,
     /// This is used to check if the mesh is prepared in client side.
     /// Because sometimes rendering engine needs to do some preparation asynchronously.

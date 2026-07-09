@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use bevy_ecs::{
     entity::Entity,
@@ -166,7 +167,9 @@ fn set_layer_appearances(tile_source: &mut TileSource, layer_id: &str, appearanc
     with_source_layers(tile_source, |layers| {
         for owned in layers {
             if owned.layer_id == layer_id {
-                for a in &mut owned.appearances {
+                // Copy-on-write: in-flight parse tasks keep their snapshot of
+                // the previous appearances; only the source's copy is updated.
+                for a in Arc::make_mut(&mut owned.appearances) {
                     a.set(appearance);
                 }
             }
@@ -178,7 +181,7 @@ fn owned_layer_info(layer: &MvtLayer) -> OwnedMatchedLayerInfo {
     let limit_layers = layer.source_layers.clone();
     OwnedMatchedLayerInfo {
         layer_id: layer.layer_id.clone(),
-        appearances: layer.appearances.clone(),
+        appearances: Arc::new(layer.appearances.clone()),
         limit_layers,
     }
 }

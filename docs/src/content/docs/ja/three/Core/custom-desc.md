@@ -285,9 +285,9 @@ class MyInstancedDesc extends InstancedMeshDesc<
 
 | Property   | Type      | Description                                                                  |
 | ---------- | --------- | ---------------------------------------------------------------------------- |
-| `position` | `XYZ`     | Local position relative to the parent group                                  |
-| `rotation` | `XYZ`     | Local rotation (Euler angles in radians)                                     |
-| `scale`    | `XYZ`     | Local scale                                                                  |
+| `position` | [`XYZ`](../../../three/api/types/#xyz) | Local position relative to the parent group                                  |
+| `rotation` | [`XYZ`](../../../three/api/types/#xyz) | Local rotation (Euler angles in radians)                                     |
+| `scale`    | [`XYZ`](../../../three/api/types/#xyz) | Local scale                                                                  |
 | `matrix`   | `Matrix4` | Pre-computed transform matrix. When set, position/rotation/scale are ignored |
 
 ### Abstract Methods

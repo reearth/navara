@@ -302,7 +302,7 @@ impl App {
                 }
             }
             BatchProperty::Mvt(mvt_layer_data) => {
-                for batch_idx in 0..mvt_layer_data.feature_tags.len() {
+                for batch_idx in 0..mvt_layer_data.feature_count() {
                     let global_batch_id = global_batch_id_array
                         .as_ref()
                         .and_then(|arr| arr.get(batch_idx).copied())

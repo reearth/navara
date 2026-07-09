@@ -18,6 +18,12 @@ export class FeatureMesh {
   _setFeatureHeight(_height: number) {
     throw new Unimplemented();
   }
+  _setFeatureWidth(_width: number) {
+    throw new Unimplemented();
+  }
+  _setFeatureOpacity(_opacity: number) {
+    throw new Unimplemented();
+  }
   _setFrustumCulled(_culled: boolean) {
     throw new Unimplemented();
   }
@@ -29,6 +35,9 @@ export const isFeatureMesh = (v: object): v is FeatureMesh => {
     "_getFeatureColor" in v &&
     "_setFeatureShow" in v &&
     "_setFeatureExtrudedHeight" in v &&
+    "_setFeatureHeight" in v &&
+    "_setFeatureWidth" in v &&
+    "_setFeatureOpacity" in v &&
     "_setFrustumCulled" in v
   );
 };

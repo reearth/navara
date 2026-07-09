@@ -21,9 +21,12 @@ use navara_tile_component::{
     OverscaledTileHandle, TerrainTileQuadtree, TileExtent, TileMeshMarker,
     sample_terrain_height_within_extent,
 };
-use navara_worker::construct_polyline_batched_feature::{
-    ConstructPolylineBatchedFeatureMarker, ConstructPolylineBatchedFeatureParameters,
-    ConstructPolylineBatchedFeatureResult, ConstructPolylineBatchedFeatureWorkerTaskBundle,
+use navara_worker::{
+    WorkerTaskResultConsumed,
+    construct_polyline_batched_feature::{
+        ConstructPolylineBatchedFeatureMarker, ConstructPolylineBatchedFeatureParameters,
+        ConstructPolylineBatchedFeatureResult, ConstructPolylineBatchedFeatureWorkerTaskBundle,
+    },
 };
 
 #[allow(clippy::type_complexity)]
@@ -144,7 +147,12 @@ pub fn transfer_batched_mesh(
 
         feature_batch_id_map.add(entity, global_batch_ids.clone());
 
-        commands.entity(task_entity).insert(Deleted);
+        // The result's geometry handles now live in the spawned feature, so
+        // mark the task consumed or its `on_remove` hook would free live
+        // buffers when the worker plugin despawns it.
+        commands
+            .entity(task_entity)
+            .insert((Deleted, WorkerTaskResultConsumed));
     }
 }
 
@@ -225,7 +233,6 @@ pub fn remove_batched_feature(
         ),
         (With<PolylineMarker>, With<Deleted>),
     >,
-    worker_task_results: Query<&ConstructPolylineBatchedFeatureResult>,
     mut buf: ResMut<BufferStore>,
     mut batch_table_res: ResMut<BatchTable>,
     mut feature_batch_id_map: ResMut<FeatureBatchIdMap>,
@@ -248,12 +255,16 @@ pub fn remove_batched_feature(
             // Mark RenderableFeature as Deleted so event::despawn will clean it up
             commands.entity(rendered_feature_id).insert(Deleted);
         } else if let Some(task_entity) = batched_feature.construct_polyline_feature {
-            // RenderableFeature wasn't created yet, but worker task might have completed.
-            // Clean up the task result's geometry handles to prevent memory leak.
-            if let Ok(result) = worker_task_results.get(task_entity) {
-                let mut geometry = result.geometry.clone();
-                geometry.remove_from_buf(&mut buf, &mut batch_table_res);
-            }
+            // The tessellation was never transferred: cancel the task. An
+            // unconsumed result frees its buffers via the component's
+            // `on_remove` hook when the worker plugin despawns the entity
+            // (freeing it here instead would race that despawn), and a result
+            // arriving after this lands is freed by the worker plugin's
+            // `handle_completed_event`.
+            let _ = commands
+                .get_entity(task_entity)
+                .as_mut()
+                .map(|e| e.insert(Deleted));
         }
 
         // Clean up BatchedPolylineGeometry handles in BufferStore

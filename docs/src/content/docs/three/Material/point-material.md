@@ -175,6 +175,25 @@ import { Color } from "@navara/three";
 }
 ```
 
+### opacity
+
+**Type:** `number | undefined`
+
+**Description:** Specifies the opacity of the point. Valid range is 0.0 (fully transparent) to 1.0 (fully opaque).
+
+**Default:** `1.0`
+
+**Example:**
+
+```typescript
+{
+  point: {
+    transparent: true,
+    opacity: 0.5 // 50% opacity
+  }
+}
+```
+
 ### sizeInMeters
 
 **Type:** `boolean | undefined`
@@ -189,24 +208,6 @@ import { Color } from "@navara/three";
 {
   point: {
     sizeInMeters: true
-  }
-}
-```
-
-### selectiveEffectOcclusion
-
-**Type:** `string | undefined`
-
-**Description:** Specifies the depth behavior for the selective effect mask pass. Can be set to "normal" or "silhouette".
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  point: {
-    selectiveEffectOcclusion: "normal"
   }
 }
 ```

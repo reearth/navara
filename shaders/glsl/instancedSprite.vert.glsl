@@ -15,8 +15,7 @@
     varying float vLayer;
 #endif
 
-attribute float instanceShow;
-attribute float instanceHeight;
+attribute vec4 instanceParams; // x=height, y=size, z=show, w=opacity
 attribute vec3 instanceColor;
 attribute float instanceBatchID;
 
@@ -38,8 +37,14 @@ varying vec2 vUv;
 varying vec3 vColor;
 varying float vBatchID;
 varying float vFragDepth;
+varying float vOpacity; // Pass opacity to fragment shader
 
 void main() {
+    float instanceHeight = instanceParams.x;
+    float instanceSize = instanceParams.y;
+    float instanceShow = instanceParams.z;
+    vOpacity = instanceParams.w;
+
 #ifdef USE_RTE
     vec3 absTransformed = instancePositionHIGH + instancePositionLOW;
 #else
@@ -81,7 +86,9 @@ void main() {
     mvPosition += mvr_getMvHeightOffset(absTransformed, instanceHeight);
     vec2 center = clamp(uCenter, vec2(-0.5), vec2(0.5)); // Ensure center is within the bounds of the sprite
 
-    float clampedScale = max(0.0, uScale); // Prevent negative scaling
+    // Use per-instance size when set (>= 0.0). A negative value means "use uScale".
+    float scale = instanceSize >= 0.0 ? instanceSize : uScale;
+    float clampedScale = max(0.0, scale); // Prevent negative scaling
     // This makes it always face the camera
     if (!uSizeInMeters) {
         clampedScale = nvr_pxToWorld(clampedScale, uFovRad, uScreenHeightPx, vec3(0.0, 0.0, mvPosition.z), vec3(0.0, 0.0, 0.0));

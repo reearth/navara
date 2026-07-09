@@ -65,6 +65,24 @@ import { Color } from "@navara/three";
 }
 ```
 
+### depthWrite
+
+**Type:** `boolean | undefined`
+
+**Description:** Enables writing to the depth buffer. Set to `false` for transparent materials to prevent depth sorting issues.
+
+**Default:** `true`
+
+**Example:**
+
+```typescript
+{
+  polyline: {
+    depthWrite: false
+  }
+}
+```
+
 ### effectIds
 
 **Type:** `string[] | undefined`
@@ -175,24 +193,6 @@ import { Color } from "@navara/three";
 }
 ```
 
-### selectiveEffectOcclusion
-
-**Type:** `string | undefined`
-
-**Description:** Specifies the depth behavior for the selective effect mask pass. Can be set to "normal" or "silhouette".
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  polyline: {
-    selectiveEffectOcclusion: "normal"
-  }
-}
-```
-
 ### show
 
 **Type:** `boolean | undefined`
@@ -210,6 +210,28 @@ import { Color } from "@navara/three";
   }
 }
 ```
+
+### transparent
+
+**Type:** `boolean | undefined`
+
+**Description:** Enables transparency and alpha blending. This allows the polyline to be rendered with opacity.
+
+**Default:** `false`
+
+**Example:**
+
+```typescript
+{
+  polyline: {
+    transparent: true
+  }
+}
+```
+
+:::note
+Enabling `transparent` might cause unexpected behavior when using selective effects.
+:::
 
 ### tiled
 

@@ -32,4 +32,13 @@ export const updateMaterialProps = (
   if (props.emissiveIntensity !== undefined) {
     material.emissiveIntensity = props.emissiveIntensity;
   }
+  if (props.transparent !== undefined) {
+    material.transparent = props.transparent;
+  }
+  if (props.opacity !== undefined) {
+    material.opacity = props.opacity;
+  }
+  if (props.depthWrite !== undefined) {
+    material.depthWrite = props.depthWrite;
+  }
 };

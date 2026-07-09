@@ -97,32 +97,37 @@ impl Core {
         self.app.trigger_event(input);
     }
 
+    // The `getBuffer*` getters return zero-copy VIEWS into wasm linear memory
+    // (see `view_*` in navara_wasm_types): the caller must consume the array
+    // immediately and `.slice()` it if it needs to retain the data. Consecutive
+    // `getBuffer*` calls do not allocate wasm memory, so earlier views stay
+    // valid; any other wasm call may grow memory and detach them.
     #[wasm_bindgen(js_name = getBufferU8)]
     pub fn get_buffer_u8(&self, handle: i32) -> Option<js_sys::Uint8Array> {
         let buf = self.app.get_buffer_u8(handle)?;
 
-        Some(copy_u8_array(buf))
+        Some(view_u8_array(buf))
     }
 
     #[wasm_bindgen(js_name = getBufferU32)]
     pub fn get_buffer_u32(&self, handle: i32) -> Option<js_sys::Uint32Array> {
         let buf = self.app.get_buffer_u32(handle)?;
 
-        Some(copy_u32_array(buf))
+        Some(view_u32_array(buf))
     }
 
     #[wasm_bindgen(js_name = getBufferF32)]
     pub fn get_buffer_f32(&self, handle: i32) -> Option<js_sys::Float32Array> {
         let buf = self.app.get_buffer_f32(handle)?;
 
-        Some(copy_f32_array(buf))
+        Some(view_f32_array(buf))
     }
 
     #[wasm_bindgen(js_name = getBufferF64)]
     pub fn get_buffer_f64(&self, handle: i32) -> Option<js_sys::Float64Array> {
         let buf = self.app.get_buffer_f64(handle)?;
 
-        Some(copy_f64_array(buf))
+        Some(view_f64_array(buf))
     }
 
     #[wasm_bindgen(js_name = setBufferU8)]
@@ -177,6 +182,9 @@ impl Core {
         self.app.remove_buffer(handle);
     }
 
+    // Unlike `getBuffer*`, the `removeBuffer*` variants MUST copy: the backing
+    // Vec is dropped here, so a view would point at freed wasm memory. The copy
+    // is the single transfer of ownership to JS.
     #[wasm_bindgen(js_name = removeBufferU8)]
     pub fn remove_buffer_u8(&mut self, handle: i32) -> Option<js_sys::Uint8Array> {
         Some(copy_u8_array(&self.app.remove_buffer_u8(handle)?))
@@ -470,9 +478,25 @@ impl Core {
                 } => navara_worker::DelegatedWorkerTasksResult::ConstructPolylineBatchedFeature(
                     navara_worker::DelegatedWorkerTask::with_bits(delegator_id.0, v.into()),
                 ),
+                DelegatedWorkerTasksResult {
+                    delegator_id,
+                    parse_mvt_tile: Some(v),
+                    ..
+                } => navara_worker::DelegatedWorkerTasksResult::ParseMvtTile(
+                    navara_worker::DelegatedWorkerTask::with_bits(delegator_id.0, v.into()),
+                ),
                 _ => unreachable!(),
             },
         );
+    }
+
+    /// Release the delegator of a task that ended without a deliverable
+    /// result (worker error, missing input, ...). Consumes `delegator_id`.
+    /// Safe to call for a task the engine already cancelled: a despawned
+    /// delegator makes this a no-op.
+    #[wasm_bindgen(js_name = triggerWorkerTaskFailed)]
+    pub fn trigger_worker_task_failed(&mut self, delegator_id: ReconstructableEntity) {
+        self.app.trigger_worker_task_failed(delegator_id.0);
     }
 
     #[wasm_bindgen(js_name = getMartini)]

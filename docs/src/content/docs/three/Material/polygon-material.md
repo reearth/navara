@@ -357,24 +357,6 @@ import { Color } from "@navara/three";
 }
 ```
 
-### selectiveEffectOcclusion
-
-**Type:** `string | undefined`
-
-**Description:** Specifies the depth behavior for the selective effect mask pass. Can be set to "normal" or "silhouette".
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  polygon: {
-    selectiveEffectOcclusion: "normal"
-  }
-}
-```
-
 ### shininess
 
 **Type:** `number | undefined`
@@ -515,24 +497,6 @@ import { Color } from "@navara/three";
 {
   polygon: {
     water: true
-  }
-}
-```
-
-### waterNormalUrl
-
-**Type:** `string | undefined`
-
-**Description:** Specifies the URL of the water surface normal map.
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  polygon: {
-    waterNormalUrl: "/textures/water_normal.png"
   }
 }
 ```

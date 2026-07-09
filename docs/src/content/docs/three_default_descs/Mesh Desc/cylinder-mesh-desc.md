@@ -237,7 +237,7 @@ import { Color } from "@navara/three";
 
 **Description:** Specifies the emissive intensity.
 
-**Default:** `1`
+**Default:** `0`
 
 **Example:**
 
@@ -305,26 +305,6 @@ import { Color } from "@navara/three";
 }
 ```
 
-### selectiveEffectOcclusion
-
-**Type:** `SelectiveEffectOcclusion` (optional)
-
-**Description:** Specifies the occlusion mode for selective effects (Bloom, Outline, etc.).
-
-- `"normal"`: Normal occlusion where effects are not applied to parts occluded by other objects
-- `"silhouette"`: Silhouette mode where effects are applied even to occluded parts
-
-**Example:**
-
-```typescript
-{
-  cylinder: {
-    effectIds: ["bloom-effect"],
-    selectiveEffectOcclusion: "normal",
-  }
-}
-```
-
 ## Usage Examples
 
 ### Basic Cylinder
@@ -334,6 +314,7 @@ import ThreeView, { Color } from "@navara/three";
 import { CylinderMeshDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
+view.registerMesh("cylinder", CylinderMeshDesc);
 await view.init();
 
 // Add a CylinderMeshDesc

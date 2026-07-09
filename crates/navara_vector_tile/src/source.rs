@@ -49,6 +49,7 @@ pub trait VectorTileSource: Send + Sync + 'static {
         buf: &mut BufferStore,
         tile: &VectorTile,
         tile_handle: TileHandle,
+        rendered_tile: Entity,
         order: &OrderByDistance,
         data_requester: Option<&DataRequester>,
     ) -> Option<Vec<Entity>>;

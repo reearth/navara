@@ -4,10 +4,11 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
+import { AttributionPlugin } from "@navara/three_plugins";
 import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 
-import { showAttributions } from "../../helpers/attributions";
+import { datasetToSource } from "../../helpers/attribution-source";
 import { PMTILES_DATASETS } from "../../helpers/constants";
 import { SH_COEFFICIENTS } from "../../helpers/sh";
 
@@ -15,6 +16,9 @@ export type CustomDescriptions = DefaultDescriptions;
 
 export const run = async (view: ThreeView<CustomDescriptions>) => {
   view.addPlugin(new DefaultPlugin());
+
+  const attribution = new AttributionPlugin();
+  view.addPlugin(attribution);
 
   await view.init();
 
@@ -43,27 +47,31 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   // example has no terrain/raster base of its own).
   view.addLayer({ type: "terrain", ellipsoid: {} });
 
-  const url = PMTILES_DATASETS.protomapsFirenze.url;
+  // One vector-tile source for the whole `.pmtiles` archive (one
+  // header/directory fetch, shared tile cache); PMTiles is detected from the
+  // URL extension. Every layer below references it and picks which MVT source
+  // layer to style via `sourceLayers`.
+  // `earth` is the base fill, so it goes first; the others drape on top of it.
+  const firenze = view.addSource({
+    type: "vector-tile",
+    url: PMTILES_DATASETS.protomapsFirenze.url,
+    maxZoom: 15,
+  });
 
-  // Every layer below shares the same `.pmtiles` archive URL, so they all
-  // resolve through a single PmtilesSource (one header/directory fetch, shared
-  // tile cache). The `vectorTile.layers` filter picks which MVT layer each one
-  // styles — identical to how the MVT example works.
-  // `land` is the base fill, so it goes first; water / land_use / infrastructure
-  // drape on top of it.
   view.addLayer({
-    type: "mvt",
-    data: { url },
+    type: "vector",
+    source: firenze,
+    sourceLayers: ["earth"],
     polygon: {
       color: new Color().setStyle("#d0bf70"),
       clampToGround: true,
     },
-    vectorTile: { maxZoom: 15, layers: ["earth"] },
   });
 
   view.addLayer({
-    type: "mvt",
-    data: { url },
+    type: "vector",
+    source: firenze,
+    sourceLayers: ["boundaries"],
     polyline: {
       show: true,
       color: new Color().setStyle("#b4aa15"),
@@ -71,22 +79,22 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       height: 1,
       clampToGround: true,
     },
-    vectorTile: { maxZoom: 15, layers: ["boundaries"] },
   });
 
   view.addLayer({
-    type: "mvt",
-    data: { url },
+    type: "vector",
+    source: firenze,
+    sourceLayers: ["water"],
     polygon: {
       color: new Color().setStyle("#4a90d9"),
       clampToGround: true,
     },
-    vectorTile: { maxZoom: 15, layers: ["water"] },
   });
 
   view.addLayer({
-    type: "mvt",
-    data: { url },
+    type: "vector",
+    source: firenze,
+    sourceLayers: ["roads"],
     polyline: {
       show: true,
       color: new Color().setStyle("#278b8c"),
@@ -94,17 +102,16 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       height: 1,
       clampToGround: true,
     },
-    vectorTile: { maxZoom: 15, layers: ["roads"] },
   });
 
   view.addLayer({
-    type: "mvt",
-    data: { url },
+    type: "vector",
+    source: firenze,
+    sourceLayers: ["buildings"],
     polygon: {
       color: new Color().setStyle("#ca7c56"),
       clampToGround: true,
     },
-    vectorTile: { maxZoom: 15, layers: ["buildings"] },
   });
 
   const pane = new Pane();
@@ -124,5 +131,5 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       });
     });
 
-  showAttributions([PMTILES_DATASETS.protomapsFirenze]);
+  attribution.show([datasetToSource(PMTILES_DATASETS.protomapsFirenze)]);
 };

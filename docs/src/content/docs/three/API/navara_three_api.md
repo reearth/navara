@@ -1107,16 +1107,16 @@ import ThreeView, {
 import { GLTFModelDesc } from "@navara/three_default_descs";
 import { Vector3, Quaternion, Euler, Matrix4 } from "three";
 
-const view = new ThreeView(container, {
-  camera: {
-    lng: 139.6503,
-    lat: 35.6762,
-    altitude: 1000,
-  },
-});
+const view = new ThreeView({ container });
 
 view.registerMesh("gltfModel", GLTFModelDesc);
 await view.init();
+
+view.setCamera({
+  lng: 139.6503,
+  lat: 35.6762,
+  height: 1000,
+});
 
 // Initial position in Osaka
 let longitude = 135.5023;

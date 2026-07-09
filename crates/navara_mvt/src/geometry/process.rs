@@ -1,23 +1,28 @@
-use std::sync::Arc;
-
 use bevy_ecs::{entity::Entity, system::Commands};
-use geozero::GeomProcessor;
-use geozero::mvt::{Message, Tile as MvtTile, process_geom, tile};
 use navara_buffer_store::BufferStore;
 use navara_component::OrderByDistance;
-use navara_core::{Aabb, CRS, TileXYZ, WGS84_64};
-use navara_core::{Extent, Radians};
-use navara_feature_component::{batch::BatchTable, geometry_builder::GeometryAppearanceKind};
-use navara_geometry::{Hierarchy, WindingOrder};
+use navara_core::{Aabb, CRS, Extent, Radians, TileXYZ};
+use navara_feature_component::{
+    batch::BatchTable,
+    batched_geometry::{
+        EncodedPointPositions, PointGeometryAccumulator, PolygonGeometryAccumulator,
+        PolylineGeometryAccumulator,
+    },
+    geometry_builder::{
+        AccumulatedGeometry, GeometryAppearanceKind, GeometryGroup, GeometryGroups,
+    },
+};
 use navara_material::Appearance;
-use navara_math::{FloatType, Vec3};
+use navara_math::{FloatType, Transform, Vec3};
+use navara_parser::mvt::{
+    LayerParseConfig, LayerParseKind, MvtLayerData, ParsedGeometry, ParsedLayerGroup, PointEmitter,
+    parse_mvt_tile,
+};
 use navara_tile_component::{OverscaledTileHandle, TileExtent, TileHandle};
-use navara_vector_tile::{PosConverter, VectorTileFeatureMarker};
-
-use super::builder::MvtGeometryBuilder;
+use navara_vector_tile::VectorTileFeatureMarker;
 
 // ============================================================================
-// Multi-layer support: Parse MVT once, spawn features for multiple layers
+// Multi-layer support: parse MVT once, spawn features for multiple layers
 // ============================================================================
 
 /// Information about a matched layer for multi-layer processing.
@@ -30,11 +35,65 @@ pub struct MatchedLayerInfo<'a> {
     pub limit_layers: &'a Option<Vec<String>>,
 }
 
+/// Reduce a matched layer's `Appearance`s to the ECS-free parse configuration
+/// the geometry walk needs. `Appearance` (and thus `navara_material`) is
+/// bevy_ecs-coupled, so this lowering keeps it out of the lean parse core.
+pub(crate) fn layer_parse_config(matched: &MatchedLayerInfo) -> LayerParseConfig {
+    let flat = matched.appearances.iter().any(|a| match a {
+        Appearance::Polyline(app) => app.clamp_to_ground,
+        Appearance::Polygon(app) => app.clamp_to_ground,
+        _ => false,
+    });
+
+    let mut point_emitters = Vec::new();
+    let mut polyline = false;
+    let mut polygon = false;
+    for a in matched.appearances {
+        match a {
+            Appearance::Point(m) => point_emitters.push(PointEmitter {
+                kind: LayerParseKind::Point,
+                height: m.height,
+            }),
+            Appearance::Billboard(m) => point_emitters.push(PointEmitter {
+                kind: LayerParseKind::Billboard,
+                height: m.height,
+            }),
+            Appearance::Text(m) => point_emitters.push(PointEmitter {
+                kind: LayerParseKind::Text,
+                height: m.height,
+            }),
+            Appearance::Polyline(_) => polyline = true,
+            Appearance::Polygon(_) => polygon = true,
+            _ => {}
+        }
+    }
+
+    LayerParseConfig {
+        layer_id: matched.layer_id.to_owned(),
+        flat,
+        point_emitters,
+        polyline,
+        polygon,
+        limit_layers: matched.limit_layers.clone(),
+    }
+}
+
+pub(crate) fn to_appearance_kind(kind: LayerParseKind) -> GeometryAppearanceKind {
+    match kind {
+        LayerParseKind::Point => GeometryAppearanceKind::Point,
+        LayerParseKind::Billboard => GeometryAppearanceKind::Billboard,
+        LayerParseKind::Text => GeometryAppearanceKind::Text,
+        LayerParseKind::Polyline => GeometryAppearanceKind::Polyline,
+        LayerParseKind::Polygon => GeometryAppearanceKind::Polygon,
+    }
+}
+
 /// Main entry point for multi-layer MVT processing.
-/// Parses MVT binary once and spawns entities for all matched layers.
 ///
-/// This is more efficient than calling `construct_geometry` multiple times
-/// when multiple layers share the same source URL.
+/// Parses the MVT binary once via the ECS-free parse core, then finalizes the
+/// resulting plain geometry into batched `BatchedFeature` entities. Batch-id
+/// assignment, tag registration and entity spawning stay on the main thread
+/// while the (worker-offloadable) parse produces only plain data.
 #[allow(clippy::too_many_arguments)]
 pub fn construct_geometry_multi_layer(
     commands: &mut Commands,
@@ -50,18 +109,37 @@ pub fn construct_geometry_multi_layer(
         return None;
     }
 
-    let tile = MvtTile::decode(mvt_bin.as_slice()).ok()?;
+    let rtc_center = tile_info
+        .map(|(_, ext)| Aabb::from_extent_f64(ext, 0., 1.).center)
+        .unwrap_or(Vec3::ZERO);
+
+    let configs: Vec<LayerParseConfig> = matched_layers.iter().map(layer_parse_config).collect();
+
+    let parsed = parse_mvt_tile(&mvt_bin, xyz, rtc_center, &configs);
+    if parsed.is_empty() {
+        return None;
+    }
 
     let mut result = Vec::new();
+    for group in parsed {
+        // The parse core selects the last matching layer per sublayer, so recover
+        // that layer's appearances the same way (last matching id wins).
+        let Some(appearances) = matched_layers
+            .iter()
+            .rev()
+            .find(|ml| ml.layer_id == group.layer_id)
+            .map(|ml| ml.appearances)
+        else {
+            continue;
+        };
 
-    for mvt_layer in tile.layers {
-        let entities = process_layer_multi(
+        let entities = finalize_parsed_group(
             commands,
             batch_table,
             buf,
-            mvt_layer,
-            xyz,
-            matched_layers,
+            group,
+            appearances,
+            rtc_center,
             tile_info,
             order,
         );
@@ -75,73 +153,149 @@ pub fn construct_geometry_multi_layer(
     }
 }
 
-/// Process a single MVT sublayer for the last matching target layer.
-/// Uses only the last matched layer since rendering the same features multiple times
-/// for different layers with the same source provides no visual benefit.
+/// Convert one parsed group into a batched entity: assign batch ids, build the
+/// handle-based geometry component and spawn via the shared finalize path.
 #[allow(clippy::too_many_arguments)]
-fn process_layer_multi(
+fn finalize_parsed_group(
     commands: &mut Commands,
     batch_table: &mut BatchTable,
     buf: &mut BufferStore,
-    mut mvt_layer: tile::Layer,
-    xyz: TileXYZ,
-    matched_layers: &[MatchedLayerInfo],
+    group: ParsedLayerGroup,
+    appearances: &[Appearance],
+    rtc_center: Vec3,
     tile_info: Option<(TileHandle, Extent<FloatType, Radians>)>,
     order: &OrderByDistance,
 ) -> Vec<Entity> {
-    let extent = mvt_layer.extent.unwrap_or(4096);
-    let mut converter = PosConverter::new(xyz, extent);
+    let layer_id = group.layer_id;
+    let kind = to_appearance_kind(group.kind);
 
-    // Use the last layer that wants this MVT sublayer.
-    let target_layer = matched_layers.iter().rev().find(|ml| {
-        ml.limit_layers
-            .as_ref()
-            .map(|ll| ll.contains(&mvt_layer.name))
-            .unwrap_or(true)
-    });
+    let batch_id = batch_table
+        .init_mvt(
+            Some(layer_id.clone()),
+            MvtLayerData::from_raw(
+                group.keys,
+                group.values,
+                group.feature_tags_flat,
+                &group.feature_tag_sizes,
+            ),
+        )
+        .unwrap_or(0);
 
-    let Some(target_layer) = target_layer else {
-        return Vec::new();
-    };
-
-    let layer_id = target_layer.layer_id;
-
-    let keys = Arc::new(std::mem::take(&mut mvt_layer.keys));
-    let values = Arc::new(std::mem::take(&mut mvt_layer.values));
-    let feature_count = mvt_layer.features.len();
-
-    let mut builder = MvtGeometryBuilder::new(
-        batch_table,
-        layer_id,
-        Arc::clone(&keys),
-        Arc::clone(&values),
-        feature_count,
-    );
-
-    {
-        let rtc_center = tile_info
-            .map(|(_, ext)| Aabb::from_extent_f64(ext, 0., 1.).center)
-            .unwrap_or(Vec3::ZERO);
-        let mut processor = MvtFeatureProcessor::new(
-            &mut builder,
-            &mut converter,
-            target_layer.appearances,
-            rtc_center,
-        );
-        for feature in &mut mvt_layer.features {
-            let tags = std::mem::take(&mut feature.tags);
-            processor.builder.begin_feature(tags);
-            let _ = process_geom(feature, &mut processor);
-        }
+    let item_count = group.geometry.item_count();
+    let mut global_batch_ids = Vec::with_capacity(item_count);
+    for _ in 0..item_count {
+        global_batch_ids.push(batch_table.gen_global_batch_id().unwrap_or(0));
     }
 
-    let entities = builder.groups.finalize(
+    let accumulated = build_accumulated_geometry(group.geometry, &global_batch_ids, rtc_center);
+
+    spawn_finalized_group(
         commands,
         buf,
-        target_layer.appearances,
-        target_layer.layer_id,
-        false,
-    );
+        kind,
+        global_batch_ids,
+        batch_id,
+        group.feature_count,
+        accumulated,
+        appearances,
+        &layer_id,
+        tile_info,
+        order,
+    )
+}
+
+/// Build the handle-free [`AccumulatedGeometry`] for one parsed group from its
+/// plain buffers. Shared by the synchronous finalize and the worker-completion
+/// finalize (`async_finalize`) so the mapping from parsed buffers to accumulators
+/// — CRS, RTC encoding, batch-id packing, transform — is defined in one place and
+/// cannot drift between the two paths.
+pub(crate) fn build_accumulated_geometry(
+    geometry: ParsedGeometry,
+    global_batch_ids: &[u32],
+    rtc_center: Vec3,
+) -> AccumulatedGeometry {
+    match geometry {
+        ParsedGeometry::Points {
+            coords,
+            batch_indices,
+            encoded_coords,
+        } => {
+            let batch_ids = global_batch_ids.iter().map(|&id| id as f32).collect();
+            AccumulatedGeometry::Points(PointGeometryAccumulator {
+                coords,
+                crs: CRS::Geographic,
+                batch_indices,
+                encoded: EncodedPointPositions::Rtc {
+                    coords: encoded_coords,
+                    center: rtc_center,
+                },
+                batch_ids,
+                transform: Transform::default(),
+            })
+        }
+        ParsedGeometry::Polylines {
+            points,
+            points_sizes,
+            batch_indices,
+        } => AccumulatedGeometry::Polylines(PolylineGeometryAccumulator {
+            points,
+            points_sizes,
+            batch_indices,
+            crs: CRS::Geographic,
+        }),
+        ParsedGeometry::Polygons {
+            outer_rings,
+            outer_ring_sizes,
+            holes,
+            holes_total_sizes,
+            holes_sizes,
+            holes_boundaries,
+            expected_winding_orders,
+            batch_indices,
+        } => AccumulatedGeometry::Polygons(PolygonGeometryAccumulator {
+            outer_rings,
+            outer_ring_sizes,
+            holes,
+            holes_total_sizes,
+            holes_sizes,
+            holes_boundaries,
+            expected_winding_orders,
+            batch_indices,
+            crs: CRS::Geographic,
+        }),
+    }
+}
+
+/// Spawn a single batched-feature entity from a fully-built accumulator and tag
+/// it with tile/order markers. Shared by the synchronous finalize and the
+/// worker-completion finalize (`async_finalize`).
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn spawn_finalized_group(
+    commands: &mut Commands,
+    buf: &mut BufferStore,
+    kind: GeometryAppearanceKind,
+    global_batch_ids: Vec<u32>,
+    batch_id: u32,
+    feature_count: u32,
+    accumulated: AccumulatedGeometry,
+    appearances: &[Appearance],
+    layer_id: &str,
+    tile_info: Option<(TileHandle, Extent<FloatType, Radians>)>,
+    order: &OrderByDistance,
+) -> Vec<Entity> {
+    let groups = GeometryGroups {
+        groups: vec![GeometryGroup {
+            kind,
+            global_batch_ids,
+            batch_id,
+            feature_count,
+            committed: false,
+            current_batch_index: 0,
+            accumulated,
+        }],
+    };
+
+    let entities = groups.finalize(commands, buf, appearances, layer_id, false);
 
     for &entity in &entities {
         if let Some((tile_handle, tile_extent)) = tile_info {
@@ -158,263 +312,6 @@ fn process_layer_multi(
     entities
 }
 
-// ============================================================================
-// GeomProcessor implementation: spawn entities directly during MVT decoding
-// ============================================================================
-
-/// A [`GeomProcessor`] that accumulates geometry into batched components as MVT
-/// geometry is decoded, eliminating both intermediate `geo_types::Geometry`
-/// allocation and per-feature child entity spawning.
-struct MvtFeatureProcessor<'a, 'bt> {
-    builder: &'a mut MvtGeometryBuilder<'bt>,
-    converter: &'a mut PosConverter,
-    appearances: &'a [Appearance],
-
-    /// Pre-projected coordinates for current linestring/ring.
-    projected: Vec<FloatType>,
-    /// Polygon outer ring.
-    outer_ring: Vec<FloatType>,
-    /// Polygon hole rings, built as `Hierarchy` in `linestring_end`.
-    holes: Vec<Hierarchy>,
-    /// Whether the polyline/polygon appearance uses `clamp_to_ground`.
-    flat: bool,
-    /// Whether we are inside a point/multipoint geometry.
-    in_point: bool,
-    /// Whether linestring_end should push to rings (polygon) vs spawn polyline.
-    in_polygon: bool,
-    /// RTC center for point encoding (from tile extent).
-    rtc_center: Vec3,
-    /// Per-kind material heights for point encoding.
-    point_height: f32,
-    billboard_height: f32,
-    text_height: f32,
-}
-
-impl<'a, 'bt> MvtFeatureProcessor<'a, 'bt> {
-    fn new(
-        builder: &'a mut MvtGeometryBuilder<'bt>,
-        converter: &'a mut PosConverter,
-        appearances: &'a [Appearance],
-        rtc_center: Vec3,
-    ) -> Self {
-        let flat = appearances.iter().any(|a| match a {
-            Appearance::Polyline(app) => app.clamp_to_ground,
-            Appearance::Polygon(app) => app.clamp_to_ground,
-            _ => false,
-        });
-
-        let mut point_height = 0.0f32;
-        let mut billboard_height = 0.0f32;
-        let mut text_height = 0.0f32;
-        for a in appearances {
-            match a {
-                Appearance::Point(m) => point_height = m.height,
-                Appearance::Billboard(m) => billboard_height = m.height,
-                Appearance::Text(m) => text_height = m.height,
-                _ => {}
-            }
-        }
-
-        Self {
-            builder,
-            converter,
-            appearances,
-            projected: Vec::new(),
-            outer_ring: Vec::new(),
-            holes: Vec::new(),
-            flat,
-            in_point: false,
-            in_polygon: false,
-            rtc_center,
-            point_height,
-            billboard_height,
-            text_height,
-        }
-    }
-
-    fn height_for_kind(&self, kind: GeometryAppearanceKind) -> f32 {
-        match kind {
-            GeometryAppearanceKind::Point => self.point_height,
-            GeometryAppearanceKind::Billboard => self.billboard_height,
-            GeometryAppearanceKind::Text => self.text_height,
-            _ => 0.0,
-        }
-    }
-
-    fn accumulate_point(&mut self, x: f64, y: f64, kind: GeometryAppearanceKind) {
-        let (px, py) = self.converter.project_point(x, y);
-        let coords = Vec3::new(px, py, 0.0 as FloatType);
-        let world_pos = CRS::Geographic.to_vec3(WGS84_64, coords, self.height_for_kind(kind));
-        let rtc = [
-            (world_pos.x - self.rtc_center.x) as f32,
-            (world_pos.y - self.rtc_center.y) as f32,
-            (world_pos.z - self.rtc_center.z) as f32,
-        ];
-        self.builder
-            .add_point(kind, coords, CRS::Geographic, rtc, self.rtc_center);
-    }
-
-    fn accumulate_points_from_coord(&mut self, x: f64, y: f64) {
-        let appearances = self.appearances;
-        for appearance in appearances {
-            match appearance {
-                Appearance::Point(_) => {
-                    self.accumulate_point(x, y, GeometryAppearanceKind::Point);
-                }
-                Appearance::Billboard(_) => {
-                    self.accumulate_point(x, y, GeometryAppearanceKind::Billboard);
-                }
-                Appearance::Text(_) => {
-                    self.accumulate_point(x, y, GeometryAppearanceKind::Text);
-                }
-                _ => {}
-            }
-        }
-    }
-
-    fn accumulate_polyline(&mut self) {
-        for appearance in self.appearances {
-            let Appearance::Polyline(_) = appearance else {
-                continue;
-            };
-
-            let geo_points = std::mem::take(&mut self.projected);
-
-            if geo_points.is_empty() {
-                break;
-            }
-            self.builder.add_polyline(geo_points, CRS::Geographic);
-            break;
-        }
-    }
-
-    fn accumulate_polygon(&mut self) {
-        if self.outer_ring.is_empty() {
-            return;
-        }
-        for appearance in self.appearances {
-            let Appearance::Polygon(_) = appearance else {
-                continue;
-            };
-            let outer_vec = std::mem::take(&mut self.outer_ring);
-            let holes = std::mem::take(&mut self.holes);
-            if outer_vec.is_empty() {
-                break;
-            }
-            let winding_order = if self.flat {
-                WindingOrder::CounterClockwise
-            } else {
-                WindingOrder::Clockwise
-            };
-            self.builder
-                .add_polygon(outer_vec, &holes, winding_order, CRS::Geographic);
-            break;
-        }
-    }
-}
-
-impl<'a, 'bt> GeomProcessor for MvtFeatureProcessor<'a, 'bt> {
-    fn multi_dim(&self) -> bool {
-        true
-    }
-
-    fn coordinate(
-        &mut self,
-        x: f64,
-        y: f64,
-        _z: Option<f64>,
-        _m: Option<f64>,
-        _t: Option<f64>,
-        _tm: Option<u64>,
-        _idx: usize,
-    ) -> geozero::error::Result<()> {
-        if self.in_point {
-            self.accumulate_points_from_coord(x, y);
-        } else if self.flat {
-            let (cx, cy) = self.converter.project_point_on_center(x, y);
-            self.projected.push(cx);
-            self.projected.push(cy);
-            self.projected.push(0.0);
-        } else {
-            let (gx, gy) = self.converter.project_point(x, y);
-            self.projected.push(gx);
-            self.projected.push(gy);
-            self.projected.push(0.0);
-        }
-        Ok(())
-    }
-
-    fn point_begin(&mut self, _idx: usize) -> geozero::error::Result<()> {
-        self.in_point = true;
-        Ok(())
-    }
-
-    fn point_end(&mut self, _idx: usize) -> geozero::error::Result<()> {
-        self.in_point = false;
-        Ok(())
-    }
-
-    fn multipoint_begin(&mut self, _size: usize, _idx: usize) -> geozero::error::Result<()> {
-        self.in_point = true;
-        Ok(())
-    }
-
-    fn multipoint_end(&mut self, _idx: usize) -> geozero::error::Result<()> {
-        self.in_point = false;
-        Ok(())
-    }
-
-    fn linestring_begin(
-        &mut self,
-        _tagged: bool,
-        size: usize,
-        _idx: usize,
-    ) -> geozero::error::Result<()> {
-        self.projected.clear();
-        self.projected.reserve(size * 3);
-        Ok(())
-    }
-
-    fn linestring_end(&mut self, _tagged: bool, _idx: usize) -> geozero::error::Result<()> {
-        if self.in_polygon {
-            if self.outer_ring.is_empty() {
-                self.outer_ring = std::mem::take(&mut self.projected);
-            } else {
-                self.holes.push(Hierarchy {
-                    outer_ring: std::mem::take(&mut self.projected),
-                    holes: None,
-                    expected_winding_order: if self.flat {
-                        WindingOrder::Clockwise
-                    } else {
-                        WindingOrder::CounterClockwise
-                    },
-                });
-            }
-        } else {
-            self.accumulate_polyline();
-        }
-        Ok(())
-    }
-
-    fn polygon_begin(
-        &mut self,
-        _tagged: bool,
-        _size: usize,
-        _idx: usize,
-    ) -> geozero::error::Result<()> {
-        self.in_polygon = true;
-        self.outer_ring.clear();
-        self.holes.clear();
-        Ok(())
-    }
-
-    fn polygon_end(&mut self, _tagged: bool, _idx: usize) -> geozero::error::Result<()> {
-        self.accumulate_polygon();
-        self.in_polygon = false;
-        Ok(())
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -422,7 +319,7 @@ mod test {
     use bevy_ecs::prelude::Resource;
     use bevy_ecs::query::With;
     use bevy_ecs::system::{Commands, ResMut};
-    use geozero::mvt::tile;
+    use geozero::mvt::{Message, tile};
     use navara_feature_component::{
         batch::{BatchTable, BatchedFeature, FeatureBatchId, GlobalBatchIds},
         batched_geometry::{BatchedPointGeometry, BatchedPolygonGeometry, BatchedPolylineGeometry},
@@ -1026,8 +923,8 @@ mod test {
             let properties = batch_value.properties.as_ref().unwrap();
             match properties {
                 navara_feature_component::batch::BatchProperty::Mvt(mvt_data) => {
-                    assert_eq!(mvt_data.feature_tags.len(), 1);
-                    assert_eq!(mvt_data.feature_tags[0], vec![0, 0]);
+                    assert_eq!(mvt_data.feature_count(), 1);
+                    assert_eq!(mvt_data.feature_tags(0), Some(&[0, 0][..]));
                 }
                 _ => panic!("Expected BatchProperty::Mvt"),
             }

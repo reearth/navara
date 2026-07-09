@@ -33,7 +33,7 @@ export type BatchedFeatureAttributes<
 } & Attr;
 
 export const FEATURE_BATCH_TEXTURE_CONFIG: BatchTextureConfig = {
-  rows: ["COLOR_SHOW", "HEIGHT", "EXTRUDED_HEIGHT"],
+  rows: ["COLOR_SHOW", "HEIGHT", "EXTRUDED_HEIGHT", "LINE_WIDTH"],
   batchLength: 0,
 };
 
@@ -126,6 +126,14 @@ export class BatchedFeatureMesh<
 
   _setFeatureHeight(height: number): void {
     this._updateBatchAttribute(0, "height", height);
+  }
+
+  _setFeatureWidth(width: number): void {
+    this._updateBatchAttribute(0, "lineWidth", width);
+  }
+
+  _setFeatureOpacity(opacity: number): void {
+    this._updateBatchAttribute(0, "opacity", opacity);
   }
 
   _setFrustumCulled(_culled: boolean): void {

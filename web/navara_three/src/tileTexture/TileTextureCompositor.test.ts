@@ -198,14 +198,40 @@ describe("TileTextureCompositor.renderVectorScenes", () => {
     expect(renderer.clear).toHaveBeenCalledTimes(1);
   });
 
-  it("clears a render target that has no slot", () => {
+  it("skips a never-touched render target that has no slot (no GPU allocation)", () => {
     const { compositor, renderer } = setup();
 
     const rt = fakeRT();
     compositor.renderVectorScenes([], [rt as never]);
 
+    // Render-targeting the RT would create its GL framebuffer; an empty slot
+    // whose target was never baked must not pay that cost.
+    expect(renderer.setRenderTarget).not.toHaveBeenCalledWith(rt);
     expect(renderer.render).not.toHaveBeenCalled();
+    expect(renderer.clear).not.toHaveBeenCalled();
+  });
+
+  it("clears a previously-baked render target whose slot went away", () => {
+    const { compositor, renderer, texturizedScenes } = setup();
+    texturizedScenes.add(1n, "layer-a", mesh(), 0);
+
+    const rt = fakeRT();
+    compositor.renderVectorScenes(
+      [
+        {
+          layerId: "layer-a",
+          sources: [{ tileHandle: 1n, uvOffset: [0, 0], uvScale: [1, 1] }],
+        },
+      ],
+      [rt as never],
+    );
     expect(renderer.clear).toHaveBeenCalledTimes(1);
+
+    // The slot disappeared: the stale bake must be wiped so the atlas doesn't
+    // composite outdated content.
+    compositor.renderVectorScenes([], [rt as never]);
+    expect(renderer.render).toHaveBeenCalledTimes(1);
+    expect(renderer.clear).toHaveBeenCalledTimes(2);
   });
 
   it("clears (does not render) a source whose scene hasn't reached the cache yet", () => {

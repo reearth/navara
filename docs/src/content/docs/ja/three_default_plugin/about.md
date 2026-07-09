@@ -13,7 +13,7 @@ sidebar:
 
 ```
 navara_three（コア: ThreeView, Plugin, addPlugin, registerMesh/Effect/Light）
-  ├── three_default_descs（Descriptorの実装: 17 メッシュ, 12 エフェクト, 4 ライト）
+  ├── three_default_descs（Descriptorの実装: 22 メッシュ, 14 エフェクト, 4 ライト）
   └── three_default_plugin（DefaultPlugin: Descriptorの一括登録 + ユーティリティ）
 ```
 
@@ -37,9 +37,9 @@ await view.init({ canvas: document.getElementById("canvas") });
 
 プラグインの `init()` で以下のDescriptorが自動的に登録されます：
 
-**メッシュ（17 種）:** `rain`, `snow`, `sky`, `skyBox`, `stars`, `box`, `boxes`, `sphere`, `glowGlobe`, `cylinder`, `tube`, `plane`, `gltfModel`, `axesHelper`, `arrowHelper`, `arcLines`, `smoothLines`
+**メッシュ（22 種）:** `rain`, `snow`, `sky`, `skyBox`, `stars`, `box`, `sphere`, `glowGlobe`, `cylinder`, `tube`, `plane`, `gltfModel`, `splat`, `axesHelper`, `arrowHelper`, `arcLines`, `smoothLines`, `boxes`, `spheres`, `planes`, `cylinders`, `gltfModels`
 
-**エフェクト（12 種）:** `aerialPerspective`, `rainDrop`, `clouds`, `fogLight`, `lensFlare`, `ssao`, `ssr`, `depthOfField`, `colorGradingLUT`, `toneMapping`, `smaa`, `fxaa`
+**エフェクト（14 種）:** `aerialPerspective`, `rainDrop`, `selectiveBloom`, `selectiveOutline`, `clouds`, `fogLight`, `lensFlare`, `ssao`, `ssr`, `depthOfField`, `colorGradingLUT`, `toneMapping`, `smaa`, `fxaa`
 
 **ライト（4 種）:** `sun`, `ambient`, `skyLightProbe`, `lightProbe`
 
@@ -63,7 +63,6 @@ const layers = plugin.addDefaultPhotorealScene();
 | オブジェクト        | 種別   | 説明                                   |
 | ------------------- | ------ | -------------------------------------- |
 | `sky`               | mesh   | 空の描画                               |
-| `skyEnv`            | mesh   | 環境マップ用の空                       |
 | `stars`             | mesh   | 星の描画                               |
 | `skyLightProbe`     | light  | 空に基づく環境光                       |
 | `sun`               | light  | 太陽光                                 |

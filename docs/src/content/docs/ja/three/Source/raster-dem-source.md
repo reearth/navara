@@ -77,26 +77,26 @@ view.addSource({
 
 明示的なデコーダオブジェクトを渡すこともできます。
 
-| プロパティ    | 型       | 説明                    |
-| ----------- | -------- | ----------------------- |
-| `rScaler`   | `number` | 赤チャンネルのスケーラー。 |
-| `gScaler`   | `number` | 緑チャンネルのスケーラー。 |
-| `bScaler`   | `number` | 青チャンネルのスケーラー。 |
-| `offset`    | `number` | 高さのオフセット。        |
-| `maxOffset` | `number` | オフセットの最大値。      |
-| `minOffset` | `number` | オフセットの最小値。      |
-| `boundary`  | `number` | 境界値。                 |
-| `epsilon`   | `number` | イプシロン（微小値）。    |
+| プロパティ     | 型       | 説明                    |
+| ------------ | -------- | ----------------------- |
+| `r_scaler`   | `number` | 赤チャンネルのスケーラー。 |
+| `g_scaler`   | `number` | 緑チャンネルのスケーラー。 |
+| `b_scaler`   | `number` | 青チャンネルのスケーラー。 |
+| `offset`     | `number` | 高さのオフセット。        |
+| `max_offset` | `number` | オフセットの最大値。      |
+| `min_offset` | `number` | オフセットの最小値。      |
+| `boundary`   | `number` | 境界値。                 |
+| `epsilon`    | `number` | イプシロン（微小値）。    |
 
 ```typescript
 {
   elevationDecoder: {
-    rScaler: 256.0,
-    gScaler: 1.0,
-    bScaler: 1.0 / 256.0,
+    r_scaler: 256.0,
+    g_scaler: 1.0,
+    b_scaler: 1.0 / 256.0,
     offset: -32768.0,
-    maxOffset: 8848.0,
-    minOffset: -11034.0,
+    max_offset: 8848.0,
+    min_offset: -11034.0,
     boundary: 0.01,
     epsilon: 0.001,
   },

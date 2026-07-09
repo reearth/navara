@@ -237,7 +237,7 @@ import { Color } from "@navara/three";
 
 **Description:** 発光の強度を指定します。
 
-**Default:** `1`
+**Default:** `0`
 
 **Example:**
 
@@ -305,26 +305,6 @@ import { Color } from "@navara/three";
 }
 ```
 
-### selectiveEffectOcclusion
-
-**Type:** `SelectiveEffectOcclusion` (optional)
-
-**Description:** セレクティブエフェクト（Bloom、Outline など）のオクルージョンモードを指定します。
-
-- `"normal"`: 通常のオクルージョンで、他のオブジェクトに遮られた部分はエフェクトが適用されません
-- `"silhouette"`: シルエットモードで、遮られた部分もエフェクトが適用されます
-
-**Example:**
-
-```typescript
-{
-  cylinder: {
-    effectIds: ["bloom-effect"],
-    selectiveEffectOcclusion: "normal",
-  }
-}
-```
-
 ## Usage Examples
 
 ### 基本的な円柱
@@ -334,6 +314,7 @@ import ThreeView, { Color } from "@navara/three";
 import { CylinderMeshDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
+view.registerMesh("cylinder", CylinderMeshDesc);
 await view.init();
 
 // CylinderMeshDescを追加

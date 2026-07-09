@@ -29,7 +29,7 @@ sidebar:
 
 ### center
 
-**Type:** [`Vec2`](./point-material#vec2)
+**Type:** [`Vec2`](../../api/types/#vec2)
 
 **Description:** 中心からのシフト量を指定します。範囲は 0 から 1 の間です。
 
@@ -193,6 +193,25 @@ import { Color } from "@navara/three";
 }
 ```
 
+### opacity
+
+**Type:** `number | undefined`
+
+**Description:** ビルボードの不透明度を指定します。有効範囲は 0.0（完全に透明）から 1.0（完全に不透明）です。
+
+**Default:** `1.0`
+
+**Example:**
+
+```typescript
+{
+  billboard: {
+    transparent: true,
+    opacity: 0.5 // 50%の不透明度
+  }
+}
+```
+
 ### sizeInMeters
 
 **Type:** `boolean | undefined`
@@ -207,24 +226,6 @@ import { Color } from "@navara/three";
 {
   billboard: {
     sizeInMeters: true
-  }
-}
-```
-
-### selectiveEffectOcclusion
-
-**Type:** `string | undefined`
-
-**Description:** セレクティブエフェクトマスクパスの深度動作を指定します。"normal" または "silhouette" を指定できます。
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  billboard: {
-    selectiveEffectOcclusion: "normal"
   }
 }
 ```

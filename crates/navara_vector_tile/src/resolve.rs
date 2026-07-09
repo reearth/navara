@@ -160,10 +160,13 @@ pub fn resolve_vector_tiles(
 /// 1. `coords` exists and is (or contains) rendered tiles → its rendered self / finer
 ///    descendants (the vector subdivided deeper than the terrain-driven `target_z`; the
 ///    ancestor-only walk-up would miss these, leaving the latitude-row gaps this fixes).
-/// 2. `coords` exists but nothing in its subtree is rendered → its nearest rendered ancestor
-///    (`ready_parent_tile_handle`).
-/// 3. `coords` doesn't exist (the vector rendered coarser than `target_z`) → walk up to the
-///    nearest existing tile's recorded source.
+/// 2. `coords` exists but nothing in its subtree is rendered → its recorded coarser ancestor
+///    source (`ready_parent_tile_handle`).
+/// 3. Otherwise walk up until an ancestor yields a bakeable source. A node the traverse
+///    created but never recorded a source on (an early-returned path, e.g. past
+///    `overscaled_max_zoom` on deeply subdivided terrain) must be climbed PAST, not stopped
+///    at — stopping there left the terrain tile blank even though a rendered ancestor
+///    existed right above it.
 fn collect_drape_sources(
     qt: &VectorTileQuadtree,
     coords: TileXYZ,
@@ -181,19 +184,21 @@ fn collect_drape_sources(
         // Case 2: nothing rendered at or below → its recorded coarser ancestor source.
         if let Some(src) = source_of(qt, leaf.handle()) {
             out.push(src);
+            return;
         }
-        return;
+        // No usable recorded source — fall through to the ancestor walk-up.
     }
-    // Case 3: the requested tile doesn't exist → walk up to the nearest existing tile.
+    // Case 3: climb to the nearest ancestor with a bakeable recorded source, skipping
+    // existing-but-sourceless nodes on the way.
     let (mut x, mut y, mut z) = (coords.x, coords.y, coords.z);
     while z > 0 {
         z -= 1;
         x /= 2;
         y /= 2;
-        if let Some(leaf) = qt.qt.leaf((x, y, z)) {
-            if let Some(src) = source_of(qt, leaf.handle()) {
-                out.push(src);
-            }
+        if let Some(leaf) = qt.qt.leaf((x, y, z))
+            && let Some(src) = source_of(qt, leaf.handle())
+        {
+            out.push(src);
             return;
         }
     }
@@ -238,10 +243,18 @@ fn collect_from_subtree(
 }
 
 /// The tile's recorded drape source (`ready_parent_tile_handle`) and that source tile's
-/// coordinates, if any.
+/// coordinates, if it is still bakeable. A fresh traverse only ever records tiles that
+/// record THEMSELVES as their source (their features are active), so a pointer to a tile
+/// that no longer does is stale (the tile deactivated or was evicted and re-created on a
+/// path the traverse skipped this frame) — rejected so the caller climbs on instead of
+/// draping a scene the web side no longer holds.
 fn source_of(qt: &VectorTileQuadtree, handle: TileHandle) -> Option<(TileHandle, TileXYZ)> {
     let src = qt.qt.get(handle)?.ready_parent_tile_handle?;
-    Some((src, qt.qt.get(src)?.coords))
+    let src_tile = qt.qt.get(src)?;
+    if src_tile.ready_parent_tile_handle != Some(src) {
+        return None;
+    }
+    Some((src, src_tile.coords))
 }
 
 #[cfg(test)]
@@ -402,6 +415,54 @@ mod tests {
         // Child not active itself, but records root as its ready ancestor (as the traverse
         // threads down); its own subtree has nothing rendered.
         qt.qt.get_mut(child).unwrap().ready_parent_tile_handle = Some(root);
+
+        assert_eq!(
+            collect(&qt, TileXYZ { x: 0, y: 0, z: 1 }),
+            vec![(root, TileXYZ { x: 0, y: 0, z: 0 })]
+        );
+    }
+
+    /// The requested tile exists but never recorded a drape source (a traverse path that
+    /// early-returns, e.g. past `overscaled_max_zoom` on deeply upsampled terrain). The
+    /// walk must climb past it to the rendered ancestor instead of returning nothing —
+    /// stopping there was the blank-tile bug.
+    #[test]
+    fn collect_climbs_past_an_existing_sourceless_node() {
+        let (mut qt, root, child) = qt_root_with_children();
+        qt.qt.get_mut(root).unwrap().ready_parent_tile_handle = Some(root);
+        qt.qt.get_mut(child).unwrap().ready_parent_tile_handle = None;
+
+        assert_eq!(
+            collect(&qt, TileXYZ { x: 0, y: 0, z: 1 }),
+            vec![(root, TileXYZ { x: 0, y: 0, z: 0 })]
+        );
+    }
+
+    /// Same, one level deeper: the requested tile is absent and the nearest existing
+    /// ancestor is sourceless — the walk-up must keep climbing rather than stop at it.
+    #[test]
+    fn collect_walkup_climbs_past_a_sourceless_node() {
+        let (mut qt, root, child) = qt_root_with_children();
+        qt.qt.get_mut(root).unwrap().ready_parent_tile_handle = Some(root);
+        qt.qt.get_mut(child).unwrap().ready_parent_tile_handle = None;
+
+        assert_eq!(
+            collect(&qt, TileXYZ { x: 0, y: 0, z: 2 }),
+            vec![(root, TileXYZ { x: 0, y: 0, z: 0 })]
+        );
+    }
+
+    /// A recorded source that no longer records itself (it deactivated on a path the
+    /// traverse skipped) is stale: it must be rejected and the walk-up must climb to the
+    /// still-active ancestor instead of draping a scene the web side no longer holds.
+    #[test]
+    fn collect_rejects_a_stale_source_and_climbs() {
+        let (mut qt, root, child) = qt_root_with_children();
+        let sibling = qt.qt.leaf((1, 0, 1)).unwrap().handle();
+        qt.qt.get_mut(root).unwrap().ready_parent_tile_handle = Some(root);
+        // `child` still points at `sibling`, which has since deactivated.
+        qt.qt.get_mut(child).unwrap().ready_parent_tile_handle = Some(sibling);
+        qt.qt.get_mut(sibling).unwrap().ready_parent_tile_handle = None;
 
         assert_eq!(
             collect(&qt, TileXYZ { x: 0, y: 0, z: 1 }),

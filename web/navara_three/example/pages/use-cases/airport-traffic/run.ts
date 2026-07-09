@@ -12,9 +12,10 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
+import { AttributionPlugin } from "@navara/three_plugins";
 import type { FeatureCollection, MultiLineString } from "geojson";
 
-import { showAttributions } from "../../../helpers/attributions";
+import { datasetToSource } from "../../../helpers/attribution-source";
 import { PLASMA_COLORMAP } from "../../../helpers/colors";
 import { LOCAL_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 import { atZoneTime } from "../../../helpers/control";
@@ -105,6 +106,10 @@ export async function run() {
 
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
+
+  const attribution = new AttributionPlugin();
+  view.addPlugin(attribution);
+
   await view.init();
 
   view.atmosphere.date = atZoneTime(view.atmosphere.date, 8);
@@ -198,9 +203,9 @@ export async function run() {
   };
   dashAnimFunc();
 
-  showAttributions([
-    LOCAL_DATASETS.blueMarbleNight,
-    TILE_DATASETS.gsiSeamlessphoto,
-    LOCAL_DATASETS.airportTrafficVolume,
+  attribution.show([
+    datasetToSource(LOCAL_DATASETS.blueMarbleNight),
+    datasetToSource(TILE_DATASETS.gsiSeamlessphoto),
+    datasetToSource(LOCAL_DATASETS.airportTrafficVolume),
   ]);
 }

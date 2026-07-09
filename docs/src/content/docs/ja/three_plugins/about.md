@@ -56,7 +56,7 @@ import {
 
 ## 使い方
 
-どちらのプラグインも標準的なプラグインのライフサイクルに従います。インスタンスを作成し、`view.init()` の前に `view.addPlugin()` で登録し、初期化後にプラグイン固有のメソッドを使用します。
+すべてのプラグインは標準的なプラグインのライフサイクルに従います。インスタンスを作成し、`view.init()` の前に `view.addPlugin()` で登録し、初期化後にプラグイン固有のメソッドを使用します。
 
 ```typescript
 import ThreeView from "@navara/three";

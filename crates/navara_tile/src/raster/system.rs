@@ -151,6 +151,9 @@ pub fn update_raster_tiles(
 
     let terrain_present = terrain_layer.iter().next().is_some();
 
+    // Sort the layer list once per run; the traversal touches every visited tile.
+    let sorted_layers: Vec<_> = tiles.iter().sort::<&Order>().collect();
+
     let root_coords = (TilingScheme::WebMercator { tms: false }).root_tiles();
     for root in &root_coords {
         let coords = (root.x, root.y, root.z);
@@ -160,7 +163,7 @@ pub fn update_raster_tiles(
 
         traverse_raster(
             &mut commands,
-            &tiles,
+            &sorted_layers,
             &source_store,
             root_handle,
             &mut qt,
