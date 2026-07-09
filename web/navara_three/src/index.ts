@@ -155,7 +155,17 @@ export { type BlendMode, blendFunction, createReplacer } from "./utils";
 export { Atmosphere, type AtmosphereOptions } from "./atmosphere";
 export type { Quality } from "./quality";
 export type { CustomObject3DEventMap } from "./object3DEvent";
-export type { FontFamily, FontFace } from "@navara/font";
+export type { FontFamily, FontFace, UnicodeRange } from "@navara/font";
+export {
+  fetchFontFamilyFromCss,
+  parseCssUnicodeRange,
+  parseFontFamilyFromCss,
+} from "@navara/font";
+export type {
+  CssFontFaceFilter,
+  FetchCssFontFamilyOptions,
+  ParseCssFontFamilyOptions,
+} from "@navara/font";
 
 // NOTE:
 // This overrides all materials to output a normal buffer, meaning Navara operates using MRT (Multiple Render Targets).
@@ -1648,6 +1658,20 @@ export default class ThreeView<
    *     },
    *   ],
    * });
+   * ```
+   *
+   * Instead of writing faces and ranges by hand, they can be derived from a
+   * stylesheet's `@font-face` rules (e.g. the Google Fonts CSS API) with
+   * {@link fetchFontFamilyFromCss} / {@link parseFontFamilyFromCss}:
+   *
+   * @example
+   * ```ts
+   * view.addFontFamily(
+   *   await fetchFontFamilyFromCss(
+   *     "MapFont",
+   *     "https://fonts.googleapis.com/css2?family=Noto+Sans&family=Noto+Sans+JP",
+   *   ),
+   * );
    * ```
    */
   addFontFamily(family: FontFamily): this {

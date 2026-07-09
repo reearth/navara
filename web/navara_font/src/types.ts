@@ -116,7 +116,8 @@ export type BatchPrepareTextResult = {
   evicted?: boolean;
 };
 
-type UnicodeRange = {
+/** Inclusive codepoint range covered by a font face. */
+export type UnicodeRange = {
   from: number;
   to: number;
 };
