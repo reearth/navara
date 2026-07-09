@@ -58,6 +58,19 @@ describe("parseCssUnicodeRange", () => {
     expect(() => parseCssUnicodeRange("U+GGGG")).toThrow();
     expect(() => parseCssUnicodeRange("U+4??-4FF")).toThrow();
   });
+
+  it("rejects ranges whose end precedes their start", () => {
+    expect(() => parseCssUnicodeRange("U+200-100")).toThrow();
+  });
+
+  it("rejects codepoints beyond U+10FFFF", () => {
+    expect(() => parseCssUnicodeRange("U+110000")).toThrow();
+    expect(() => parseCssUnicodeRange("U+10FFFF-110000")).toThrow();
+    expect(() => parseCssUnicodeRange("U+??????")).toThrow();
+    expect(parseCssUnicodeRange("U+10FFFF")).toEqual([
+      { from: 0x10ffff, to: 0x10ffff },
+    ]);
+  });
 });
 
 describe("parseFontFamilyFromCss", () => {
@@ -124,6 +137,18 @@ describe("parseFontFamilyFromCss", () => {
     });
     expect(family.faces).toHaveLength(1);
     expect(family.faces[0].url).toBe("a-bold.woff2");
+  });
+
+  it("normalizes whitespace and case in weight/style filters", () => {
+    const css = `
+      @font-face { font-family: A; font-style: normal; font-weight: 100  900; src: url(a-var.woff2); }
+    `;
+    const family = parseFontFamilyFromCss("labels", css, {
+      fontStyle: "Normal",
+      fontWeight: " 100 900 ",
+    });
+    expect(family.faces).toHaveLength(1);
+    expect(family.faces[0].url).toBe("a-var.woff2");
   });
 
   it("covers all codepoints when a block has no unicode-range", () => {

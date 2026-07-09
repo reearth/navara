@@ -46,20 +46,25 @@ export function parseCssUnicodeRange(value: string): UnicodeRange[] {
       throw new Error(`Invalid unicode-range token: "${trimmed}"`);
     }
     const [, start, end] = match;
+    let range: UnicodeRange;
     if (start.includes("?")) {
       // Wildcard form: `U+4??` means U+400-4FF. A wildcard cannot be
       // combined with an explicit end.
       if (end !== undefined) {
         throw new Error(`Invalid unicode-range token: "${trimmed}"`);
       }
-      ranges.push({
+      range = {
         from: parseInt(start.replace(/\?/g, "0"), 16),
         to: parseInt(start.replace(/\?/g, "f"), 16),
-      });
+      };
     } else {
       const from = parseInt(start, 16);
-      ranges.push({ from, to: end !== undefined ? parseInt(end, 16) : from });
+      range = { from, to: end !== undefined ? parseInt(end, 16) : from };
     }
+    if (range.from > range.to || range.to > 0x10ffff) {
+      throw new Error(`Invalid unicode-range token: "${trimmed}"`);
+    }
+    ranges.push(range);
   }
   return ranges;
 }
@@ -121,6 +126,15 @@ function parseFontFaceBlocks(cssText: string): CssFontFaceBlock[] {
   return blocks;
 }
 
+/**
+ * Normalize a CSS descriptor value for comparison: CSS keywords are
+ * case-insensitive, and whitespace (e.g. in variable-font ranges like
+ * `"100 900"`) is insignificant beyond separating tokens.
+ */
+function normalizeCssValue(value: string): string {
+  return value.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
 function matchesFilter(
   block: CssFontFaceBlock,
   filter: CssFontFaceFilter,
@@ -134,11 +148,16 @@ function matchesFilter(
   }
   if (
     filter.fontWeight !== undefined &&
-    block.fontWeight?.replace(/\s+/g, " ") !== String(filter.fontWeight)
+    normalizeCssValue(block.fontWeight ?? "") !==
+      normalizeCssValue(String(filter.fontWeight))
   ) {
     return false;
   }
-  if (filter.fontStyle !== undefined && block.fontStyle !== filter.fontStyle) {
+  if (
+    filter.fontStyle !== undefined &&
+    normalizeCssValue(block.fontStyle ?? "") !==
+      normalizeCssValue(filter.fontStyle)
+  ) {
     return false;
   }
   return true;
