@@ -15,7 +15,6 @@ import {
 import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
-import { datasetToSource } from "../../helpers/attribution-source";
 import {
   TILE_DATASETS,
   TILES_3D_DATASETS,
@@ -186,5 +185,5 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
 
   addDateControl(view, pane);
   addCameraControl(view, pane);
-  attribution.show([datasetToSource(TILE_DATASETS.openstreetmap)]);
+  attribution.show([TILE_DATASETS.openstreetmap]);
 };

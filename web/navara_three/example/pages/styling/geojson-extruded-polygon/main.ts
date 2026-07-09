@@ -6,7 +6,6 @@ import {
 import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
-import { datasetToSource } from "../../../helpers/attribution-source";
 import {
   LOCAL_DATASETS,
   TERRAIN_DATASETS,
@@ -153,10 +152,7 @@ const run = async () => {
   });
 
   // interiorGeoJSON is local sample data with no attribution, so it is omitted.
-  attribution.show([
-    datasetToSource(TILE_DATASETS.gsiSeamlessphoto),
-    datasetToSource(TERRAIN_DATASETS.gsi),
-  ]);
+  attribution.show([TILE_DATASETS.gsiSeamlessphoto, TERRAIN_DATASETS.gsi]);
 };
 
 run();

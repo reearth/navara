@@ -24,7 +24,7 @@
  *   [
  *     {
  *       attribution: "Geospatial Information Authority of Japan (GSI)",
- *       url: "https://maps.gsi.go.jp/development/ichiran.html",
+ *       attributionUrl: "https://maps.gsi.go.jp/development/ichiran.html",
  *       children: [
  *         { attribution: "Nationwide latest aerial photos (seamless)", minZoom: 14, maxZoom: 18 },
  *         { attribution: "GRUS画像（© Axelspace）", minZoom: 14, maxZoom: 18 },
@@ -378,7 +378,9 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
         continue;
       }
 
-      const href = item.url ? safeHref(item.url) : undefined;
+      const href = item.attributionUrl
+        ? safeHref(item.attributionUrl)
+        : undefined;
       if (href) {
         text.appendChild(createSafeAnchor(href, item.attribution));
       } else {

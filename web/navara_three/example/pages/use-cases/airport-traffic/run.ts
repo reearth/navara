@@ -15,7 +15,6 @@ import {
 import { AttributionPlugin } from "@navara/three_plugins";
 import type { FeatureCollection, MultiLineString } from "geojson";
 
-import { datasetToSource } from "../../../helpers/attribution-source";
 import { PLASMA_COLORMAP } from "../../../helpers/colors";
 import { LOCAL_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 import { atZoneTime } from "../../../helpers/control";
@@ -204,8 +203,8 @@ export async function run() {
   dashAnimFunc();
 
   attribution.show([
-    datasetToSource(LOCAL_DATASETS.blueMarbleNight),
-    datasetToSource(TILE_DATASETS.gsiSeamlessphoto),
-    datasetToSource(LOCAL_DATASETS.airportTrafficVolume),
+    LOCAL_DATASETS.blueMarbleNight,
+    TILE_DATASETS.gsiSeamlessphoto,
+    LOCAL_DATASETS.airportTrafficVolume,
   ]);
 }

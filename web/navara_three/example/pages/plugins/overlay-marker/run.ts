@@ -11,7 +11,6 @@ import {
   moveOverlayElement,
 } from "@navara/three_plugins";
 
-import { datasetToSource } from "../../../helpers/attribution-source";
 import { LOCAL_DATASETS, TILES_3D_DATASETS } from "../../../helpers/constants";
 import { atZoneTime } from "../../../helpers/control";
 import { GOOGLE_MAPS_API_KEY } from "../../../helpers/keys";
@@ -80,9 +79,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
 
   // Google 3D Tiles
   const googleApiKey = GOOGLE_MAPS_API_KEY;
-  const sources: AttributionSource[] = [
-    datasetToSource(LOCAL_DATASETS.animatedBirdPigeonGLTF),
-  ];
+  const sources: AttributionSource[] = [LOCAL_DATASETS.animatedBirdPigeonGLTF];
   if (googleApiKey) {
     const tilesLayer = view.addLayer({
       type: "cesium3dtiles",
@@ -95,11 +92,10 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       },
     });
     // Per-tile credits nest under the Google source via `creditLayerId`.
-    sources.unshift(
-      datasetToSource(TILES_3D_DATASETS.googlePhotorealTiles, {
-        creditLayerId: tilesLayer.id,
-      }),
-    );
+    sources.unshift({
+      ...TILES_3D_DATASETS.googlePhotorealTiles,
+      creditLayerId: tilesLayer.id,
+    });
   }
   attribution.show(sources);
 

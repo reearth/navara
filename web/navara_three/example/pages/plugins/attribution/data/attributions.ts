@@ -15,7 +15,7 @@ import type { AttributionItem } from "@navara/three_plugins";
  */
 export const GSI_ATTRIBUTION: AttributionItem = {
   attribution: "Geospatial Information Authority of Japan (GSI)",
-  url: "https://maps.gsi.go.jp/development/ichiran.html",
+  attributionUrl: "https://maps.gsi.go.jp/development/ichiran.html",
   children: [
     // z14-18: latest seamless aerial photo
     {

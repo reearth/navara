@@ -3,7 +3,6 @@ import { DefaultPlugin } from "@navara/three_default_plugin";
 import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
-import { datasetToSource } from "../../../helpers/attribution-source";
 import {
   MVT_DATASETS,
   TERRAIN_DATASETS,
@@ -155,10 +154,7 @@ const run = async () => {
       layer?.update({ polyline: { width: value } });
     });
 
-  attribution.show([
-    datasetToSource(TILE_DATASETS.openstreetmap),
-    datasetToSource(MVT_DATASETS.plateauGifuTran),
-  ]);
+  attribution.show([TILE_DATASETS.openstreetmap, MVT_DATASETS.plateauGifuTran]);
 };
 
 run();

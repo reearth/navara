@@ -10,7 +10,6 @@ import {
 import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
-import { datasetToSource } from "../../../helpers/attribution-source";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 import { addCameraControl, addDateControl } from "../../../helpers/control";
 
@@ -111,10 +110,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
 
   addDateControl(view, pane, date);
   addCameraControl(view, pane);
-  attribution.show([
-    datasetToSource(TERRAIN_DATASETS.mapterhorn),
-    datasetToSource(TILE_DATASETS.openstreetmap),
-  ]);
+  attribution.show([TERRAIN_DATASETS.mapterhorn, TILE_DATASETS.openstreetmap]);
 
   const params = {
     enable: true,

@@ -51,7 +51,7 @@ attribution.show(
   [
     {
       attribution: "Geospatial Information Authority of Japan (GSI)",
-      url: "https://maps.gsi.go.jp/development/ichiran.html",
+      attributionUrl: "https://maps.gsi.go.jp/development/ichiran.html",
       children: [
         { attribution: "Nationwide latest aerial photos (seamless)", minZoom: 14, maxZoom: 18 },
         { attribution: "GRUS画像（© Axelspace）", minZoom: 14, maxZoom: 18 },
@@ -141,14 +141,14 @@ type AttributionItem = AttributionSource | AttributionHtml;
 
 ### AttributionSource
 
-| Property        | Type                              | Description                                                                           |
-| --------------- | --------------------------------- | ------------------------------------------------------------------------------------- |
-| `attribution`   | `string`                          | Top-level source / provider name                                                      |
-| `url`           | `string \| undefined`             | Optional link for the source name                                                     |
-| `logo`          | `string \| undefined`             | Optional logo image URL, shown in the always-visible bottom-left frame                |
-| `logoUrl`       | `string \| undefined`             | Optional click target for the `logo`; the logo is linked only when this is set        |
-| `children`      | `AttributionChild[] \| undefined` | Optional credits shown only at their zoom range                                       |
-| `creditLayerId` | `string \| undefined`             | Optional `layer.id`; per-feature credits from that layer are nested under this source |
+| Property         | Type                              | Description                                                                           |
+| ---------------- | --------------------------------- | ------------------------------------------------------------------------------------- |
+| `attribution`    | `string`                          | Top-level source / provider name                                                      |
+| `attributionUrl` | `string \| undefined`             | Optional link for the source name                                                     |
+| `logo`           | `string \| undefined`             | Optional logo image URL, shown in the always-visible bottom-left frame                |
+| `logoUrl`        | `string \| undefined`             | Optional click target for the `logo`; the logo is linked only when this is set        |
+| `children`       | `AttributionChild[] \| undefined` | Optional credits shown only at their zoom range                                       |
+| `creditLayerId`  | `string \| undefined`             | Optional `layer.id`; per-feature credits from that layer are nested under this source |
 
 ### AttributionHtml
 
@@ -183,7 +183,7 @@ All fields are optional; an unset field keeps the default color. Colors are appl
 - **Zoom ranges are for raster sources you declare yourself.** Tiles like GSI or OpenStreetMap don't carry their own credits, so describe their zoom-dependent credits with `children`.
 - **Per-layer credits come from the tiles.** Only sources that embed a copyright (such as Google Photorealistic 3D Tiles) produce credits through `creditLayerId`; for everything else, use `children`.
 - **Mandated logos go in the logo frame, not the popover.** Use `logo` only for marks you are required to keep visible at all times; ordinary sources are best shown as text. A logo is a plain image by default — set `logoUrl` to make it link to the provider's page. Some marks must be shown but not turned into a link, so leave `logoUrl` unset for those.
-- **Links are scheme-checked.** Every credit link — `url`, `logoUrl`, inline `<a>` in `attributionHtml` / `attribution`, and `<a>` embedded in a layer's per-feature credits — is kept only for safe schemes (`http` / `https` / `mailto`, or relative URLs); anything else (e.g. `javascript:`) is dropped to plain text. This makes it safe to render links even from untrusted tile metadata.
+- **Links are scheme-checked.** Every credit link — `attributionUrl`, `logoUrl`, inline `<a>` in `attributionHtml` / `attribution`, and `<a>` embedded in a layer's per-feature credits — is kept only for safe schemes (`http` / `https` / `mailto`, or relative URLs); anything else (e.g. `javascript:`) is dropped to plain text. This makes it safe to render links even from untrusted tile metadata.
 - **Bare URLs are auto-linked.** A plain `http(s)` URL inside credit text is turned into a clickable link automatically, so you can paste an official notice verbatim without hand-wrapping the URL in `<a>` — the wording (and the URL) stays unchanged.
 
 ## Related Resources

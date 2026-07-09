@@ -3,7 +3,6 @@ import { DefaultPlugin } from "@navara/three_default_plugin";
 import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
-import { datasetToSource } from "../../../helpers/attribution-source";
 import {
   LOCAL_DATASETS,
   TERRAIN_DATASETS,
@@ -156,10 +155,7 @@ const run = async () => {
       layer?.update({ polyline: { maxWidth: value } });
     });
 
-  attribution.show([
-    datasetToSource(TILE_DATASETS.openstreetmap),
-    datasetToSource(LOCAL_DATASETS.railways),
-  ]);
+  attribution.show([TILE_DATASETS.openstreetmap, LOCAL_DATASETS.railways]);
 };
 
 run();

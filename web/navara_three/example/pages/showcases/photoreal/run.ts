@@ -24,7 +24,6 @@ import utc from "dayjs/plugin/utc";
 import { Vector2 } from "three";
 import { Pane } from "tweakpane";
 
-import { datasetToSource } from "../../../helpers/attribution-source";
 import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
@@ -287,9 +286,10 @@ const buildGoogle = (
   });
 
   attribution.show([
-    datasetToSource(TILES_3D_DATASETS.googlePhotorealTiles, {
+    {
+      ...TILES_3D_DATASETS.googlePhotorealTiles,
       creditLayerId: tiles.id,
-    }),
+    },
   ]);
 };
 
@@ -325,8 +325,8 @@ const buildMapterhorn = (
   });
 
   attribution.show([
-    datasetToSource(TERRAIN_DATASETS.mapterhorn),
-    datasetToSource(TILE_DATASETS.gsiSeamlessphoto),
+    TERRAIN_DATASETS.mapterhorn,
+    TILE_DATASETS.gsiSeamlessphoto,
   ]);
 };
 

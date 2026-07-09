@@ -18,7 +18,6 @@ import { AttributionPlugin } from "@navara/three_plugins";
 import { Vector3 } from "three";
 import { Pane } from "tweakpane";
 
-import { datasetToSource } from "../../../helpers/attribution-source";
 import {
   TILE_DATASETS,
   TILES_3D_DATASETS,
@@ -163,10 +162,10 @@ export const run = async (view: ThreeView<DefaultDescriptions>) => {
   });
 
   attribution.show([
-    datasetToSource(TILE_DATASETS.openstreetmap),
-    datasetToSource(TERRAIN_DATASETS.gsi),
-    datasetToSource(TILES_3D_DATASETS.plateauChiyoda),
-    datasetToSource(TILES_3D_DATASETS.plateauChuo),
+    TILE_DATASETS.openstreetmap,
+    TERRAIN_DATASETS.gsi,
+    TILES_3D_DATASETS.plateauChiyoda,
+    TILES_3D_DATASETS.plateauChuo,
   ]);
 
   // --- Debug Controls ---

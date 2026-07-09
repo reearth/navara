@@ -11,7 +11,6 @@ import { AttributionPlugin } from "@navara/three_plugins";
 import { Vector3 } from "three";
 import { Pane } from "tweakpane";
 
-import { datasetToSource } from "../../../helpers/attribution-source";
 import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
@@ -658,13 +657,13 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   addCtrlPanel(geoLayersDef, view, materialCtrl as Pane);
 
   attribution.show([
-    datasetToSource(TERRAIN_DATASETS.gsi),
-    datasetToSource(TILE_DATASETS.openstreetmap),
-    datasetToSource(GEOJSON_DATASETS.calderdaleDefibrillators),
-    datasetToSource(TILES_3D_DATASETS.plateauChiyoda),
-    datasetToSource(TILES_3D_DATASETS.plateauChuo),
-    datasetToSource(MVT_DATASETS.plateauWakayamaGen),
-    datasetToSource(MVT_DATASETS.plateauGifuTran),
-    datasetToSource(MVT_DATASETS.plateauTokyoHeightControl),
+    TERRAIN_DATASETS.gsi,
+    TILE_DATASETS.openstreetmap,
+    GEOJSON_DATASETS.calderdaleDefibrillators,
+    TILES_3D_DATASETS.plateauChiyoda,
+    TILES_3D_DATASETS.plateauChuo,
+    MVT_DATASETS.plateauWakayamaGen,
+    MVT_DATASETS.plateauGifuTran,
+    MVT_DATASETS.plateauTokyoHeightControl,
   ]);
 };

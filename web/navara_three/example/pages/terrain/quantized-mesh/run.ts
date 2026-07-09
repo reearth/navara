@@ -6,10 +6,6 @@ import {
 import { AttributionPlugin, CesiumIonPlugin } from "@navara/three_plugins";
 import { ButtonApi, Pane } from "tweakpane";
 
-import {
-  datasetToHtmlSource,
-  datasetToSource,
-} from "../../../helpers/attribution-source";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 import { addDateControl, atZoneDate } from "../../../helpers/control";
 
@@ -101,10 +97,7 @@ export const run = async (
       type === "cesiumIon"
         ? TERRAIN_DATASETS.cesiumIon
         : TERRAIN_DATASETS.reearthQuantizedMesh;
-    attribution.show([
-      datasetToSource(dataset),
-      datasetToHtmlSource(TILE_DATASETS.eox),
-    ]);
+    attribution.show([dataset, TILE_DATASETS.eox]);
   };
 
   // Delete the current terrain layer and its explicit source (if any) on the

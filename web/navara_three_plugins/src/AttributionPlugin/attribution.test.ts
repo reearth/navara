@@ -183,7 +183,7 @@ describe("dedupeAttributionItems", () => {
   it("drops exact-duplicate sources, keeping first-seen order", () => {
     const overture = {
       attribution: "© OpenStreetMap contributors, © Overture Maps Foundation",
-      url: "https://overturemaps.org",
+      attributionUrl: "https://overturemaps.org",
     };
     expect(
       dedupeAttributionItems([

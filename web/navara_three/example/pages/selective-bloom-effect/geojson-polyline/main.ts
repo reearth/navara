@@ -6,7 +6,6 @@ import {
 import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
-import { datasetToSource } from "../../../helpers/attribution-source";
 import {
   LOCAL_DATASETS,
   TERRAIN_DATASETS,
@@ -156,9 +155,9 @@ const run = async () => {
   });
 
   attribution.show([
-    datasetToSource(TILE_DATASETS.openstreetmap),
-    datasetToSource(TERRAIN_DATASETS.gsi),
-    datasetToSource(LOCAL_DATASETS.railways),
+    TILE_DATASETS.openstreetmap,
+    TERRAIN_DATASETS.gsi,
+    LOCAL_DATASETS.railways,
   ]);
 };
 

@@ -27,10 +27,6 @@ import { Vector2 } from "three";
 import { Pane } from "tweakpane";
 
 import {
-  datasetToHtmlSource,
-  datasetToSource,
-} from "../../helpers/attribution-source";
-import {
   LOCAL_DATASETS,
   TERRAIN_DATASETS,
   TILE_DATASETS,
@@ -258,9 +254,7 @@ export const run = async () => {
   // view would drop mandated base credits (e.g. Google Photorealistic 3D Tiles).
   const applyAttribution = (base: AttributionItem[]) => {
     attribution?.show(
-      currentKind === "person"
-        ? [...base, datasetToSource(LOCAL_DATASETS.soldierGLTF)]
-        : base,
+      currentKind === "person" ? [...base, LOCAL_DATASETS.soldierGLTF] : base,
     );
   };
   let defaultScene: ReturnType<
@@ -307,10 +301,7 @@ export const run = async () => {
       }),
     );
 
-    return [
-      datasetToSource(TERRAIN_DATASETS.mapterhorn),
-      datasetToHtmlSource(TILE_DATASETS.eox),
-    ];
+    return [TERRAIN_DATASETS.mapterhorn, TILE_DATASETS.eox];
   };
 
   const buildGoogle = (v: ThreeView<CustomDescriptions>): AttributionItem[] => {
@@ -329,9 +320,10 @@ export const run = async () => {
     baseLayers.push(tiles);
 
     return [
-      datasetToSource(TILES_3D_DATASETS.googlePhotorealTiles, {
+      {
+        ...TILES_3D_DATASETS.googlePhotorealTiles,
         creditLayerId: tiles.id,
-      }),
+      },
     ];
   };
 

@@ -28,8 +28,8 @@ export type AttributionChild = {
 export type AttributionSource = {
   /** Top-level source / provider name. */
   attribution: string;
-  /** Optional URL. Rendered as an `<a>` for the source title. */
-  url?: string;
+  /** Optional link for the source name, rendered as an `<a>`. */
+  attributionUrl?: string;
   /**
    * Optional logo image URL. When set, the logo is shown in an always-visible
    * frame in the bottom-left corner, independent of the popover's open state —
@@ -40,9 +40,9 @@ export type AttributionSource = {
   logo?: string;
   /**
    * Optional click target for the {@link logo}, opened in a new tab. Kept
-   * separate from {@link url} (the title's link) so a provider can require the
-   * logo be shown without linking it, or point the logo somewhere other than the
-   * title. Has no effect unless {@link logo} is also set.
+   * separate from {@link attributionUrl} (the title's link) so a provider can
+   * require the logo be shown without linking it, or point the logo somewhere
+   * other than the title. Has no effect unless {@link logo} is also set.
    */
   logoUrl?: string;
   /** Zoom-banded child credits, filtered by current camera zoom. */
@@ -108,7 +108,7 @@ function attributionItemKey(item: AttributionItem): string {
   return JSON.stringify([
     "src",
     item.attribution,
-    item.url ?? null,
+    item.attributionUrl ?? null,
     item.logo ?? null,
     item.logoUrl ?? null,
     item.creditLayerId ?? null,

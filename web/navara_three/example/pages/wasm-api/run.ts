@@ -37,7 +37,6 @@ import { AttributionPlugin } from "@navara/three_plugins";
 import { Mesh, Vector2, Vector3, Object3D, Group, ArrowHelper } from "three";
 import { Pane, FolderApi } from "tweakpane";
 
-import { datasetToSource } from "../../helpers/attribution-source";
 import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
@@ -216,10 +215,10 @@ export const run = async (
   onRegisterChange();
 
   attribution.show([
-    datasetToSource(TERRAIN_DATASETS.gsi),
-    datasetToSource(TILE_DATASETS.openstreetmap),
-    datasetToSource(TILES_3D_DATASETS.plateauChiyoda),
-    datasetToSource(LOCAL_DATASETS.steelDrumGLTF),
+    TERRAIN_DATASETS.gsi,
+    TILE_DATASETS.openstreetmap,
+    TILES_3D_DATASETS.plateauChiyoda,
+    LOCAL_DATASETS.steelDrumGLTF,
   ]);
 };
 

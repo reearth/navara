@@ -1,5 +1,11 @@
 /**
- * Dataset type definition
+ * A data source used by the examples: the tile/asset `url` plus the attribution
+ * fields. The attribution fields mirror `AttributionSource` / `AttributionHtml`
+ * from `@navara/three_plugins` (same names — `attribution`, `attributionUrl`,
+ * `attributionHtml`, `logo`, `logoUrl`), so a dataset can be passed straight to
+ * `AttributionPlugin.show()` without a conversion step. The tile endpoint keeps
+ * the plain `url` name; `AttributionSource`'s own link is `attributionUrl`, so
+ * the two never collide.
  */
 export type Dataset = {
   url: string;
@@ -15,8 +21,7 @@ export type Dataset = {
   /**
    * Optional click target for the logo. Separate from `attributionUrl` so a
    * mark can be shown without linking it (some marks must be displayed but not
-   * turned into a link). Carried into the `AttributionPlugin` via
-   * `datasetToSource`.
+   * turned into a link).
    */
   logoUrl?: string;
 };

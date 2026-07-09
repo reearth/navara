@@ -3,7 +3,6 @@ import { DefaultPlugin } from "@navara/three_default_plugin";
 import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
-import { datasetToSource } from "../../../helpers/attribution-source";
 import {
   GEOJSON_DATASETS,
   TERRAIN_DATASETS,
@@ -146,10 +145,7 @@ const run = async () => {
       layer?.update({ text: { textAlign: value } });
     });
 
-  attribution.show([
-    datasetToSource(TILE_DATASETS.openstreetmap),
-    datasetToSource(TERRAIN_DATASETS.mapterhorn),
-  ]);
+  attribution.show([TILE_DATASETS.openstreetmap, TERRAIN_DATASETS.mapterhorn]);
 };
 
 run();

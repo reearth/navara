@@ -6,7 +6,6 @@ import {
 import { AttributionPlugin, PersonViewPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
-import { datasetToSource } from "../../../helpers/attribution-source";
 import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
@@ -159,9 +158,9 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   addTeleportControl(pane, personView);
 
   attribution.show([
-    datasetToSource(TERRAIN_DATASETS.gsi),
-    datasetToSource(TILE_DATASETS.gsiSeamlessphoto),
-    datasetToSource(TILES_3D_DATASETS.plateauTakanawa),
+    TERRAIN_DATASETS.gsi,
+    TILE_DATASETS.gsiSeamlessphoto,
+    TILES_3D_DATASETS.plateauTakanawa,
   ]);
 };
 

@@ -45,7 +45,6 @@ import {
 } from "three";
 import { Pane } from "tweakpane";
 
-import { datasetToSource } from "../../../helpers/attribution-source";
 import { TILE_DATASETS } from "../../../helpers/constants";
 import { addDateControl, atZoneTime } from "../../../helpers/control";
 
@@ -335,7 +334,7 @@ const run = async () => {
     idBinding.refresh();
   });
 
-  attribution.show([datasetToSource(TILE_DATASETS.openstreetmap)]);
+  attribution.show([TILE_DATASETS.openstreetmap]);
 };
 
 run();

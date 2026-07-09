@@ -11,7 +11,6 @@ import { AttributionPlugin } from "@navara/three_plugins";
 import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 
-import { datasetToSource } from "../../helpers/attribution-source";
 import { PMTILES_DATASETS } from "../../helpers/constants";
 import { SH_COEFFICIENTS } from "../../helpers/sh";
 
@@ -738,9 +737,9 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   // All four Overture sources are declared; base/divisions/buildings share one
   // credit, so the AttributionPlugin collapses them to a single rendered line.
   attribution.show([
-    datasetToSource(PMTILES_DATASETS.overtureBase),
-    datasetToSource(PMTILES_DATASETS.overtureDivisions),
-    datasetToSource(PMTILES_DATASETS.overtureBuildings),
-    datasetToSource(PMTILES_DATASETS.overturePlaces),
+    PMTILES_DATASETS.overtureBase,
+    PMTILES_DATASETS.overtureDivisions,
+    PMTILES_DATASETS.overtureBuildings,
+    PMTILES_DATASETS.overturePlaces,
   ]);
 };

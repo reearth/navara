@@ -4,7 +4,6 @@ import { DefaultPlugin } from "@navara/three_default_plugin";
 import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
-import { datasetToSource } from "../../../helpers/attribution-source";
 import { GEOJSON_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 import { addDateControl } from "../../../helpers/control";
 import WORLD_FONT_FAMILY from "../geojson-font-faces/worldCitiesFontFamily.json";
@@ -182,7 +181,7 @@ const run = async () => {
       layer?.update({ text: { size: value } });
     });
 
-  attribution.show([datasetToSource(TILE_DATASETS.openstreetmap)]);
+  attribution.show([TILE_DATASETS.openstreetmap]);
 };
 
 run();

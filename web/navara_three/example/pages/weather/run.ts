@@ -22,7 +22,6 @@ import { AttributionPlugin } from "@navara/three_plugins";
 import { Vector2 } from "three";
 import { Pane } from "tweakpane";
 
-import { datasetToSource } from "../../helpers/attribution-source";
 import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
@@ -193,12 +192,12 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   addWeatherControl(view, pane, rainDropEffect);
 
   attribution.show([
-    datasetToSource(TERRAIN_DATASETS.gsi),
-    datasetToSource(TILE_DATASETS.gsiSeamlessphoto),
-    datasetToSource(TILES_3D_DATASETS.plateauChiyoda),
-    datasetToSource(TILES_3D_DATASETS.plateauChuo),
-    datasetToSource(TILES_3D_DATASETS.plateauTokyoFlood),
-    datasetToSource(VECTOR_DATASETS.gsiExperimentalVector),
+    TERRAIN_DATASETS.gsi,
+    TILE_DATASETS.gsiSeamlessphoto,
+    TILES_3D_DATASETS.plateauChiyoda,
+    TILES_3D_DATASETS.plateauChuo,
+    TILES_3D_DATASETS.plateauTokyoFlood,
+    VECTOR_DATASETS.gsiExperimentalVector,
   ]);
 };
 

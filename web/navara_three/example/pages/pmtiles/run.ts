@@ -8,7 +8,6 @@ import { AttributionPlugin } from "@navara/three_plugins";
 import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 
-import { datasetToSource } from "../../helpers/attribution-source";
 import { PMTILES_DATASETS } from "../../helpers/constants";
 import { SH_COEFFICIENTS } from "../../helpers/sh";
 
@@ -131,5 +130,5 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       });
     });
 
-  attribution.show([datasetToSource(PMTILES_DATASETS.protomapsFirenze)]);
+  attribution.show([PMTILES_DATASETS.protomapsFirenze]);
 };

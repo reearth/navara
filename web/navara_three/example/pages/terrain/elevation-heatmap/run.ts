@@ -12,7 +12,6 @@ import { AttributionPlugin } from "@navara/three_plugins";
 import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 
-import { datasetToSource } from "../../../helpers/attribution-source";
 import {
   PLATEAU_COLOR_MAP,
   TURBO_COLOR_MAP,
@@ -109,7 +108,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   const pane = new Pane();
   addDateControl(view, pane);
   addCameraControl(view, pane);
-  attribution.show([datasetToSource(TERRAIN_DATASETS.mapterhorn)]);
+  attribution.show([TERRAIN_DATASETS.mapterhorn]);
 
   const params = {
     color_map: "plateau",
