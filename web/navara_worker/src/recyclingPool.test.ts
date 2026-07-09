@@ -94,7 +94,14 @@ it("creates one single-worker pool per slot", () => {
   expect(pools).toHaveLength(3);
   expect(workerpool.pool).toHaveBeenLastCalledWith(
     "https://example.com",
-    expect.objectContaining({ maxWorkers: 1, minWorkers: 0 }),
+    expect.objectContaining({
+      maxWorkers: 1,
+      minWorkers: 0,
+      // Must outlive the longest synchronous WASM task, or a cancel while
+      // running force-terminates the warm worker despite the worker-side
+      // abort listener (workerpool's default is 1s).
+      workerTerminateTimeout: expect.any(Number),
+    }),
   );
 });
 

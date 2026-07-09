@@ -1,11 +1,11 @@
-use bevy_ecs::{component::Component, lifecycle::HookContext, world::DeferredWorld};
+use bevy_ecs::component::Component;
 use navara_buffer_store::{BufferStore, Handle};
 use navara_geometry::TransferableGeometry;
 use navara_math::{FloatType, Vec3};
 use navara_tile_component::TileHandle;
 use serde::Serialize;
 
-use crate::component::{WorkerTaskBundle, WorkerTaskResultConsumed};
+use crate::component::{FreeResultBuffers, WorkerTaskBundle, free_unconsumed_buffers};
 
 #[derive(Component)]
 pub struct ConstructTerrainMeshMarker;
@@ -33,7 +33,7 @@ pub struct ConstructTerrainMeshParameters {
 /// its tile was torn down before transfer) frees its buffers via the
 /// `on_remove` hook.
 #[derive(Component, Clone, Debug, Serialize)]
-#[component(on_remove = free_unconsumed_buffers)]
+#[component(on_remove = free_unconsumed_buffers::<ConstructTerrainMeshResult>)]
 pub struct ConstructTerrainMeshResult {
     pub geometry: TransferableGeometry,
     pub heights: Handle,
@@ -43,27 +43,14 @@ pub struct ConstructTerrainMeshResult {
     pub watermask: Option<Handle>,
 }
 
-/// `on_remove` hook: free the result's buffers unless a consumer took over
-/// handle ownership (`WorkerTaskResultConsumed`). Unlike the MVT parse result,
-/// consumption transfers the live handles to the tile mesh instead of removing
-/// the entries, so freeing unconditionally would destroy in-use mesh data.
-fn free_unconsumed_buffers(mut world: DeferredWorld, ctx: HookContext) {
-    if world.get::<WorkerTaskResultConsumed>(ctx.entity).is_some() {
-        return;
-    }
-    let Some(result) = world.get::<ConstructTerrainMeshResult>(ctx.entity) else {
-        return;
-    };
-    let geometry = result.geometry.clone();
-    let heights = result.heights;
-    let watermask = result.watermask;
-    let Some(mut buf) = world.get_resource_mut::<BufferStore>() else {
-        return;
-    };
-    geometry.remove_from_buf(&mut buf);
-    buf.remove(&heights);
-    if let Some(watermask) = watermask {
-        buf.remove(&watermask);
+impl FreeResultBuffers for ConstructTerrainMeshResult {
+    fn remove_from_buf(&self, buf: &mut BufferStore) -> Vec<u32> {
+        self.geometry.remove_from_buf(buf);
+        buf.remove(&self.heights);
+        if let Some(watermask) = &self.watermask {
+            buf.remove(watermask);
+        }
+        Vec::new()
     }
 }
 

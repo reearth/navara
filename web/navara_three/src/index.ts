@@ -519,6 +519,14 @@ export default class ThreeView<
     triggerWorkerTaskCompleted: (bits, result) => {
       this._core?.triggerWorkerTaskCompleted(bits, result);
     },
+    triggerWorkerTaskFailed: (delegator_id) => {
+      if (this._core) {
+        this._core.triggerWorkerTaskFailed(delegator_id);
+      } else {
+        // The engine is gone (teardown); still free the boundary object.
+        delegator_id.free();
+      }
+    },
     hasWorkerTask: (bits) => {
       return !!this._core?.hasWorkerTask(bits);
     },
