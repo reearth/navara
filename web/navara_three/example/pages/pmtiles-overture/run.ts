@@ -1,5 +1,6 @@
 import ThreeView, {
   Color,
+  fetchFontFamilyFromCss,
   type FeatureEvaluator,
   type Layer,
 } from "@navara/three";
@@ -14,12 +15,70 @@ import { Pane } from "tweakpane";
 import { PMTILES_DATASETS } from "../../helpers/constants";
 import { SH_COEFFICIENTS } from "../../helpers/sh";
 
-import LABEL_FONT_FAMILY from "./labelFontFamily.json";
-
 export type CustomDescriptions = DefaultDescriptions;
 
-// Family name the faces are registered under (see labelFontFamily.json).
+// Family name the label faces are registered under.
 const LABEL_FONT = "OvertureLabels";
+
+// Fonts covering the scripts Overture place names use, in priority order:
+// Archivo (Expanded ExtraBold) for Latin, Noto Sans script fonts for the
+// rest. Faces and their unicode ranges are derived from the Google Fonts
+// stylesheet at runtime; font files themselves are still downloaded lazily,
+// only when a label needs one of their codepoints.
+//
+// Order matters: for each codepoint the first face whose declared ranges
+// contain it wins, and Google's declared ranges are per-subset boilerplate
+// that can claim codepoints a font doesn't actually contain (which would
+// shape as tofu). This order was verified against the fonts' real coverage:
+// - Bengali/Devanagari/Armenian/Gurmukhi/Syriac precede Noto Sans, which
+//   declares (but lacks) some of their signs, e.g. Vedic marks.
+// - Noto Sans and JP/KR precede the remaining script fonts so shared
+//   symbols/punctuation resolve to fonts that really contain them.
+// - SC and Mongolian go last: Google slices them like CJK fonts whose
+//   declared ranges also claim Hiragana, Hangul, Armenian, Arabic, Thai,
+//   Cherokee, and more that these fonts don't cover.
+const LABEL_FONT_STACK = [
+  "Archivo:wdth,wght@125,800",
+  "Noto Sans Bengali:wght@800",
+  "Noto Sans Devanagari:wght@800",
+  "Noto Sans Armenian:wght@800",
+  "Noto Sans Gurmukhi:wght@800",
+  "Noto Sans Syriac:wght@800",
+  "Noto Sans:wght@800",
+  "Noto Sans JP:wght@800",
+  "Noto Sans KR:wght@800",
+  "Noto Sans Arabic:wght@800",
+  "Noto Sans Hebrew:wght@800",
+  "Noto Sans Thaana:wght@800",
+  "Noto Sans NKo",
+  "Noto Sans Thai:wght@800",
+  "Noto Sans Lao:wght@800",
+  "Noto Sans Khmer:wght@800",
+  "Noto Sans Myanmar:wght@800",
+  "Noto Sans Gujarati:wght@800",
+  "Noto Sans Tamil:wght@800",
+  "Noto Sans Telugu:wght@800",
+  "Noto Sans Kannada:wght@800",
+  "Noto Sans Malayalam:wght@800",
+  "Noto Sans Oriya:wght@800",
+  "Noto Sans Sinhala:wght@800",
+  "Noto Sans Georgian:wght@800",
+  "Noto Sans Ethiopic:wght@800",
+  "Noto Serif Tibetan:wght@800",
+  "Noto Sans Tifinagh",
+  "Noto Sans Adlam:wght@700",
+  "Noto Sans Cherokee:wght@800",
+  "Noto Sans Canadian Aboriginal:wght@800",
+  "Noto Sans Vai",
+  "Noto Sans Yi",
+  "Noto Sans Osmanya",
+  "Noto Sans SC:wght@800",
+  "Noto Sans Mongolian",
+];
+
+const LABEL_FONT_CSS_URL = `https://fonts.googleapis.com/css2?${LABEL_FONT_STACK.map(
+  (family) => `family=${family.replace(/ /g, "+")}`,
+).join("&")}`;
 
 // Camera presets.
 const VIEWPOINTS = {
@@ -38,17 +97,17 @@ const LABEL_TIERS = [
   },
   {
     key: "region",
-    maxHeight: 2_000_000,
+    maxHeight: 400_000,
     match: ["region", "macroregion", "governorate", "province", "state"],
   },
   {
     key: "county",
-    maxHeight: 800_000,
+    maxHeight: 100_000,
     match: ["county", "macrocounty", "localadmin", "district"],
   },
   {
     key: "locality",
-    maxHeight: 100_000,
+    maxHeight: 50_000,
     match: ["locality", "city", "town"],
   },
 ];
@@ -168,7 +227,14 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
 
   await view.init();
 
-  view.addFontFamily(LABEL_FONT_FAMILY);
+  // The Google Fonts CSS API orders @font-face blocks alphabetically, so
+  // pass the stack as a fontFamily array to restore the intended priority
+  // (e.g. JP before SC/KR for codepoints shared across CJK subsets).
+  view.addFontFamily(
+    await fetchFontFamilyFromCss(LABEL_FONT, LABEL_FONT_CSS_URL, {
+      fontFamily: LABEL_FONT_STACK.map((family) => family.split(":")[0]),
+    }),
+  );
 
   view.addLight({ ambient: {} });
   view.addLight({
@@ -645,9 +711,9 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     const proxy = { km: Math.round(tier.maxHeight / 1000) };
     tiersFolder
       .addBinding(proxy, "km", {
-        min: 100,
+        min: 0,
         max: 20_000,
-        step: 100,
+        step: 10,
         label: tier.key,
       })
       .on("change", ({ value }) => {

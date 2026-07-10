@@ -1,4 +1,4 @@
-import ThreeView, { Color } from "@navara/three";
+import ThreeView, { Color, fetchFontFamilyFromCss } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
@@ -10,7 +10,11 @@ import {
 } from "../../../helpers/constants";
 import { addDateControl } from "../../../helpers/control";
 
-import WORLD_FONT_FAMILY from "./worldCitiesFontFamily.json";
+// Self-hosted multi-script faces (Roboto + Noto Sans script fonts + sliced
+// Noto Sans JP/SC/KR subsets), declared as @font-face rules with
+// unicode-range. Only the CSS is fetched up front; each face file is
+// downloaded lazily when a label first needs one of its codepoints.
+const WORLD_FONT_CSS_URL = "/fonts/woff2/world-cities.css";
 
 const run = async () => {
   const view = new ThreeView({
@@ -27,8 +31,10 @@ const run = async () => {
 
   defaultPlugin.addDefaultPhotorealScene();
 
-  // Register the multi-script font family
-  view.addFontFamily(WORLD_FONT_FAMILY);
+  // Register the multi-script font family from its @font-face stylesheet
+  view.addFontFamily(
+    await fetchFontFamilyFromCss("WorldCities", WORLD_FONT_CSS_URL),
+  );
 
   // Global view: show all cities
   view.setCamera({

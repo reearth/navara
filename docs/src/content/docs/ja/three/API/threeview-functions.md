@@ -1011,6 +1011,20 @@ layer.on("featureUpdated", ({ evaluator }) => {
 });
 ```
 
+:::tip[推奨]
+フェイスと Unicode 範囲を手書きする代わりに、スタイルシートの `@font-face` ルール（例: Google Fonts CSS API）から [`fetchFontFamilyFromCss()`](../../../three/api/font-family-from-css/) で導出できます:
+
+```typescript
+view.addFontFamily(
+  await fetchFontFamilyFromCss(
+    "MapFont",
+    "https://fonts.googleapis.com/css2?family=Noto+Sans&family=Noto+Sans+JP",
+  ),
+);
+```
+
+:::
+
 ### removeFontFamily()
 
 登録済みのフォントファミリを名前で削除します。削除後もこのファミリを参照しているテキストレイヤは、該当ファミリを解決できなくなります。

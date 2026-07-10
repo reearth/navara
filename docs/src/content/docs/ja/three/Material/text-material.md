@@ -151,6 +151,8 @@ import { Color } from "@navara/three";
 
 各コードポイントには、`faces` の並び順で最初に `unicodeRanges` がそのコードポイントを含むフェイスが使用されるため、範囲が重複する場合は先に定義されたエントリが優先されます。どのフェイスにもカバーされないコードポイントは先頭のフェイス（`faces[0]`）にフォールバックするため、宣言された `unicodeRanges` に含まれない文字のためにも先頭のフェイスがダウンロードされる可能性があります。詳細は [`addFontFamily()`](../../api/threeview-functions/#addfontfamily) を参照してください。
 
+フェイスと Unicode 範囲は手書きする代わりに、スタイルシートの `@font-face` ルール（例: Google Fonts CSS API）から導出することもできます。詳細は [Font Family from CSS](../../api/font-family-from-css/) を参照してください。
+
 **Default:** `undefined`（フォントは読み込まれず、フォントを指定するまでテキストレイヤは描画されません）。
 
 **Example (単一フォントファイル):**

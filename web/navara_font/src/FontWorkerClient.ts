@@ -62,17 +62,22 @@ export class FontWorkerClient {
    *  `highQuality`: whether to use the high-quality atlas raster path. The Rust side creates the
    *  atlas with this mode on the first load; subsequent loads under the same
    *  `atlasKey` are expected to reuse the same quality (the TS layer
-   *  guarantees this by including the highQuality flag in both `url` and `atlasKey`). */
+   *  guarantees this by including the highQuality flag in both `url` and `atlasKey`).
+   *
+   *  On success, `cmapRanges` holds the font's real cmap coverage as
+   *  flattened `[from, to, ...]` inclusive codepoint ranges (empty when the
+   *  face has no parsable unicode cmap — treat as unknown). */
   async loadFont(
     url: string,
     data: ArrayBuffer,
     atlasKey: string | undefined,
     highQuality: boolean,
-  ): Promise<{ ok: boolean }> {
+  ): Promise<{ ok: boolean; cmapRanges: Uint32Array | null }> {
     return this._send("loadFont", { url, data, atlasKey, highQuality }, [
       data,
     ]) as Promise<{
       ok: boolean;
+      cmapRanges: Uint32Array | null;
     }>;
   }
 

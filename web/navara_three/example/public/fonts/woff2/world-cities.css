@@ -1,0 +1,260 @@
+/*
+ * Self-hosted faces for the WorldCities demo family (Roboto for
+ * Latin/Cyrillic/Greek, Noto Sans script fonts, and sliced Noto Sans
+ * JP/SC/KR subsets). Consumed by fetchFontFamilyFromCss(), which follows
+ * CSS precedence: LATER @font-face rules win when unicode-ranges overlap,
+ * so faces are listed lowest-priority first (the last rule, Roboto latin,
+ * is the highest-priority face and the fallback for uncovered codepoints).
+ */
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/noto-sans-lao.woff2) format("woff2");
+  unicode-range: U+E80-EFF;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/noto-sans-myanmar.woff2) format("woff2");
+  unicode-range: U+1000-109F;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/noto-sans-kannada.woff2) format("woff2");
+  unicode-range: U+C80-CFF;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/noto-sans-telugu.woff2) format("woff2");
+  unicode-range: U+C00-C7F;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/noto-sans-tamil.woff2) format("woff2");
+  unicode-range: U+B80-BFF;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/noto-sans-bengali.woff2) format("woff2");
+  unicode-range: U+980-9FF;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/noto-sans-georgian.woff2) format("woff2");
+  unicode-range: U+10A0-10FF;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/noto-sans-armenian.woff2) format("woff2");
+  unicode-range: U+530-58F;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/noto-sans-devanagari.woff2) format("woff2");
+  unicode-range: U+900-97F, U+A8E0-A8FF;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/noto-sans-thai.woff2) format("woff2");
+  unicode-range: U+E00-E7F;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/noto-sans-arabic.woff2) format("woff2");
+  unicode-range: U+600-6FF, U+750-77F, U+8A0-8FF, U+FB50-FDFF, U+FE70-FEFF;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/kr-slices/noto-sans-kr-119.woff2) format("woff2");
+  unicode-range: U+20-22, U+27-2A, U+2C-38, U+3A-3B, U+3F, U+41-47, U+4A-4C, U+4F-5D, U+61-7B, U+7D, U+A1, U+AB, U+AE, U+B7, U+BB, U+BF, U+2013-2014, U+201C-201D, U+2122, U+AC00, U+ACE0, U+AE30, U+B2E4, U+B85C, U+B9AC, U+C0AC, U+C2A4, U+C2DC, U+C774, U+C778, U+C9C0, U+D558;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/kr-slices/noto-sans-kr-118.woff2) format("woff2");
+  unicode-range: U+39, U+49, U+4D-4E, U+A0, U+AC04, U+AC1C, U+AC70, U+AC8C, U+ACBD, U+ACF5, U+ACFC, U+AD00, U+AD6C, U+ADF8, U+B098, U+B0B4, U+B294, U+B2C8, U+B300, U+B3C4, U+B3D9, U+B4DC, U+B4E4, U+B77C, U+B7EC, U+B85D, U+B97C, U+B9C8, U+B9CC, U+BA54, U+BA74, U+BA85, U+BAA8, U+BB34, U+BB38, U+BBF8, U+BC14, U+BC29, U+BC88, U+BCF4, U+BD80, U+BE44, U+C0C1, U+C11C, U+C120, U+C131, U+C138, U+C18C, U+C218, U+C2B5, U+C2E0, U+C544, U+C548, U+C5B4, U+C5D0, U+C5EC, U+C5F0, U+C601, U+C624, U+C694, U+C6A9, U+C6B0, U+C6B4, U+C6D0, U+C704, U+C720, U+C73C, U+C740, U+C744, U+C74C, U+C758, U+C77C, U+C785, U+C788, U+C790-C791, U+C7A5, U+C804, U+C815, U+C81C, U+C870, U+C8FC, U+C911, U+C9C4, U+CCB4, U+CE58, U+CE74, U+D06C, U+D0C0, U+D130, U+D2B8, U+D3EC, U+D504, U+D55C, U+D569, U+D574, U+D638, U+D654, U+D68C;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/kr-slices/noto-sans-kr-117.woff2) format("woff2");
+  unicode-range: U+D, U+48, U+7C, U+AC10, U+AC15, U+AC74, U+AC80, U+AC83, U+ACC4, U+AD11, U+AD50, U+AD6D, U+ADFC, U+AE00, U+AE08, U+AE4C, U+B0A8, U+B124, U+B144, U+B178, U+B274, U+B2A5, U+B2E8, U+B2F9, U+B354, U+B370, U+B418, U+B41C, U+B4F1, U+B514, U+B798, U+B808, U+B824-B825, U+B8CC, U+B978, U+B9D0, U+B9E4, U+BAA9, U+BB3C, U+BC18, U+BC1C, U+BC30, U+BC84, U+BCF5, U+BCF8, U+BD84, U+BE0C, U+BE14, U+C0B0, U+C0C9, U+C0DD, U+C124, U+C2DD, U+C2E4, U+C2EC, U+C54C, U+C57C-C57D, U+C591, U+C5C5-C5C6, U+C5ED, U+C608, U+C640, U+C6B8, U+C6D4, U+C784, U+C7AC, U+C800-C801, U+C9C1, U+C9D1, U+CC28, U+CC98, U+CC9C, U+CCAD, U+CD5C, U+CD94, U+CD9C, U+CDE8, U+CE68, U+CF54, U+D0DC, U+D14C, U+D1A0, U+D1B5, U+D2F0, U+D30C, U+D310, U+D398, U+D45C, U+D50C, U+D53C, U+D560, U+D568, U+D589, U+D604, U+D6C4, U+D788;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/sc-slices/noto-sans-sc-118.woff2) format("woff2");
+  unicode-range: U+D, U+3E, U+5F, U+7C, U+A0, U+A9, U+4E09-4E0B, U+4E0D-4E0E, U+4E13, U+4E1A, U+4E2A, U+4E3A-4E3B, U+4E4B, U+4E86, U+4E8E, U+4EA7, U+4EBA, U+4EE4-4EE5, U+4EEC, U+4F1A, U+4F4D, U+4F53, U+4F5C, U+4F60, U+4FE1, U+5165, U+5168, U+516C, U+5173, U+5176, U+5185, U+51FA, U+5206, U+5230, U+5236, U+524D, U+529B, U+52A0-52A1, U+52A8, U+5316, U+533A, U+53CB, U+53D1, U+53EF, U+53F7-53F8, U+5408, U+540C-540E, U+544A, U+548C, U+54C1, U+56DE, U+56FD-56FE, U+5728, U+5730, U+5907, U+5916, U+591A, U+5927, U+5929, U+597D, U+5982, U+5B50, U+5B66, U+5B89, U+5B9A, U+5B9E, U+5BA2, U+5BB6, U+5BF9, U+5C0F, U+5DE5, U+5E02, U+5E73-5E74, U+5E7F, U+5EA6, U+5F00, U+5F0F, U+5F53, U+5F55, U+5FAE, U+5FC3, U+6027, U+606F, U+60A8, U+60C5, U+610F, U+6210-6211, U+6237, U+6240, U+624B, U+6280, U+62A5, U+63A5, U+63A8, U+63D0, U+6536, U+6570, U+6587, U+65B9, U+65E0, U+65F6, U+660E, U+662D, U+662F, U+66F4, U+6700, U+670D, U+672C, U+673A, U+6743, U+6765, U+679C, U+682A, U+6B21, U+6B63, U+6CBB, U+6CD5, U+6CE8, U+6D3B, U+70ED, U+7247-7248, U+7269, U+7279, U+73B0, U+7406, U+751F, U+7528, U+7535, U+767B, U+76F8, U+770B, U+77E5, U+793E, U+79D1, U+7AD9, U+7B49, U+7C7B, U+7CFB, U+7EBF, U+7ECF, U+7F8E, U+8005, U+8054, U+80FD, U+81EA, U+85CF, U+884C, U+8868, U+8981, U+89C6, U+8BBA, U+8BDD, U+8BF4, U+8BF7, U+8D44, U+8FC7, U+8FD8-8FD9, U+8FDB, U+901A, U+9053, U+90E8, U+91D1, U+957F, U+95E8, U+95EE, U+95F4, U+9762, U+9875, U+9898, U+9996, U+9AD8, U+FF01, U+FF08-FF09;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/sc-slices/noto-sans-sc-117.woff2) format("woff2");
+  unicode-range: U+4E, U+201C-201D, U+3010-3011, U+4E07, U+4E1C, U+4E24, U+4E3E, U+4E48, U+4E50, U+4E5F, U+4E8B-4E8C, U+4EA4, U+4EAB-4EAC, U+4ECB, U+4ECE, U+4ED6, U+4EE3, U+4EF6-4EF7, U+4EFB, U+4F20, U+4F55, U+4F7F, U+4FDD, U+505A, U+5143, U+5149, U+514D, U+5171, U+5177, U+518C, U+51FB, U+521B, U+5229, U+522B, U+52A9, U+5305, U+5317, U+534E, U+5355, U+5357, U+535A, U+5373, U+539F, U+53BB, U+53CA, U+53CD, U+53D6, U+53E3, U+53F0, U+5458, U+5546, U+56DB, U+573A, U+578B, U+57CE, U+58F0, U+590D, U+5934, U+5973, U+5B57, U+5B8C, U+5B98, U+5BB9, U+5BFC, U+5C06, U+5C11, U+5C31, U+5C55, U+5DF2, U+5E03, U+5E38, U+5E76, U+5E94, U+5EFA, U+5F71, U+5F97, U+5FEB, U+6001, U+603B, U+60F3, U+611F, U+6216, U+624D, U+6253, U+6295, U+6301, U+6392, U+641C, U+652F, U+653E, U+6559, U+6599, U+661F, U+671F, U+672F, U+6761, U+67E5, U+6807, U+6837, U+683C, U+6848, U+6B22, U+6B64, U+6BD4, U+6C14, U+6C34, U+6C42, U+6CA1, U+6D41, U+6D77, U+6D88, U+6E05, U+6E38, U+6E90, U+7136, U+7231, U+7531, U+767E, U+76EE, U+76F4, U+771F, U+7801, U+793A, U+79CD, U+7A0B, U+7A7A, U+7ACB, U+7AE0, U+7B2C, U+7B80, U+7BA1, U+7CBE, U+7D22, U+7EA7, U+7ED3, U+7ED9, U+7EDF, U+7F16, U+7F6E, U+8001, U+800C, U+8272, U+8282, U+82B1, U+8350, U+88AB, U+88C5, U+897F, U+89C1, U+89C4, U+89E3, U+8A00, U+8BA1, U+8BA4, U+8BAE-8BB0, U+8BBE, U+8BC1, U+8BC4, U+8BFB, U+8D28, U+8D39, U+8D77, U+8D85, U+8DEF, U+8EAB, U+8F66, U+8F6C, U+8F7D, U+8FD0, U+9009, U+90AE, U+90FD, U+91CC-91CD, U+91CF, U+95FB, U+9650, U+96C6, U+9891, U+98CE, U+FF1F;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/sc-slices/noto-sans-sc-116.woff2) format("woff2");
+  unicode-range: U+2B, U+40, U+3000, U+300A-300B, U+4E16, U+4E66, U+4E70, U+4E91-4E92, U+4E94, U+4E9B, U+4EC0, U+4ECA, U+4F01, U+4F17-4F18, U+4F46, U+4F4E, U+4F9B, U+4FEE, U+503C, U+5065, U+50CF, U+513F, U+5148, U+518D, U+51C6, U+51E0, U+5217, U+529E-529F, U+5341, U+534F, U+5361, U+5386, U+53C2, U+53C8, U+53CC, U+53D7-53D8, U+53EA, U+5404, U+5411, U+5417, U+5427, U+5468, U+559C, U+5668, U+56E0, U+56E2, U+56ED, U+5740, U+57FA, U+58EB, U+5904, U+592A, U+59CB, U+5A31, U+5B58, U+5B9D, U+5BC6, U+5C71, U+5DDE, U+5DF1, U+5E08, U+5E26, U+5E2E, U+5E93, U+5E97, U+5EB7, U+5F15, U+5F20, U+5F3A, U+5F62, U+5F69, U+5F88, U+5F8B, U+5FC5, U+600E, U+620F, U+6218, U+623F, U+627E, U+628A, U+62A4, U+62DB, U+62E9, U+6307, U+6362, U+636E, U+64AD, U+6539, U+653F, U+6548, U+6574, U+6613, U+6625, U+663E, U+666F, U+672A, U+6750, U+6784, U+6A21, U+6B3E, U+6B65, U+6BCF, U+6C11, U+6C5F, U+6DF1, U+706B, U+7167, U+724C, U+738B, U+73A9, U+73AF, U+7403, U+7537, U+754C, U+7559, U+767D, U+7740, U+786E, U+795E, U+798F, U+79F0, U+7AEF, U+7B7E, U+7BB1, U+7EA2, U+7EA6, U+7EC4, U+7EC6, U+7ECD, U+7EDC, U+7EF4, U+8003, U+80B2, U+81F3-81F4, U+822A, U+827A, U+82F1, U+83B7, U+8425, U+89C2, U+89C8, U+8BA9, U+8BB8, U+8BC6, U+8BD5, U+8BE2, U+8BE5, U+8BED, U+8C03, U+8D23, U+8D2D, U+8D34, U+8D70, U+8DB3, U+8FBE, U+8FCE, U+8FD1, U+8FDE, U+9001, U+901F-9020, U+90A3, U+914D, U+91C7, U+94FE, U+9500, U+952E, U+9605, U+9645, U+9662, U+9664, U+9700, U+9752, U+975E, U+97F3, U+9879, U+9886, U+98DF, U+9A6C, U+9A8C, U+9ED1, U+9F99;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/sc-slices/noto-sans-sc-115.woff2) format("woff2");
+  unicode-range: U+25, U+4E14, U+4E1D, U+4E3D, U+4E49, U+4E60, U+4E9A, U+4EB2, U+4EC5, U+4EFD, U+4F3C, U+4F4F, U+4F8B, U+4FBF, U+5019, U+5145, U+514B, U+516B, U+516D, U+5174, U+5178, U+517B, U+5199, U+519B, U+51B3, U+51B5, U+5207, U+5212, U+5219, U+521D, U+52BF, U+533B, U+5343, U+5347, U+534A, U+536B, U+5370, U+53E4, U+53F2, U+5403, U+542C, U+547D, U+54A8, U+54CD, U+54EA, U+552E, U+56F4, U+5747, U+575B, U+5883, U+589E, U+5931, U+5947, U+5956-5957, U+5A92, U+5B83, U+5BA4, U+5BB3, U+5BCC, U+5C14, U+5C1A, U+5C3D, U+5C40, U+5C45, U+5C5E, U+5DF4, U+5E72, U+5E95, U+5F80, U+5F85, U+5FB7, U+5FD7, U+601D, U+626B, U+627F, U+62C9, U+62CD, U+6309, U+63A7, U+6545, U+65AD, U+65AF, U+65C5, U+666E, U+667A, U+670B, U+671B, U+674E, U+677F, U+6781, U+6790, U+6797, U+6821, U+6838-6839, U+697C, U+6B27, U+6B62, U+6BB5, U+6C7D, U+6C99, U+6D4B, U+6D4E, U+6D6A, U+6E29, U+6E2F, U+6EE1, U+6F14, U+6F2B, U+72B6, U+72EC, U+7387, U+7533, U+753B, U+76CA, U+76D8, U+7701, U+773C, U+77ED, U+77F3, U+7814, U+793C, U+79BB, U+79C1, U+79D8, U+79EF, U+79FB, U+7A76, U+7B11, U+7B54, U+7B56, U+7B97, U+7BC7, U+7C73, U+7D20, U+7EAA, U+7EC8, U+7EDD, U+7EED, U+7EFC, U+7FA4, U+804C, U+8058, U+80CC, U+8111, U+817E, U+826F, U+8303, U+843D, U+89C9, U+89D2, U+8BA2, U+8BBF, U+8BC9, U+8BCD, U+8BE6, U+8C22, U+8C61, U+8D22, U+8D26-8D27, U+8D8A, U+8F6F, U+8F7B, U+8F83, U+8F91, U+8FB9, U+8FD4, U+8FDC, U+9002, U+94B1, U+9519, U+95ED, U+961F, U+9632-9633, U+963F, U+968F-9690, U+96BE, U+9876, U+9884, U+98DE, U+9988, U+9999, U+9EC4, U+FF1B;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/sc-slices/noto-sans-sc-114.woff2) format("woff2");
+  unicode-range: U+7E, U+2026, U+4E03, U+4E25, U+4E30, U+4E34, U+4E45, U+4E5D, U+4E89, U+4EAE, U+4ED8, U+4F11, U+4F19, U+4F24, U+4F34, U+4F59, U+4F73, U+4F9D, U+4FB5, U+5047, U+505C, U+5170, U+519C, U+51CF, U+5267, U+5356, U+5374, U+5382, U+538B, U+53E6, U+5426, U+542B, U+542F, U+5462, U+5473, U+554A, U+5566, U+5708, U+571F, U+5757, U+57DF, U+57F9, U+5802, U+590F, U+591C, U+591F, U+592B, U+5965, U+5979, U+5A01, U+5A5A, U+5B63, U+5B69, U+5B81, U+5BA1, U+5BA3, U+5C3C, U+5C42, U+5C81, U+5DE7, U+5DEE, U+5E0C, U+5E10, U+5E55, U+5E86, U+5E8F, U+5EA7, U+5F02, U+5F52, U+5F81, U+5FF5, U+60CA, U+60E0, U+6279, U+62C5, U+62FF, U+63CF, U+6444, U+64CD, U+653B, U+65BD, U+65E9, U+665A, U+66B4, U+66FE, U+6728, U+6742, U+677E, U+67B6, U+680F, U+68A6, U+68C0, U+699C, U+6B4C, U+6B66, U+6B7B, U+6BCD, U+6BDB, U+6C38, U+6C47, U+6C49, U+6CB3, U+6CB9, U+6CE2, U+6D32, U+6D3E, U+6D4F, U+6E56, U+6FC0, U+7075, U+7206, U+725B, U+72C2, U+73ED, U+7565, U+7591, U+7597, U+75C5, U+76AE, U+76D1, U+76DF, U+7834, U+7968, U+7981, U+79C0, U+7A7F, U+7A81, U+7AE5, U+7B14, U+7C89, U+7D27, U+7EAF, U+7EB3, U+7EB8, U+7EC7, U+7EE7, U+7EFF, U+7F57, U+7FFB, U+805A, U+80A1, U+822C, U+82CF, U+82E5, U+8363, U+836F, U+84DD, U+878D, U+8840, U+8857, U+8863, U+8865, U+8B66, U+8BB2, U+8BDA, U+8C01, U+8C08, U+8C46, U+8D1F, U+8D35, U+8D5B, U+8D5E, U+8DA3, U+8DDF, U+8F93, U+8FDD, U+8FF0, U+8FF7, U+8FFD, U+9000, U+9047, U+9152, U+949F, U+94C1, U+94F6, U+9646, U+9648, U+9669, U+969C, U+96EA, U+97E9, U+987B, U+987E, U+989D, U+9970, U+9986, U+9C7C, U+9C9C;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/sc-slices/noto-sans-sc-113.woff2) format("woff2");
+  unicode-range: U+26, U+3C, U+D7, U+4E4E, U+4E61, U+4E71, U+4EBF, U+4F26, U+5012, U+51AC, U+51B0, U+51B2, U+51B7, U+5218, U+521A, U+5220, U+5237, U+523B, U+526F, U+5385, U+53BF, U+53E5, U+53EB, U+53F3, U+53F6, U+5409, U+5438, U+54C8, U+54E5, U+552F, U+5584, U+5706, U+5723, U+5750, U+575A, U+5987-5988, U+59B9, U+59D0, U+59D4, U+5B88, U+5B9C, U+5BDF, U+5BFB, U+5C01, U+5C04, U+5C3E, U+5C4B, U+5C4F, U+5C9B, U+5CF0, U+5DDD, U+5DE6, U+5DE8, U+5E01, U+5E78, U+5E7B, U+5E9C, U+5EAD, U+5EF6, U+5F39, U+5FD8, U+6000, U+6025, U+604B, U+6076, U+613F, U+6258, U+6263, U+6267, U+6298, U+62A2, U+62E5, U+62EC, U+6311, U+6377, U+6388-6389, U+63A2, U+63D2, U+641E, U+642D, U+654F, U+6551, U+6597, U+65CF, U+65D7, U+65E7, U+6682, U+66F2, U+671D, U+672B, U+6740, U+6751, U+6768, U+6811, U+6863, U+6982, U+6BD2, U+6CF0, U+6D0B, U+6D17, U+6D59, U+6DD8, U+6DFB, U+6E7E, U+6F6E, U+6FB3, U+706F, U+719F, U+72AF, U+72D0, U+72D7, U+732B, U+732E, U+7389, U+73E0, U+7530, U+7687, U+76D6, U+76DB, U+7840, U+786C, U+79CB, U+79D2, U+7A0E, U+7A33, U+7A3F, U+7A97, U+7ADE-7ADF, U+7B26, U+7E41, U+7EC3, U+7F3A, U+8089, U+80DC, U+811A, U+8131, U+8138, U+821E, U+8349, U+83DC, U+8457, U+867D, U+86CB, U+8A89, U+8BA8, U+8BAD, U+8BEF, U+8BFE, U+8C6A, U+8D1D, U+8D4F, U+8D62, U+8DD1, U+8DF3, U+8F6E, U+8FF9, U+900F, U+9014, U+9057, U+9192, U+91CE, U+9488, U+94A2, U+9547, U+955C, U+95F2, U+9644, U+964D, U+96C4-96C5, U+96E8, U+96F6-96F7, U+9732, U+9759, U+9760, U+987A, U+989C, U+9910, U+996D-996E, U+9B54, U+9E21, U+9EBB, U+9F50;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/sc-slices/noto-sans-sc-112.woff2) format("woff2");
+  unicode-range: U+23, U+3D, U+4E01, U+4E39, U+4E73, U+4ECD, U+4ED9, U+4EEA, U+4F0A, U+4F1F, U+4F5B, U+4FA0, U+4FC3, U+501F, U+50A8, U+515A, U+5175, U+51A0, U+51C0, U+51E1, U+51E4, U+5200, U+520A, U+5224, U+523A, U+52AA, U+52B1, U+52B3, U+5348, U+5353, U+5360, U+5371, U+5377, U+539A, U+541B, U+5434, U+547C, U+54E6, U+5510, U+5531, U+5609, U+56F0, U+56FA, U+5733, U+574F, U+5851, U+5854, U+5899, U+58C1, U+592E, U+5939, U+5976, U+5986, U+59BB, U+5A18, U+5A74, U+5B59, U+5B87, U+5B97, U+5BA0, U+5BAB, U+5BBD-5BBE, U+5BF8, U+5C0A, U+5C3A, U+5C4A, U+5E16, U+5E1D, U+5E2D, U+5E8A, U+6015, U+602A, U+6050, U+6069, U+6162, U+61C2, U+6293, U+6297, U+62B1, U+62BD, U+62DF, U+62FC, U+6302, U+635F, U+638C, U+63ED, U+6458, U+6469, U+6563, U+6620, U+6653, U+6696-6697, U+66DD, U+675F, U+676F-6770, U+67D0, U+67D3, U+684C, U+6865, U+6885, U+68B0, U+68EE, U+690D, U+6B23, U+6B32, U+6BD5, U+6C89, U+6D01, U+6D25, U+6D89, U+6DA6, U+6DB2, U+6DF7, U+6ED1, U+6F02, U+70C8, U+70DF, U+70E7, U+7126, U+7236, U+7259, U+731C, U+745E, U+74E3, U+751A, U+751C, U+7532, U+7545, U+75DB, U+7761, U+7A0D, U+7B51, U+7CA4, U+7CD6, U+7D2B, U+7EA0, U+7EB9, U+7ED8, U+7F18, U+7F29, U+8033, U+804A, U+80A4-80A5, U+80E1, U+817F, U+829D, U+82E6, U+8336, U+840C, U+8499, U+864E, U+8651, U+865A, U+88AD, U+89E6, U+8BD7, U+8BFA, U+8C37, U+8D25, U+8D38, U+8DDD, U+8FEA, U+9010, U+9012, U+906D, U+907F-9080, U+90D1, U+9177, U+91CA, U+94FA, U+9501, U+9634-9635, U+9694, U+9707, U+9738, U+9769, U+9A7B, U+9A97, U+9AA8, U+9B3C, U+9C81, U+9ED8;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/sc-slices/noto-sans-sc-111.woff2) format("woff2");
+  unicode-range: U+4E4C, U+4E88, U+4EA1, U+4EA6, U+4ED3-4ED4, U+4EFF, U+4F30, U+4FA7, U+4FC4, U+4FD7, U+500D, U+504F, U+5076-5077, U+517D, U+5192, U+51C9, U+51EF, U+5238, U+5251, U+526A, U+52C7, U+52DF, U+52FF, U+53A6, U+53A8, U+53EC, U+5410, U+559D, U+55B7, U+5634, U+573E, U+5783, U+585E, U+586B, U+58A8, U+5999, U+59D3, U+5A1C, U+5A46, U+5B54-5B55, U+5B85, U+5B8B, U+5B8F, U+5BBF, U+5BD2, U+5C16, U+5C24, U+5E05, U+5E45, U+5E7C, U+5E84, U+5F03, U+5F1F, U+5F31, U+5F84, U+5F90, U+5FBD, U+5FC6, U+5FD9, U+5FE7, U+6052, U+6062, U+6089, U+60A3, U+60D1, U+6167, U+622A, U+6234, U+624E, U+6269, U+626C, U+62B5, U+62D2, U+6325, U+63E1, U+643A, U+6446, U+6562, U+656C, U+65E2, U+65FA, U+660C, U+6628, U+6652, U+6668, U+6676, U+66FC, U+66FF, U+6717, U+676D, U+67AA, U+67D4, U+6843, U+6881, U+68D2, U+695A, U+69FD, U+6A2A, U+6B8A, U+6C60, U+6C64, U+6C9F, U+6CAA, U+6CC9, U+6CE1, U+6CFD, U+6D1B, U+6D1E, U+6D6E, U+6DE1, U+6E10, U+6E7F, U+6F5C, U+704C, U+7070, U+7089, U+70B8, U+718A, U+71C3, U+723D, U+732A, U+73CD, U+7518, U+756A, U+75AF, U+75BE, U+75C7, U+76D2, U+76D7, U+7763, U+78E8, U+795D, U+79DF, U+7C4D, U+7D2F, U+7EE9, U+7F13, U+7F8A, U+8000, U+8010, U+80AF, U+80F6, U+80F8, U+8212, U+8273, U+82F9, U+83AB, U+83B1, U+83F2, U+8584, U+871C, U+8861, U+888B, U+88C1, U+88E4, U+8BD1, U+8BF1, U+8C31, U+8D5A, U+8D75-8D76, U+8DE8, U+8F85, U+8FA3, U+8FC5, U+9006, U+903C, U+904D, U+9075, U+9178, U+9274, U+950B, U+9526, U+95EA, U+9636, U+9686, U+978B, U+987F, U+9A7E, U+9B42, U+9E1F, U+9EA6, U+9F13, U+9F84, U+FF5E;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/sc-slices/noto-sans-sc-110.woff2) format("woff2");
+  unicode-range: U+300C-300D, U+4E54, U+4E58, U+4E95, U+4EC1, U+4F2F, U+4F38, U+4FA3, U+4FCA, U+503E, U+5141, U+5144, U+517C, U+51CC, U+51ED, U+5242, U+52B2, U+52D2, U+52E4, U+540A, U+5439, U+5448, U+5496, U+54ED, U+5565, U+5761, U+5766, U+58EE, U+593A, U+594B, U+594F, U+5954, U+5996, U+59C6, U+59FF, U+5B64, U+5BFF, U+5C18, U+5C1D, U+5C97, U+5CA9, U+5CB8, U+5E9F, U+5EC9, U+5F04, U+5F7B, U+5FA1, U+5FCD, U+6012, U+60A6, U+60AC, U+60B2, U+60EF, U+626E, U+6270, U+6276, U+62D6, U+62DC, U+6316, U+632F, U+633A, U+6355, U+63AA, U+6447, U+649E, U+64C5, U+654C, U+65C1, U+65CB, U+65E6, U+6606, U+6731, U+675C, U+67CF, U+67DC, U+6846, U+6B8B, U+6BEB, U+6C61, U+6C88, U+6CBF, U+6CDB, U+6CEA, U+6D45, U+6D53, U+6D74, U+6D82, U+6DA8, U+6DB5, U+6DEB, U+6EDA, U+6EE8, U+6F0F, U+706D, U+708E, U+70AE, U+70BC, U+70C2, U+70E6, U+7237-7238, U+72FC, U+730E, U+731B, U+739B, U+73BB, U+7483, U+74DC, U+74F6, U+7586, U+7626, U+775B, U+77FF, U+788E, U+78B0, U+7956, U+7965, U+79E6, U+7AF9, U+7BEE, U+7C97, U+7EB1, U+7EB7, U+7ED1, U+7ED5, U+7F6A, U+7F72, U+7FBD, U+8017, U+808C, U+80A9, U+80C6, U+80CE, U+8150, U+8170, U+819C, U+820D, U+8230, U+8239, U+827E, U+8377, U+8389, U+83B2, U+8428, U+8463, U+867E, U+88C2, U+88D9, U+8986, U+8BCA, U+8BDE, U+8C13, U+8C8C, U+8D21, U+8D24, U+8D56, U+8D60, U+8D8B, U+8DB4, U+8E2A, U+8F68, U+8F89, U+8F9B, U+8FA8, U+8FBD, U+9003, U+90CE, U+90ED, U+9189, U+94BB, U+9505, U+95F9, U+963B, U+9655, U+966A, U+9677, U+96FE, U+9896, U+99A8, U+9A71, U+9A82, U+9A91, U+9B45, U+9ECE, U+9F20, U+FEFF, U+FF0D;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/jp-slices/noto-sans-jp-117.woff2) format("woff2");
+  unicode-range: U+4E, U+A0, U+3000, U+300C-300D, U+4E00, U+4E0A, U+4E2D, U+4E8B, U+4EBA, U+4F1A, U+5165, U+5168, U+5185, U+51FA, U+5206, U+5229, U+524D, U+52D5, U+5408, U+554F, U+5831, U+5834, U+5927, U+5B9A, U+5E74, U+5F0F, U+60C5, U+65B0, U+65B9, U+6642, U+6700, U+672C, U+682A, U+6B63, U+6C17, U+7121, U+751F, U+7528, U+753B, U+76EE, U+793E, U+884C, U+898B, U+8A18, U+9593, U+95A2, U+FF01, U+FF08-FF09;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/jp-slices/noto-sans-jp-116.woff2) format("woff2");
+  unicode-range: U+A9, U+3010-3011, U+30E2, U+4E0B, U+4ECA, U+4ED6, U+4ED8, U+4F53, U+4F5C, U+4F7F, U+53D6, U+540D, U+54C1, U+5730, U+5916, U+5B50, U+5C0F, U+5F8C, U+624B, U+6570, U+6587, U+6599, U+691C, U+696D, U+6CD5, U+7269, U+7279, U+7406, U+767A-767B, U+77E5, U+7D04, U+7D22, U+8005, U+80FD, U+81EA, U+8868, U+8981, U+89A7, U+901A, U+9023, U+90E8, U+91D1, U+9332, U+958B, U+96C6, U+9AD8, U+FF1A, U+FF1F;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/jp-slices/noto-sans-jp-115.woff2) format("woff2");
+  unicode-range: U+7C, U+3080, U+4EE5, U+5148, U+516C, U+521D, U+5225, U+529B, U+52A0, U+53EF, U+56DE, U+56FD, U+5909, U+591A, U+5B66, U+5B9F, U+5BB6, U+5BFE, U+5E73, U+5E83, U+5EA6, U+5F53, U+6027, U+610F, U+6210, U+6240, U+660E, U+66F4, U+66F8, U+6709, U+6771, U+697D, U+69D8, U+6A5F, U+6C34, U+6CBB, U+73FE, U+756A, U+7684, U+771F, U+793A, U+7F8E, U+898F, U+8A2D, U+8A71, U+8FD1, U+9078, U+9577, U+96FB, U+FF5E;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/jp-slices/noto-sans-jp-113.woff2) format("woff2");
+  unicode-range: U+26, U+5F, U+2026, U+203B, U+4E09, U+4EAC, U+4ED5, U+4FA1, U+5143, U+5199, U+5207, U+539F, U+53E3, U+53F7, U+5411, U+5473, U+5546, U+55B6, U+5929, U+597D, U+5BB9, U+5C11, U+5C4B, U+5DDD, U+5F97, U+5FC5, U+6295, U+6301, U+6307, U+671B, U+76F8, U+78BA, U+795E, U+7D30, U+7D39, U+7D9A, U+89E3, U+8A00, U+8A73, U+8A8D, U+8A9E, U+8AAD, U+8ABF, U+8CEA, U+8ECA, U+8FFD, U+904B, U+9650, U+FF11-FF12;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/jp-slices/noto-sans-jp-112.woff2) format("woff2");
+  unicode-range: U+4E16, U+4E3B, U+4EA4, U+4EE4, U+4F4D, U+4F4F, U+4F55, U+4F9B, U+5317, U+5358, U+53C2, U+53E4, U+548C, U+571F, U+59CB, U+5CF6, U+5E38, U+63A2, U+63B2, U+6559, U+662D, U+679C, U+6C7A, U+72B6, U+7523, U+767D, U+770C, U+7A2E, U+7A3F, U+7A7A, U+7B2C, U+7B49, U+7D20, U+7D42, U+8003, U+8272, U+8A08, U+8AAC, U+8CB7, U+8EAB, U+8EE2, U+9054-9055, U+90FD, U+914D, U+91CD, U+969B, U+97F3, U+984C, U+FF06;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/jp-slices/noto-sans-jp-110.woff2) format("woff2");
+  unicode-range: U+40, U+4E86, U+4E95, U+4F01, U+4F1D, U+4FBF, U+5099, U+5171, U+5177, U+53CB, U+53CE, U+53F0, U+5668, U+5712, U+5BA4, U+5CA1, U+5F85, U+60F3, U+653E, U+65AD, U+65E9, U+6620, U+6750, U+6761, U+6B62, U+6B74, U+6E08, U+6E80, U+7248, U+7531, U+7533, U+753A, U+77F3, U+798F, U+7F6E, U+8449, U+88FD, U+89B3, U+8A55, U+8AC7, U+8B77, U+8DB3, U+8EFD, U+8FD4, U+9031-9032, U+9580, U+9589, U+96D1, U+985E;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/jp-slices/noto-sans-jp-108.woff2) format("woff2");
+  unicode-range: U+2605-2606, U+301C, U+4E57, U+4FEE, U+5065, U+52DF, U+533B, U+5357, U+57DF, U+58EB, U+58F0, U+591C, U+592A-592B, U+5948, U+5B85, U+5D0E, U+5EA7, U+5FF5, U+6025, U+63A1, U+63A5, U+63DB, U+643A, U+65BD, U+671D, U+68EE, U+6982, U+6B73, U+6BD4, U+6D88, U+7570, U+7B11, U+7D76, U+8077, U+8217, U+8C37, U+8C61, U+8CC7, U+8D85, U+901F, U+962A, U+9802, U+9806, U+9854, U+98F2, U+9928, U+99C5, U+9ED2;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/jp-slices/noto-sans-jp-107.woff2) format("woff2");
+  unicode-range: U+23, U+3C, U+2192, U+4E45, U+4EFB, U+4F50, U+4F8B, U+4FC2, U+5024, U+5150, U+5272, U+5370, U+53BB, U+542B, U+56DB, U+56E3, U+57CE, U+5BC4, U+5BCC, U+5F71, U+60AA, U+6238, U+6280, U+629C, U+6539, U+66FF, U+670D, U+677E-677F, U+6839, U+69CB, U+6B4C, U+6BB5, U+6E96, U+6F14, U+72EC, U+7389, U+7814, U+79CB, U+79D1, U+79FB, U+7A0E, U+7D0D, U+85E4, U+8D64, U+9632, U+96E2, U+9805, U+99AC, U+FF1E;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/jp-slices/noto-sans-jp-106.woff2) format("woff2");
+  unicode-range: U+30F6, U+50AC, U+5178, U+51E6, U+5224, U+52DD, U+5883, U+5897, U+590F, U+5A5A, U+5BB3, U+5C65, U+5E03, U+5E2B, U+5E30, U+5EB7, U+6271, U+63F4, U+64AE, U+6574, U+672B, U+679A, U+6A29-6A2A, U+6CA2, U+6CC1, U+6D0B, U+713C, U+74B0, U+7981, U+7A0B, U+7BC0, U+7D1A, U+7D61, U+7FD2, U+822C, U+8996, U+89AA, U+8CAC, U+8CBB, U+8D77, U+8DEF, U+9020, U+9152, U+9244, U+9662, U+967A, U+96E3, U+9759, U+FF16;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/jp-slices/noto-sans-jp-103.woff2) format("woff2");
+  unicode-range: U+500D, U+5074, U+50CD, U+5175, U+52E2, U+5352, U+5354, U+53F2, U+5409, U+56FA, U+5A18, U+5B88, U+5BDD, U+5CA9, U+5F92, U+5FA9, U+60A9, U+623F, U+6483, U+653F, U+666F, U+66AE, U+66F2, U+6A21, U+6B66, U+6BCD, U+6D5C, U+796D, U+7A4D, U+7AEF, U+7B56, U+7B97, U+7C4D, U+7E04, U+7FA9, U+8377, U+83DC, U+83EF, U+8535, U+8863, U+88CF, U+88DC, U+8907, U+8ACB, U+90CE, U+91DD, U+FF0B, U+FF0D, U+FF19, U+FF65;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/jp-slices/noto-sans-jp-101.woff2) format("woff2");
+  unicode-range: U+25BC, U+3012, U+4EF2, U+4F0A, U+516B, U+5373, U+539A, U+53B3, U+559C, U+56F0, U+5727, U+5742, U+5965, U+59FF, U+5BC6, U+5DFB, U+5E45, U+5EAD, U+5FB3, U+6211, U+6253, U+639B, U+63A8, U+6545, U+6575, U+6628, U+672D, U+68A8, U+6BDB, U+6D25, U+707D, U+767E, U+7834, U+7B46, U+7BC9, U+8074, U+82E6, U+8349, U+8A2A, U+8D70, U+8DA3, U+8FCE, U+91CC, U+967D, U+97FF, U+9996, U+FF1C, U+FF2F, U+FF32, U+FF34;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/jp-slices/noto-sans-jp-92.woff2) format("woff2");
+  unicode-range: U+2460, U+4E5F, U+4E7E, U+4ED9, U+501F, U+502B, U+5968, U+5974, U+5AC1, U+5B99, U+5BA3, U+5BE7, U+5BE9, U+5C64, U+5CB8, U+5EC3, U+5F1F, U+616E, U+6297, U+62E0, U+62EC, U+6368, U+642D, U+65E6, U+6717, U+676F, U+6B04, U+732E, U+7652, U+76CA, U+76D7, U+7802, U+7E70, U+7F6A, U+8133, U+81E8, U+866B, U+878D, U+88F8, U+8A5E, U+8CDB, U+8D08, U+907A, U+90E1, U+96F2, U+9F8D, U+FF35, U+FF37, U+FF40, U+FF9D;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./noto-sans/jp-slices/noto-sans-jp-91.woff2) format("woff2");
+  unicode-range: U+60, U+2200, U+226B, U+2461, U+517C, U+526F, U+5800, U+5B97, U+5BF8, U+5C01, U+5D29, U+5E4C, U+5E81, U+6065, U+61D0, U+667A, U+6696, U+6843, U+6C99, U+6D99, U+6EC5, U+6F22, U+6F6E, U+6FA4, U+6FEF, U+71C3, U+72D9, U+7384, U+78E8, U+7A1A, U+7A32, U+7A3C, U+7ADC, U+7CA7, U+7D2B, U+7DAD, U+7E4B, U+80A9, U+8170, U+81ED, U+820E, U+8A17, U+8AFE, U+90AA, U+914E, U+963F, U+99C4, U+9EBA, U+9F3B, U+FF38;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./roboto/roboto-vietnamese.woff2) format("woff2");
+  unicode-range: U+102-103, U+110-111, U+128-129, U+168-169, U+1A0-1A1, U+1AF-1B0, U+300-301, U+303-304, U+308-309, U+323, U+329, U+1EA0-1EF9, U+20AB;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./roboto/roboto-greek.woff2) format("woff2");
+  unicode-range: U+370-377, U+37A-37F, U+384-38A, U+38C, U+38E-3A1, U+3A3-3FF;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./roboto/roboto-cyrillic-ext.woff2) format("woff2");
+  unicode-range: U+460-52F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./roboto/roboto-cyrillic.woff2) format("woff2");
+  unicode-range: U+301, U+400-45F, U+490-491, U+4B0-4B1, U+2116;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./roboto/roboto-latin-ext.woff2) format("woff2");
+  unicode-range: U+100-2BA, U+2BD-2C5, U+2C7-2CC, U+2CE-2D7, U+2DD-2FF, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "WorldCities";
+  src: url(./roboto/roboto-latin.woff2) format("woff2");
+  unicode-range: U+0-FF, U+131, U+152-153, U+2BB-2BC, U+2C6, U+2DA, U+2DC, U+2000-206F, U+20AC, U+2122, U+FEFF, U+FFFD;
+}
