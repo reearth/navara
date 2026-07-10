@@ -576,16 +576,11 @@ export class TileMesh
     // which can grow linear memory and detach any previously-obtained buffer
     // view. Reading it first keeps position/uv/indices/normals valid until
     // createSkirtMesh copies them.
-    const aabb_center = new Vector3(
-      mesh.aabb.center.x,
-      mesh.aabb.center.y,
-      mesh.aabb.center.z,
-    );
-    const aabb_extent = new Vector3(
-      mesh.aabb.extent.x,
-      mesh.aabb.extent.y,
-      mesh.aabb.extent.z,
-    );
+    const aabb = mesh.aabb;
+    const center = aabb.center;
+    const extent = aabb.extent;
+    const aabb_center = new Vector3(center.x, center.y, center.z);
+    const aabb_extent = new Vector3(extent.x, extent.y, extent.z);
 
     const position = buf.f32(mesh.vertices);
     const indices = buf.u32(mesh.indices);
