@@ -288,7 +288,7 @@ import { Color } from "@navara/three";
 
 **Type:** `string`
 
-**Description:** Specifies the URL of the object. Supports image files.
+**Description:** Specifies the URL of the object. Supports image files. This is the default image for every feature in the layer; individual features can override it by returning `image` from [`FeatureEvaluator.evaluate()`](../../api/feature-evaluator/#evaluate).
 
 **Default:** Required
 
