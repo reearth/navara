@@ -10,10 +10,6 @@ import {
   Object3D,
   ShaderMaterial,
   BufferAttribute,
-  DataArrayTexture,
-  UnsignedByteType,
-  RGBAFormat,
-  LinearFilter,
   Color,
   PerspectiveCamera,
   Vector2,
@@ -21,10 +17,10 @@ import {
 import invariant from "tiny-invariant";
 
 import type { EventContext } from "../event/context";
-import { TEXTURE_LOADER } from "../event/loaders";
 import { createInstancedSpriteMaterialEnhancer } from "../material/enhancer";
-import { getImageDataFromImageBitmap } from "../tasks/getImageDataFromImageBitmap";
 
+import { BillboardAtlas } from "./billboardAtlas";
+import { loadAtlasImageFromUrl } from "./billboardAtlasImageLoader";
 import { PickableMesh } from "./pickableMesh";
 
 export type InstancedSpriteOptions = {
@@ -55,7 +51,11 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   private _initialColor: Color = new Color(0xffffff);
   private _initialHeight = 0.0;
   private _initialSize = -1.0; // Negative value indicates "use uScale" in shader
-  private _loadedUrls = new Set<string>();
+  private _atlas?: BillboardAtlas;
+  private _defaultUrl?: string;
+  /** Instance ids whose image was overridden per-feature; the default image
+   * from the material no longer applies to them. */
+  private _imageOverrides = new Set<number>();
   private _active = true;
   readonly ctx: EventContext;
   /** Material enhancer for encapsulated state management */
@@ -185,17 +185,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       });
 
       if (m.material.url) {
-        const layerIndex = await this.uploadTexture(m.material.url, material);
-        if (layerIndex !== undefined) {
-          const layerAttr = this.geometry.getAttribute(
-            "instanceLayer",
-          ) as InstancedBufferAttribute;
-          const instanceCount = layerAttr.count;
-          for (let i = 0; i < instanceCount; i++) {
-            layerAttr.setX(i, layerIndex);
-          }
-          layerAttr.needsUpdate = true;
-        }
+        await this._setDefaultImage(m.material.url);
       }
     }
   }
@@ -242,7 +232,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     // instanceParams: vec4(height, size, show, opacity)
     const paramsBuffer = new Float32Array(instanceCount * 4);
     const colorBuffer = new Float32Array(instanceCount * 3);
-    let layerBuffer = undefined;
 
     this._initialColor = new Color().setHex(m.material.color ?? 0xffffff);
     // instanceSize defaults to a negative value to indicate "use uScale" in the shader.
@@ -271,14 +260,12 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     }
 
     if (m instanceof NavaraBillboardMesh) {
-      layerBuffer = new Float32Array(instanceCount);
-      // For billboards, we set layer based on some logic, here we just set to 0
-      for (let i = 0; i < instanceCount; i++) {
-        layerBuffer[i] = 0; // All use layer 0 for now
-      }
+      // instanceUvRect: vec4(x, y, w, h) — this instance's atlas sub-rect in
+      // pixels. Zeroed until an image is packed; a zero-height rect samples a
+      // transparent texel, so instances stay invisible rather than garbled.
       instancedGeometry.setAttribute(
-        "instanceLayer",
-        new InstancedBufferAttribute(layerBuffer, 1),
+        "instanceUvRect",
+        new InstancedBufferAttribute(new Float32Array(instanceCount * 4), 4),
       );
     }
 
@@ -387,7 +374,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
 
     // Handle billboard texture
     if (isBillboard && m.material.url) {
-      await this.uploadTexture(m.material.url, material);
+      await this._setDefaultImage(m.material.url);
     }
 
     material.visible = m.material.show ?? true;
@@ -463,92 +450,48 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     return null;
   }
 
-  /** Extract raw RGBA pixel data from an image-based texture via an offscreen canvas. */
-  private async extractPixelData(
-    texture: { image: HTMLImageElement | ImageBitmap },
-    flipY: boolean,
-  ) {
-    const img = texture.image;
-
-    const imageData = await getImageDataFromImageBitmap(
-      await createImageBitmap(img, {
-        imageOrientation: flipY ? "flipY" : "none",
-      }),
-      new OffscreenCanvas(img.width, img.height),
-    );
-
-    return new Uint8Array(imageData);
+  private _ensureAtlas(): BillboardAtlas {
+    this._atlas ??= new BillboardAtlas({ loadImage: loadAtlasImageFromUrl });
+    return this._atlas;
   }
 
-  private async uploadTexture(
-    url: string,
-    material: ShaderMaterial,
-  ): Promise<number | undefined> {
-    if (this._loadedUrls.has(url)) return [...this._loadedUrls].indexOf(url);
+  /**
+   * Push the atlas texture and size to the material. The texture object is
+   * replaced whenever the atlas grows, so this must run after every pack().
+   */
+  private _syncAtlasUniforms(): void {
+    const atlas = this._atlas;
+    if (!atlas) return;
+    this.getEnhancer().update({
+      base: {
+        texture: { value: atlas.texture },
+        atlasSize: [atlas.size, atlas.size],
+      },
+    });
+  }
 
-    const newTexture = await TEXTURE_LOADER.loadAsync(url);
+  /**
+   * Load the material-level image and apply its rect to every instance that
+   * hasn't been overridden per-feature via setFeatureImageByBatchId.
+   */
+  private async _setDefaultImage(url: string): Promise<void> {
+    if (this._defaultUrl === url) return;
+    this._defaultUrl = url;
 
-    if (newTexture) {
-      let newTextureArray: DataArrayTexture;
-      const width = newTexture.image.width;
-      const height = newTexture.image.height;
-      const pixelData = await this.extractPixelData(newTexture, true);
+    const rect = await this._ensureAtlas().pack(url);
+    if (!rect) return;
+    // A newer default image won the race while this one was loading.
+    if (this._defaultUrl !== url) return;
 
-      const existingTextureArray = material.uniforms.uTexture
-        ?.value as DataArrayTexture;
-      if (existingTextureArray) {
-        // make sure new texture has same dimensions as existing one, otherwise we cannot update the texture array
-        if (
-          existingTextureArray.image.width !== width ||
-          existingTextureArray.image.height !== height
-        ) {
-          console.warn(
-            `InstancedSpriteMesh: Billboard texture size mismatch old:[${existingTextureArray.image.width}x${existingTextureArray.image.height}] ,new:[${width}x${height}], cannot update texture array`,
-          );
-          newTexture.dispose();
-          return undefined;
-        }
-        // update existing texture array with new texture data
-        const existingData = existingTextureArray.image.data as Uint8Array;
-        const totalByteLength = existingData.byteLength + pixelData.byteLength;
-        const textureData = new Uint8Array(totalByteLength);
-        textureData.set(existingData, 0); // copy existing layers
-        textureData.set(pixelData, existingData.byteLength); // append new layer
-
-        newTextureArray = new DataArrayTexture(
-          textureData,
-          width,
-          height,
-          this._loadedUrls.size + 1,
-        );
-
-        existingTextureArray.dispose(); // dispose old texture array
-      } else {
-        newTextureArray = new DataArrayTexture(pixelData, width, height, 1);
-      }
-
-      newTextureArray.format = RGBAFormat;
-      newTextureArray.type = UnsignedByteType;
-      newTextureArray.generateMipmaps = false;
-      newTextureArray.needsUpdate = true;
-      newTextureArray.minFilter = LinearFilter;
-      newTextureArray.magFilter = LinearFilter;
-
-      // Sync texture and aspect ratio via enhancer
-      this.getEnhancer().update({
-        base: {
-          texture: { value: newTextureArray },
-          aspect: width / height,
-        },
-      });
-
-      newTexture.dispose();
-      this._loadedUrls.add(url);
-      return this._loadedUrls.size - 1; // return index of the newly added texture layer
+    this._syncAtlasUniforms();
+    const rectAttr = this.geometry.getAttribute(
+      "instanceUvRect",
+    ) as InstancedBufferAttribute;
+    for (let i = 0; i < rectAttr.count; i++) {
+      if (this._imageOverrides.has(i)) continue;
+      rectAttr.setXYZW(i, rect.x, rect.y, rect.w, rect.h);
     }
-
-    console.warn(`Failed to load texture from url: ${url}`);
-    return undefined;
+    rectAttr.needsUpdate = true;
   }
 
   onBeforePicking(): void {
@@ -641,25 +584,41 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     paramsAttr.needsUpdate = true;
   }
 
+  /**
+   * Give one feature its own image, packed into this mesh's texture atlas.
+   * Loads are deduplicated by URL, so styling many features with few distinct
+   * images fetches each image once. On load failure the feature keeps its
+   * current (default) image. No-op for non-billboard (point) meshes.
+   */
+  async setFeatureImageByBatchId(batchId: number, url: string): Promise<void> {
+    const instanceId = this._batchIdToInstance.get(batchId);
+    if (instanceId === undefined) return;
+
+    const rectAttr = this.geometry.getAttribute("instanceUvRect") as
+      | InstancedBufferAttribute
+      | undefined;
+    if (!rectAttr) return;
+
+    const rect = await this._ensureAtlas().pack(url);
+    if (!rect) return;
+
+    this._imageOverrides.add(instanceId);
+    this._syncAtlasUniforms();
+    rectAttr.setXYZW(instanceId, rect.x, rect.y, rect.w, rect.h);
+    rectAttr.needsUpdate = true;
+  }
+
   dispose(): void {
     this.geometry?.dispose();
 
-    const shaderMaterial = this.material as ShaderMaterial;
+    // The material's uTexture points at the atlas texture; the atlas owns it.
+    this._atlas?.dispose();
+    this._atlas = undefined;
 
-    const uniforms = shaderMaterial.uniforms as {
-      uTexture?: { value: DataArrayTexture | null };
-      [key: string]: unknown;
-    };
-
-    const textureArray = uniforms?.uTexture?.value;
-    if (textureArray instanceof DataArrayTexture) {
-      textureArray.dispose();
-    }
-
-    shaderMaterial.dispose();
+    (this.material as ShaderMaterial).dispose();
 
     // Clear internal collections to release references
     this._batchIdToInstance.clear();
-    this._loadedUrls.clear();
+    this._imageOverrides.clear();
   }
 }

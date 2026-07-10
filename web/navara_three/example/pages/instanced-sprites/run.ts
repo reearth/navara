@@ -18,7 +18,7 @@ const layers: MaterialDesc[] = [
       features: [
         {
           type: "Feature",
-          properties: {},
+          properties: { icon: "restaurant" },
           geometry: {
             coordinates: [139.70513431449842, 35.69279782617761],
             type: "Point",
@@ -26,7 +26,7 @@ const layers: MaterialDesc[] = [
         },
         {
           type: "Feature",
-          properties: {},
+          properties: { icon: "cafe" },
           geometry: {
             coordinates: [140.13033810546995, 35.60447056434825],
             type: "Point",
@@ -34,7 +34,7 @@ const layers: MaterialDesc[] = [
         },
         {
           type: "Feature",
-          properties: {},
+          properties: { icon: "hotel" },
           geometry: {
             coordinates: [139.64591330307843, 35.85950281451436],
             type: "Point",
@@ -42,7 +42,7 @@ const layers: MaterialDesc[] = [
         },
         {
           type: "Feature",
-          properties: {},
+          properties: { icon: "school" },
           geometry: {
             coordinates: [139.63564871528018, 35.44128807202607],
             type: "Point",
@@ -50,7 +50,7 @@ const layers: MaterialDesc[] = [
         },
         {
           type: "Feature",
-          properties: {},
+          properties: { icon: "hospital" },
           geometry: {
             coordinates: [139.28453080888477, 35.51560883529815],
             type: "Point",
@@ -127,7 +127,22 @@ export const run = async (view: ThreeView<DefaultDescriptions>) => {
     expanded: true,
   });
 
-  addCtrlPanel(layers, view, pane);
+  const layerInstances = addCtrlPanel(layers, view, pane);
   addCameraControl(view, pane);
   addDateControl(view, pane);
+
+  // Per-feature billboard images: each feature's `icon` property picks an
+  // image URL. Every distinct URL is loaded once and packed into the layer's
+  // texture atlas; the material's `url` stays the fallback for features
+  // without an `icon`.
+  const [billboardLayer] = layerInstances.values();
+  billboardLayer?.on("featureUpdated", ({ evaluator }) => {
+    evaluator.evaluate(
+      ({ properties }) => {
+        const icon = properties?.["icon"] as string | undefined;
+        return icon ? { image: `/icons/${icon}.svg` } : {};
+      },
+      { filters: ["icon"] },
+    );
+  });
 };

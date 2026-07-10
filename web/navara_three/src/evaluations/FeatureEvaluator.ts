@@ -55,6 +55,8 @@ export type EvaluatableMaterialProperty = {
   size: AvailableMaterialProperty["size"];
   /** Opacity expression from layer configuration (for polygons/points/text where supported). */
   opacity: AvailableMaterialProperty["opacity"];
+  /** Image URL for billboards; packed into a shared per-mesh texture atlas. */
+  image: string;
 };
 
 type EvaluatableMaterialPropertyKey = keyof EvaluatableMaterialProperty;
@@ -68,6 +70,7 @@ type EvaluatedMaterialProperty = {
   width: number;
   size: number;
   opacity: number;
+  image: string;
 };
 
 /**
@@ -305,6 +308,8 @@ export class FeatureEvaluator {
    * - `width` - Line width in pixels (for polylines)
    * - `size` - Feature size in pixels (for points/text)
    * - `opacity` - Feature opacity 0-1
+   * - `image` - Image URL (for billboards); loaded once per distinct URL and
+   *   packed into the layer's texture atlas
    *
    * Note: Evaluated styles override the layer's default styles.
    *
@@ -379,6 +384,11 @@ export class FeatureEvaluator {
       }
       if (evaluated.opacity != null) {
         obj.setFeatureOpacityByBatchId(batchId, evaluated.opacity);
+      }
+      if (evaluated.image != null) {
+        // Async by nature (the image may need fetching); the atlas dedupes
+        // loads by URL so evaluating many features costs one fetch per image.
+        void obj.setFeatureImageByBatchId(batchId, evaluated.image);
       }
       return;
     }

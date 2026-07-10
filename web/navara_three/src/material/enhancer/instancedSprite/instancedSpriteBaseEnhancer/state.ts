@@ -19,7 +19,7 @@ export const DEFAULT_BASE_PROPS: Required<
   emissiveIntensity: 0,
   transparent: true,
   depthTest: true,
-  aspect: 1.0,
+  atlasSize: [1.0, 1.0],
   fovRad: 1.0,
   screenHeightPx: 1080,
 };
@@ -39,7 +39,7 @@ export const DEFAULT_BASE_STATE: InstancedSpriteBaseState = {
   emissiveIntensity: DEFAULT_BASE_PROPS.emissiveIntensity,
   transparent: DEFAULT_BASE_PROPS.transparent,
   depthTest: DEFAULT_BASE_PROPS.depthTest,
-  aspect: DEFAULT_BASE_PROPS.aspect,
+  atlasSize: DEFAULT_BASE_PROPS.atlasSize,
   fovRad: DEFAULT_BASE_PROPS.fovRad,
   screenHeightPx: DEFAULT_BASE_PROPS.screenHeightPx,
 };
@@ -73,7 +73,7 @@ export const updateState = (
       props.emissiveIntensity ?? currentState.emissiveIntensity,
     transparent: props.transparent ?? currentState.transparent,
     depthTest: props.depthTest ?? currentState.depthTest,
-    aspect: props.aspect ?? currentState.aspect,
+    atlasSize: props.atlasSize ?? currentState.atlasSize,
     fovRad: props.fovRad ?? currentState.fovRad,
     screenHeightPx: props.screenHeightPx ?? currentState.screenHeightPx,
   };

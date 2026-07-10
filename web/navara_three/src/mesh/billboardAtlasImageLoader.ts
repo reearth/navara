@@ -1,0 +1,27 @@
+import { TEXTURE_LOADER } from "../event/loaders";
+import { getImageDataFromImageBitmap } from "../tasks/getImageDataFromImageBitmap";
+
+import type { LoadAtlasImage } from "./billboardAtlas";
+
+/**
+ * Browser decode pipeline for `BillboardAtlas`: fetch via the shared texture
+ * loader, rasterize to RGBA off the main thread. Lives outside billboardAtlas
+ * so the atlas itself stays importable in worker-free environments (tests).
+ *
+ * flipY at decode matches the previous DataArrayTexture path: row 0 of the
+ * pixel data is the bottom of the image, i.e. v = 0 in the atlas texture.
+ */
+export const loadAtlasImageFromUrl: LoadAtlasImage = async (url) => {
+  const texture = await TEXTURE_LOADER.loadAsync(url);
+  const img = texture.image as HTMLImageElement | ImageBitmap;
+  const width = img.width;
+  const height = img.height;
+
+  const data = await getImageDataFromImageBitmap(
+    await createImageBitmap(img, { imageOrientation: "flipY" }),
+    new OffscreenCanvas(width, height),
+  );
+  texture.dispose();
+
+  return { width, height, data: new Uint8Array(data) };
+};
