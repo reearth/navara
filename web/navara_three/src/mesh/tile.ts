@@ -571,21 +571,11 @@ export class TileMesh
       textureFragmentIndex,
       tileMeshToFragmentIds,
     } = this.ctx;
-    const position = buf.f32(mesh.vertices);
-    const indices = buf.u32(mesh.indices);
-    if (!position || !indices) return;
-
-    const uv = buf.f32(mesh.uvs);
-    const normals = mesh.normals != null ? buf.f32(mesh.normals) : null;
-
-    // The buf.* arrays are short-lived views into WASM memory: they must be
-    // consumed before any further WASM call. createSkirtMesh copies them once —
-    // into the combined buffers when a skirt exists, or via slice() otherwise.
-    // Terrain-only geometry (for shadow rendering). createSkirtMesh fills it:
-    // when a skirt exists it shares the combined geometry's buffers (with the
-    // skirt cut off via drawRange).
-    const terrainGeometry = new BufferGeometry();
-
+    // Read the AABB before grabbing the buffer views below. `mesh.aabb` (and its
+    // Vec3 center/extent) are wasm-bindgen getters that allocate WASM objects,
+    // which can grow linear memory and detach any previously-obtained buffer
+    // view. Reading it first keeps position/uv/indices/normals valid until
+    // createSkirtMesh copies them.
     const aabb_center = new Vector3(
       mesh.aabb.center.x,
       mesh.aabb.center.y,
@@ -596,6 +586,23 @@ export class TileMesh
       mesh.aabb.extent.y,
       mesh.aabb.extent.z,
     );
+
+    const position = buf.f32(mesh.vertices);
+    const indices = buf.u32(mesh.indices);
+    if (!position || !indices) return;
+
+    const uv = buf.f32(mesh.uvs);
+    const normals = mesh.normals != null ? buf.f32(mesh.normals) : null;
+
+    // The buf.* arrays are short-lived views into WASM memory: they must be
+    // consumed before any further WASM call that allocates. createSkirtMesh only
+    // reads non-allocating handle getters and consecutive buf.* views, then
+    // copies them once — into the combined buffers when a skirt exists, or via
+    // slice() otherwise.
+    // Terrain-only geometry (for shadow rendering). createSkirtMesh fills it:
+    // when a skirt exists it shares the combined geometry's buffers (with the
+    // skirt cut off via drawRange).
+    const terrainGeometry = new BufferGeometry();
 
     const geometry = this.createSkirtMesh(
       mesh,
