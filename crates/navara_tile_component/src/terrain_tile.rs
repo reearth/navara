@@ -381,6 +381,9 @@ impl TerrainTile {
             if let Some(h) = &cached_mesh.heights {
                 buf.remove(h);
             }
+            if let Some(h) = &cached_mesh.normals {
+                buf.remove(h);
+            }
             self.cached_mesh_handle = None;
         }
 

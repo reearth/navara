@@ -116,6 +116,23 @@ export type BatchPrepareTextResult = {
   evicted?: boolean;
 };
 
+/** Snapshot of the font worker's WASM heap and font-cache memory usage. */
+export type FontWorkerMemoryStats = {
+  /** Total WASM linear memory of the font worker (never shrinks). */
+  heapBytes: number;
+  fontCount: number;
+  atlasCount: number;
+  glyphCount: number;
+  /** Raw font file bytes held by the cache. */
+  fontBytes: number;
+  /** Monochrome (SDF/MSDF) atlas pixel bytes. */
+  atlasBytes: number;
+  /** COLRv1 color atlas pixel bytes. */
+  colorAtlasBytes: number;
+  /** Configured cache budget; undefined when unlimited. */
+  budgetBytes?: number;
+};
+
 type UnicodeRange = {
   from: number;
   to: number;

@@ -15,9 +15,17 @@
 //!    fetch the leaf and feed it to [`on_leaf_bytes`](Archive::on_leaf_bytes),
 //!    then resolve again. On [`Resolution::Tile`], fetch the payload.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::{Compression, Directory, Error, Header, tile_id};
+
+/// Resident-byte cap for cached leaf directories. A global multi-GB archive
+/// has thousands of leaf directories; caching them all costs 50–500MB. Beyond
+/// this cap, the oldest leaves are dropped and re-fetched on demand (a leaf is
+/// only a few KB, and `resolve` re-emits `NeedLeaf` for a missing one), so
+/// resident leaf memory stays bounded. Sized generously so the working set of
+/// a viewport rarely thrashes.
+const LEAF_CACHE_MAX_BYTES: usize = 32 * 1024 * 1024;
 
 /// A byte range to fetch from the archive: `length` bytes starting at `offset`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -77,11 +85,40 @@ struct Ready {
     header: Header,
     root_dir: Directory,
     /// Leaf directories already fetched, keyed by their offset within the
-    /// leaf-directory section.
+    /// leaf-directory section. Byte-capped (see [`LEAF_CACHE_MAX_BYTES`]);
+    /// dropped leaves are re-fetched on the next `resolve`.
     leaves: HashMap<u64, Directory>,
+    /// Insertion order of `leaves`, for FIFO eviction under the byte cap.
+    leaf_order: VecDeque<u64>,
+    /// Current resident bytes of `leaves`.
+    leaves_bytes: usize,
     /// Leaf offsets whose fetch failed. Tiles behind them resolve to `Absent`
     /// instead of being re-requested forever.
     failed_leaves: HashSet<u64>,
+}
+
+impl Ready {
+    /// Insert a fetched leaf, evicting oldest leaves (FIFO) to stay under the
+    /// byte cap.
+    fn insert_leaf(&mut self, leaf_offset: u64, dir: Directory) {
+        // Replacing an existing leaf: reverse its old contribution first.
+        if let Some(old) = self.leaves.remove(&leaf_offset) {
+            self.leaves_bytes = self.leaves_bytes.saturating_sub(old.byte_len());
+            self.leaf_order.retain(|&o| o != leaf_offset);
+        }
+        self.leaves_bytes += dir.byte_len();
+        self.leaves.insert(leaf_offset, dir);
+        self.leaf_order.push_back(leaf_offset);
+
+        while self.leaves_bytes > LEAF_CACHE_MAX_BYTES && self.leaf_order.len() > 1 {
+            let Some(evict) = self.leaf_order.pop_front() else {
+                break;
+            };
+            if let Some(dropped) = self.leaves.remove(&evict) {
+                self.leaves_bytes = self.leaves_bytes.saturating_sub(dropped.byte_len());
+            }
+        }
+    }
 }
 
 /// A PMTiles v3 archive being resolved incrementally. URL-agnostic: the caller
@@ -184,6 +221,8 @@ impl Archive {
                             header,
                             root_dir,
                             leaves: HashMap::new(),
+                            leaf_order: VecDeque::new(),
+                            leaves_bytes: 0,
                             failed_leaves: HashSet::new(),
                         });
                     }
@@ -200,6 +239,8 @@ impl Archive {
                     header,
                     root_dir,
                     leaves: HashMap::new(),
+                    leaf_order: VecDeque::new(),
+                    leaves_bytes: 0,
                     failed_leaves: HashSet::new(),
                 });
                 Ok(())
@@ -295,7 +336,7 @@ impl Archive {
             return Ok(());
         };
         let dir = parse_directory(ready.header.internal_compression, bytes)?;
-        ready.leaves.insert(leaf_offset, dir);
+        ready.insert_leaf(leaf_offset, dir);
         Ok(())
     }
 
@@ -319,4 +360,77 @@ impl Archive {
 fn parse_directory(compression: Compression, raw: &[u8]) -> Result<Directory, Error> {
     let bytes = crate::decompress(compression, raw)?;
     Directory::parse(&bytes)
+}
+
+#[cfg(test)]
+mod leaf_cache_tests {
+    use super::*;
+    use crate::directory::Entry;
+    use crate::header::TileType;
+
+    fn header() -> Header {
+        Header {
+            version: 3,
+            root_dir_offset: 0,
+            root_dir_length: 0,
+            leaf_dirs_offset: 0,
+            tile_data_offset: 0,
+            internal_compression: Compression::None,
+            tile_compression: Compression::None,
+            tile_type: TileType::Mvt,
+            min_zoom: 0,
+            max_zoom: 20,
+        }
+    }
+
+    fn ready() -> Ready {
+        Ready {
+            header: header(),
+            root_dir: Directory::default(),
+            leaves: HashMap::new(),
+            leaf_order: VecDeque::new(),
+            leaves_bytes: 0,
+            failed_leaves: HashSet::new(),
+        }
+    }
+
+    /// A directory whose entry vector is `bytes` large (approx).
+    fn dir_of_bytes(bytes: usize) -> Directory {
+        let n = (bytes / std::mem::size_of::<Entry>()).max(1);
+        Directory {
+            entries: vec![Entry::default(); n],
+        }
+    }
+
+    #[test]
+    fn caps_resident_bytes_and_evicts_oldest_fifo() {
+        let mut r = ready();
+        let per_leaf = 8 * 1024 * 1024; // 8MB each; cap is 32MB → holds ~4.
+
+        // Insert more than the cap can hold.
+        for offset in 0..10u64 {
+            r.insert_leaf(offset, dir_of_bytes(per_leaf));
+        }
+
+        assert!(
+            r.leaves_bytes <= LEAF_CACHE_MAX_BYTES,
+            "resident bytes exceeded the cap: {}",
+            r.leaves_bytes
+        );
+        // Oldest (0,1,...) evicted; the most recent survive.
+        assert!(!r.leaves.contains_key(&0), "oldest leaf should be evicted");
+        assert!(r.leaves.contains_key(&9), "newest leaf should be resident");
+        // leaves map and order queue stay consistent.
+        assert_eq!(r.leaves.len(), r.leaf_order.len());
+    }
+
+    #[test]
+    fn reinserting_same_offset_does_not_double_count() {
+        let mut r = ready();
+        r.insert_leaf(5, dir_of_bytes(4 * 1024 * 1024));
+        let once = r.leaves_bytes;
+        r.insert_leaf(5, dir_of_bytes(4 * 1024 * 1024));
+        assert_eq!(r.leaves_bytes, once, "re-insert should replace, not add");
+        assert_eq!(r.leaf_order.len(), 1);
+    }
 }

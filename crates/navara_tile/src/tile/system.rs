@@ -2,7 +2,7 @@ use bevy_ecs::prelude::*;
 use bevy_ecs::system::SystemParam;
 use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, Order, OrderByDistance, Priority, Rendered};
-use navara_core::{Aabb, TileXYZ, WGS84_64};
+use navara_core::{Aabb, TileXYZ, WGS84_64, vec3_to_xyz};
 use navara_data_requester::{DataManager, DataRequester, DataRequesterStatus};
 use navara_fog::Fog;
 use navara_frame::FrameManager;
@@ -12,6 +12,10 @@ use navara_geometry::{
 };
 use navara_material::RasterTileInternalMaterial;
 use navara_math::{FloatType, Transform};
+use navara_memory::{
+    GPU_GEOMETRY_RESIDENCY_FACTOR, MemoryLedger, ReserveEstimates, ReserveKey, RetainedEntry,
+    TileCost,
+};
 
 use navara_mesh::{CachedMeshHandle, Mesh, MeshBundle, ObjectBundle};
 use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
@@ -19,8 +23,9 @@ use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 use navara_camera::{CameraFrustum, CameraMarker};
 use navara_tile_component::{
     ChangedTileTerrainDataRequesterQuery, ChangedTileTextureFragmentQuery, TerrainInformation,
-    TerrainInformationQuadtree, TerrainTile, TerrainTileQuadtree, Tile, TileMeshMarker,
-    TileTerrainDataRequesterQuery, TileTextureFragmentMarker, TileTextureFragmentQuery,
+    TerrainInformationQuadtree, TerrainTile, TerrainTileGpuCost, TerrainTileQuadtree, Tile,
+    TileHandle, TileMeshMarker, TileTerrainDataRequesterQuery, TileTextureFragmentMarker,
+    TileTextureFragmentQuery,
 };
 use navara_window::Window;
 use navara_worker::{
@@ -124,13 +129,14 @@ pub fn update_terrain(
     mut data_resources: DataResources,
     frame: Res<FrameManager>,
     window: Res<Window>,
-    globe: Res<navara_globe::Globe>,
+    // Bundled to stay within Bevy's per-system parameter limit.
+    globe: (Res<navara_globe::Globe>, Res<navara_memory::SsePressure>),
     source_store: Res<navara_source::SourceStore>,
     mut tiles_set: ParamSet<(Query<(&TilesLayer, &Order)>, Query<(), Changed<TilesLayer>>)>,
     mut terrain_layer_set: ParamSet<(Query<&TerrainLayer>, Query<(), Added<TerrainLayer>>)>,
     mut camera_set: ParamSet<(
         Query<(Ref<Transform>, Ref<CameraFrustum>), With<CameraMarker>>,
-        Query<&Fog>,
+        Query<Ref<Fog>>,
     )>,
     changed_texture_fragment: ChangedTileTextureFragmentQuery,
     mut data_requesters_set: ParamSet<(
@@ -179,7 +185,12 @@ pub fn update_terrain(
 
     let occluder = occluder.iter().next().unwrap();
 
-    let fog = camera_set.p1().single().unwrap().clone();
+    let (fog, is_fog_changed) = {
+        let fog_query = camera_set.p1();
+        let fog = fog_query.single().unwrap();
+        (Fog::clone(&fog), fog.is_changed())
+    };
+    let (globe, pressure) = globe;
     let camera = camera_set.p0();
     let (camera, frustum) = camera.single().unwrap();
 
@@ -205,7 +216,9 @@ pub fn update_terrain(
         || is_tile_layer_added
         || is_terrain_layer_added
         || is_layers_len_changed
-        || is_source_changed;
+        || is_source_changed
+        || is_fog_changed
+        || pressure.is_changed();
     if !needs_update {
         return;
     }
@@ -213,6 +226,19 @@ pub fn update_terrain(
     tc.is_updated_in_this_frame = true;
     tc.last_rendered_frame = frame.rendered_frame();
     tc.prev_layers_len = tiles_len;
+
+    // Memory-pressure LOD degrade, weighted by distance relative to the
+    // camera's height above the ellipsoid.
+    let camera_height = WGS84_64
+        .xyz_to_lle(vec3_to_xyz(camera.transform_point(navara_math::Vec3::ZERO)))
+        .height
+        .val();
+    let degrade = navara_memory::SseDegrade::new(
+        pressure.multiplier,
+        camera_height,
+        pressure.min,
+        pressure.max,
+    );
 
     let root_coords: Vec<TileXYZ> = globe.tiling_scheme.root_tiles();
 
@@ -261,6 +287,7 @@ pub fn update_terrain(
             &mut meshes,
             &fog,
             globe.max_sse as f64,
+            degrade,
             false,
             false,
             is_texture_ready.then_some(root_handle),
@@ -1075,6 +1102,7 @@ pub fn sync_terrain_layer_changes(
     added: Query<(), Added<TerrainLayer>>,
     layers: Query<(Entity, &TerrainLayer)>,
     mut rendered_tiles: Query<(Entity, &mut RenderedTile)>,
+    meshes: Query<&Mesh, (With<TileMeshMarker>, Without<Deleted>)>,
 ) {
     if deleted.is_empty() && added.is_empty() {
         return;
@@ -1131,6 +1159,9 @@ pub fn sync_terrain_layer_changes(
         if let Some(cache) = tc.rendered_tile_caches.get(&handle)
             && let Some(mesh_entity) = cache.mesh_entity
         {
+            if let Ok(mesh) = meshes.get(mesh_entity) {
+                free_mesh_only_buffers(mesh, &mut buf);
+            }
             commands.entity(mesh_entity).insert(Deleted);
         }
         commands.entity(rendered_tile_entity).despawn();
@@ -1486,14 +1517,190 @@ pub fn add_order_to_tiles_layer(
     }
 }
 
+/// Frees the BufferStore handles that exist only on the `Mesh` component
+/// (skirts, watermask). The vertex/index/uv/normal handles are shared with
+/// the quadtree tile's `CachedMeshHandle` and freed by
+/// `TerrainTile::destroy`; nothing frees the mesh-only handles when the mesh
+/// entity despawns, so every mesh teardown must call this or they leak.
+pub(crate) fn free_mesh_only_buffers(mesh: &Mesh, buf: &mut BufferStore) {
+    for handle in [
+        mesh.skirt_vertices,
+        mesh.skirt_uvs,
+        mesh.skirt_indices,
+        mesh.skirt_normals,
+        mesh.watermask,
+    ]
+    .into_iter()
+    .flatten()
+    {
+        buf.remove(&handle);
+    }
+}
+
+/// Destroys a rendered terrain tile: marks its mesh `Deleted`, despawns the
+/// rendered-tile entity, and removes the tile from both quadtrees. This is
+/// the single destroy path shared by `clear_caches` (budget disabled) and
+/// `enforce_memory_budget` (eviction).
+#[allow(clippy::too_many_arguments)]
+fn destroy_terrain_tile(
+    commands: &mut Commands,
+    tc: &mut TileCacheManager,
+    qt: &mut TerrainTileQuadtree,
+    terrain_qt: &mut TerrainInformationQuadtree,
+    buf: &mut BufferStore,
+    meshes: &Query<&mut Mesh, (With<TileMeshMarker>, Without<Deleted>)>,
+    rendered_tile_entity_id: Entity,
+    rendered_tile: &mut RenderedTile,
+) {
+    if let Some(cache) = tc.rendered_tile_caches.get(&rendered_tile.tile_handle)
+        && let Some(mesh_entity) = cache.mesh_entity
+    {
+        if let Ok(mesh) = meshes.get(mesh_entity) {
+            free_mesh_only_buffers(mesh, buf);
+        }
+        commands.entity(mesh_entity).insert(Deleted);
+    }
+    commands.entity(rendered_tile_entity_id).despawn();
+    tc.rendered_tile_caches.remove(&rendered_tile.tile_handle);
+    tc.requested_tile_caches.remove(&rendered_tile.tile_handle);
+    tc.retained.remove(&rendered_tile.tile_handle);
+
+    rendered_tile.destroy(commands);
+    qt.qt
+        .remove(rendered_tile.tile_handle)
+        .unwrap()
+        .destroy(commands, buf);
+
+    terrain_qt.qt.remove(rendered_tile.tile_handle);
+}
+
+/// Attaches a [`TileCost`] to newly spawned terrain meshes so the memory
+/// ledger tracks their GPU footprint. The JS-side GPU buffers mirror the
+/// mesh's BufferStore contents, so their byte lengths are the estimate.
+///
+/// The `drape` contribution is seeded with the composite-atlas cost, which
+/// EVERY terrain tile pays: the atlas is acquired eagerly in the JS `TileMesh`
+/// constructor (per terrain tile, regardless of whether it drapes any vector
+/// layers), so a raster-only terrain scene still holds one atlas per tile. If
+/// this seed were omitted, that ~3MB/tile would be invisible to the budget
+/// (JS only reports the atlas via `report_terrain_drape_gpu_bytes` once the
+/// tile actually drapes something), and a typical raster+terrain mobile scene
+/// would silently exceed the budget.
+///
+/// When the tile later drapes clamp-to-ground vectors, JS reports the full
+/// drape footprint (composite atlas + one render target per live layer) via
+/// [`report_terrain_drape_gpu_bytes`], which REPLACES the `drape` term
+/// wholesale — its value already includes the atlas, so seeding the atlas here
+/// never double-counts. See [`TerrainTileGpuCost`].
+#[allow(clippy::type_complexity)]
+pub fn attach_terrain_mesh_cost(
+    mut commands: Commands,
+    buf: Res<BufferStore>,
+    ledger: Res<MemoryLedger>,
+    mut estimates: ResMut<ReserveEstimates>,
+    meshes: Query<(Entity, &Mesh), (With<TileMeshMarker>, Added<Mesh>)>,
+) {
+    for (entity, mesh) in &meshes {
+        let handles = [
+            Some(mesh.vertices),
+            Some(mesh.indices),
+            Some(mesh.uvs),
+            mesh.normals,
+            mesh.skirt_vertices,
+            mesh.skirt_uvs,
+            mesh.skirt_indices,
+            mesh.skirt_normals,
+            mesh.watermask,
+        ];
+        let mesh_bytes: u64 = handles
+            .into_iter()
+            .flatten()
+            .filter_map(|h| buf.get(&h).map(|b| b.byte_len() as u64))
+            .sum();
+        // The mesh is handed to Three.js and uploaded to the GPU. Three.js now
+        // releases the CPU-side typed array via `onUpload` after the upload
+        // (see the web `releaseGeometryArraysAfterUpload`), so only the GPU
+        // copy stays resident (factor 1). The WASM `BufferStore` copy kept for
+        // upsampling is counted separately in `cpu_bytes`.
+        let geometry = mesh_bytes.saturating_mul(GPU_GEOMETRY_RESIDENCY_FACTOR);
+        // Seed `drape` with the composite atlas every terrain tile pays (see
+        // the doc comment); `report_terrain_drape_gpu_bytes` overwrites it with
+        // the measured atlas+RT total once the tile drapes, so no double-count.
+        let cost = TerrainTileGpuCost {
+            geometry,
+            drape: ledger.cost_hints.atlas_tile_bytes,
+        };
+        commands.entity(entity).insert((
+            cost,
+            TileCost {
+                cpu: 0,
+                gpu_est: cost.total(),
+            },
+        ));
+        // Feed the terrain reservation estimator with the landed actual cost
+        // (geometry + atlas) — this is what the dispatch-time `ReservedCost`
+        // was standing in for. Re-meshes (e.g. upsample → real data) record
+        // again, which is fine: the EMA tracks the cost of meshes currently
+        // being produced.
+        estimates.record(ReserveKey::Terrain, cost.total());
+    }
+}
+
+/// Clears tile caches for tiles that are no longer visible.
+///
+/// When a memory budget is set, non-visited tiles are deactivated and moved
+/// to the retention pool instead of being destroyed; `enforce_memory_budget`
+/// evicts them later if the budget is exceeded. Retained terrain tiles keep
+/// their quadtree nodes, so they stay valid as upsample sources and for
+/// height queries.
+#[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn clear_caches(
     mut commands: Commands,
+    ledger: Res<MemoryLedger>,
     mut tc: ResMut<TileCacheManager>,
     mut qt: ResMut<TerrainTileQuadtree>,
     mut terrain_qt: ResMut<TerrainInformationQuadtree>,
     mut buf: ResMut<BufferStore>,
     mut rendered_tiles: Query<(Entity, &mut RenderedTile, &OrderByDistance)>,
+    tile_costs: Query<&TileCost>,
+    mut meshes: Query<&mut Mesh, (With<TileMeshMarker>, Without<Deleted>)>,
 ) {
+    // If the budget was disabled at runtime (`setCacheBytes(undefined)`),
+    // retained terrain tiles would otherwise leak forever: the loop below only
+    // deactivates newly-stale tiles, and `enforce_memory_budget` returns early
+    // with no budget, so nothing ever destroys the retention pool. Drain it
+    // here to restore the original destroy-on-unvisited behavior. Mirrors
+    // `clear_raster_caches`; runs regardless of `is_updated_in_this_frame` so
+    // the drain is not deferred until the next traversal on an idle page.
+    if !ledger.enabled() && !tc.retained.is_empty() {
+        let retained: Vec<TileHandle> = tc.retained.keys().copied().collect();
+        for handle in retained {
+            let Some(entity) = tc
+                .rendered_tile_caches
+                .get(&handle)
+                .map(|cache| cache.rendered_tile_entity)
+            else {
+                // No rendered tile backing this entry; just drop it.
+                tc.retained.remove(&handle);
+                continue;
+            };
+            let Ok((_, mut rendered_tile, _)) = rendered_tiles.get_mut(entity) else {
+                tc.retained.remove(&handle);
+                continue;
+            };
+            destroy_terrain_tile(
+                &mut commands,
+                &mut tc,
+                &mut qt,
+                &mut terrain_qt,
+                &mut buf,
+                &meshes,
+                entity,
+                &mut rendered_tile,
+            );
+        }
+    }
+
     if !tc.is_updated_in_this_frame {
         tc.is_updated_in_this_frame = false;
         return;
@@ -1512,30 +1719,59 @@ pub fn clear_caches(
             continue;
         }
 
-        let cache = match tc.rendered_tile_caches.get(&rendered_tile.tile_handle) {
-            Some(cache) => cache,
-            None => continue,
-        };
-
-        if let Some(mesh_entity) = cache.mesh_entity {
-            commands.entity(mesh_entity).insert(Deleted);
+        if !tc
+            .rendered_tile_caches
+            .contains_key(&rendered_tile.tile_handle)
+        {
+            continue;
         }
-        commands.entity(rendered_tile_entity_id).despawn();
-        tc.rendered_tile_caches.remove(&rendered_tile.tile_handle);
-        tc.requested_tile_caches.remove(&rendered_tile.tile_handle);
 
-        rendered_tile.destroy(&mut commands);
-        qt.qt
-            .remove(rendered_tile.tile_handle)
-            .unwrap()
-            .destroy(&mut commands, &mut buf);
+        if ledger.enabled() {
+            // Retain: hide the mesh but keep the entity, the quadtree nodes,
+            // and the terrain data alive so a revisit reactivates the tile
+            // without refetching.
+            if !tc.retained.contains_key(&rendered_tile.tile_handle) {
+                tc.activate_rendered_tile(&rendered_tile.tile_handle, &mut meshes, false);
+                let cost = tc
+                    .rendered_tile_caches
+                    .get(&rendered_tile.tile_handle)
+                    .and_then(|cache| cache.mesh_entity)
+                    .and_then(|e| tile_costs.get(e).ok())
+                    .copied()
+                    .unwrap_or_default();
+                let retained_at = tc.last_rendered_frame;
+                tc.retained.insert(
+                    rendered_tile.tile_handle,
+                    RetainedEntry { retained_at, cost },
+                );
+            }
+            continue;
+        }
 
-        terrain_qt.qt.remove(rendered_tile.tile_handle);
+        destroy_terrain_tile(
+            &mut commands,
+            &mut tc,
+            &mut qt,
+            &mut terrain_qt,
+            &mut buf,
+            &meshes,
+            rendered_tile_entity_id,
+            &mut rendered_tile,
+        );
     }
 
     let mut removed_handles = vec![];
     for handle in tc.requested_tile_caches.iter() {
         let tile_handle = *handle;
+
+        // Retained tiles keep their `requested_tile_caches` entry; their
+        // quadtree node must stay alive until eviction. Rendered tiles are
+        // handled (retained or destroyed) by the loop above.
+        if tc.retained.contains_key(&tile_handle)
+            || tc.rendered_tile_caches.contains_key(&tile_handle)
+        {
+            continue;
+        }
 
         let visited_at = {
             let tile = qt.qt.get(tile_handle).unwrap();
@@ -1556,6 +1792,650 @@ pub fn clear_caches(
 
     for removed in removed_handles {
         tc.requested_tile_caches.remove(&removed);
+    }
+}
+
+/// Evicts retained terrain tiles, oldest-visited first, until usage drops to
+/// the hysteresis target. Runs right after `clear_caches`.
+#[allow(clippy::too_many_arguments)]
+pub fn enforce_memory_budget(
+    mut commands: Commands,
+    mut ledger: ResMut<MemoryLedger>,
+    pressure: Res<navara_memory::SsePressure>,
+    frame: Res<FrameManager>,
+    mut tc: ResMut<TileCacheManager>,
+    mut qt: ResMut<TerrainTileQuadtree>,
+    mut terrain_qt: ResMut<TerrainInformationQuadtree>,
+    mut buf: ResMut<BufferStore>,
+    mut rendered_tiles: Query<(Entity, &mut RenderedTile, &OrderByDistance)>,
+    meshes: Query<&mut Mesh, (With<TileMeshMarker>, Without<Deleted>)>,
+) {
+    // Purge entries that were revisited (traversal reactivated them) or
+    // whose tile no longer exists. `survives_purge` shares the one-frame
+    // revisit grace with the other layer caches (see `navara_memory::eviction`).
+    let last_rendered_frame = tc.last_rendered_frame;
+    let rendered_tile_caches = std::mem::take(&mut tc.rendered_tile_caches);
+    tc.retained.retain(|handle, _| {
+        let Some(tile) = qt.qt.get(*handle) else {
+            return false;
+        };
+        rendered_tile_caches.contains_key(handle)
+            && navara_memory::eviction::survives_purge(tile.visited_at, last_rendered_frame)
+    });
+    tc.rendered_tile_caches = rendered_tile_caches;
+
+    if ledger.budget_bytes.is_none() {
+        return;
+    }
+
+    // While the load gate is closed, evict down to the reopen target even when
+    // not over budget, or usage stranded in the hysteresis band would keep the
+    // gate closed (and all new tile loads blocked) forever.
+    let usage_est = ledger.usage(buf.total_bytes() as u64);
+    if !ledger.needs_eviction(usage_est, pressure.load_gate_closed) {
+        return;
+    }
+
+    let current_frame = frame.rendered_frame();
+    let mut candidates: Vec<(TileHandle, usize, f64, u64)> = tc
+        .retained
+        .iter()
+        .filter(|(_, entry)| {
+            navara_memory::eviction::is_evictable(entry.retained_at, current_frame)
+        })
+        .filter_map(|(handle, entry)| {
+            let tile = qt.qt.get(*handle)?;
+            let cache = tc.rendered_tile_caches.get(handle)?;
+            let distance = rendered_tiles
+                .get(cache.rendered_tile_entity)
+                .map(|(_, _, order)| order.distance)
+                .unwrap_or(0.);
+            Some((*handle, tile.visited_at, distance, entry.cost.gpu_est))
+        })
+        .collect();
+
+    // Oldest visit first; evict the farthest tiles first among equals.
+    candidates.sort_by(|a, b| navara_memory::eviction::order((a.1, a.2), (b.1, b.2)));
+
+    let mut budget = navara_memory::eviction::EvictBudget::new(usage_est, ledger.evict_target());
+    for (handle, _, _, gpu_est) in candidates {
+        if !budget.over_target() {
+            break;
+        }
+
+        let Some(entity) = tc
+            .rendered_tile_caches
+            .get(&handle)
+            .map(|cache| cache.rendered_tile_entity)
+        else {
+            continue;
+        };
+        let Ok((_, mut rendered_tile, _)) = rendered_tiles.get_mut(entity) else {
+            continue;
+        };
+
+        // `destroy_terrain_tile` frees this tile's BufferStore bytes
+        // SYNCHRONOUSLY (via `free_mesh_only_buffers` and the quadtree node's
+        // `destroy(.., buf)`), so snapshot the store around the call and
+        // credit the real freed delta — matching the CPU term of
+        // `MemoryLedger::usage`. Crediting only `gpu_est` would ignore the
+        // freed CPU bytes and make the loop believe it is still far over budget,
+        // over-evicting well past the hysteresis target.
+        let buf_before = buf.total_bytes() as u64;
+        destroy_terrain_tile(
+            &mut commands,
+            &mut tc,
+            &mut qt,
+            &mut terrain_qt,
+            &mut buf,
+            &meshes,
+            entity,
+            &mut rendered_tile,
+        );
+        let cpu_freed = buf_before.saturating_sub(buf.total_bytes() as u64);
+
+        // GPU bytes are freed through the deferred `TileCost` component hooks
+        // (subtracted via `gpu_est`); CPU bytes are already gone from the store
+        // (`cpu_freed`). Together this mirrors what `usage` summed, no double-count.
+        budget.credit(gpu_est, cpu_freed);
+        // Credit the ledger too so the OTHER pipelines' enforce systems this
+        // frame see this eviction (their `EvictBudget` is stack-local); the mesh
+        // despawn that actually subtracts `gpu_est` from `gpu_bytes_est` is
+        // deferred to next frame's `remove_removed_mesh`.
+        ledger.credit_pending_eviction(gpu_est);
+        ledger.evicted_count += 1;
+    }
+}
+
+#[cfg(test)]
+mod memory_budget_tests {
+    use super::*;
+    use crate::tile::tile_cache_manager::RenderedTileCache;
+    use bevy_app::{App, Update};
+    use navara_frame::FramePlugin;
+
+    struct Setup {
+        rendered_tile_entity: Entity,
+        mesh_entity: Entity,
+        handle: TileHandle,
+    }
+
+    /// One rendered, non-visited terrain tile (`visited_at == 0`,
+    /// `last_rendered_frame == 2` to clear the +1 grace).
+    fn setup(app: &mut App, gpu_est: u64) -> Setup {
+        let mut qt = TerrainTileQuadtree::new_with_linear_qt();
+        qt.qt
+            .initialize_zero(&|(x, y, z)| TerrainTile::new(TileXYZ { x, y, z }, 0., 0.));
+        let handle = qt.qt.zero().unwrap().handle();
+
+        let mesh_entity = app
+            .world_mut()
+            .spawn((
+                TileMeshMarker {
+                    handle,
+                    ready_parent_tile_handle: None,
+                },
+                Mesh {
+                    vertices: 0,
+                    uvs: 0,
+                    indices: 0,
+                    active: true,
+                    render_order: 0,
+                    aabb: Aabb::default(),
+                    normals: None,
+                    skirt_vertices: None,
+                    skirt_uvs: None,
+                    skirt_indices: None,
+                    skirt_normals: None,
+                    watermask: None,
+                },
+                TileCost { cpu: 0, gpu_est },
+            ))
+            .id();
+
+        let rendered_tile_entity = app
+            .world_mut()
+            .spawn((
+                RenderedTile {
+                    tile_handle: handle,
+                    terrain_mesh_constructor: None,
+                    terrain_mesh_upsampler: None,
+                },
+                OrderByDistance {
+                    sse: 0.,
+                    distance: 0.,
+                },
+            ))
+            .id();
+
+        let mut tc = TileCacheManager::default();
+        tc.rendered_tile_caches.insert(
+            handle,
+            RenderedTileCache {
+                mesh_entity: Some(mesh_entity),
+                ready_parent_tile_handle: None,
+                layer_parents: None,
+                rendered_tile_entity,
+                mesh_prepared: true,
+                needs_material_update: false,
+            },
+        );
+        tc.last_rendered_frame = 2;
+        tc.is_updated_in_this_frame = true;
+        app.insert_resource(tc);
+        app.insert_resource(qt);
+
+        Setup {
+            rendered_tile_entity,
+            mesh_entity,
+            handle,
+        }
+    }
+
+    fn new_app(budget_bytes: Option<u64>) -> App {
+        let mut app = App::new();
+        app.add_plugins(FramePlugin);
+        app.init_resource::<BufferStore>();
+        app.init_resource::<navara_memory::SsePressure>();
+        app.init_resource::<ReserveEstimates>();
+        app.insert_resource(TerrainInformationQuadtree::new_with_linear_qt());
+        app.insert_resource(MemoryLedger {
+            budget_bytes,
+            ..Default::default()
+        });
+        app
+    }
+
+    #[test]
+    fn clear_caches_destroys_when_budget_disabled() {
+        let mut app = new_app(None);
+        let setup = setup(&mut app, 100);
+        app.add_systems(Update, clear_caches);
+
+        app.update();
+
+        assert!(app.world().get_entity(setup.rendered_tile_entity).is_err());
+        assert!(
+            app.world().get::<Deleted>(setup.mesh_entity).is_some(),
+            "mesh should be marked Deleted"
+        );
+        let tc = app.world().resource::<TileCacheManager>();
+        assert!(tc.rendered_tile_caches.is_empty());
+        assert!(tc.retained.is_empty());
+        let qt = app.world().resource::<TerrainTileQuadtree>();
+        assert!(qt.qt.get(setup.handle).is_none());
+    }
+
+    #[test]
+    fn clear_caches_retains_when_budget_enabled() {
+        let mut app = new_app(Some(u64::MAX));
+        let setup = setup(&mut app, 100);
+        app.add_systems(Update, clear_caches);
+
+        app.update();
+
+        assert!(app.world().get_entity(setup.rendered_tile_entity).is_ok());
+        assert!(app.world().get::<Deleted>(setup.mesh_entity).is_none());
+        assert!(
+            !app.world().get::<Mesh>(setup.mesh_entity).unwrap().active,
+            "retained tile's mesh should be deactivated"
+        );
+        let tc = app.world().resource::<TileCacheManager>();
+        assert!(tc.rendered_tile_caches.contains_key(&setup.handle));
+        assert!(tc.retained.contains_key(&setup.handle));
+        let qt = app.world().resource::<TerrainTileQuadtree>();
+        assert!(qt.qt.get(setup.handle).is_some());
+    }
+
+    #[test]
+    fn enforce_memory_budget_evicts_after_min_retain_frames() {
+        let mut app = new_app(Some(50));
+        let setup = setup(&mut app, 100);
+        {
+            let mut tc = app.world_mut().resource_mut::<TileCacheManager>();
+            tc.retained.insert(
+                setup.handle,
+                RetainedEntry {
+                    retained_at: 0,
+                    cost: TileCost {
+                        cpu: 0,
+                        gpu_est: 100,
+                    },
+                },
+            );
+        }
+        app.add_systems(Update, enforce_memory_budget);
+
+        // Protected while younger than MIN_RETAIN_FRAMES.
+        for _ in 0..navara_memory::MIN_RETAIN_FRAMES - 1 {
+            app.update();
+            assert!(app.world().get_entity(setup.rendered_tile_entity).is_ok());
+        }
+        app.update();
+
+        assert!(app.world().get_entity(setup.rendered_tile_entity).is_err());
+        let ledger = app.world().resource::<MemoryLedger>();
+        assert_eq!(ledger.evicted_count, 1);
+        // The mesh entity still exists (Deleted marker, despawned by the
+        // mesh cleanup elsewhere), so its TileCost is still accounted.
+        assert!(app.world().get::<Deleted>(setup.mesh_entity).is_some());
+        let tc = app.world().resource::<TileCacheManager>();
+        assert!(tc.retained.is_empty());
+    }
+
+    /// Eviction must free every BufferStore handle the tile holds: the shared
+    /// vertex/index/uv/heights/normals handles cached on the quadtree tile AND
+    /// the skirt/watermask handles that exist only on the `Mesh` component
+    /// (the leak this guards: skirts were freed by nobody).
+    #[test]
+    fn eviction_frees_all_mesh_buffers() {
+        let mut app = new_app(Some(50));
+        let setup = setup(&mut app, 100);
+        {
+            let world = app.world_mut();
+            let (vertices, indices, uvs, heights, normals, skirt_v, skirt_u, skirt_i, watermask) = {
+                let mut buf = world.resource_mut::<BufferStore>();
+                (
+                    buf.new_f32(vec![0.; 9]),
+                    buf.new_u32(vec![0; 3]),
+                    buf.new_f32(vec![0.; 6]),
+                    buf.new_f32(vec![0.; 4]),
+                    buf.new_f32(vec![0.; 9]),
+                    buf.new_f32(vec![0.; 9]),
+                    buf.new_f32(vec![0.; 6]),
+                    buf.new_u32(vec![0; 3]),
+                    buf.new_u8(vec![0; 1]),
+                )
+            };
+            let mut mesh = world.get_mut::<Mesh>(setup.mesh_entity).unwrap();
+            mesh.vertices = vertices;
+            mesh.indices = indices;
+            mesh.uvs = uvs;
+            mesh.skirt_vertices = Some(skirt_v);
+            mesh.skirt_uvs = Some(skirt_u);
+            mesh.skirt_indices = Some(skirt_i);
+            mesh.watermask = Some(watermask);
+            let mut qt = world.resource_mut::<TerrainTileQuadtree>();
+            qt.qt.get_mut(setup.handle).unwrap().cached_mesh_handle = Some(CachedMeshHandle {
+                vertices,
+                indices,
+                uvs,
+                heights: Some(heights),
+                normals: Some(normals),
+            });
+            let mut tc = world.resource_mut::<TileCacheManager>();
+            tc.retained.insert(
+                setup.handle,
+                RetainedEntry {
+                    retained_at: 0,
+                    cost: TileCost {
+                        cpu: 0,
+                        gpu_est: 100,
+                    },
+                },
+            );
+        }
+        app.add_systems(Update, enforce_memory_budget);
+
+        for _ in 0..navara_memory::MIN_RETAIN_FRAMES + 1 {
+            app.update();
+        }
+
+        assert!(
+            app.world().get_entity(setup.rendered_tile_entity).is_err(),
+            "tile should have been evicted"
+        );
+        let buf = app.world().resource::<BufferStore>();
+        assert!(
+            buf.is_empty(),
+            "eviction must free every mesh buffer, {} left",
+            buf.len()
+        );
+    }
+
+    /// FIX 1: every terrain mesh must be charged the composite-atlas cost the
+    /// JS `TileMesh` acquires eagerly, even before any vector layer drapes.
+    #[test]
+    fn attach_terrain_mesh_cost_includes_atlas_baseline() {
+        let mut app = new_app(Some(u64::MAX));
+        // Non-default atlas hint so the assertion is unambiguous.
+        let atlas = 3 * 1024 * 1024;
+        app.world_mut()
+            .resource_mut::<MemoryLedger>()
+            .cost_hints
+            .atlas_tile_bytes = atlas;
+
+        let handle = {
+            let mut qt = TerrainTileQuadtree::new_with_linear_qt();
+            qt.qt
+                .initialize_zero(&|(x, y, z)| TerrainTile::new(TileXYZ { x, y, z }, 0., 0.));
+            let h = qt.qt.zero().unwrap().handle();
+            app.insert_resource(qt);
+            h
+        };
+
+        let mesh_entity = app
+            .world_mut()
+            .spawn((
+                TileMeshMarker {
+                    handle,
+                    ready_parent_tile_handle: None,
+                },
+                Mesh {
+                    vertices: 0,
+                    uvs: 0,
+                    indices: 0,
+                    active: true,
+                    render_order: 0,
+                    aabb: Aabb::default(),
+                    normals: None,
+                    skirt_vertices: None,
+                    skirt_uvs: None,
+                    skirt_indices: None,
+                    skirt_normals: None,
+                    watermask: None,
+                },
+            ))
+            .id();
+
+        app.add_systems(Update, attach_terrain_mesh_cost);
+        // `Added<Mesh>` fires on the frame after insertion.
+        app.update();
+        app.update();
+
+        let gpu_cost = app
+            .world()
+            .get::<TerrainTileGpuCost>(mesh_entity)
+            .expect("TerrainTileGpuCost attached");
+        // Buffers are all handle 0 with no bytes, so geometry is 0 and the
+        // whole cost is the seeded atlas baseline.
+        assert_eq!(gpu_cost.drape, atlas, "atlas must be seeded into drape");
+        assert_eq!(gpu_cost.total(), atlas);
+        let tile_cost = app.world().get::<TileCost>(mesh_entity).unwrap();
+        assert_eq!(tile_cost.gpu_est, atlas);
+        // The component hook must have folded the atlas into the ledger.
+        assert_eq!(
+            app.world().resource::<MemoryLedger>().gpu_bytes_est,
+            atlas,
+            "atlas must be visible to the budget"
+        );
+    }
+
+    #[test]
+    fn attach_terrain_mesh_cost_feeds_the_reservation_estimator() {
+        let mut app = new_app(Some(u64::MAX));
+        app.add_systems(Update, attach_terrain_mesh_cost);
+
+        // Empty-buffer meshes: geometry is 0, so each landed cost is exactly
+        // the atlas baseline — distinguishable from the seed (raster + atlas).
+        for _ in 0..navara_memory::RESERVE_MIN_SAMPLES {
+            app.world_mut().spawn((
+                TileMeshMarker {
+                    handle: 0,
+                    ready_parent_tile_handle: None,
+                },
+                Mesh {
+                    vertices: 0,
+                    uvs: 0,
+                    indices: 0,
+                    active: true,
+                    render_order: 0,
+                    aabb: Aabb::default(),
+                    normals: None,
+                    skirt_vertices: None,
+                    skirt_uvs: None,
+                    skirt_indices: None,
+                    skirt_normals: None,
+                    watermask: None,
+                },
+            ));
+        }
+        // `Added<Mesh>` fires on the frame after insertion.
+        app.update();
+        app.update();
+
+        let hints = app.world().resource::<MemoryLedger>().cost_hints;
+        let estimate = app
+            .world()
+            .resource::<ReserveEstimates>()
+            .estimate(ReserveKey::Terrain, hints.terrain_reserve_seed());
+        assert_eq!(
+            estimate, hints.atlas_tile_bytes,
+            "recorded mesh costs (atlas-only here) must replace the seed"
+        );
+    }
+
+    /// FIX 3: eviction must subtract the SYNCHRONOUSLY-freed BufferStore bytes,
+    /// not just the GPU estimate, or it over-evicts far past the hysteresis
+    /// target. Two retained tiles, budget just over one tile's real cost: the
+    /// loop must stop after evicting exactly ONE.
+    #[test]
+    fn eviction_stops_at_target_without_over_evicting() {
+        let mut app = new_app(Some(6000)); // final budget set below after sizing
+        // Build two independent rendered+mesh tiles, each holding real CPU
+        // bytes in the BufferStore, no GPU estimate (isolates the CPU delta).
+        let child_handles;
+        {
+            let mut qt = TerrainTileQuadtree::new_with_linear_qt();
+            qt.qt
+                .initialize_zero(&|(x, y, z)| TerrainTile::new(TileXYZ { x, y, z }, 0., 0.));
+            child_handles = qt
+                .qt
+                .initialize_children((0, 0, 0), &|(x, y, z)| {
+                    TerrainTile::new(TileXYZ { x, y, z }, 0., 0.)
+                })
+                .expect("children initialized");
+            app.insert_resource(qt);
+        }
+        assert!(child_handles.len() >= 2);
+        let handles = [child_handles[0], child_handles[1]];
+
+        let bytes_per_tile;
+        let mut rendered_entities = vec![];
+        {
+            let world = app.world_mut();
+            // 1000 f32 = 4000 bytes per tile. Buffers must live on the quadtree
+            // node's `cached_mesh_handle` — those are what `destroy(.., buf)`
+            // frees SYNCHRONOUSLY (skirt/watermask on the Mesh are the only
+            // ones `free_mesh_only_buffers` touches).
+            bytes_per_tile = 4000u64;
+            for handle in handles.iter() {
+                let vbuf = world.resource_mut::<BufferStore>().new_f32(vec![0.; 1000]);
+                world
+                    .resource_mut::<TerrainTileQuadtree>()
+                    .qt
+                    .get_mut(*handle)
+                    .unwrap()
+                    .cached_mesh_handle = Some(CachedMeshHandle {
+                    vertices: vbuf,
+                    indices: vbuf,
+                    uvs: vbuf,
+                    heights: None,
+                    normals: None,
+                });
+            }
+
+            let mut tc = TileCacheManager::default();
+            for (i, handle) in handles.iter().enumerate() {
+                let mesh_entity = world
+                    .spawn((
+                        TileMeshMarker {
+                            handle: *handle,
+                            ready_parent_tile_handle: None,
+                        },
+                        Mesh {
+                            vertices: 0,
+                            uvs: 0,
+                            indices: 0,
+                            active: false,
+                            render_order: 0,
+                            aabb: Aabb::default(),
+                            normals: None,
+                            skirt_vertices: None,
+                            skirt_uvs: None,
+                            skirt_indices: None,
+                            skirt_normals: None,
+                            watermask: None,
+                        },
+                        TileCost { cpu: 0, gpu_est: 0 },
+                    ))
+                    .id();
+                let rendered_tile_entity = world
+                    .spawn((
+                        RenderedTile {
+                            tile_handle: *handle,
+                            terrain_mesh_constructor: None,
+                            terrain_mesh_upsampler: None,
+                        },
+                        OrderByDistance {
+                            sse: 0.,
+                            distance: i as FloatType, // tile 1 farther → evicted first
+                        },
+                    ))
+                    .id();
+                rendered_entities.push(rendered_tile_entity);
+                tc.rendered_tile_caches.insert(
+                    *handle,
+                    RenderedTileCache {
+                        mesh_entity: Some(mesh_entity),
+                        ready_parent_tile_handle: None,
+                        layer_parents: None,
+                        rendered_tile_entity,
+                        mesh_prepared: true,
+                        needs_material_update: false,
+                    },
+                );
+                tc.retained.insert(
+                    *handle,
+                    RetainedEntry {
+                        retained_at: 0,
+                        cost: TileCost { cpu: 0, gpu_est: 0 },
+                    },
+                );
+            }
+            tc.last_rendered_frame = 2;
+            world.insert_resource(tc);
+        }
+
+        // Two retained tiles hold 4000 CPU bytes each → usage 8000. With
+        // budget 6000 the hysteresis target is 0.85*6000 = 5100: freeing ONE
+        // tile drops real usage to 4000 (≤ target) so the loop must stop.
+        // The old code subtracted only `gpu_est` (== 0 here) and never saw the
+        // freed CPU bytes, so `usage_est` stayed at 8000 and it evicted BOTH.
+        assert_eq!(bytes_per_tile, 4000);
+        app.world_mut().resource_mut::<MemoryLedger>().budget_bytes = Some(6000);
+
+        app.add_systems(Update, enforce_memory_budget);
+        for _ in 0..navara_memory::MIN_RETAIN_FRAMES + 1 {
+            app.update();
+        }
+
+        let alive: usize = rendered_entities
+            .iter()
+            .filter(|e| app.world().get_entity(**e).is_ok())
+            .count();
+        assert_eq!(
+            alive, 1,
+            "must evict exactly one tile, not over-evict the pool"
+        );
+        assert_eq!(app.world().resource::<MemoryLedger>().evicted_count, 1);
+    }
+
+    /// FIX 4: disabling the budget at runtime must drain the terrain retention
+    /// pool immediately, even on an idle frame (`is_updated_in_this_frame ==
+    /// false`), mirroring `clear_raster_caches`.
+    #[test]
+    fn clear_caches_drains_retention_pool_when_budget_disabled() {
+        let mut app = new_app(None); // budget disabled
+        let setup = setup(&mut app, 100);
+        {
+            let mut tc = app.world_mut().resource_mut::<TileCacheManager>();
+            // Simulate an idle frame with a leftover retained tile.
+            tc.is_updated_in_this_frame = false;
+            tc.retained.insert(
+                setup.handle,
+                RetainedEntry {
+                    retained_at: 0,
+                    cost: TileCost {
+                        cpu: 0,
+                        gpu_est: 100,
+                    },
+                },
+            );
+        }
+        app.add_systems(Update, clear_caches);
+
+        app.update();
+
+        assert!(
+            app.world().get_entity(setup.rendered_tile_entity).is_err(),
+            "retained tile must be destroyed when budget is disabled"
+        );
+        let tc = app.world().resource::<TileCacheManager>();
+        assert!(tc.retained.is_empty(), "retention pool must be drained");
+        assert!(tc.rendered_tile_caches.is_empty());
+        let qt = app.world().resource::<TerrainTileQuadtree>();
+        assert!(qt.qt.get(setup.handle).is_none());
     }
 }
 

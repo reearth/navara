@@ -156,9 +156,52 @@ impl BatchTableValue {
     }
 }
 
+/// Per-entry accounting record, so `remove` can reverse exactly what `add`
+/// contributed (owned bytes + which shared `Arc`s it referenced).
+#[derive(Default)]
+struct EntryAccounting {
+    /// Bytes owned exclusively by this entry.
+    owned_bytes: usize,
+    /// Pointers into `arc_registry` for shared tables this entry references.
+    arc_ptrs: [Option<usize>; 2],
+}
+
+/// Refcounted shared allocation (an MVT keys/values table) so multiple batch
+/// entries sharing one tile's `Arc` count its bytes only once.
+struct ArcEntry {
+    bytes: usize,
+    refs: u32,
+}
+
+/// Rough byte size of a `serde_json::Value` tree (GeoJSON property path).
+fn json_bytes(value: &serde_json::Value) -> usize {
+    use serde_json::Value;
+    match value {
+        Value::Null | Value::Bool(_) | Value::Number(_) => size_of::<Value>(),
+        Value::String(s) => size_of::<Value>() + s.capacity(),
+        Value::Array(a) => size_of::<Value>() + a.iter().map(json_bytes).sum::<usize>(),
+        Value::Object(o) => {
+            size_of::<Value>()
+                + o.iter()
+                    .map(|(k, v)| k.capacity() + json_bytes(v))
+                    .sum::<usize>()
+        }
+    }
+}
+
 #[derive(Resource)]
 pub struct BatchTable {
     map: FxHashMap<u32, Option<BatchTableValue>>,
+    /// Parallel accounting keyed by the same batch id. Kept separate from
+    /// `BatchTableValue` so the (externally constructed) value struct stays
+    /// unchanged.
+    accounting: FxHashMap<u32, EntryAccounting>,
+    /// Shared `Arc` allocations by pointer identity, refcounted within this
+    /// table so a layer's shared keys/values table is counted once.
+    arc_registry: FxHashMap<usize, ArcEntry>,
+    /// Sum of all owned + shared bytes currently held. Surfaced to the memory
+    /// ledger as external (non-BufferStore) CPU bytes.
+    total_bytes: usize,
     unique_feature_batch_id: UniqueFeatureId,
     unique_global_batch_id: UniqueGlobalBatchId,
 }
@@ -173,6 +216,9 @@ impl BatchTable {
     pub fn new() -> Self {
         Self {
             map: FxHashMap::default(),
+            accounting: FxHashMap::default(),
+            arc_registry: FxHashMap::default(),
+            total_bytes: 0,
             unique_feature_batch_id: UniqueFeatureId::new(),
             unique_global_batch_id: UniqueGlobalBatchId::new(),
         }
@@ -186,9 +232,79 @@ impl BatchTable {
         self.len() == 0
     }
 
+    /// Bytes held by this table's property data — invisible to `BufferStore`
+    /// (plain `Vec`s/`HashMap`s), so the memory ledger reads it from here.
+    pub fn total_bytes(&self) -> usize {
+        self.total_bytes
+    }
+
+    /// Register a shared allocation: adds its bytes to the total only on first
+    /// reference. Returns the ptr so the caller records it for `remove`.
+    fn register_arc(&mut self, ptr: usize, bytes: usize) -> usize {
+        self.arc_registry
+            .entry(ptr)
+            .and_modify(|e| e.refs += 1)
+            .or_insert_with(|| {
+                self.total_bytes += bytes;
+                ArcEntry { bytes, refs: 1 }
+            });
+        ptr
+    }
+
+    /// Drop one reference to a shared allocation, freeing its bytes when the
+    /// last reference within this table goes away.
+    fn unregister_arc(&mut self, ptr: usize) {
+        if let Some(entry) = self.arc_registry.get_mut(&ptr) {
+            entry.refs -= 1;
+            if entry.refs == 0 {
+                self.total_bytes -= entry.bytes;
+                self.arc_registry.remove(&ptr);
+            }
+        }
+    }
+
+    /// Compute the accounting for a freshly inserted value and fold it into
+    /// the running totals.
+    fn account_insert(&mut self, value: Option<&BatchTableValue>) -> EntryAccounting {
+        let mut acc = EntryAccounting::default();
+        let Some(BatchTableValue {
+            properties: Some(props),
+            ..
+        }) = value
+        else {
+            return acc;
+        };
+        match props {
+            BatchProperty::Mvt(d) => {
+                acc.owned_bytes = d.owned_bytes();
+                self.total_bytes += acc.owned_bytes;
+                acc.arc_ptrs[0] = Some(self.register_arc(d.keys_ptr(), d.keys_shared_bytes()));
+                acc.arc_ptrs[1] = Some(self.register_arc(d.values_ptr(), d.values_shared_bytes()));
+            }
+            BatchProperty::Values(vals) => {
+                acc.owned_bytes = vals.iter().map(json_bytes).sum();
+                self.total_bytes += acc.owned_bytes;
+            }
+            // b3dm batch tables own their JSON + binary property blobs as plain
+            // `Vec`s (invisible to BufferStore); attribute-rich tiles make these
+            // large, so count them.
+            BatchProperty::Cesium3dTileset(bt) => {
+                acc.owned_bytes = bt.json_data.capacity() + bt.binary_data.capacity();
+                self.total_bytes += acc.owned_bytes;
+            }
+            // glTF 1.1 (EXT_structural_metadata) resolves its bulk binary from
+            // BufferStore via the handle (already counted); only small column
+            // metadata lives here, so it is not tracked.
+            BatchProperty::Cesium3dTilesetV11(_) => {}
+        }
+        acc
+    }
+
     /// Store the feature property to `map`.
     pub fn add(&mut self, value: Option<BatchTableValue>) -> Option<u32> {
         let key = self.unique_feature_batch_id.get()?;
+        let acc = self.account_insert(value.as_ref());
+        self.accounting.insert(key, acc);
         self.map.insert(key, value);
         Some(key)
     }
@@ -224,7 +340,17 @@ impl BatchTable {
             return;
         };
 
-        values.push(props)
+        // The Values vec is append-only and never mutated in place, so the
+        // owned-bytes delta is exactly this one value's bytes — compute it once
+        // instead of re-summing the whole vec (which made a k-element layer O(k²)
+        // over its k pushes).
+        let delta = json_bytes(&props);
+        values.push(props);
+
+        if let Some(acc) = self.accounting.get_mut(&key) {
+            acc.owned_bytes += delta;
+            self.total_bytes += delta;
+        }
     }
 
     pub fn get(&self, key: &u32) -> Option<&BatchTableValue> {
@@ -232,6 +358,108 @@ impl BatchTable {
     }
 
     pub fn remove(&mut self, key: &u32) {
+        if let Some(acc) = self.accounting.remove(key) {
+            self.total_bytes -= acc.owned_bytes;
+            for ptr in acc.arc_ptrs.into_iter().flatten() {
+                self.unregister_arc(ptr);
+            }
+        }
         self.map.remove(key);
+    }
+}
+
+#[cfg(test)]
+mod accounting_tests {
+    use super::*;
+    use navara_parser::mvt::MvtLayerData;
+    use std::sync::Arc;
+
+    fn mvt(keys: Arc<Vec<geozero::mvt::tile::Value>>) -> MvtLayerData {
+        // Reuse a shared values Arc across entries to exercise dedup.
+        MvtLayerData::from_raw(
+            Arc::new(vec!["name".to_string(), "height".to_string()]),
+            keys,
+            vec![0, 0, 1, 1],
+            &[4],
+        )
+    }
+
+    fn shared_values() -> Arc<Vec<geozero::mvt::tile::Value>> {
+        Arc::new(vec![
+            geozero::mvt::tile::Value {
+                string_value: Some("a_long_building_name".to_string()),
+                ..Default::default()
+            },
+            geozero::mvt::tile::Value {
+                double_value: Some(1.0),
+                ..Default::default()
+            },
+        ])
+    }
+
+    #[test]
+    fn insert_and_remove_balances_to_zero() {
+        let mut t = BatchTable::new();
+        let id = t.init_mvt(None, mvt(shared_values())).unwrap();
+        assert!(t.total_bytes() > 0);
+        t.remove(&id);
+        assert_eq!(t.total_bytes(), 0);
+        assert!(t.arc_registry.is_empty());
+    }
+
+    #[test]
+    fn shared_values_arc_counted_once() {
+        let mut t = BatchTable::new();
+        let values = shared_values();
+        // Two batch entries share the same values Arc (same tile/layer).
+        let a = t.init_mvt(None, mvt(values.clone())).unwrap();
+        let after_first = t.total_bytes();
+        let b = t.init_mvt(None, mvt(values.clone())).unwrap();
+
+        // The second entry adds only its own owned bytes + keys arc, NOT a
+        // second copy of the shared values table.
+        let values_bytes = mvt(values.clone()).values_shared_bytes();
+        let delta = t.total_bytes() - after_first;
+        assert!(
+            delta < values_bytes,
+            "second entry re-counted the shared values table: delta={delta} values={values_bytes}"
+        );
+
+        // The values arc survives until BOTH sharers are removed.
+        let values_ptr = mvt(values.clone()).values_ptr();
+        t.remove(&a);
+        assert!(t.arc_registry.contains_key(&values_ptr));
+        t.remove(&b);
+        assert!(!t.arc_registry.contains_key(&values_ptr));
+        assert_eq!(t.total_bytes(), 0);
+    }
+
+    #[test]
+    fn values_path_grows_and_frees() {
+        let mut t = BatchTable::new();
+        let id = t.init_values(None).unwrap();
+        let empty = t.total_bytes();
+        t.add_values(id, serde_json::json!({ "name": "some feature name" }));
+        assert!(t.total_bytes() > empty);
+        t.remove(&id);
+        assert_eq!(t.total_bytes(), 0);
+    }
+
+    #[test]
+    fn b3dm_batch_table_json_and_binary_counted() {
+        let mut t = BatchTable::new();
+        let bt = B3dmBatchTable {
+            json_data: vec![0u8; 4096],
+            binary_data: vec![0u8; 8192],
+        };
+        let id = t
+            .add(Some(BatchTableValue {
+                properties: Some(BatchProperty::Cesium3dTileset(bt)),
+                layer_id: None,
+            }))
+            .unwrap();
+        assert!(t.total_bytes() >= 4096 + 8192);
+        t.remove(&id);
+        assert_eq!(t.total_bytes(), 0);
     }
 }

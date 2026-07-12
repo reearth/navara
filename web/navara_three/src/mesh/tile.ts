@@ -74,6 +74,7 @@ import {
 } from "../utils/textureFragmentIndex";
 
 import type { PickableMesh } from "./pickableMesh";
+import { releaseGeometryArraysAfterUpload } from "./releaseGeometryArrays";
 
 export type TileMaterial = MeshBasicMaterial | MeshLambertMaterial;
 
@@ -106,6 +107,51 @@ type VectorSlot = {
   reproject?: [number, number];
 };
 
+/** The MRT composite atlas has three RGBA attachments (color, attr, normal). */
+const ATLAS_ATTACHMENTS = 3;
+/** GPU bytes for one drape render target at side length `size`: size² RGBA. */
+function drapeRtBytes(size: number): number {
+  return size * size * 4;
+}
+/** GPU bytes for the per-tile composite atlas at side length `size`: one MRT
+ * with three size² RGBA attachments. A terrain tile acquires this atlas in its
+ * constructor and holds it for its whole lifetime (raster-only tiles
+ * included), so Rust seeds it into the tile's cost at mesh-attach time and
+ * every drape report from here must keep including it. The side length is 512²
+ * on both desktop and mobile (so ~3MB per tile with three attachments) and
+ * flows in from the compositor, which is the SAME source of truth
+ * `getDefaultMemoryCostHints` feeds to the Rust ledger — so the reported bytes
+ * always match the seed. */
+function compositeAtlasBytes(size: number): number {
+  return size * size * 4 * ATLAS_ATTACHMENTS;
+}
+
+/** Shared 1×1 transparent texture bound to texturized sampler slots that have
+ * no drape render target yet (they are allocated lazily). WebGL requires every
+ * sampler to reference a valid texture; the shader gates sampling with `shows`,
+ * so this placeholder's content is never visible. */
+const EMPTY_TEXTURIZED_TEXTURE = new DataTexture(
+  new Uint8Array([0, 0, 0, 0]),
+  1,
+  1,
+  RGBAFormat,
+);
+EMPTY_TEXTURIZED_TEXTURE.needsUpdate = true;
+
+/** Apply the shared texturized-slot sampler settings to a drape render target's
+ * texture. Returns the texture for call-site chaining. */
+function configureTexturizedTexture(
+  tex: Texture,
+  textureOptions: TextureOptions,
+): Texture {
+  tex.minFilter = textureOptions.minFilter as MinificationTextureFilter;
+  tex.magFilter = textureOptions.magFilter as MagnificationTextureFilter;
+  tex.anisotropy = textureOptions.maxAnisotropy;
+  tex.generateMipmaps = textureOptions.useMipmaps;
+  tex.needsUpdate = true;
+  return tex;
+}
+
 export class TileMesh
   extends Mesh<BufferGeometry, TileMaterial, CustomObject3DEventMap>
   implements PickableMesh
@@ -134,6 +180,18 @@ export class TileMesh
   private compositor: TileTextureCompositor;
 
   texturizedSceneRenderTargets: WebGLRenderTarget[] = [];
+  // Drape RT side length + atlas byte cost, read from the compositor (the
+  // single source of truth shared with the Rust cost hints) in the constructor.
+  // Per-instance rather than module constants because the compositor size is a
+  // runtime value (512² on both desktop and mobile today, but configurable).
+  private readonly drapeRtSize: number;
+  private readonly atlasBytes: number;
+  // Drape footprint (bytes) last reported to the memory ledger, so a report
+  // only crosses the WASM boundary when it actually changes. Starts at the
+  // atlas cost to match the seed Rust charges at mesh-attach time (the atlas
+  // is acquired in the constructor) — a tile that never drapes therefore
+  // never reports. Assigned in the constructor once `atlasBytes` is known.
+  private reportedDrapeGpuBytes: number;
 
   private warnedExceededTextures = false;
 
@@ -157,6 +215,12 @@ export class TileMesh
     this.texturizedSceneByTileCoordinates = texturizedSceneByTileCoordinates;
     this.compositor = tileTextureCompositor;
 
+    // Device-dependent atlas / drape RT sizing, sourced from the compositor so
+    // it always matches the ledger cost hints (see device.ts).
+    this.drapeRtSize = this.compositor.size;
+    this.atlasBytes = compositeAtlasBytes(this.compositor.size);
+    this.reportedDrapeGpuBytes = this.atlasBytes;
+
     // Acquire the per-tile composite atlas from the compositor. Pairing the
     // acquire with the mesh keeps the atlas lifecycle tied to the tile and lets
     // the compositor allocate its private OrthographicCamera for this handle.
@@ -176,13 +240,11 @@ export class TileMesh
       Math.floor(textureOptions.maxTextures / 2) - numAdditionalTextures;
     this.texturizedSceneIndexFrom = this.maxTextures - this.numTexturizedVector;
 
-    for (let i = 0; i < this.numTexturizedVector; i++) {
-      this.texturizedSceneRenderTargets.push(
-        new WebGLRenderTarget(512, 512, {
-          format: RGBAFormat,
-        }),
-      );
-    }
+    // Drape render targets are allocated lazily (see `ensureRenderTargets`),
+    // one per live clamp-to-ground layer draped onto this tile — most terrain
+    // tiles drape 0–2 layers, so eagerly reserving `numTexturizedVector` (~5)
+    // drape targets per tile wasted GPU memory and, worse, scaled with terrain
+    // subdivision past the vector maxZoom (a mobile OOM driver).
 
     this.tileHandler = tileHandler;
 
@@ -259,6 +321,44 @@ export class TileMesh
     }
 
     this.vectorSlots = [...byLayer.values()];
+    this.syncDrapeRenderTargets();
+  }
+
+  /**
+   * Size the drape render-target pool to the live slot count (already capped to
+   * `numTexturizedVector` by {@link refreshVectorSlots}): allocate the ones a
+   * newly-draped layer needs, dispose the ones a vanished layer freed. Then
+   * report the pool's GPU footprint to the memory ledger so it tracks drape
+   * memory that scales with terrain subdivision past the vector maxZoom — a cost
+   * per-vector-tile accounting cannot see. Reports only when the count changes.
+   */
+  private syncDrapeRenderTargets() {
+    const target = this.vectorSlots.length;
+    const rts = this.texturizedSceneRenderTargets;
+    while (rts.length < target) {
+      const rt = new WebGLRenderTarget(this.drapeRtSize, this.drapeRtSize, {
+        format: RGBAFormat,
+      });
+      // Match the sampler settings setupTextures applies to eager RTs, so the
+      // lazily-grown one binds identically when bindVectorSlots picks it up.
+      configureTexturizedTexture(rt.texture, this.ctx.textureOptions);
+      rts.push(rt);
+    }
+    while (rts.length > target) {
+      rts.pop()?.dispose();
+    }
+
+    // The composite atlas is acquired in the constructor and held for the
+    // tile's lifetime regardless of draping, so it is always part of the
+    // report — otherwise a tile whose last vector layer vanished would report
+    // 0 and wipe the atlas cost Rust seeds at mesh-attach time. The render
+    // targets on top of it scale with terrain subdivision past the vector
+    // maxZoom — a cost per-vector-tile accounting cannot see.
+    const bytes = this.atlasBytes + rts.length * drapeRtBytes(this.drapeRtSize);
+    if (bytes !== this.reportedDrapeGpuBytes) {
+      this.reportedDrapeGpuBytes = bytes;
+      this.tileHandler.reportDrapeGpuBytes(this.handle, bytes);
+    }
   }
 
   /**
@@ -347,7 +447,15 @@ export class TileMesh
     for (let i = 0; i < this.numTexturizedVector; i++) {
       const lastIdx = this.texturizedSceneIndexFrom + i;
       const ownRt = this.texturizedSceneRenderTargets[i];
-      if (!ownRt) continue;
+      // Slots past the live pool (lazily sized to the draped-layer count) have
+      // no render target: hide the slot and rebind the shared empty texture so
+      // the shader never samples a stale / disposed texture from a layer that
+      // is no longer draped here.
+      if (!ownRt) {
+        m.userData.shows.value[lastIdx] = 0;
+        textures[lastIdx] = EMPTY_TEXTURIZED_TEXTURE;
+        continue;
+      }
 
       textures[lastIdx] = ownRt.texture;
       // The bake framed every source into this RT so it spans the terrain tile's
@@ -571,6 +679,22 @@ export class TileMesh
       textureFragmentIndex,
       tileMeshToFragmentIds,
     } = this.ctx;
+    // Read the aabb BEFORE acquiring any buffer views: these wasm-bindgen
+    // getters return boxed objects (Aabb, Vec3), each of which allocates in
+    // WASM linear memory and can trigger a memory.grow that detaches every
+    // live view (`%TypedArray%.prototype.set on a detached ArrayBuffer`).
+    const aabb = mesh.aabb;
+    const aabb_center = new Vector3(
+      aabb.center.x,
+      aabb.center.y,
+      aabb.center.z,
+    );
+    const aabb_extent = new Vector3(
+      aabb.extent.x,
+      aabb.extent.y,
+      aabb.extent.z,
+    );
+
     const position = buf.f32(mesh.vertices);
     const indices = buf.u32(mesh.indices);
     if (!position || !indices) return;
@@ -579,23 +703,13 @@ export class TileMesh
     const normals = mesh.normals != null ? buf.f32(mesh.normals) : null;
 
     // The buf.* arrays are short-lived views into WASM memory: they must be
-    // consumed before any further WASM call. createSkirtMesh copies them once —
-    // into the combined buffers when a skirt exists, or via slice() otherwise.
+    // consumed before any further WASM call that may allocate. Reading more
+    // views (createSkirtMesh) is allocation-free, but nothing else may come
+    // between acquisition and the copies into the combined buffers.
     // Terrain-only geometry (for shadow rendering). createSkirtMesh fills it:
     // when a skirt exists it shares the combined geometry's buffers (with the
     // skirt cut off via drawRange).
     const terrainGeometry = new BufferGeometry();
-
-    const aabb_center = new Vector3(
-      mesh.aabb.center.x,
-      mesh.aabb.center.y,
-      mesh.aabb.center.z,
-    );
-    const aabb_extent = new Vector3(
-      mesh.aabb.extent.x,
-      mesh.aabb.extent.y,
-      mesh.aabb.extent.z,
-    );
 
     const geometry = this.createSkirtMesh(
       mesh,
@@ -648,6 +762,20 @@ export class TileMesh
       this.add(bb);
     }
     this.geometry = geometry;
+
+    // Drop the CPU-side typed arrays (position/uv/normal/index, and the skirt
+    // data merged into the same combined buffers above) once the GPU upload
+    // completes, so terrain geometry keeps a single resident (GPU) copy — the
+    // premise behind GPU_GEOMETRY_RESIDENCY_FACTOR=1 in the Rust ledger.
+    // Bounding volumes are already assigned from the WASM aabb above (no
+    // computeBoundingBox re-read), nothing else re-reads these arrays, and
+    // terrain geometry never goes through the worker `toBufferGeometryLike`
+    // path, so releasing is safe. CONSTRAINT: once released these geometries
+    // can no longer be re-uploaded on a WebGL context loss — acceptable because
+    // terrain is re-fetched from Rust on demand, not restored from CPU memory.
+    // When a skirt exists, `terrainGeometry` (shadow mesh) shares these exact
+    // BufferAttribute instances, so this one call releases both meshes' arrays.
+    releaseGeometryArraysAfterUpload(geometry);
 
     this.material = this.initMaterial(mat, uniforms, globe);
 
@@ -1515,19 +1643,15 @@ ${generateTileCommonInjection(maxTextures)}
     }
 
     for (let i = 0; i < numTexturizedVector; i++) {
-      // texturizedSceneRenderTarget should be added always due to GLSL spec.
+      // Every texturized sampler slot must reference a valid texture (GLSL/WebGL
+      // requires it even for a sampler never read). Drape render targets are now
+      // allocated lazily, so a slot without one binds the shared empty texture;
+      // `bindVectorSlots` swaps in the real RT texture once a layer drapes here.
       const lastIndex = this.texturizedSceneIndexFrom + i;
-      const texturizedSceneTexture =
-        this.texturizedSceneRenderTargets[i].texture;
-      // Don't need it. If you want to set it, you need to consider the color space on picking scene.
-      // texturizedSceneTexture.colorSpace = SRGBColorSpace;
-      texturizedSceneTexture.minFilter =
-        textureOptions.minFilter as MinificationTextureFilter;
-      texturizedSceneTexture.magFilter =
-        textureOptions.magFilter as MagnificationTextureFilter;
-      texturizedSceneTexture.anisotropy = textureOptions.maxAnisotropy;
-      texturizedSceneTexture.generateMipmaps = textureOptions.useMipmaps;
-      texturizedSceneTexture.needsUpdate = true;
+      const rt = this.texturizedSceneRenderTargets[i];
+      const texturizedSceneTexture = rt
+        ? configureTexturizedTexture(rt.texture, textureOptions)
+        : EMPTY_TEXTURIZED_TEXTURE;
 
       textures[lastIndex] = texturizedSceneTexture;
 
@@ -1589,11 +1713,24 @@ ${generateTileCommonInjection(maxTextures)}
     return this;
   }
 
+  private _disposed = false;
+
   dispose(
     tileMapByHandle?: TileMapByHandle,
     textureFragmentIndex?: Map<string, Set<TextureSlot>>,
     tileMeshToFragmentIds?: Map<TileMesh, Set<string>>,
   ) {
+    // A second dispose would steal another holder's compositor refcount.
+    if (this._disposed) {
+      if (import.meta.env?.DEV) {
+        console.error(
+          `TileMesh.dispose called twice for handle ${this.handle}`,
+        );
+      }
+      return;
+    }
+    this._disposed = true;
+
     // Remove from texture fragment index
     if (textureFragmentIndex && tileMeshToFragmentIds) {
       removeTextureFragmentIndex(
@@ -1618,6 +1755,16 @@ ${generateTileCommonInjection(maxTextures)}
       renderTarget.dispose();
     }
     this.texturizedSceneRenderTargets.length = 0;
+    // Do NOT report a zero drape cost here. The Rust `TerrainTileGpuCost` /
+    // `TileCost` live on the mesh entity, whose despawn already subtracts the
+    // full cost from the ledger via the component `on_replace` hook — so the
+    // report is redundant on the normal removal path. Worse, on the terrain
+    // mesh-replacement path the old entity is marked `Deleted` while a NEW live
+    // mesh reuses the same position-stable handle, so `reportDrapeGpuBytes(0)`
+    // would resolve (via `Without<Deleted>`) to the NEW entity and wipe the
+    // atlas cost `attach_terrain_mesh_cost` just seeded. Leaving accounting to
+    // the entity despawn keeps both paths correct.
+    this.reportedDrapeGpuBytes = 0;
 
     // Release the watermask DataTexture (one per tile, RedFormat 1×1 or 256×256).
     this.userData.watermask?.texture?.dispose();

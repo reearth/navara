@@ -22,6 +22,7 @@ import type {
   BatchedAttributeName,
   DefaultBatchAttributeValues,
 } from "./batchTexture";
+import { releaseGeometryArraysAfterUpload } from "./releaseGeometryArrays";
 import { setupRTECallback } from "./rtcRteHelper";
 
 // Sentinel value for picking coordinate when not picking (reused to avoid allocations)
@@ -225,6 +226,19 @@ export class PolylineMesh extends BatchedFeatureMesh<
 
     geometry.setIndex(new BufferAttribute(indices, 1));
     // geometry.computeVertexNormals();
+
+    // Non-RTE polylines keep frustum culling (RTE disables it below), which
+    // lazily calls computeBoundingSphere() and reads position.array. Compute it
+    // eagerly here so that read happens before we drop the CPU arrays.
+    if (!useRTE) {
+      geometry.computeBoundingSphere();
+    }
+
+    // With the bounding sphere resolved and batch-id data consumed on the GPU,
+    // no CPU read survives the first upload. Drop the JS-heap copies to keep a
+    // single resident (GPU) copy — see releaseGeometryArraysAfterUpload for the
+    // context-loss trade-off.
+    releaseGeometryArraysAfterUpload(geometry);
 
     return { success: true, useRTE };
   }

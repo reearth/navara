@@ -39,6 +39,13 @@ pub struct Directory {
 }
 
 impl Directory {
+    /// Approximate heap bytes held by this directory (its entry vector). Used
+    /// by the archive's leaf-directory cache to cap resident memory.
+    #[must_use]
+    pub fn byte_len(&self) -> usize {
+        self.entries.capacity() * std::mem::size_of::<Entry>()
+    }
+
     /// Parse a directory from its **decompressed** bytes.
     ///
     /// The encoding is: entry count, then four varint columns

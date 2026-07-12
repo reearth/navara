@@ -24,6 +24,7 @@ import {
 } from "./featureEvent";
 import { renderBillboard, processBillboardChanged } from "./features/billboard";
 import { renderModel, processModelChanged } from "./features/model";
+import { sumModelGpuBytes } from "./features/modelGpuBytes";
 import { renderPoint, processPointChanged } from "./features/point";
 import { renderPolygon, processPolygonChanged } from "./features/polygon";
 import {
@@ -111,6 +112,12 @@ export async function processRenderableFeatureAdded(
       })();
       if (type) {
         featureHandler.markFeatureIsRendered(type, ev.bits);
+      }
+      // The glTF/Draco decode happened on the JS side, so report the actual
+      // decoded GPU size back to the ledger (its compressed-payload estimate
+      // undercounts Draco content). Draco decode inflates geometry markedly.
+      if (model && r) {
+        featureHandler.reportFeatureGpuBytes(ev.bits, sumModelGpuBytes(r));
       }
       return r;
     })

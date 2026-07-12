@@ -8,6 +8,7 @@ use navara_fog::Fog;
 use navara_frame::FrameManager;
 use navara_globe::Globe;
 use navara_math::{FloatType, Transform};
+use navara_memory::SseDegrade;
 
 use navara_layer::TerrainLayer;
 use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
@@ -53,6 +54,7 @@ pub fn traverse_tile(
     features: &Query<&FeatureId, With<VectorTileFeatureMarker>>,
     renderable_features: &mut Query<&mut RenderableFeature>,
     fog: &Fog,
+    degrade: SseDegrade,
     is_ancestor_rendered: bool,
     // This is used to keep rendering current children when parent tile isn't ready after you zoomed out.
     meets_sse_ancestors: bool,
@@ -168,7 +170,7 @@ pub fn traverse_tile(
     } else {
         traversal_config.max_sse()
     } as f64;
-    let meets_sse = sse <= max_sse;
+    let meets_sse = sse <= degrade.effective_max_sse(max_sse, distance_from_camera);
 
     let is_renderable = is_rendered_last_frame || is_tile_ready;
 
@@ -243,6 +245,7 @@ pub fn traverse_tile(
                 features,
                 renderable_features,
                 fog,
+                degrade,
                 if meets_sse_ancestors {
                     is_ancestor_rendered
                 } else {

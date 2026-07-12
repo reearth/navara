@@ -56,6 +56,52 @@ impl MvtLayerData {
         self.feature_tag_offsets.len().saturating_sub(1)
     }
 
+    // === Memory accounting (for MemoryLedger via BatchTable) ===
+    //
+    // `keys`/`values` are `Arc`-shared across a layer's groups, so they must be
+    // counted once per allocation (via [`Self::keys_ptr`]/[`Self::values_ptr`]),
+    // while `feature_tags_flat`/`feature_tag_offsets` are owned per entry.
+
+    /// Bytes owned exclusively by this entry (the two flat tag buffers).
+    pub fn owned_bytes(&self) -> usize {
+        self.feature_tags_flat.capacity() * size_of::<u32>()
+            + self.feature_tag_offsets.capacity() * size_of::<u32>()
+    }
+
+    /// Stable identity of the shared keys allocation (dedup key).
+    pub fn keys_ptr(&self) -> usize {
+        Arc::as_ptr(&self.keys) as *const () as usize
+    }
+
+    /// Stable identity of the shared values allocation (dedup key).
+    pub fn values_ptr(&self) -> usize {
+        Arc::as_ptr(&self.values) as *const () as usize
+    }
+
+    /// Approximate bytes held by the shared keys table (property names).
+    pub fn keys_shared_bytes(&self) -> usize {
+        size_of::<Vec<String>>()
+            + self
+                .keys
+                .iter()
+                .map(|s| size_of::<String>() + s.capacity())
+                .sum::<usize>()
+    }
+
+    /// Approximate bytes held by the shared values table. Only `string_value`
+    /// carries a heap payload; the other `tile::Value` fields are inline.
+    pub fn values_shared_bytes(&self) -> usize {
+        size_of::<Vec<tile::Value>>()
+            + self
+                .values
+                .iter()
+                .map(|v| {
+                    size_of::<tile::Value>()
+                        + v.string_value.as_ref().map(|s| s.capacity()).unwrap_or(0)
+                })
+                .sum::<usize>()
+    }
+
     /// Tag pairs for a feature index, or `None` if out of range.
     pub fn feature_tags(&self, feature_index: usize) -> Option<&[u32]> {
         let start = *self.feature_tag_offsets.get(feature_index)? as usize;

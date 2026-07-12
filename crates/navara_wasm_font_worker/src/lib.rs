@@ -174,6 +174,10 @@ impl FontCache {
             .map(|g| g.glyph_id)
             .collect();
 
+        // Memory budget: this atlas may only grow up to what the budget
+        // leaves after every other resident byte in the cache.
+        let max_atlas_bytes = self.max_bytes_for_atlas(&atlas_key, is_color);
+
         // Split-borrow: hand the immutable font bytes to a mutable atlas
         // method without cloning the (possibly multi-MB) buffer.
         let entry = self.fonts.get(url)?;
@@ -192,6 +196,7 @@ impl FontCache {
             font_index,
             &glyph_ids,
             &mut evicted,
+            max_atlas_bytes,
         );
 
         let glyphs: Vec<WasmShapedGlyph> = shaped
@@ -276,4 +281,58 @@ impl FontCache {
     pub fn wasm_release_glyphs(&mut self, atlas_key: &str, keys: &[u64]) {
         self.release_glyphs(atlas_key, keys);
     }
+
+    /// Sets the cache's memory budget in bytes (font data + atlas pixels).
+    /// The budget caps further atlas growth — the WASM heap never shrinks —
+    /// so over-budget glyph bursts degrade to missing glyphs instead of
+    /// growing the atlas. `undefined` removes the budget.
+    #[wasm_bindgen(js_name = setBudget)]
+    pub fn wasm_set_budget(&mut self, bytes: Option<f64>) {
+        self.set_budget(bytes.map(|b| b as usize));
+    }
+
+    /// Snapshot of the cache's modeled resident bytes for diagnostics.
+    #[wasm_bindgen(js_name = memoryStats)]
+    pub fn wasm_memory_stats(&self) -> FontCacheStats {
+        let (font_bytes, atlas_bytes, color_atlas_bytes) = self.modeled_bytes();
+        FontCacheStats {
+            font_count: self.fonts.len() as u32,
+            atlas_count: (self.atlases.len() + self.color_atlases.len()) as u32,
+            glyph_count: (self
+                .atlases
+                .values()
+                .map(|a| a.glyph_count())
+                .sum::<usize>()
+                + self
+                    .color_atlases
+                    .values()
+                    .map(|a| a.glyph_count())
+                    .sum::<usize>()) as u32,
+            font_bytes: font_bytes as f64,
+            atlas_bytes: atlas_bytes as f64,
+            color_atlas_bytes: color_atlas_bytes as f64,
+            budget_bytes: self.budget_bytes.map(|b| b as f64).unwrap_or(0.),
+        }
+    }
+}
+
+/// Modeled memory usage of the font cache. Byte counts are `f64` because JS
+/// has no u64; `budget_bytes == 0` means no budget is set.
+#[wasm_bindgen]
+#[derive(Clone, Copy)]
+pub struct FontCacheStats {
+    #[wasm_bindgen(js_name = fontCount, readonly)]
+    pub font_count: u32,
+    #[wasm_bindgen(js_name = atlasCount, readonly)]
+    pub atlas_count: u32,
+    #[wasm_bindgen(js_name = glyphCount, readonly)]
+    pub glyph_count: u32,
+    #[wasm_bindgen(js_name = fontBytes, readonly)]
+    pub font_bytes: f64,
+    #[wasm_bindgen(js_name = atlasBytes, readonly)]
+    pub atlas_bytes: f64,
+    #[wasm_bindgen(js_name = colorAtlasBytes, readonly)]
+    pub color_atlas_bytes: f64,
+    #[wasm_bindgen(js_name = budgetBytes, readonly)]
+    pub budget_bytes: f64,
 }

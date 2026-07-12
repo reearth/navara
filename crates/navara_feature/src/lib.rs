@@ -2,9 +2,18 @@
 
 use bevy_app::{App, Plugin, PostUpdate, PreUpdate, Update};
 use bevy_ecs::schedule::IntoScheduleConfigs;
+use bevy_ecs::system::{Res, ResMut};
 use navara_feature_component::batch::{BatchTable, FeatureBatchIdMap};
 use navara_geometry::PolygonResource;
+use navara_memory::{MemoryAccountingSet, MemoryLedger};
 use navara_tile::TileSet;
+
+/// Publishes the `BatchTable`'s attribute-table bytes (invisible to
+/// `BufferStore`) into the memory ledger, so the budget, eviction, and
+/// SSE-pressure degrade see them.
+fn sync_batch_table_bytes(batch_table: Res<BatchTable>, mut ledger: ResMut<MemoryLedger>) {
+    ledger.external_cpu_bytes = batch_table.total_bytes() as u64;
+}
 
 mod billboard;
 mod event;
@@ -22,6 +31,12 @@ impl Plugin for FeaturePlugin {
         app.init_resource::<PolygonResource>()
             .init_resource::<BatchTable>()
             .init_resource::<FeatureBatchIdMap>()
+            // Feed attribute-table bytes into the memory ledger before its
+            // pressure/stat systems run.
+            .add_systems(
+                PostUpdate,
+                sync_batch_table_bytes.in_set(MemoryAccountingSet),
+            )
             // Despawn RenderableFeature after removed event is sent.
             // Otherwise removed event can't reach to client.
             .add_systems(PreUpdate, event::despawn)

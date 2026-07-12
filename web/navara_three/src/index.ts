@@ -16,13 +16,20 @@ import initCore, {
   type TerrainHeightUpdatedEvent,
   type TextureFragmentStatus,
 } from "@navara/engine";
-import { FontManager, type FontFamily } from "@navara/font";
+import {
+  FontManager,
+  type FontFamily,
+  type FontWorkerMemoryStats,
+} from "@navara/font";
 import FontWorkerURL from "@navara/font/fontWorker?worker&url";
 import { initNavaraApi } from "@navara/three_api";
 import {
   initializeWorkerPool,
+  probeWorkerPoolHeap,
   terminateWorkerPool,
   warmUpWorkerPool,
+  workerPoolHeapStats,
+  type WorkerPoolHeapStats,
 } from "@navara/worker";
 import {
   Scene,
@@ -62,7 +69,15 @@ import {
   type AnyMeshDesc,
 } from "./core/BaseHandle";
 import { Registries } from "./core/Registries";
-import { getDevicePixelRatio, isMobileDevice } from "./device";
+import {
+  getCompositeAtlasSize,
+  getDefaultLodFog,
+  getDefaultMemoryBudgets,
+  getDefaultMemoryCostHints,
+  getDevicePixelRatio,
+  isMobileDevice,
+  type LodFogSettings,
+} from "./device";
 import {
   processEvent,
   EventContext,
@@ -158,7 +173,43 @@ export { type BlendMode, blendFunction, createReplacer } from "./utils";
 export { Atmosphere, type AtmosphereOptions } from "./atmosphere";
 export type { Quality } from "./quality";
 export type { CustomObject3DEventMap } from "./object3DEvent";
-export type { FontFamily, FontFace } from "@navara/font";
+export type { FontFamily, FontFace, FontWorkerMemoryStats } from "@navara/font";
+export {
+  getDefaultCacheBytes,
+  getDefaultLodFog,
+  getDefaultMemoryBudgets,
+  MB,
+  type LodFogSettings,
+  type MemoryBudgets,
+} from "./device";
+
+/**
+ * Snapshot of engine memory usage; see {@link ThreeView.memoryStats}. Plain
+ * object (not the WASM-generated class) per the WASM API policy: the class is
+ * copied field-by-field and freed before returning.
+ */
+export type MemoryStats = {
+  bufferTotalBytes: number;
+  bufferCount: number;
+  gpuBytesEst: number;
+  externalCpuBytes: number;
+  reservedBytes: number;
+  budgetBytes: number | undefined;
+  evictedCount: number;
+  sseMultiplier: number;
+  retainedVector: number;
+  retainedTerrain: number;
+  retainedRaster: number;
+  retainedTiles3d: number;
+};
+
+/** Snapshot of worker-side memory; see {@link ThreeView.workerMemoryStats}. */
+export type WorkerMemoryStats = {
+  /** Tile-worker pool heaps (undefined per slot until first probed). */
+  tileWorkers: WorkerPoolHeapStats | undefined;
+  /** Font worker heap/cache breakdown; undefined while no font is in use. */
+  fontWorker: FontWorkerMemoryStats | undefined;
+};
 
 // NOTE:
 // This overrides all materials to output a normal buffer, meaning Navara operates using MRT (Multiple Render Targets).
@@ -202,6 +253,48 @@ export type Options = {
    * @defaultValue 100
    */
   idleThreshold?: number;
+  /**
+   * Memory budget in bytes for tile caches (WASM buffers + estimated GPU
+   * cost). Tiles leaving the view are retained until the budget is exceeded,
+   * then evicted least-recently-visited first — panning back is refetch-free
+   * while total usage stays capped. Naming follows Cesium3DTileset.cacheBytes.
+   * @defaultValue device-dependent, see `getDefaultCacheBytes`
+   */
+  cacheBytes?: number;
+  /**
+   * LOD fog: distance-based screen-space-error relaxation used by tile LOD
+   * selection — far tiles tolerate a larger error and stay coarser while
+   * near tiles keep full resolution. Purely an LOD control; it never
+   * affects visual fog rendering. Partial overrides are merged over the
+   * device default.
+   * @defaultValue device-memory-dependent, see `getDefaultLodFog`
+   */
+  lodFog?: Partial<LodFogSettings>;
+  /**
+   * Overrides for the worker-side memory budgets (per-tile-worker WASM heap
+   * recycle threshold and the font worker's cache budget). Defaults derive
+   * from the device memory together with `cacheBytes` — see
+   * `getDefaultMemoryBudgets`. The font budget caps *further growth* of the
+   * font caches; WASM heaps never return memory to the OS.
+   */
+  memoryBudget?: {
+    maxWorkerHeapBytes?: number;
+    fontBudgetBytes?: number;
+    /** In-flight data fetch cap per tile pipeline (see `getDefaultMemoryBudgets`). */
+    maxPendingRequests?: number;
+    /**
+     * Resting (base) memory-pressure SSE multiplier. On mobile a value > 1
+     * keeps far tiles coarser even when the budget is not exceeded. Defaults
+     * per device — see `getDefaultSseMultiplierRange`.
+     */
+    sseMultiplierMin?: number;
+    /**
+     * Ceiling for the dynamic memory-pressure SSE degrade. A larger value lets
+     * the engine shed more of the visible set under pressure before the tab is
+     * killed. Defaults per device — see `getDefaultSseMultiplierRange`.
+     */
+    sseMultiplierMax?: number;
+  };
   /**
    * Enables shared water texture. When enabled, a single water normal texture
    * is loaded once and shared across all meshes that have water effects enabled.
@@ -433,6 +526,9 @@ export default class ThreeView<
     // Returns the per-frame cached revision (read once in `_render`), so per-tile
     // `onBeforeRender` gating costs no WASM-boundary call.
     vectorRevision: () => this._vectorRevision,
+    reportDrapeGpuBytes: (handle, bytes) => {
+      this._core?.reportTerrainDrapeGpuBytes(handle, bytes);
+    },
     calcMetersPerTexel: (tileHandle, textureZoom, textureWidth) => {
       return (
         this._core?.calcMetersPerTexel(tileHandle, textureZoom, textureWidth) ??
@@ -541,6 +637,9 @@ export default class ThreeView<
     markFeatureIsRendered: (type, bits) => {
       this._core?.markFeatureIsRendered(type, bits);
     },
+    reportFeatureGpuBytes: (bits, bytes) => {
+      this._core?.reportFeatureGpuBytes(bits, bytes);
+    },
     readAllBatchedProperties: (featureId, f) =>
       this._core?.readAllBatchedProperties(featureId, f),
     readFilteredBatchedProperties: (featureId, keys, f) =>
@@ -647,9 +746,15 @@ export default class ThreeView<
     // vector-scene offscreen render loop that previously lived in TileMesh,
     // and is the seam through which a future MRT composite pass will reduce
     // the main TileMesh shader's texture fetches.
+    // Atlas / drape RT side length is 512² on both desktop and mobile — the
+    // SAME source of truth `getDefaultMemoryCostHints` uses, so the ledger's
+    // per-tile GPU estimate matches the real allocation.
+    // `isMobileOptimized()` only reads `_options.mobileOptimization` (set
+    // above) and the pure `isMobileDevice()`, so it is safe here in the ctor.
     this._tileTextureCompositor = new TileTextureCompositor({
       renderer: this._renderer,
       texturizedSceneByTileCoordinates: this._texturizedSceneByTileCoordinates,
+      size: getCompositeAtlasSize(this.isMobileOptimized()),
     });
 
     this._scenes = {
@@ -694,13 +799,39 @@ export default class ThreeView<
     if (options.debug) {
       const t = options.container || this._renderer.domElement.parentElement;
       if (t) {
-        this._stats = new RendererStats({
-          beginRender: () => this._renderer.info.reset(),
-          endRender: () => ({
-            ...this._renderer.info.render,
-            memGeometries: this._renderer.info.memory.geometries,
-          }),
-        });
+        this._stats = new RendererStats(
+          {
+            beginRender: () => this._renderer.info.reset(),
+            endRender: () => ({
+              ...this._renderer.info.render,
+              memGeometries: this._renderer.info.memory.geometries,
+            }),
+          },
+          () => {
+            const stats = this._core?.getMemoryStats();
+            // Read the fields off the boxed wasm-bindgen struct, then free it —
+            // the sampler runs ~1/s and the struct otherwise leaks until the
+            // FinalizationRegistry runs (see fontWorker.ts for the pattern).
+            const bufferTotalBytes = stats?.bufferTotalBytes;
+            const budgetBytes = stats?.budgetBytes;
+            stats?.free();
+            const memory = (
+              performance as Performance & {
+                memory?: { usedJSHeapSize: number };
+              }
+            ).memory;
+            const MB = 1024 * 1024;
+            return {
+              wasmMB:
+                bufferTotalBytes !== undefined
+                  ? bufferTotalBytes / MB
+                  : undefined,
+              jsHeapMB: memory ? memory.usedJSHeapSize / MB : undefined,
+              budgetMB:
+                budgetBytes !== undefined ? budgetBytes / MB : undefined,
+            };
+          },
+        );
         t.appendChild(this._stats.dom);
       }
     }
@@ -851,6 +982,107 @@ export default class ThreeView<
     this.forceUpdate();
   }
 
+  /**
+   * The resolved tile-cache memory budget in bytes (see `Options.cacheBytes`).
+   * `undefined` before `init()` when no explicit option was given.
+   */
+  get cacheBytes(): number | undefined {
+    return this._options.cacheBytes;
+  }
+  /**
+   * Updates the tile-cache memory budget at runtime. Lowering it evicts
+   * retained tiles down to the new budget over the next frames. Passing
+   * `undefined` disables budgeting entirely, restoring the original
+   * destroy-on-unvisited tile lifecycle.
+   */
+  set cacheBytes(v: number | undefined) {
+    this._options.cacheBytes = v;
+    this._core?.setCacheBytes(v);
+  }
+
+  /**
+   * The resolved LOD fog settings (see `Options.lodFog`). `undefined`
+   * before `init()`.
+   */
+  get lodFog(): LodFogSettings | undefined {
+    const lodFog = this._options.lodFog;
+    if (!lodFog) return undefined;
+    return lodFog as LodFogSettings;
+  }
+  /**
+   * Updates the LOD fog at runtime; partial values merge over the current
+   * settings. The next traversal re-selects tile LODs with the new curve.
+   */
+  set lodFog(v: Partial<LodFogSettings>) {
+    const lodFog = {
+      ...getDefaultLodFog({ isMobile: this.isMobileOptimized() }),
+      ...this._options.lodFog,
+      ...v,
+    };
+    this._options.lodFog = lodFog;
+    this._core?.setLodFog(lodFog.enabled, lodFog.density, lodFog.sseFactor);
+  }
+
+  /**
+   * Updates the memory-pressure SSE degrade range at runtime. `min` is the
+   * resting multiplier applied even without budget pressure (> 1 coarsens far
+   * tiles at rest); `max` is the ceiling the dynamic degrade can climb to. The
+   * next traversal re-selects tile LODs with the new range.
+   */
+  setSseMultiplierRange(min: number, max: number): void {
+    this._options.memoryBudget = {
+      ...this._options.memoryBudget,
+      sseMultiplierMin: min,
+      sseMultiplierMax: max,
+    };
+    this._core?.setSseMultiplierRange(min, max);
+  }
+
+  /**
+   * Snapshot of engine memory usage (WASM buffer bytes, GPU estimates,
+   * retained tile counts). Returns `undefined` before `init()`.
+   */
+  memoryStats(): MemoryStats | undefined {
+    const stats = this._core?.getMemoryStats();
+    if (!stats) return undefined;
+    // Copy every field into a plain object and free the boxed WASM struct
+    // before returning — the public API must not expose wasm-bindgen classes
+    // (WASM_API_POLICY.md), and returning the class would also leak it.
+    const plain: MemoryStats = {
+      bufferTotalBytes: stats.bufferTotalBytes,
+      bufferCount: stats.bufferCount,
+      gpuBytesEst: stats.gpuBytesEst,
+      externalCpuBytes: stats.externalCpuBytes,
+      reservedBytes: stats.reservedBytes,
+      budgetBytes: stats.budgetBytes,
+      evictedCount: stats.evictedCount,
+      sseMultiplier: stats.sseMultiplier,
+      retainedVector: stats.retainedVector,
+      retainedTerrain: stats.retainedTerrain,
+      retainedRaster: stats.retainedRaster,
+      retainedTiles3d: stats.retainedTiles3d,
+    };
+    stats.free();
+    return plain;
+  }
+
+  /**
+   * Snapshot of worker-side memory: per-tile-worker WASM heaps (point-in-time
+   * samples from the pool's post-task probes — this call also requests fresh
+   * probes, whose results show up on the *next* call) and the font worker's
+   * heap/cache breakdown (`undefined` while no font has been used). Returns
+   * `undefined` before `init()`.
+   */
+  async workerMemoryStats(): Promise<WorkerMemoryStats | undefined> {
+    if (!this._initialized) return undefined;
+    // Request fresh samples for the next read; probes coalesce per worker.
+    probeWorkerPoolHeap();
+    return {
+      tileWorkers: workerPoolHeapStats(),
+      fontWorker: await this._fontManager.memoryStats(),
+    };
+  }
+
   private get globeDepthTexture() {
     return this.renderPass.globeDepthCopyPass.texture;
   }
@@ -891,10 +1123,19 @@ export default class ThreeView<
       this._hillshadeContext.normalMapScale = 0.5;
     }
 
+    // One device-wide view of memory: the main-thread tile cache, the
+    // tile-worker pool, and the font worker derive their budgets together.
+    const budgets = getDefaultMemoryBudgets({
+      isMobile: mobileOptimized,
+      poolSize: concurrencyManager.total,
+    });
+
     initializeWorkerPool(WorkerURL, concurrencyManager, {
       // A worker over this WASM heap budget is recycled; tighter on mobile,
       // where the process is killed at much lower memory pressure.
-      maxWorkerHeapBytes: (mobileOptimized ? 128 : 256) * 1024 * 1024,
+      maxWorkerHeapBytes:
+        this._options.memoryBudget?.maxWorkerHeapBytes ??
+        budgets.maxWorkerHeapBytes,
     });
 
     // Asynchronous initialization in parallel, pre-warming all workers with
@@ -904,7 +1145,46 @@ export default class ThreeView<
     this._core = new Core(newId());
     this._core.start();
 
+    const cacheBytes = this._options.cacheBytes ?? budgets.cacheBytes;
+    this._options.cacheBytes = cacheBytes;
+    this._core.setCacheBytes(cacheBytes);
+
+    // Cap in-flight fetches (per tile pipeline) — mobile presets shrink the
+    // decode/upload burst a camera move can produce.
+    this._core.setMaxPendingRequests(
+      this._options.memoryBudget?.maxPendingRequests ??
+        budgets.maxPendingRequests,
+    );
+
+    // Memory-pressure SSE degrade range. min > 1 (mobile) keeps far tiles
+    // coarser at rest; max is the ceiling the dynamic degrade can climb to
+    // when the visible set alone exceeds the budget.
+    this._core.setSseMultiplierRange(
+      this._options.memoryBudget?.sseMultiplierMin ?? budgets.sseMultiplierMin,
+      this._options.memoryBudget?.sseMultiplierMax ?? budgets.sseMultiplierMax,
+    );
+
+    // Override the Rust CostHints defaults with sizes derived from this
+    // device's actual composite-atlas dimensions (512² with three MRT
+    // attachments, ~3MB per tile) so the ledger's per-tile GPU estimate matches.
+    const costHints = getDefaultMemoryCostHints({ isMobile: mobileOptimized });
+    this._core.setMemoryCostHints(
+      costHints.atlasTileBytes,
+      costHints.rasterTileBytes,
+    );
+
+    // LOD fog: stronger distance-based degrade on low-memory devices.
+    const lodFog = {
+      ...getDefaultLodFog({ isMobile: mobileOptimized }),
+      ...this._options.lodFog,
+    };
+    this._options.lodFog = lodFog;
+    this._core.setLodFog(lodFog.enabled, lodFog.density, lodFog.sseFactor);
+
     this._fontManager.setConcurrencyManager(concurrencyManager);
+    this._fontManager.setMemoryBudget(
+      this._options.memoryBudget?.fontBudgetBytes ?? budgets.fontBudgetBytes,
+    );
 
     this._globe = new Globe(this._globeHandler, this._options);
 

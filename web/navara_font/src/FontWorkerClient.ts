@@ -4,7 +4,14 @@ import type {
   ShapeTextResult,
   FontAtlasData,
   BatchPrepareTextResult,
+  FontWorkerMemoryStats,
 } from "./types";
+
+export type FontWorkerClientOptions = {
+  /** Memory budget for the worker's font caches (font data + atlas pixels).
+   * Caps further atlas growth; the WASM heap itself never shrinks. */
+  fontBudgetBytes?: number;
+};
 
 /**
  * Main-thread client that communicates with the dedicated font Web Worker.
@@ -20,7 +27,11 @@ export class FontWorkerClient {
   >();
   private _ready: Promise<void>;
 
-  constructor(workerUrl: string | URL, concurrencyManager: ConcurrencyManager) {
+  constructor(
+    workerUrl: string | URL,
+    concurrencyManager: ConcurrencyManager,
+    options?: FontWorkerClientOptions,
+  ) {
     this._concurrencyManager = concurrencyManager;
 
     this._worker = new Worker(workerUrl, {
@@ -46,8 +57,11 @@ export class FontWorkerClient {
       this.dispose();
     };
 
-    // Trigger WASM init and resolve once the worker is ready.
-    this._ready = this._send("init", undefined).then(() => undefined);
+    // Trigger WASM init and resolve once the worker is ready; the init
+    // payload also delivers the memory budget.
+    this._ready = this._send("init", {
+      fontBudgetBytes: options?.fontBudgetBytes,
+    }).then(() => undefined);
     this._concurrencyManager.increment();
   }
 
@@ -131,6 +145,14 @@ export class FontWorkerClient {
       atlasKey: raw.atlasKey,
       evicted: raw.evicted,
     };
+  }
+
+  /** Snapshot of the worker's WASM heap and font-cache memory usage. */
+  async getMemoryStats(): Promise<FontWorkerMemoryStats> {
+    return this._send(
+      "getMemoryStats",
+      undefined,
+    ) as Promise<FontWorkerMemoryStats>;
   }
 
   dispose(): void {

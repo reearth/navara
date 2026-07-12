@@ -15,6 +15,7 @@ import type {
   FontAtlasData,
   FontFace,
   FontFamily,
+  FontWorkerMemoryStats,
   GlyphMetrics,
   ShapedGlyph,
   ShapeTextResult,
@@ -82,6 +83,8 @@ export class FontManager {
   private _client: FontWorkerClient | undefined;
   private _clientPromise: Promise<FontWorkerClient> | undefined;
   private _concurrencyManager: ConcurrencyManager | undefined;
+  /** Worker cache budget, delivered when the (lazy) client is created. */
+  private _fontBudgetBytes: number | undefined;
   /** Tracks in-flight fetch promises to avoid duplicate requests. */
   private _pending = new Map<string, Promise<void>>();
   /** Tracks fonts that have been successfully loaded. */
@@ -232,7 +235,9 @@ export class FontManager {
     }
     const cm = this._concurrencyManager;
     this._clientPromise = (async () => {
-      const client = new FontWorkerClient(this._workerUrl, cm);
+      const client = new FontWorkerClient(this._workerUrl, cm, {
+        fontBudgetBytes: this._fontBudgetBytes,
+      });
       await client.ready();
       this._client = client;
       return client;
@@ -241,6 +246,23 @@ export class FontManager {
       this._clientPromise = undefined;
     });
     return this._clientPromise;
+  }
+
+  /**
+   * Sets the worker-side cache budget (font data + atlas pixels). Must be
+   * called before the first font loads — the worker is created lazily and
+   * the budget is delivered with its init message.
+   */
+  setMemoryBudget(bytes: number | undefined): void {
+    this._fontBudgetBytes = bytes;
+  }
+
+  /**
+   * Snapshot of the font worker's memory usage, or `undefined` while no
+   * worker has been spawned (no fonts in use = zero cost).
+   */
+  async memoryStats(): Promise<FontWorkerMemoryStats | undefined> {
+    return this._client?.getMemoryStats();
   }
 
   /**

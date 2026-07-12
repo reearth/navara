@@ -62,12 +62,14 @@ use navara_feature_component::{
     model::{ModelBin, ModelGeometry, ModelMarker},
     render::RenderableFeature,
 };
+use navara_fog::Fog;
 use navara_layer::{
     Cesium3dTilesLayer, DeleteCesium3dTilesLayerMarker, LayerId, LayerStore,
     UpdateCesium3dTilesLayerMarker,
 };
 use navara_material::{Appearance, ModelMaterial};
 use navara_math::{Transform, Vec3};
+use navara_memory::{SseDegrade, SsePressure};
 use navara_parser::cesium3dtiles;
 use navara_window::Window;
 use std::sync::Arc;
@@ -267,6 +269,9 @@ pub fn traverse_cesium_3d_tiles_tree(
         Query<&RenderableFeature>,
         Query<(), (Changed<RenderableFeature>, With<ModelMarker>)>,
     )>,
+    fog_query: Query<Ref<Fog>>,
+    pressure: Res<SsePressure>,
+    pool: Res<crate::Cesium3dTilesRetentionPool>,
 ) {
     let is_data_requesters_changed = !changed_requesters.is_empty();
     let changed_rendered_tiles = !rendered_tiles.p1().is_empty();
@@ -274,6 +279,18 @@ pub fn traverse_cesium_3d_tiles_tree(
 
     let mut rendered_tiles = rendered_tiles.p0();
     let renderable_features = renderable_features.p0();
+
+    let (fog, is_fog_changed) = match fog_query.single() {
+        Ok(fog) => (Fog::clone(&fog), fog.is_changed()),
+        Err(_) => (
+            Fog {
+                enabled: false,
+                density: 0.,
+                sse_factor: 0.,
+            },
+            false,
+        ),
+    };
 
     for (metadata, mut tree) in &mut tiles {
         for (_, camera, frustum) in &camera {
@@ -284,11 +301,25 @@ pub fn traverse_cesium_3d_tiles_tree(
                 || camera.is_changed()
                 || frustum.is_added()
                 || frustum.is_changed()
-                || tree.is_added();
+                || tree.is_added()
+                || is_fog_changed
+                || pressure.is_changed();
             if !needs_update {
                 continue;
             }
             let camera_pos = camera.transform_point(Vec3::ZERO);
+            // Memory-pressure LOD degrade, weighted by distance relative to
+            // the camera's height above the ellipsoid.
+            let camera_height = navara_core::WGS84_64
+                .xyz_to_lle(navara_core::vec3_to_xyz(camera_pos))
+                .height
+                .val();
+            let degrade = SseDegrade::new(
+                pressure.multiplier,
+                camera_height,
+                pressure.min,
+                pressure.max,
+            );
             let is_v1_1 = tree.is_v1_1;
             let base_url = Arc::clone(&tree.base_url);
             select_tiles(
@@ -306,7 +337,10 @@ pub fn traverse_cesium_3d_tiles_tree(
                 &mut rendered_tiles,
                 &features,
                 &renderable_features,
+                &pool,
                 &window,
+                &fog,
+                degrade,
                 is_v1_1,
             );
         }

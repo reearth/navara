@@ -49,6 +49,37 @@ pub struct Core {
     app: App,
 }
 
+/// Engine memory usage snapshot for diagnostics. Byte counts are `f64`
+/// because JS has no u64.
+#[wasm_bindgen]
+#[derive(Clone, Copy)]
+pub struct MemoryStats {
+    #[wasm_bindgen(js_name = bufferTotalBytes, readonly)]
+    pub buffer_total_bytes: f64,
+    #[wasm_bindgen(js_name = bufferCount, readonly)]
+    pub buffer_count: u32,
+    #[wasm_bindgen(js_name = gpuBytesEst, readonly)]
+    pub gpu_bytes_est: f64,
+    #[wasm_bindgen(js_name = externalCpuBytes, readonly)]
+    pub external_cpu_bytes: f64,
+    #[wasm_bindgen(js_name = reservedBytes, readonly)]
+    pub reserved_bytes: f64,
+    #[wasm_bindgen(js_name = budgetBytes, readonly)]
+    pub budget_bytes: Option<f64>,
+    #[wasm_bindgen(js_name = evictedCount, readonly)]
+    pub evicted_count: f64,
+    #[wasm_bindgen(js_name = sseMultiplier, readonly)]
+    pub sse_multiplier: f32,
+    #[wasm_bindgen(js_name = retainedVector, readonly)]
+    pub retained_vector: u32,
+    #[wasm_bindgen(js_name = retainedTerrain, readonly)]
+    pub retained_terrain: u32,
+    #[wasm_bindgen(js_name = retainedRaster, readonly)]
+    pub retained_raster: u32,
+    #[wasm_bindgen(js_name = retainedTiles3d, readonly)]
+    pub retained_tiles3d: u32,
+}
+
 #[wasm_bindgen]
 impl Core {
     #[wasm_bindgen(constructor)]
@@ -443,6 +474,27 @@ impl Core {
             "model" => self.app.mark_model_is_rendered(bits),
             _ => unreachable!(),
         }
+    }
+
+    /// Reports the actual GPU byte size a rendered feature was measured at on
+    /// the JS side so the memory ledger replaces its payload-based estimate.
+    /// Feature kinds without a wired-up owner lookup are a no-op (currently
+    /// wired: 3D Tiles models, whose glTF/Draco decode otherwise undercounts).
+    #[wasm_bindgen(js_name = reportFeatureGpuBytes)]
+    pub fn report_feature_gpu_bytes(&mut self, feature_bits: u64, gpu_bytes: f64) {
+        self.app
+            .report_feature_gpu_bytes(feature_bits, gpu_bytes as u64);
+    }
+
+    /// Reports the drape render-target GPU footprint of a terrain tile (the
+    /// clamp-to-ground vector layers baked onto it), measured on the JS side
+    /// where the render targets are lazily allocated. Scales with terrain
+    /// subdivision past the vector `maxZoom`, which per-vector-tile accounting
+    /// cannot see.
+    #[wasm_bindgen(js_name = reportTerrainDrapeGpuBytes)]
+    pub fn report_terrain_drape_gpu_bytes(&mut self, handle: TileHandle, gpu_bytes: f64) {
+        self.app
+            .report_terrain_drape_gpu_bytes(handle, gpu_bytes as u64);
     }
 
     #[wasm_bindgen(js_name = triggerWorkerTaskCompleted)]
@@ -882,6 +934,63 @@ impl Core {
     #[wasm_bindgen(js_name = getGlobeElevationColormap)]
     pub fn get_globe_elevation_colormap(&self) -> Option<Vec<f32>> {
         self.app.get_globe().map(|g| g.elevation_colormap.clone())
+    }
+
+    /// Updates the LOD fog parameters (distance-based screen-space-error
+    /// relaxation: far tiles tolerate a larger error and stay coarser). This
+    /// only affects tile LOD selection, never visual fog rendering.
+    #[wasm_bindgen(js_name = setLodFog)]
+    pub fn set_lod_fog(&mut self, enabled: bool, density: f64, sse_factor: f64) {
+        self.app.set_lod_fog(enabled, density, sse_factor);
+    }
+
+    /// Caps the number of in-flight data fetches per tile pipeline (raster /
+    /// terrain / vector / 3D Tiles / hillshade each apply it independently).
+    #[wasm_bindgen(js_name = setMaxPendingRequests)]
+    pub fn set_max_pending_requests(&mut self, value: u32) {
+        self.app.set_max_pending_requests(value);
+    }
+
+    /// Sets the memory-pressure SSE multiplier range. `min` is the resting
+    /// base (far tiles always coarser; >1 on mobile), `max` the ceiling the
+    /// degrade rises to under memory pressure.
+    #[wasm_bindgen(js_name = setSseMultiplierRange)]
+    pub fn set_sse_multiplier_range(&mut self, min: f32, max: f32) {
+        self.app.set_sse_multiplier_range(min, max);
+    }
+
+    /// Sets the memory budget for tile caches in bytes. Passing `undefined`
+    /// disables budgeting (tiles are destroyed as soon as they leave the
+    /// view, the original behavior).
+    #[wasm_bindgen(js_name = setCacheBytes)]
+    pub fn set_cache_bytes(&mut self, bytes: Option<f64>) {
+        self.app.set_cache_bytes(bytes);
+    }
+
+    /// Overrides GPU cost estimates that only the JS side knows precisely
+    /// (the composite atlas size depends on device options).
+    #[wasm_bindgen(js_name = setMemoryCostHints)]
+    pub fn set_memory_cost_hints(&mut self, atlas_tile_bytes: f64, raster_tile_bytes: f64) {
+        self.app
+            .set_memory_cost_hints(atlas_tile_bytes, raster_tile_bytes);
+    }
+
+    #[wasm_bindgen(js_name = getMemoryStats)]
+    pub fn get_memory_stats(&mut self) -> Option<MemoryStats> {
+        self.app.memory_stats().map(|s| MemoryStats {
+            buffer_total_bytes: s.buffer_total_bytes as f64,
+            buffer_count: s.buffer_count,
+            gpu_bytes_est: s.gpu_bytes_est as f64,
+            external_cpu_bytes: s.external_cpu_bytes as f64,
+            reserved_bytes: s.reserved_bytes as f64,
+            budget_bytes: s.budget_bytes.map(|b| b as f64),
+            evicted_count: s.evicted_count as f64,
+            sse_multiplier: s.sse_multiplier,
+            retained_vector: s.retained_vector,
+            retained_terrain: s.retained_terrain,
+            retained_raster: s.retained_raster,
+            retained_tiles3d: s.retained_tiles3d,
+        })
     }
 
     #[wasm_bindgen(js_name = setGlobeTransparent)]

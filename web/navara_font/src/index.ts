@@ -10,6 +10,7 @@ export type {
   FontAtlasData,
   FontFace,
   FontFamily,
+  FontWorkerMemoryStats,
   GlyphMetrics,
   ShapedGlyph,
   ShapeTextResult,

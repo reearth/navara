@@ -13,7 +13,8 @@ use navara_geojson::GeoJsonPlugin;
 use navara_globe::GlobePlugin;
 use navara_input::InputPlugin;
 use navara_layer_event::LayerPlugin;
-use navara_mesh::MeshPlugin;
+use navara_memory::{MemoryAccountingSet, MemoryPlugin, PendingEvictionResetSet};
+use navara_mesh::{MeshPlugin, remove_removed_mesh};
 use navara_mvt::MvtPlugin;
 use navara_occluder::OccluderPlugin;
 use navara_pmtiles::PmTilesPlugin;
@@ -36,6 +37,7 @@ impl bevy_app::Plugin for Plugin {
         app.add_plugins(FramePlugin);
         app.add_plugins(GlobePlugin);
         app.add_plugins(BufferStorePlugin);
+        app.add_plugins(MemoryPlugin);
         app.add_plugins(InputPlugin);
         app.add_plugins(EventPlugin);
         app.add_plugins(TextureFragmentPlugin);
@@ -61,9 +63,35 @@ impl bevy_app::Plugin for Plugin {
         // terrain/raster `TileSet` so it sees this frame's rendered terrain tiles.
         app.configure_sets(Update, VectorTileSet::Process.after(TileSet));
 
+        // Layer add/update/delete events must apply BEFORE the tile pipeline
+        // runs, so `sync_terrain_layer_changes` observes `Added<TerrainLayer>`
+        // in the same frame `update_terrain` first traverses with the new
+        // layer. Without this the spawn can land between the two (schedule
+        // ambiguity), and the one-frame-late teardown destroys in-flight DEM
+        // requesters whose re-created shared-fetch consumers then wait forever
+        // (terrain never renders when the DEM source lacks low-zoom tiles).
+        app.configure_sets(Update, navara_layer_event::LayerEventSet.before(TileSet));
+
+        // The deferred-eviction credit (`pending_evicted_gpu_bytes`) must be
+        // cleared only AFTER the previous frame's evicted meshes are despawned
+        // (firing their `TileCost` hooks, so `gpu_bytes_est` already reflects
+        // the eviction). The reset system is registered by `MemoryPlugin` in
+        // its own set; only here are both crates in scope to order it.
+        app.configure_sets(
+            PreUpdate,
+            PendingEvictionResetSet.after(remove_removed_mesh),
+        );
+
         // custom systems
         app.add_systems(Startup, startup);
         app.add_systems(Update, update);
+        // Fold the per-layer retention pools into the ledger each frame so the
+        // load gate / pressure controller can exclude the evictable cache from
+        // the budget decision (see `MemoryLedger::hard_usage`).
+        app.add_systems(
+            PostUpdate,
+            crate::sync_retained_bytes.in_set(MemoryAccountingSet),
+        );
     }
 }
 

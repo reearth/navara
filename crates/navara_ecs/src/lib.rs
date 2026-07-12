@@ -46,8 +46,10 @@ use navara_worker::{
 
 mod app;
 mod batch_property;
+mod memory;
 
 pub use batch_property::*;
+pub use memory::*;
 pub use navara_vector_tile::ResolvedVectorTileState;
 
 pub struct App {

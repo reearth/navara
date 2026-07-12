@@ -30,6 +30,7 @@ import type {
   BatchedAttributeName,
   DefaultBatchAttributeValues,
 } from "./batchTexture";
+import { releaseGeometryArraysAfterUpload } from "./releaseGeometryArrays";
 import { setupRTECallback } from "./rtcRteHelper";
 
 /** Set to true to render bounding spheres as wireframe spheres for debugging. */
@@ -215,6 +216,17 @@ export class PolygonMesh extends BatchedFeatureMesh<
     }
 
     geometry.setIndex(new BufferAttribute(indices, 1));
+
+    // Ensure a bounding sphere exists before we drop the CPU arrays. When
+    // `mesh.bounding_sphere` is provided, init() overwrites this from the
+    // WASM AABB (`_baseBoundingSphere`); otherwise this eager compute prevents
+    // Three.js from lazily calling computeBoundingSphere() on a nulled array
+    // during frustum culling. Batch-id attributes are consumed on the GPU
+    // (batch data texture), so no other CPU read survives the first upload.
+    // Drop the JS-heap copies to keep a single resident (GPU) copy — see
+    // releaseGeometryArraysAfterUpload for the context-loss trade-off.
+    geometry.computeBoundingSphere();
+    releaseGeometryArraysAfterUpload(geometry);
 
     return { success: true, useRTE };
   }
