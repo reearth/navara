@@ -85,7 +85,7 @@ export type ExampleMeta = {
   section: SectionKey;
   /** Title shown on the card and detail header. */
   title: Localized;
-  /** One-line summary of what the example does (the "purpose" column in AD_EXAMPLE.md §5). */
+  /** One-line summary of what the example does. */
   description: Localized;
   /** Featured (★). Surfaced in the top "Featured" band. */
   signature?: boolean;
