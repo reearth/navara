@@ -133,7 +133,8 @@ export type FontWorkerMemoryStats = {
   budgetBytes?: number;
 };
 
-type UnicodeRange = {
+/** Inclusive codepoint range covered by a font face. */
+export type UnicodeRange = {
   from: number;
   to: number;
 };

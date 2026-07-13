@@ -1087,6 +1087,20 @@ layer.on("featureUpdated", ({ evaluator }) => {
 });
 ```
 
+:::tip[Recommended]
+Instead of writing faces and ranges by hand, derive them from a stylesheet's `@font-face` rules (e.g. the Google Fonts CSS API) with [`fetchFontFamilyFromCss()`](../../../three/api/font-family-from-css/):
+
+```typescript
+view.addFontFamily(
+  await fetchFontFamilyFromCss(
+    "MapFont",
+    "https://fonts.googleapis.com/css2?family=Noto+Sans&family=Noto+Sans+JP",
+  ),
+);
+```
+
+:::
+
 ### removeFontFamily()
 
 Unregisters a previously added font family by name. Text layers that still reference the family will no longer be able to resolve it.

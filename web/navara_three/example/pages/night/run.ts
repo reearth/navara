@@ -25,7 +25,6 @@ import type { FeatureCollection, Point } from "geojson";
 import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 
-import { datasetToSource } from "../../helpers/attribution-source";
 import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
@@ -172,11 +171,11 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   addFogLightControl(view, pane, sceneChangeHandler);
 
   attribution.show([
-    datasetToSource(TERRAIN_DATASETS.gsi),
-    datasetToSource(TILE_DATASETS.gsiSeamlessphoto),
-    datasetToSource(TILES_3D_DATASETS.plateauChiyoda),
-    datasetToSource(TILES_3D_DATASETS.plateauChuo),
-    datasetToSource(TILES_3D_DATASETS.plateauTakanawa),
+    TERRAIN_DATASETS.gsi,
+    TILE_DATASETS.gsiSeamlessphoto,
+    TILES_3D_DATASETS.plateauChiyoda,
+    TILES_3D_DATASETS.plateauChuo,
+    TILES_3D_DATASETS.plateauTakanawa,
   ]);
 };
 

@@ -3,7 +3,6 @@ import { DefaultPlugin } from "@navara/three_default_plugin";
 import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
-import { datasetToSource } from "../../../helpers/attribution-source";
 import {
   MVT_DATASETS,
   TERRAIN_DATASETS,
@@ -145,8 +144,8 @@ const run = async () => {
   }
 
   attribution.show([
-    datasetToSource(TILE_DATASETS.gsiSeamlessphoto),
-    datasetToSource(MVT_DATASETS.plateauTokyoFirePrevention),
+    TILE_DATASETS.gsiSeamlessphoto,
+    MVT_DATASETS.plateauTokyoFirePrevention,
   ]);
 };
 

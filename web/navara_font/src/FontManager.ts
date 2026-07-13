@@ -19,6 +19,7 @@ import type {
   GlyphMetrics,
   ShapedGlyph,
   ShapeTextResult,
+  UnicodeRange,
 } from "./types";
 
 /** Internal cache key combining an identifier with a quality, so SDF and
@@ -71,6 +72,15 @@ function createAtlasTexture(
 /** Maximum number of shaped text results to cache before LRU eviction. */
 const SHAPE_CACHE_MAX_SIZE = 10_000;
 
+/** Decode the worker's flattened `[from, to, ...]` cmap range pairs. */
+const decodeCmapRanges = (flat: Uint32Array): UnicodeRange[] => {
+  const ranges: UnicodeRange[] = [];
+  for (let i = 0; i + 1 < flat.length; i += 2) {
+    ranges.push({ from: flat[i], to: flat[i + 1] });
+  }
+  return ranges;
+};
+
 /**
  * Manages font loading, text shaping, and SDF atlas access.
  *
@@ -121,6 +131,13 @@ export class FontManager {
   private _refCount = new Map<string, number>();
   /** Registered font families, keyed by family name. */
   private _families = new Map<string, FontFamily>();
+  /** Real cmap coverage per font file URL, reported by the worker when the
+   *  file is first loaded. Declared face ranges can differ from what the
+   *  file contains (e.g. shared per-subset boilerplate in Google Fonts CSS
+   *  claims codepoints the file lacks, which would shape as tofu), so
+   *  registered faces pointing at the URL get their `unicodeRanges` replaced
+   *  with these — once per file, never per shaped text. */
+  private _cmapRanges = new Map<string, UnicodeRange[]>();
   /** Maps font URL → atlas key (family name or URL for standalone fonts). */
   private _atlasKeys = new Map<string, string>();
 
@@ -159,7 +176,16 @@ export class FontManager {
    * No font files are loaded until text is prepared.
    */
   registerFontFamily(family: FontFamily): void {
-    this._families.set(family.family, family);
+    // Clone the faces so cmap corrections (see `_cmapRanges`) never mutate
+    // caller-owned data; faces whose file was already loaded pick up their
+    // real coverage immediately.
+    this._families.set(family.family, {
+      family: family.family,
+      faces: family.faces.map((face) => ({
+        url: face.url,
+        unicodeRanges: this._cmapRanges.get(face.url) ?? face.unicodeRanges,
+      })),
+    });
   }
 
   /**
@@ -223,6 +249,18 @@ export class FontManager {
       }
     }
     return faces[0].url;
+  }
+
+  /** Replace the unicode ranges of every registered face pointing at
+   *  `rawUrl` with the font file's real cmap coverage (see `_cmapRanges`). */
+  private _applyCmapRanges(rawUrl: string): void {
+    const ranges = this._cmapRanges.get(rawUrl);
+    if (!ranges) return;
+    for (const family of this._families.values()) {
+      for (const face of family.faces) {
+        if (face.url === rawUrl) face.unicodeRanges = ranges;
+      }
+    }
   }
 
   private _ensureClient(): Promise<FontWorkerClient> {
@@ -387,16 +425,26 @@ export class FontManager {
       // `unloadFont(url, highQuality)`. A single set is therefore tied to one
       // highQuality — callers switching highQuality should use a fresh set.
       const tracker = loadedFaces ?? new Set<string>();
-      const segments = this._segmentTextByFace(family.faces, text);
-      const uniqueUrls = [...new Set(segments.map((s) => s.url))];
-      await Promise.all(
-        uniqueUrls
-          .filter((url) => !tracker.has(url))
-          .map(async (url) => {
+      // Load faces until segmentation is stable: the first load of a font
+      // file replaces its faces' declared unicode ranges with the file's
+      // real cmap coverage (see `_cmapRanges`), which can re-route
+      // codepoints the declared ranges over-promised to another face. Each
+      // iteration loads at least one new face, so the loop is bounded by
+      // the face count.
+      let passesLeft = family.faces.length + 1;
+      while (passesLeft-- > 0) {
+        const segments = this._segmentTextByFace(family.faces, text);
+        const missing = [...new Set(segments.map((s) => s.url))].filter(
+          (url) => !tracker.has(url),
+        );
+        if (missing.length === 0) break;
+        await Promise.all(
+          missing.map(async (url) => {
             await this.loadFont(url, highQuality, fontIdentifier);
             tracker.add(url);
           }),
-      );
+        );
+      }
       return this._prepareFamilyText(fontIdentifier, family, text, highQuality);
     }
 
@@ -918,6 +966,15 @@ export class FontManager {
 
     if (!result.ok) {
       throw new Error(`FontManager: WASM failed to load font from ${rawUrl}`);
+    }
+
+    // Once per file (quality variants share the same bytes): replace the
+    // registered faces' declared unicode ranges with the file's real cmap
+    // coverage. An empty result means the cmap was unparsable — keep the
+    // declared ranges rather than treating the font as covering nothing.
+    if (result.cmapRanges?.length && !this._cmapRanges.has(rawUrl)) {
+      this._cmapRanges.set(rawUrl, decodeCmapRanges(result.cmapRanges));
+      this._applyCmapRanges(rawUrl);
     }
   }
 

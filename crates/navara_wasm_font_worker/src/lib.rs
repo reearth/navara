@@ -122,6 +122,11 @@ impl FontCache {
     /// per-URL atlas.
     /// `mode`: `"msdf"` → MTSDF; anything else (including `None`) → SDF.
     /// Selected by the TS `highQuality` boolean knob (`true` → `"msdf"`).
+    ///
+    /// Returns the font's cmap coverage as flattened `[from, to, ...]`
+    /// codepoint ranges (see [`cache::cmap_ranges`]) so the TS FontManager
+    /// can correct a face's declared unicode ranges once per file, or `None`
+    /// when the font failed to load.
     #[wasm_bindgen(js_name = loadFont)]
     pub fn wasm_load_font(
         &mut self,
@@ -130,13 +135,16 @@ impl FontCache {
         f: &js_sys::Function,
         atlas_key: Option<String>,
         mode: Option<String>,
-    ) -> bool {
+    ) -> Option<Vec<u32>> {
         let data = transfer_u8_array(byte_length, f);
         let mode = match mode.as_deref() {
             Some("msdf") => crate::atlas::AtlasMode::Msdf,
             _ => crate::atlas::AtlasMode::Sdf,
         };
-        self.load_font(url, data, atlas_key, mode).is_ok()
+        self.load_font(url.clone(), data, atlas_key, mode).ok()?;
+        // `data` was decompressed (WOFF/WOFF2) during load — read the stored
+        // bytes back for cmap parsing.
+        Some(cache::cmap_ranges(&self.fonts.get(&url)?.data))
     }
 
     #[wasm_bindgen(js_name = getAtlasKey)]

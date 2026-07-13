@@ -6,7 +6,6 @@ import {
 import { AttributionPlugin } from "@navara/three_plugins";
 import { Vector3 } from "three";
 
-import { datasetToSource } from "../../helpers/attribution-source";
 import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
@@ -106,8 +105,8 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   });
 
   attribution.show([
-    datasetToSource(TERRAIN_DATASETS.gsi),
-    datasetToSource(TILE_DATASETS.openstreetmap),
-    datasetToSource(VECTOR_DATASETS.gsiExperimentalVector),
+    TERRAIN_DATASETS.gsi,
+    TILE_DATASETS.openstreetmap,
+    VECTOR_DATASETS.gsiExperimentalVector,
   ]);
 };

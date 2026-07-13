@@ -13,7 +13,6 @@ import { AttributionPlugin } from "@navara/three_plugins";
 import { Vector3, Quaternion, Euler, Matrix4 } from "three";
 import { Pane } from "tweakpane";
 
-import { datasetToSource } from "../../helpers/attribution-source";
 import { TILE_DATASETS } from "../../helpers/constants";
 import { addHidePaneKeyShortcut } from "../../helpers/control";
 
@@ -177,5 +176,5 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   // Start animation loop
   animate();
 
-  attribution.show([datasetToSource(TILE_DATASETS.openstreetmap)]);
+  attribution.show([TILE_DATASETS.openstreetmap]);
 };

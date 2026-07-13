@@ -3,7 +3,6 @@ import { DefaultPlugin } from "@navara/three_default_plugin";
 import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
-import { datasetToSource } from "../../../helpers/attribution-source";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 import { addDateControl } from "../../../helpers/control";
 
@@ -163,7 +162,7 @@ const run = async () => {
     }
   });
 
-  attribution.show([datasetToSource(TILE_DATASETS.openstreetmap)]);
+  attribution.show([TILE_DATASETS.openstreetmap]);
 };
 
 run();

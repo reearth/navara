@@ -3,7 +3,6 @@ import { DefaultPlugin } from "@navara/three_default_plugin";
 import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
-import { datasetToSource } from "../../../helpers/attribution-source";
 import { PLATEAU_COLOR_MAP, YlGnBu_COLOR_MAP } from "../../../helpers/colors";
 import {
   TERRAIN_DATASETS,
@@ -216,9 +215,9 @@ const run = async () => {
   }
 
   attribution.show([
-    datasetToSource(TILE_DATASETS.gsiSeamlessphoto),
-    datasetToSource(TERRAIN_DATASETS.gsi),
-    datasetToSource(TILES_3D_DATASETS.plateauShinjuku),
+    TILE_DATASETS.gsiSeamlessphoto,
+    TERRAIN_DATASETS.gsi,
+    TILES_3D_DATASETS.plateauShinjuku,
   ]);
 };
 

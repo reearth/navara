@@ -1,6 +1,4 @@
-/**
- * Dataset type definition
- */
+/** A tile/asset data source used by the examples, with its attribution fields. */
 export type Dataset = {
   url: string;
   attribution?: string;
@@ -15,8 +13,7 @@ export type Dataset = {
   /**
    * Optional click target for the logo. Separate from `attributionUrl` so a
    * mark can be shown without linking it (some marks must be displayed but not
-   * turned into a link). Only the `AttributionPlugin` path (via `datasetToSource`)
-   * uses this; the legacy `showAttributions` helper ignores it.
+   * turned into a link).
    */
   logoUrl?: string;
 };
@@ -75,7 +72,7 @@ export const TERRAIN_DATASETS = {
   },
   cesiumIon: {
     // The URL is resolved at runtime via the Cesium Ion endpoint API; this
-    // constant exists so the dataset can be passed to `showAttributions`.
+    // constant exists so the dataset's attribution can be displayed.
     url: "https://api.cesium.com/v1/assets",
     attribution: "© Cesium Ion",
     attributionUrl: "https://cesium.com/legal/terms-of-service/",

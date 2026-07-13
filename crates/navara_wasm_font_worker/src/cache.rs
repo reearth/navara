@@ -15,6 +15,45 @@ fn detect_colr_v1(data: &[u8]) -> bool {
     colr.base_glyph_list().is_some()
 }
 
+/// Merged, sorted `[from, to, from, to, ...]` codepoint ranges (inclusive)
+/// from the font's unicode cmap subtables — the codepoints the font really
+/// maps to glyphs. Empty when the face has no parsable unicode cmap, which
+/// callers must treat as "unknown", not "covers nothing".
+///
+/// Computed once per file at load time so the TS FontManager can correct a
+/// face's declared unicode ranges (stylesheet `unicode-range` boilerplate
+/// can claim codepoints the file doesn't contain, which would shape as
+/// tofu).
+pub fn cmap_ranges(data: &[u8]) -> Vec<u32> {
+    let Ok(face) = ttf_parser::Face::parse(data, 0) else {
+        return Vec::new();
+    };
+    let Some(cmap) = face.tables().cmap else {
+        return Vec::new();
+    };
+    let mut codepoints: Vec<u32> = Vec::new();
+    for subtable in cmap.subtables {
+        if !subtable.is_unicode() {
+            continue;
+        }
+        subtable.codepoints(|cp| codepoints.push(cp));
+    }
+    codepoints.sort_unstable();
+    codepoints.dedup();
+
+    let mut ranges: Vec<u32> = Vec::new();
+    for cp in codepoints {
+        match ranges.last_mut() {
+            Some(last) if *last + 1 == cp => *last = cp,
+            _ => {
+                ranges.push(cp);
+                ranges.push(cp);
+            }
+        }
+    }
+    ranges
+}
+
 /// Decompress WOFF2/WOFF1 to raw TTF/OTF; pass-through for raw fonts.
 fn maybe_decompress_font(data: Vec<u8>) -> Result<Vec<u8>, String> {
     if data.len() >= 4 {

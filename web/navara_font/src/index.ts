@@ -1,4 +1,14 @@
 export {
+  fetchFontFamilyFromCss,
+  parseCssUnicodeRange,
+  parseFontFamilyFromCss,
+} from "./cssFontFamily";
+export type {
+  CssFontFaceFilter,
+  FetchCssFontFamilyOptions,
+  ParseCssFontFamilyOptions,
+} from "./cssFontFamily";
+export {
   FontManager,
   createColorAtlasTexture,
   createSdfAtlasTexture,
@@ -14,4 +24,5 @@ export type {
   GlyphMetrics,
   ShapedGlyph,
   ShapeTextResult,
+  UnicodeRange,
 } from "./types";

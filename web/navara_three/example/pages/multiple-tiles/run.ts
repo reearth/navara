@@ -1,7 +1,6 @@
 import ThreeView, { Color } from "@navara/three";
 import { AttributionPlugin } from "@navara/three_plugins";
 
-import { datasetToSource } from "../../helpers/attribution-source";
 import { TILE_DATASETS } from "../../helpers/constants";
 import { addCtrlPanel } from "../../helpers/panel";
 
@@ -52,8 +51,8 @@ export const run = async (view: ThreeView) => {
   );
 
   attribution.show([
-    datasetToSource(TILE_DATASETS.openstreetmap),
-    datasetToSource(TILE_DATASETS.gsiStd),
-    datasetToSource(TILE_DATASETS.gsiSeamlessphoto),
+    TILE_DATASETS.openstreetmap,
+    TILE_DATASETS.gsiStd,
+    TILE_DATASETS.gsiSeamlessphoto,
   ]);
 };

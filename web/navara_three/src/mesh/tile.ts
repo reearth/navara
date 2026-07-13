@@ -679,21 +679,17 @@ export class TileMesh
       textureFragmentIndex,
       tileMeshToFragmentIds,
     } = this.ctx;
-    // Read the aabb BEFORE acquiring any buffer views: these wasm-bindgen
-    // getters return boxed objects (Aabb, Vec3), each of which allocates in
-    // WASM linear memory and can trigger a memory.grow that detaches every
-    // live view (`%TypedArray%.prototype.set on a detached ArrayBuffer`).
+
+    // Read the AABB before grabbing the buffer views below. `mesh.aabb` (and its
+    // Vec3 center/extent) are wasm-bindgen getters that allocate WASM objects,
+    // which can grow linear memory and detach any previously-obtained buffer
+    // view. Reading it first keeps position/uv/indices/normals valid until
+    // createSkirtMesh copies them.
     const aabb = mesh.aabb;
-    const aabb_center = new Vector3(
-      aabb.center.x,
-      aabb.center.y,
-      aabb.center.z,
-    );
-    const aabb_extent = new Vector3(
-      aabb.extent.x,
-      aabb.extent.y,
-      aabb.extent.z,
-    );
+    const center = aabb.center;
+    const extent = aabb.extent;
+    const aabb_center = new Vector3(center.x, center.y, center.z);
+    const aabb_extent = new Vector3(extent.x, extent.y, extent.z);
 
     const position = buf.f32(mesh.vertices);
     const indices = buf.u32(mesh.indices);
@@ -703,9 +699,10 @@ export class TileMesh
     const normals = mesh.normals != null ? buf.f32(mesh.normals) : null;
 
     // The buf.* arrays are short-lived views into WASM memory: they must be
-    // consumed before any further WASM call that may allocate. Reading more
-    // views (createSkirtMesh) is allocation-free, but nothing else may come
-    // between acquisition and the copies into the combined buffers.
+    // consumed before any further WASM call that allocates. createSkirtMesh only
+    // reads non-allocating handle getters and consecutive buf.* views, then
+    // copies them once — into the combined buffers when a skirt exists, or via
+    // slice() otherwise.
     // Terrain-only geometry (for shadow rendering). createSkirtMesh fills it:
     // when a skirt exists it shares the combined geometry's buffers (with the
     // skirt cut off via drawRange).

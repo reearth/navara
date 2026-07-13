@@ -9,7 +9,6 @@ import {
 } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
-import { datasetToSource } from "../../../helpers/attribution-source";
 import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
@@ -80,9 +79,10 @@ export const run = async () => {
       model: { maxSse: 60, normals: true },
     });
     attribution.show([
-      datasetToSource(TILES_3D_DATASETS.googlePhotorealTiles, {
+      {
+        ...TILES_3D_DATASETS.googlePhotorealTiles,
         creditLayerId: google.id,
-      }),
+      },
     ]);
   };
 
@@ -111,10 +111,7 @@ export const run = async () => {
       data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
       rasterTile: { maxZoom: 18 },
     });
-    attribution.show([
-      GSI_ATTRIBUTION,
-      datasetToSource(TERRAIN_DATASETS.mapterhorn),
-    ]);
+    attribution.show([GSI_ATTRIBUTION, TERRAIN_DATASETS.mapterhorn]);
   };
 
   // Build a fresh view for the given mode. Recreating the view (rather than

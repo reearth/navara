@@ -14,7 +14,6 @@ import {
 import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
-import { datasetToSource } from "../../../helpers/attribution-source";
 import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
@@ -95,10 +94,7 @@ export const run = async () => {
   view.addLayer({ type: "raster", source: rasterSource });
 
   const dataset = readDataset();
-  const attributions = [
-    datasetToSource(TERRAIN_DATASETS.gsi),
-    datasetToSource(TILE_DATASETS.openstreetmap),
-  ];
+  const attributions = [TERRAIN_DATASETS.gsi, TILE_DATASETS.openstreetmap];
 
   if (dataset === "3dtiles") {
     // Chiyoda + Chuo PLATEAU 3D Tiles — exercises the model GPU-byte path.
@@ -116,7 +112,7 @@ export const run = async () => {
           roughness: 1,
         },
       });
-      attributions.push(datasetToSource(ds));
+      attributions.push(ds);
     }
   } else {
     const vectorSource = view.addSource({
@@ -136,7 +132,7 @@ export const run = async () => {
         wireframe: false,
       },
     });
-    attributions.push(datasetToSource(VECTOR_DATASETS.gsiExperimentalVector));
+    attributions.push(VECTOR_DATASETS.gsiExperimentalVector);
   }
 
   attribution.show(attributions);

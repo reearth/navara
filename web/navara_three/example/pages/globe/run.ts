@@ -6,7 +6,6 @@ import {
 import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
-import { datasetToSource } from "../../helpers/attribution-source";
 import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
@@ -130,9 +129,9 @@ export async function run() {
   addGlobeControl(view, pane);
 
   attribution.show([
-    datasetToSource(TERRAIN_DATASETS.gsi),
-    datasetToSource(TILE_DATASETS.gsiSeamlessphoto),
-    datasetToSource(TILES_3D_DATASETS.ChiyodaSubway),
+    TERRAIN_DATASETS.gsi,
+    TILE_DATASETS.gsiSeamlessphoto,
+    TILES_3D_DATASETS.ChiyodaSubway,
   ]);
 }
 

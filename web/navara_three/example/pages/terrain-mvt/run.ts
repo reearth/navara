@@ -12,7 +12,6 @@ import { AttributionPlugin } from "@navara/three_plugins";
 import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 
-import { datasetToSource } from "../../helpers/attribution-source";
 import { TERRAIN_DATASETS, VECTOR_DATASETS } from "../../helpers/constants";
 import { addCameraControl } from "../../helpers/control";
 import { SH_COEFFICIENTS } from "../../helpers/sh";
@@ -136,15 +135,12 @@ export const run = async () => {
       mode === "quantizedMesh"
         ? TERRAIN_DATASETS.reearthQuantizedMesh
         : TERRAIN_DATASETS.gsi;
-    attribution.show([
-      datasetToSource(terrainDataset),
-      datasetToSource(VECTOR_DATASETS.gsiExperimentalVector),
-    ]);
+    attribution.show([terrainDataset, VECTOR_DATASETS.gsiExperimentalVector]);
   };
 
   attribution.show([
-    datasetToSource(TERRAIN_DATASETS.reearthQuantizedMesh),
-    datasetToSource(VECTOR_DATASETS.gsiExperimentalVector),
+    TERRAIN_DATASETS.reearthQuantizedMesh,
+    VECTOR_DATASETS.gsiExperimentalVector,
   ]);
 
   // A single vector-tile source shared by multiple vector layers; each layer

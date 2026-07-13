@@ -28,8 +28,8 @@ export type AttributionChild = {
 export type AttributionSource = {
   /** Top-level source / provider name. */
   attribution: string;
-  /** Optional URL. Rendered as an `<a>` for the source title. */
-  url?: string;
+  /** Optional link for the source name, rendered as an `<a>`. */
+  attributionUrl?: string;
   /**
    * Optional logo image URL. When set, the logo is shown in an always-visible
    * frame in the bottom-left corner, independent of the popover's open state —
@@ -40,9 +40,9 @@ export type AttributionSource = {
   logo?: string;
   /**
    * Optional click target for the {@link logo}, opened in a new tab. Kept
-   * separate from {@link url} (the title's link) so a provider can require the
-   * logo be shown without linking it, or point the logo somewhere other than the
-   * title. Has no effect unless {@link logo} is also set.
+   * separate from {@link attributionUrl} (the title's link) so a provider can
+   * require the logo be shown without linking it, or point the logo somewhere
+   * other than the title. Has no effect unless {@link logo} is also set.
    */
   logoUrl?: string;
   /** Zoom-banded child credits, filtered by current camera zoom. */
@@ -93,6 +93,54 @@ export function isAttributionHtml(
   item: AttributionItem,
 ): item is AttributionHtml {
   return "attributionHtml" in item;
+}
+
+/**
+ * Stable identity of an item for deduplication: everything that affects how it
+ * renders. Sources that differ in `creditLayerId` or `children` produce
+ * different keys, so distinct per-layer / zoom-banded credits are preserved.
+ */
+function attributionItemKey(item: AttributionItem): string {
+  if (isAttributionHtml(item)) {
+    return JSON.stringify(["html", item.attributionHtml]);
+  }
+  // Explicit, ordered field list so JSON.stringify yields a collision-free key.
+  return JSON.stringify([
+    "src",
+    item.attribution,
+    item.attributionUrl ?? null,
+    item.logo ?? null,
+    item.logoUrl ?? null,
+    item.creditLayerId ?? null,
+    (item.children ?? []).map((c) => [
+      c.attribution,
+      c.minZoom ?? null,
+      c.maxZoom ?? null,
+    ]),
+  ]);
+}
+
+/**
+ * Drop exact-duplicate entries, preserving first-seen order. Two items are
+ * duplicates only when they would render identically (same text, link, logo,
+ * tracked layer, and zoom-banded children).
+ *
+ * Callers often list several distinct data sources that happen to share one
+ * credit (e.g. multiple Overture themes); without this the same line would
+ * render once per source.
+ */
+export function dedupeAttributionItems(
+  items: AttributionItem[],
+): AttributionItem[] {
+  const seen = new Set<string>();
+  const result: AttributionItem[] = [];
+  for (const item of items) {
+    const key = attributionItemKey(item);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(item);
+  }
+  return result;
 }
 
 /**

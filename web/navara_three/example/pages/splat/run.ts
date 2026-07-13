@@ -11,7 +11,6 @@ import {
 import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
-import { datasetToSource } from "../../helpers/attribution-source";
 import { SPLAT_DATASETS, TILE_DATASETS } from "../../helpers/constants";
 
 export type CustomDescriptions = DefaultDescriptions;
@@ -141,9 +140,9 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   });
 
   attribution.show([
-    datasetToSource(TILE_DATASETS.openstreetmap),
-    datasetToSource(SPLAT_DATASETS.quechua),
-    datasetToSource(SPLAT_DATASETS.pencilSharpener),
+    TILE_DATASETS.openstreetmap,
+    SPLAT_DATASETS.quechua,
+    SPLAT_DATASETS.pencilSharpener,
   ]);
 
   const handles = new Map<SplatSample, SplatHandle>();

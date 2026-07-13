@@ -7,7 +7,6 @@ import {
 import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
-import { datasetToSource } from "../../helpers/attribution-source";
 import { TILE_DATASETS } from "../../helpers/constants";
 import { addHidePaneKeyShortcut } from "../../helpers/control";
 
@@ -174,5 +173,5 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     rainDropLayer.update({ rainDrop: { ...rainDropDefaults } });
   });
 
-  attribution.show([datasetToSource(TILE_DATASETS.gsiSeamlessphoto)]);
+  attribution.show([TILE_DATASETS.gsiSeamlessphoto]);
 };
