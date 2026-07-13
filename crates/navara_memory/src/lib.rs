@@ -167,6 +167,14 @@ fn on_tile_cost_replace(mut world: DeferredWorld, ctx: HookContext) {
 /// [`MemoryLedger::usage`] (so reserving proactively drives eviction of old
 /// pooled tiles to make room — "evict old to load new").
 ///
+/// The reserved amount is resolved centrally by the `on_insert` hook: insert
+/// [`ReservedCost::for_key`] and the hook computes
+/// `ReserveEstimates::estimate(key, MemoryLedger::reserve_seed(key))` at apply
+/// time, so the dispatch systems don't each duplicate the estimate/seed dance
+/// (the resolved amount is stored on the component so `on_replace` releases
+/// exactly what was added). [`ReservedCost::fixed`] bypasses the estimator for
+/// callers that already know the amount (tests, no-layer fallbacks).
+///
 /// Component hooks keep [`MemoryLedger::reserved_bytes`] leak-free across every
 /// exit path: `on_insert` adds the estimate, `on_replace` subtracts it. Bevy
 /// fires `on_replace` on replace, remove, AND despawn, so this single hook
@@ -180,15 +188,58 @@ fn on_tile_cost_replace(mut world: DeferredWorld, ctx: HookContext) {
 #[derive(Clone, Copy, Default, Debug, Component)]
 #[component(on_insert = on_reserved_cost_insert, on_replace = on_reserved_cost_remove)]
 pub struct ReservedCost {
-    pub bytes: u64,
+    /// `Some` until the `on_insert` hook resolves it into `bytes`.
+    key: Option<ReserveKey>,
+    bytes: u64,
+}
+
+impl ReservedCost {
+    /// Reservation whose amount the `on_insert` hook resolves from the per-key
+    /// EMA (seeded by [`MemoryLedger::reserve_seed`]) at command-apply time.
+    pub fn for_key(key: ReserveKey) -> Self {
+        Self {
+            key: Some(key),
+            bytes: 0,
+        }
+    }
+
+    /// Reservation of a known, fixed amount (no estimator lookup).
+    pub fn fixed(bytes: u64) -> Self {
+        Self { key: None, bytes }
+    }
+
+    /// The reserved amount; 0 for a `for_key` reservation whose hook has not
+    /// applied yet.
+    pub fn bytes(&self) -> u64 {
+        self.bytes
+    }
 }
 
 fn on_reserved_cost_insert(mut world: DeferredWorld, ctx: HookContext) {
     let Some(reserved) = world.get::<ReservedCost>(ctx.entity).copied() else {
         return;
     };
+    let bytes = match reserved.key {
+        None => reserved.bytes,
+        Some(key) => {
+            let Some(ledger) = world.get_resource::<MemoryLedger>() else {
+                return;
+            };
+            let seed = ledger.reserve_seed(key);
+            let bytes = world
+                .get_resource::<ReserveEstimates>()
+                .map_or(seed, |estimates| estimates.estimate(key, seed));
+            // Store the resolved amount so `on_replace` releases exactly what
+            // was added (the EMA may have moved by then). Plain mutation — no
+            // hook re-fires.
+            if let Some(mut reserved) = world.get_mut::<ReservedCost>(ctx.entity) {
+                reserved.bytes = bytes;
+            }
+            bytes
+        }
+    };
     if let Some(mut ledger) = world.get_resource_mut::<MemoryLedger>() {
-        ledger.reserved_bytes += reserved.bytes;
+        ledger.reserved_bytes += bytes;
     }
 }
 
@@ -206,9 +257,15 @@ fn on_reserved_cost_remove(mut world: DeferredWorld, ctx: HookContext) {
 /// different tile sizes), so each layer entity gets its own EMA.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ReserveKey {
-    /// Per-layer pool: the vector MVT source layer entity, or the 3D Tiles
-    /// layer (tileset) entity.
-    Layer(Entity),
+    /// Per-layer pool keyed by the vector MVT source layer entity. Split from
+    /// [`Self::Tiles3dLayer`] (rather than one generic layer variant) so the
+    /// cold-start seed is derivable from the key alone — see
+    /// [`MemoryLedger::reserve_seed`].
+    VectorLayer(Entity),
+    /// Per-tileset pool keyed by the 3D Tiles layer (tileset) entity —
+    /// b3dm/pnts/glb sizes vary wildly ACROSS tilesets, so pools are never
+    /// merged.
+    Tiles3dLayer(Entity),
     /// Single pipeline-wide pool for hillshade DEM tiles. Their payload is a
     /// per-source constant (`tile_size² × 4` RGBA plus fixed edge strips), so
     /// a per-layer split would buy no accuracy and only slow the cold start.
@@ -554,6 +611,20 @@ impl MemoryLedger {
     /// re-evict the same overage. See [`Self::pending_evicted_gpu_bytes`].
     pub fn credit_pending_eviction(&mut self, gpu_est: u64) {
         self.pending_evicted_gpu_bytes += gpu_est;
+    }
+
+    /// Cold-start seed for a [`ReserveKey`]'s reservation estimate — the value
+    /// [`ReserveEstimates::estimate`] returns until the key's EMA has enough
+    /// samples. Centralized here (keyed by the reservation key alone) so the
+    /// `ReservedCost` `on_insert` hook can resolve a reservation without each
+    /// dispatch system duplicating the seed choice.
+    pub fn reserve_seed(&self, key: ReserveKey) -> u64 {
+        match key {
+            ReserveKey::VectorLayer(_) => DEFAULT_VECTOR_TILE_RESERVE_BYTES,
+            ReserveKey::Tiles3dLayer(_) => DEFAULT_TILES3D_RESERVE_BYTES,
+            ReserveKey::Hillshade => self.cost_hints.hillshade_reserve_seed(),
+            ReserveKey::Terrain => self.cost_hints.terrain_reserve_seed(),
+        }
     }
 
     /// [`Self::usage`] minus the fully-evictable retention pool: the resident
@@ -1040,11 +1111,11 @@ mod tests {
         let mut world = bevy_ecs::world::World::new();
         world.init_resource::<MemoryLedger>();
 
-        let e = world.spawn(ReservedCost { bytes: 500 }).id();
+        let e = world.spawn(ReservedCost::fixed(500)).id();
         assert_eq!(world.resource::<MemoryLedger>().reserved_bytes, 500);
 
         // Replacing accounts the delta (on_replace subtract + on_insert add).
-        world.entity_mut(e).insert(ReservedCost { bytes: 200 });
+        world.entity_mut(e).insert(ReservedCost::fixed(200));
         assert_eq!(world.resource::<MemoryLedger>().reserved_bytes, 200);
 
         // Explicit remove releases it.
@@ -1056,13 +1127,51 @@ mod tests {
         // every removal/despawn, so a stray `on_remove` registration would
         // subtract twice here — leaving 700 - 500 = 200 instead of 700. A single
         // live reservation saturates at 0 and cannot catch this.
-        let a = world.spawn(ReservedCost { bytes: 500 }).id();
-        let _b = world.spawn(ReservedCost { bytes: 700 }).id();
+        let a = world.spawn(ReservedCost::fixed(500)).id();
+        let _b = world.spawn(ReservedCost::fixed(700)).id();
         assert_eq!(world.resource::<MemoryLedger>().reserved_bytes, 1200);
         // Despawn `a` (abort path): only its 500 bytes are released, `b`'s 700
         // remain — a double subtract would leave 200.
         world.despawn(a);
         assert_eq!(world.resource::<MemoryLedger>().reserved_bytes, 700);
+    }
+
+    #[test]
+    fn reserved_cost_for_key_resolves_via_hook() {
+        let mut world = bevy_ecs::world::World::new();
+        world.init_resource::<MemoryLedger>();
+        world.init_resource::<ReserveEstimates>();
+
+        // Cold estimator → the hook resolves to the key's seed.
+        let seed = world
+            .resource::<MemoryLedger>()
+            .reserve_seed(ReserveKey::Terrain);
+        let e = world.spawn(ReservedCost::for_key(ReserveKey::Terrain)).id();
+        assert_eq!(world.resource::<MemoryLedger>().reserved_bytes, seed);
+        assert_eq!(world.get::<ReservedCost>(e).unwrap().bytes(), seed);
+
+        // Warm the EMA past RESERVE_MIN_SAMPLES with a distinct landed cost:
+        // a new reservation resolves to the EMA estimate, and releasing the
+        // old one still subtracts the amount IT was resolved at.
+        let landed = 4 * 1024 * 1024;
+        for _ in 0..RESERVE_MIN_SAMPLES {
+            world
+                .resource_mut::<ReserveEstimates>()
+                .record(ReserveKey::Terrain, landed);
+        }
+        let estimate = world
+            .resource::<ReserveEstimates>()
+            .estimate(ReserveKey::Terrain, seed);
+        assert_ne!(estimate, seed, "test must distinguish EMA from seed");
+        let e2 = world.spawn(ReservedCost::for_key(ReserveKey::Terrain)).id();
+        assert_eq!(
+            world.resource::<MemoryLedger>().reserved_bytes,
+            seed + estimate
+        );
+        world.despawn(e);
+        assert_eq!(world.resource::<MemoryLedger>().reserved_bytes, estimate);
+        world.despawn(e2);
+        assert_eq!(world.resource::<MemoryLedger>().reserved_bytes, 0);
     }
 
     #[test]
@@ -1125,11 +1234,11 @@ mod reserve_estimator_tests {
     const SEED: u64 = 512 * 1024;
 
     fn key_a() -> ReserveKey {
-        ReserveKey::Layer(Entity::from_raw_u32(1).unwrap())
+        ReserveKey::VectorLayer(Entity::from_raw_u32(1).unwrap())
     }
 
     fn key_b() -> ReserveKey {
-        ReserveKey::Layer(Entity::from_raw_u32(2).unwrap())
+        ReserveKey::VectorLayer(Entity::from_raw_u32(2).unwrap())
     }
 
     #[test]

@@ -10,8 +10,10 @@ type Renderer = {
 };
 
 export type MemorySample = {
-  /** WASM BufferStore bytes, in MB. */
+  /** WASM BufferStore bytes (WASM-resident only), in MB. */
   wasmMB?: number;
+  /** JS-side `InMemoryBufferStore` bytes (WASM `External` entries), in MB. */
+  jsBufMB?: number;
   /** JS heap usage (Chrome-only `performance.memory`), in MB. */
   jsHeapMB?: number;
   /** Cache budget for the panel scale, in MB. */

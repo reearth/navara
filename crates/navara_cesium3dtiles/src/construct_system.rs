@@ -162,7 +162,7 @@ pub fn construct_model_by_cesium3dtiles_layer<T: TileContentParser>(
         // moment. Failed fetches never reach here (status must be Success and
         // parse must succeed); an evicted-then-refetched content records again.
         estimates.record(
-            navara_memory::ReserveKey::Layer(tile.layer_id),
+            navara_memory::ReserveKey::Tiles3dLayer(tile.layer_id),
             payload_gpu_est,
         );
     }

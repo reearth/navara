@@ -168,10 +168,17 @@ dispatch time**, in the same `filter_requestable_*` system that admits the
 request:
 
 ```text
-dispatch fetch  →  insert ReservedCost { bytes: estimate }   (counts in usage & hard_usage)
+dispatch fetch  →  insert ReservedCost::for_key(key)         (counts in usage & hard_usage)
 fetch resolves  →  release_landed_reservations removes it    (one frame BEFORE TileCost lands)
 fetch aborted   →  requester despawn fires the hook          (reservation released automatically)
 ```
+
+The dispatch system only names the `ReserveKey`; the amount is resolved
+centrally by the `ReservedCost` `on_insert` hook —
+`ReserveEstimates::estimate(key, MemoryLedger::reserve_seed(key))` — so the
+estimate/seed policy lives in `navara_memory` instead of being duplicated in
+each `filter_requestable_*` system (`ReservedCost::fixed(bytes)` bypasses the
+estimator for the rare no-layer fallbacks).
 
 `release_landed_reservations` (`navara_data_requester`) removes the component
 the frame the request leaves `Pending`, before the measured `TileCost` is
@@ -182,8 +189,8 @@ The estimate comes from `ReserveEstimates`: a per-key exponentially-weighted
 mean + variance of the **actual costs of previously landed tiles**, queried as
 `mean + 0.5·stddev` and clamped to [64 KB, 16 MB] (one freak 30 MB tile must
 not inflate every future reservation; a run of empty ocean tiles must not zero
-them). Until a key has 4 samples it returns a caller-provided cold-start seed.
-Keys and seeds per pipeline:
+them). Until a key has 4 samples it returns the key's cold-start seed
+(`MemoryLedger::reserve_seed`). Keys and seeds per pipeline:
 
 | Pipeline | `ReserveKey` | Cold-start seed | Landed cost recorded from |
 | --- | --- | --- | --- |

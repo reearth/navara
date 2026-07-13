@@ -92,6 +92,7 @@ import {
   type WorkerTaskHandler,
 } from "./event";
 import { TEXTURE_LOADER } from "./event/loaders";
+import { InMemoryBufferStore } from "./inMemoryBufferStore";
 import { registerInputEvents } from "./input";
 import { Layer, type LayerEvent } from "./layer";
 import {
@@ -190,6 +191,10 @@ export {
  */
 export type MemoryStats = {
   bufferTotalBytes: number;
+  /** Bytes held in the JS-side `InMemoryBufferStore` (WASM `External`
+   * entries): fetched MVT pbf and worker-built geometry that never enter WASM
+   * linear memory. Not part of `bufferTotalBytes`. */
+  externalBufferBytes: number;
   bufferCount: number;
   gpuBytesEst: number;
   externalCpuBytes: number;
@@ -422,36 +427,77 @@ export default class ThreeView<
   private _hillshadeContext = new HillshadeContext();
   private _initialized = false;
 
+  /**
+   * JS-side store for buffers WASM tracks by byte count only (`External`
+   * entries). Fetched MVT pbf and worker-built geometry live here instead of
+   * being copied into WASM linear memory, whose peak never shrinks. The
+   * `_buf` wrapper prefers this store, falling back to WASM for entries Rust
+   * still owns; handles are evicted per frame via `drainRemovedExternalHandles`.
+   */
+  private _inMemoryBufferStore = new InMemoryBufferStore();
+
   private _buf: BufferLoader = {
+    // Getters prefer the JS store (type-matched) and fall back to the WASM
+    // view for entries Rust still owns.
     u8: (handle) => {
+      const js = this._inMemoryBufferStore.get(handle);
+      if (js instanceof Uint8Array) return js;
       const b = this._core?.getBufferU8(handle);
       return b ?? null;
     },
     f32: (handle) => {
+      const js = this._inMemoryBufferStore.get(handle);
+      if (js instanceof Float32Array) return js;
       const b = this._core?.getBufferF32(handle);
       return b ?? null;
     },
     f64: (handle) => {
+      const js = this._inMemoryBufferStore.get(handle);
+      if (js instanceof Float64Array) return js;
       const b = this._core?.getBufferF64(handle);
       return b ?? null;
     },
     u32: (handle) => {
+      const js = this._inMemoryBufferStore.get(handle);
+      if (js instanceof Uint32Array) return js;
       const b = this._core?.getBufferU32(handle);
       return b ?? null;
     },
+    // remove* take from the JS store when present (and clear the WASM-side
+    // External accounting), else fall back to the owned-copy WASM remover.
     removeU8: (handle) => {
+      const js = this._inMemoryBufferStore.take(handle);
+      if (js instanceof Uint8Array) {
+        this._core?.removeBuffer(handle);
+        return js;
+      }
       const b = this._core?.removeBufferU8(handle);
       return b ?? null;
     },
     removeU32: (handle) => {
+      const js = this._inMemoryBufferStore.take(handle);
+      if (js instanceof Uint32Array) {
+        this._core?.removeBuffer(handle);
+        return js;
+      }
       const b = this._core?.removeBufferU32(handle);
       return b ?? null;
     },
     removeF32: (handle) => {
+      const js = this._inMemoryBufferStore.take(handle);
+      if (js instanceof Float32Array) {
+        this._core?.removeBuffer(handle);
+        return js;
+      }
       const b = this._core?.removeBufferF32(handle);
       return b ?? null;
     },
     removeF64: (handle) => {
+      const js = this._inMemoryBufferStore.take(handle);
+      if (js instanceof Float64Array) {
+        this._core?.removeBuffer(handle);
+        return js;
+      }
       const b = this._core?.removeBufferF64(handle);
       return b ?? null;
     },
@@ -487,8 +533,47 @@ export default class ThreeView<
       });
       // return this._core?.newBufferF32Cloned(b);
     },
+    // adopt* register a JS-owned array (zero-copy) and mint a byte-count-only
+    // External handle; the array bytes never touch WASM linear memory.
+    adoptU8: (array: Uint8Array) => {
+      const handle = this._core?.newExternalBuffer(array.byteLength);
+      if (handle != null) this._inMemoryBufferStore.set(handle, array);
+      return handle;
+    },
+    adoptU32: (array: Uint32Array) => {
+      const handle = this._core?.newExternalBuffer(array.byteLength);
+      if (handle != null) this._inMemoryBufferStore.set(handle, array);
+      return handle;
+    },
+    adoptF32: (array: Float32Array) => {
+      const handle = this._core?.newExternalBuffer(array.byteLength);
+      if (handle != null) this._inMemoryBufferStore.set(handle, array);
+      return handle;
+    },
+    adoptF64: (array: Float64Array) => {
+      const handle = this._core?.newExternalBuffer(array.byteLength);
+      if (handle != null) this._inMemoryBufferStore.set(handle, array);
+      return handle;
+    },
+    setExternal: (handle: number, bits: bigint, array: Uint8Array) => {
+      if (!this._core?.hasDataRequester(bits)) {
+        return;
+      }
+      this._core.setExternalBuffer(handle, bits, array.byteLength);
+      this._inMemoryBufferStore.set(handle, array);
+    },
     remove: (handle: number) => {
+      // Also drop any JS-side entry so the two stores stay in step when a
+      // caller removes an External handle without going through remove*.
+      this._inMemoryBufferStore.delete(handle);
       this._core?.removeBuffer(handle);
+    },
+    drainRemovedExternalHandles: () => {
+      const handles = this._core?.drainRemovedExternalHandles();
+      if (!handles) return;
+      for (const handle of handles) {
+        this._inMemoryBufferStore.delete(handle);
+      }
     },
     triggerDataRequesterLoaded: (bits: bigint, handle: number) => {
       this._core?.triggerDataRequesterLoaded(bits, handle);
@@ -813,6 +898,7 @@ export default class ThreeView<
             // the sampler runs ~1/s and the struct otherwise leaks until the
             // FinalizationRegistry runs (see fontWorker.ts for the pattern).
             const bufferTotalBytes = stats?.bufferTotalBytes;
+            const externalBufferBytes = stats?.externalBufferBytes;
             const budgetBytes = stats?.budgetBytes;
             stats?.free();
             const memory = (
@@ -825,6 +911,10 @@ export default class ThreeView<
               wasmMB:
                 bufferTotalBytes !== undefined
                   ? bufferTotalBytes / MB
+                  : undefined,
+              jsBufMB:
+                externalBufferBytes !== undefined
+                  ? externalBufferBytes / MB
                   : undefined,
               jsHeapMB: memory ? memory.usedJSHeapSize / MB : undefined,
               budgetMB:
@@ -1050,6 +1140,7 @@ export default class ThreeView<
     // (WASM_API_POLICY.md), and returning the class would also leak it.
     const plain: MemoryStats = {
       bufferTotalBytes: stats.bufferTotalBytes,
+      externalBufferBytes: stats.externalBufferBytes,
       bufferCount: stats.bufferCount,
       gpuBytesEst: stats.gpuBytesEst,
       externalCpuBytes: stats.externalCpuBytes,
@@ -1370,6 +1461,7 @@ export default class ThreeView<
 
     // Clear caches and maps
     this._meshes.clear();
+    this._inMemoryBufferStore.clear();
     this._workerPoolPromises.clear();
     this._tileMapByHandle.clear();
     this._textureFragmentIndex.clear();
@@ -1490,6 +1582,11 @@ export default class ThreeView<
     processEvent(this.eventContext, events);
 
     events?.free();
+
+    // Evict JS-side `InMemoryBufferStore` entries whose WASM `External` handles
+    // Rust freed this frame (tile destroy, DataRequester removal, ...), keeping
+    // the two stores in step.
+    this._buf.drainRemovedExternalHandles();
 
     this._camera.raw.updateMatrixWorld();
 

@@ -350,7 +350,7 @@ pub fn transfer_mesh(
                 // reach here (no geometry is constructed), and an
                 // evicted-then-refetched tile simply records again.
                 estimates.record(
-                    navara_memory::ReserveKey::Layer(source_entity),
+                    navara_memory::ReserveKey::VectorLayer(source_entity),
                     geometry_bytes,
                 );
             }

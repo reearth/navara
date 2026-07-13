@@ -559,10 +559,23 @@ async function processRequestedData(ctx: EventContext, req: DataRequestEvent) {
       }
 
       const bytes = new Uint8Array(val);
-      buf.setU8(req.handle, req.bits, bytes);
+      // MVT pbf: with the default delegated worker Rust never reads these
+      // bytes — they only travel back out to `processParseMvtTile`. Adopt
+      // them into the JS-side store (WASM tracks a byte-count-only `External`
+      // handle) so they never round-trip through WASM linear memory. Ownership
+      // moves into the store, so do NOT clear `bytes` afterward.
+      // Range reads (PMTiles) also arrive with the `mvt` extension but Rust
+      // parses those bytes (header/directory/payload), so they must stay
+      // WASM-resident.
+      const isRangeRequest = req.offset != null && req.length != null;
+      if (req.extension === "mvt" && !isRangeRequest) {
+        buf.setExternal(req.handle, req.bits, bytes);
+      } else {
+        buf.setU8(req.handle, req.bits, bytes);
 
-      // Prevent memory leak
-      bytes.set([]);
+        // Prevent memory leak
+        bytes.set([]);
+      }
     })
     .catch(() => {
       buf.triggerDataRequesterFailed(req.bits);

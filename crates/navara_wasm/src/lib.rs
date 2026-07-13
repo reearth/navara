@@ -56,6 +56,8 @@ pub struct Core {
 pub struct MemoryStats {
     #[wasm_bindgen(js_name = bufferTotalBytes, readonly)]
     pub buffer_total_bytes: f64,
+    #[wasm_bindgen(js_name = externalBufferBytes, readonly)]
+    pub external_buffer_bytes: f64,
     #[wasm_bindgen(js_name = bufferCount, readonly)]
     pub buffer_count: u32,
     #[wasm_bindgen(js_name = gpuBytesEst, readonly)]
@@ -206,6 +208,27 @@ impl Core {
     #[wasm_bindgen(js_name = newBufferF32Cloned)]
     pub fn new_buffer_f32_cloned(&mut self, data: &[f32]) -> Option<Handle> {
         self.app.new_buffer_f32(data.to_vec())
+    }
+
+    // The `External` buffer APIs register byte-count-only entries whose real
+    // data lives in the JS-side `InMemoryBufferStore`, so no round-trip copy of
+    // JS bytes through WASM linear memory happens. Handle issuance, accounting
+    // and removal still flow through the single Rust `BufferStore` owner.
+    #[wasm_bindgen(js_name = setExternalBuffer)]
+    pub fn set_external_buffer(&mut self, handle: i32, bits: u64, byte_length: usize) {
+        self.app.set_external_buffer(handle, bits, byte_length);
+    }
+
+    #[wasm_bindgen(js_name = newExternalBuffer)]
+    pub fn new_external_buffer(&mut self, byte_length: usize) -> Option<Handle> {
+        self.app.new_external_buffer(byte_length)
+    }
+
+    /// Handles of `External` entries removed since the last drain; JS evicts
+    /// each from its `InMemoryBufferStore` map every frame.
+    #[wasm_bindgen(js_name = drainRemovedExternalHandles)]
+    pub fn drain_removed_external_handles(&mut self) -> Vec<i32> {
+        self.app.drain_removed_external_handles()
     }
 
     #[wasm_bindgen(js_name = removeBuffer)]
@@ -979,6 +1002,7 @@ impl Core {
     pub fn get_memory_stats(&mut self) -> Option<MemoryStats> {
         self.app.memory_stats().map(|s| MemoryStats {
             buffer_total_bytes: s.buffer_total_bytes as f64,
+            external_buffer_bytes: s.external_buffer_bytes as f64,
             buffer_count: s.buffer_count,
             gpu_bytes_est: s.gpu_bytes_est as f64,
             external_cpu_bytes: s.external_cpu_bytes as f64,

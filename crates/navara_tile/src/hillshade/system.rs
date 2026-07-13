@@ -89,7 +89,6 @@ pub fn filter_requestable_hillshade_data_requester(
     limits: Res<navara_data_requester::RequestLimits>,
     pressure: Res<navara_memory::SsePressure>,
     ledger: Res<navara_memory::MemoryLedger>,
-    estimates: Res<navara_memory::ReserveEstimates>,
 ) {
     // Count only Pending DataRequesters with Requested marker.
     // Success+Requested entities exist (shared-handle consumers with already-loaded data)
@@ -122,16 +121,15 @@ pub fn filter_requestable_hillshade_data_requester(
 
     // Reserve the adaptive estimate for the requesters actually dispatched
     // this frame (the admitted prefix — the rejected tail below gets none).
-    // Released on resolve or despawn; see `ReservedCost`.
+    // The amount is resolved by the `ReservedCost` on_insert hook; released on
+    // resolve or despawn; see `ReservedCost`.
     if ledger.enabled() {
-        let bytes = estimates.estimate(
-            navara_memory::ReserveKey::Hillshade,
-            ledger.cost_hints.hillshade_reserve_seed(),
-        );
         for (e, _, _, _, _) in admissible.iter().take(num_skip as usize) {
             commands
                 .entity(*e)
-                .try_insert(navara_memory::ReservedCost { bytes });
+                .try_insert(navara_memory::ReservedCost::for_key(
+                    navara_memory::ReserveKey::Hillshade,
+                ));
         }
     }
 
@@ -1032,7 +1030,7 @@ mod reservation_tests {
             .spawn((
                 DataRequester::default(),
                 HillshadeTextureMarker,
-                ReservedCost { bytes: 4096 },
+                ReservedCost::fixed(4096),
             ))
             .id();
         assert_eq!(app.world().resource::<MemoryLedger>().reserved_bytes, 4096);

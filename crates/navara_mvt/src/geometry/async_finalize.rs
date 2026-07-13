@@ -245,7 +245,7 @@ pub(crate) fn finalize_parsed_mvt(
                 // FIX 3: warm the per-layer reservation EMA with this landed
                 // cost. In the default delegated_worker build the only other
                 // record site (`transfer_mesh`) is dead code (construct_geometry
-                // returns None), so without this the `ReserveKey::Layer` EMA
+                // returns None), so without this the `ReserveKey::VectorLayer` EMA
                 // never warms and vector reservations stay at the 512KB seed
                 // forever. The key must match the RESERVATION site's derivation
                 // (`data_requester/system.rs`): the first `LayerResources` entity
@@ -258,7 +258,7 @@ pub(crate) fn finalize_parsed_mvt(
                 });
                 if let Some(layer_entity) = layer_entity {
                     estimates.record(
-                        navara_memory::ReserveKey::Layer(layer_entity),
+                        navara_memory::ReserveKey::VectorLayer(layer_entity),
                         geometry_bytes,
                     );
                 }

@@ -17,7 +17,13 @@ use crate::App;
 /// `Core.getMemoryStats`).
 #[derive(Debug, Clone, Copy)]
 pub struct MemoryStatsData {
+    /// WASM-resident `BufferStore` bytes (`total - external`); the JS-side
+    /// `InMemoryBufferStore` bytes are reported separately as
+    /// `external_buffer_bytes`.
     pub buffer_total_bytes: u64,
+    /// Bytes held by `External` `BufferStore` entries — the real data lives in
+    /// the JS `InMemoryBufferStore`, not in WASM linear memory.
+    pub external_buffer_bytes: u64,
     pub buffer_count: u32,
     pub gpu_bytes_est: u64,
     /// CPU bytes held outside `BufferStore` (attribute tables); dominant for
@@ -194,7 +200,10 @@ impl App {
         let store = world.get_resource::<BufferStore>()?;
         let ledger = world.get_resource::<MemoryLedger>();
         Some(MemoryStatsData {
-            buffer_total_bytes: store.total_bytes() as u64,
+            // WASM-resident only; the `External` entries' bytes live JS-side
+            // (reported separately) so they don't inflate the WASM heap figure.
+            buffer_total_bytes: (store.total_bytes() - store.external_bytes()) as u64,
+            external_buffer_bytes: store.external_bytes() as u64,
             buffer_count: store.len() as u32,
             gpu_bytes_est: ledger.map(|l| l.gpu_bytes_est).unwrap_or(0),
             external_cpu_bytes: ledger.map(|l| l.external_cpu_bytes).unwrap_or(0),

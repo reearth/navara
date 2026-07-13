@@ -148,6 +148,7 @@ export const run = async () => {
 
   const state = {
     wasmMB: 0,
+    jsBufMB: 0,
     attrMB: 0,
     gpuEstMB: 0,
     reservedMB: 0,
@@ -179,6 +180,14 @@ export const run = async () => {
       if (ev.last && ev.value !== dataset) selectDataset(ev.value as Dataset);
     });
   pane.addBinding(state, "wasmMB", {
+    readonly: true,
+    view: "graph",
+    min: 0,
+    max: 1024,
+  });
+  // JS-side InMemoryBufferStore (WASM External entries): fetched MVT pbf and
+  // worker-built geometry kept out of WASM linear memory.
+  pane.addBinding(state, "jsBufMB", {
     readonly: true,
     view: "graph",
     min: 0,
@@ -312,6 +321,7 @@ export const run = async () => {
     const stats = view.memoryStats();
     if (stats) {
       state.wasmMB = stats.bufferTotalBytes / MB;
+      state.jsBufMB = stats.externalBufferBytes / MB;
       state.attrMB = stats.externalCpuBytes / MB;
       state.gpuEstMB = stats.gpuBytesEst / MB;
       state.reservedMB = stats.reservedBytes / MB;

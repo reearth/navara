@@ -54,7 +54,6 @@ pub fn filter_requestable_data_requester(
     limits: Res<navara_data_requester::RequestLimits>,
     pressure: Res<navara_memory::SsePressure>,
     ledger: Res<navara_memory::MemoryLedger>,
-    estimates: Res<navara_memory::ReserveEstimates>,
 ) {
     let pendings = requested_data_requesters.iter().count();
     // Load gate: when the memory budget is exhausted, start ZERO new fetches
@@ -72,24 +71,23 @@ pub fn filter_requestable_data_requester(
         .sort::<(&Priority, &RequestOrder<TileOrderByDistance>)>()
         .collect();
 
-    // Reserve the per-tileset adaptive estimate (EMA of previously landed
-    // content payload costs, keyed by the requester's layer entity and seeded
-    // by the 3D Tiles constant while cold — b3dm/pnts/glb sizes vary wildly
-    // ACROSS tilesets, so the pools are never merged). Only the admitted
-    // prefix, not the rejected tail below, is reserved.
+    // Reserve the per-tileset adaptive estimate (resolved by the
+    // `ReservedCost` on_insert hook — EMA of previously landed content payload
+    // costs keyed by the requester's layer entity, seeded by the 3D Tiles
+    // constant while cold). Only the admitted prefix, not the rejected tail
+    // below, is reserved.
     if ledger.enabled() {
         for (e, _, _, _, layer) in dispatched.iter().take(num_skip as usize) {
-            let bytes = layer
-                .map(|l| {
-                    estimates.estimate(
-                        navara_memory::ReserveKey::Layer(l.0),
-                        navara_memory::DEFAULT_TILES3D_RESERVE_BYTES,
-                    )
-                })
-                .unwrap_or(navara_memory::DEFAULT_TILES3D_RESERVE_BYTES);
-            commands
-                .entity(*e)
-                .try_insert(navara_memory::ReservedCost { bytes });
+            let reservation = match layer {
+                Some(l) => navara_memory::ReservedCost::for_key(
+                    navara_memory::ReserveKey::Tiles3dLayer(l.0),
+                ),
+                // No layer stamp → no EMA pool; reserve the flat seed.
+                None => {
+                    navara_memory::ReservedCost::fixed(navara_memory::DEFAULT_TILES3D_RESERVE_BYTES)
+                }
+            };
+            commands.entity(*e).try_insert(reservation);
         }
     }
 

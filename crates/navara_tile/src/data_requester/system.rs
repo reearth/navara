@@ -34,7 +34,6 @@ pub(crate) fn filter_requestable_data_requester(
     limits: Res<navara_data_requester::RequestLimits>,
     pressure: Res<navara_memory::SsePressure>,
     ledger: Res<navara_memory::MemoryLedger>,
-    estimates: Res<navara_memory::ReserveEstimates>,
 ) {
     // Count only Pending DataRequesters with Requested marker.
     // Success+Requested entities exist (shared-handle consumers with already-loaded data)
@@ -53,17 +52,6 @@ pub(crate) fn filter_requestable_data_requester(
         (limits.max_pendings as i32 - pendings as i32).max(0)
     };
 
-    // Adaptive per-tile estimate: EMA of previously landed mesh costs (fed by
-    // `attach_terrain_mesh_cost` — geometry + atlas), seeded with
-    // `terrain_reserve_seed` (raster-tile decode + composite atlas) on a cold
-    // start. A fixed raster-tile hint here undercounted the eventual resident
-    // cost ~10× (the atlas alone is ~3 MB, and quantized-mesh geometry varies
-    // with vertex count), letting camera-move terrain bursts slip the gate.
-    let reserve = estimates.estimate(
-        navara_memory::ReserveKey::Terrain,
-        ledger.cost_hints.terrain_reserve_seed(),
-    );
-
     // Limit the number of requests in this frame.
     // Skip DataRequesters with Success status - they already have
     // their data (loaded by previous consumers) and should not be subject to the
@@ -76,13 +64,17 @@ pub(crate) fn filter_requestable_data_requester(
 
     // Reserve the estimated cost for the requesters actually dispatched this
     // frame (the admitted prefix that is NOT skipped/rejected below). The
-    // reservation is released when the fetch resolves or the requester is
-    // despawned (see `ReservedCost`).
+    // amount (EMA of landed terrain mesh costs, seeded by
+    // `terrain_reserve_seed` on a cold start) is resolved by the `ReservedCost`
+    // on_insert hook; the reservation is released when the fetch resolves or
+    // the requester is despawned (see `ReservedCost`).
     if ledger.enabled() {
         for (e, _, _, _, _) in admissible.iter().take(num_skip as usize) {
             commands
                 .entity(*e)
-                .insert(navara_memory::ReservedCost { bytes: reserve });
+                .try_insert(navara_memory::ReservedCost::for_key(
+                    navara_memory::ReserveKey::Terrain,
+                ));
         }
     }
 
@@ -305,7 +297,7 @@ mod reservation_tests {
 
         let e = app
             .world_mut()
-            .spawn((DataRequester::default(), ReservedCost { bytes: 4096 }))
+            .spawn((DataRequester::default(), ReservedCost::fixed(4096)))
             .id();
         assert_eq!(app.world().resource::<MemoryLedger>().reserved_bytes, 4096);
 
@@ -339,10 +331,7 @@ mod reservation_tests {
             status: DataRequesterStatus::Success,
             ..Default::default()
         };
-        let e = app
-            .world_mut()
-            .spawn((dr, ReservedCost { bytes: 4096 }))
-            .id();
+        let e = app.world_mut().spawn((dr, ReservedCost::fixed(4096))).id();
         assert_eq!(app.world().resource::<MemoryLedger>().reserved_bytes, 4096);
 
         app.update();

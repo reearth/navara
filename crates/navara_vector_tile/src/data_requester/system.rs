@@ -39,7 +39,6 @@ pub fn filter_requestable_data_requester(
     limits: Res<navara_data_requester::RequestLimits>,
     pressure: Res<navara_memory::SsePressure>,
     ledger: Res<navara_memory::MemoryLedger>,
-    estimates: Res<navara_memory::ReserveEstimates>,
 ) {
     let pendings = requested_data_requesters.iter().count();
     // Load gate: when the memory budget is exhausted, start ZERO new fetches
@@ -57,29 +56,28 @@ pub fn filter_requestable_data_requester(
         .sort::<(&Priority, &OrderByDistance)>()
         .collect();
 
-    // Reserve the per-layer adaptive estimate (EMA of previously landed
-    // geometry costs, seeded by the vector constant while cold) for each
-    // requester actually dispatched this frame. Only the admitted prefix —
-    // NOT the rejected ones below — gets a reservation. The owning layer is
-    // found through its cache manager's `requested_tile_caches` slot, the
-    // same link the reject loop uses.
+    // Reserve the per-layer adaptive estimate (resolved by the `ReservedCost`
+    // on_insert hook — EMA of previously landed geometry costs, seeded by the
+    // vector constant while cold) for each requester actually dispatched this
+    // frame. Only the admitted prefix — NOT the rejected ones below — gets a
+    // reservation. The owning layer is found through its cache manager's
+    // `requested_tile_caches` slot, the same link the reject loop uses.
     if ledger.enabled() {
         for (e, marker, _, _, _) in dispatched.iter().take(num_skip as usize) {
             let layer_key = layers.iter().find_map(|(layer_entity, layer)| {
                 let tc = tcs.get(layer.tile_cache_manager).ok()?;
                 (tc.requested_tile_caches.get(&marker.0) == Some(e)).then_some(layer_entity)
             });
-            let bytes = layer_key
-                .map(|k| {
-                    estimates.estimate(
-                        navara_memory::ReserveKey::Layer(k),
-                        navara_memory::DEFAULT_VECTOR_TILE_RESERVE_BYTES,
-                    )
-                })
-                .unwrap_or(navara_memory::DEFAULT_VECTOR_TILE_RESERVE_BYTES);
-            commands
-                .entity(*e)
-                .try_insert(navara_memory::ReservedCost { bytes });
+            let reservation = match layer_key {
+                Some(k) => {
+                    navara_memory::ReservedCost::for_key(navara_memory::ReserveKey::VectorLayer(k))
+                }
+                // No resolvable layer → no EMA pool; reserve the flat seed.
+                None => navara_memory::ReservedCost::fixed(
+                    navara_memory::DEFAULT_VECTOR_TILE_RESERVE_BYTES,
+                ),
+            };
+            commands.entity(*e).try_insert(reservation);
         }
     }
 
