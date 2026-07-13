@@ -31,7 +31,6 @@ import { AttributionPlugin } from "@navara/three_plugins";
 import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 
-import { datasetToSource } from "../../helpers/attribution-source";
 import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
@@ -181,11 +180,11 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   addEffectsControl(view, pane, defaultEffects);
 
   attribution.show([
-    datasetToSource(TERRAIN_DATASETS.gsi),
-    datasetToSource(TILE_DATASETS.gsiSeamlessphoto),
-    datasetToSource(TILES_3D_DATASETS.plateauChiyoda),
-    datasetToSource(TILES_3D_DATASETS.plateauChuo),
-    datasetToSource(LOCAL_DATASETS.blueMarbleClouds),
+    TERRAIN_DATASETS.gsi,
+    TILE_DATASETS.gsiSeamlessphoto,
+    TILES_3D_DATASETS.plateauChiyoda,
+    TILES_3D_DATASETS.plateauChuo,
+    LOCAL_DATASETS.blueMarbleClouds,
   ]);
 };
 

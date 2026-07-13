@@ -14,7 +14,6 @@ import { VignetteEffect, VignetteTechnique } from "postprocessing";
 import type { Camera } from "three";
 import { Pane } from "tweakpane";
 
-import { datasetToSource } from "../../helpers/attribution-source";
 import { TILE_DATASETS, TILES_3D_DATASETS } from "../../helpers/constants";
 import {
   addHidePaneKeyShortcut,
@@ -317,5 +316,5 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
 
   addDateControl(view, pane);
   addCameraControl(view, pane);
-  attribution.show([datasetToSource(TILE_DATASETS.openstreetmap)]);
+  attribution.show([TILE_DATASETS.openstreetmap]);
 };

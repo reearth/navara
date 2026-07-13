@@ -13,9 +13,12 @@ import type {
 
 const mocks = vi.hoisted(() => ({
   mockReady: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+  // `cmapRanges: null` = cmap unknown, so declared face ranges stay as-is.
   mockLoadFont: vi
-    .fn<() => Promise<{ ok: boolean }>>()
-    .mockResolvedValue({ ok: true }),
+    .fn<
+      (url: string) => Promise<{ ok: boolean; cmapRanges: Uint32Array | null }>
+    >()
+    .mockResolvedValue({ ok: true, cmapRanges: null }),
   mockUnloadFont: vi
     .fn<() => Promise<{ ok: boolean }>>()
     .mockResolvedValue({ ok: true }),
@@ -196,6 +199,8 @@ describe("FontManager", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Restore the default in case a test overrode the implementation.
+    mocks.mockLoadFont.mockResolvedValue({ ok: true, cmapRanges: null });
     manager = new FontManager(WORKER_URL);
     manager.setConcurrencyManager(createMockConcurrencyManager() as never);
     mockFetchSuccess();
@@ -388,7 +393,7 @@ describe("FontManager", () => {
     });
 
     it("should throw when the worker rejects the font", async () => {
-      mocks.mockLoadFont.mockResolvedValueOnce({ ok: false });
+      mocks.mockLoadFont.mockResolvedValueOnce({ ok: false, cmapRanges: null });
 
       await expect(manager.loadFont(FONT_URL, false)).rejects.toThrow(
         "WASM failed to load font",
@@ -671,6 +676,136 @@ describe("FontManager", () => {
 
       expect(loadedFaces.has("https://fonts.test/latin.ttf")).toBe(true);
       expect(loadedFaces.has("https://fonts.test/cjk.ttf")).toBe(false);
+    });
+
+    it("should re-route codepoints the loaded font's cmap lacks to the next declaring face", async () => {
+      // Mimics Google Fonts boilerplate: latin.ttf DECLARES U+02BB (ʻ) but
+      // its cmap lacks the glyph; extended.ttf declares and truly has it.
+      // Loading a file replaces its face's ranges with the real cmap ranges.
+      const family: FontFamily = {
+        family: "Reroute",
+        faces: [
+          {
+            url: "https://fonts.test/latin.ttf",
+            unicodeRanges: [{ from: 0x0000, to: 0x02ff }],
+          },
+          {
+            url: "https://fonts.test/extended.ttf",
+            unicodeRanges: [{ from: 0x02b0, to: 0x02ff }],
+          },
+        ],
+      };
+      manager.registerFontFamily(family);
+      setupBatchMock("Reroute");
+      mocks.mockLoadFont.mockImplementation(async (url: string) => ({
+        ok: true,
+        cmapRanges: url.includes("latin.ttf")
+          ? new Uint32Array([0x0000, 0x02ba, 0x02bc, 0x02ff])
+          : new Uint32Array([0x02b0, 0x02ff]),
+      }));
+
+      const loadedFaces = new Set<string>();
+      await manager.prepareText("Reroute", "Oʻz", false, loadedFaces);
+
+      // The gap was discovered when latin.ttf loaded, so extended.ttf was
+      // loaded on the second pass and received the ʻ segment.
+      expect(loadedFaces.has("https://fonts.test/extended.ttf")).toBe(true);
+      expect(mocks.mockPrepareTextBatch).toHaveBeenCalledWith(
+        "https://fonts.test/extended.ttf#q=false",
+        ["ʻ"],
+      );
+      expect(mocks.mockPrepareTextBatch).toHaveBeenCalledWith(
+        "https://fonts.test/latin.ttf#q=false",
+        ["O", "z"],
+      );
+    });
+
+    it("should fall back to face 0 when no corrected range covers the codepoint", async () => {
+      const family: FontFamily = {
+        family: "NoAlternative",
+        faces: [
+          {
+            url: "https://fonts.test/only.ttf",
+            unicodeRanges: [{ from: 0x0000, to: 0x02ff }],
+          },
+          {
+            url: "https://fonts.test/cjk.ttf",
+            unicodeRanges: [{ from: 0x4e00, to: 0x9fff }],
+          },
+        ],
+      };
+      manager.registerFontFamily(family);
+      setupBatchMock("NoAlternative");
+      mocks.mockLoadFont.mockImplementation(async (url: string) => ({
+        ok: true,
+        cmapRanges: url.includes("only.ttf")
+          ? new Uint32Array([0x0000, 0x02ba, 0x02bc, 0x02ff])
+          : null,
+      }));
+
+      const loadedFaces = new Set<string>();
+      await manager.prepareText("NoAlternative", "Oʻz", false, loadedFaces);
+
+      // After correction ʻ is covered by no face — it falls back to face 0
+      // (only.ttf), so the text stays one segment and cjk.ttf is never
+      // fetched.
+      expect(loadedFaces.has("https://fonts.test/cjk.ttf")).toBe(false);
+      expect(mocks.mockPrepareTextBatch).toHaveBeenCalledWith(
+        "https://fonts.test/only.ttf#q=false",
+        ["Oʻz"],
+      );
+    });
+
+    it("should apply known cmap coverage to families registered after the font loaded", async () => {
+      mocks.mockLoadFont.mockResolvedValueOnce({
+        ok: true,
+        cmapRanges: new Uint32Array([0x41, 0x5a]),
+      });
+      await manager.loadFont("https://fonts.test/caps.ttf", false);
+
+      // Declared ranges are wrong (CJK); the known cmap (A-Z) wins.
+      manager.registerFontFamily({
+        family: "LateRegistration",
+        faces: [
+          {
+            url: "https://fonts.test/caps.ttf",
+            unicodeRanges: [{ from: 0x4e00, to: 0x9fff }],
+          },
+          {
+            url: "https://fonts.test/rest.ttf",
+            unicodeRanges: [{ from: 0x0000, to: 0xffff }],
+          },
+        ],
+      });
+      setupBatchMock("LateRegistration");
+
+      await manager.prepareText("LateRegistration", "AB", false);
+
+      expect(mocks.mockPrepareTextBatch).toHaveBeenCalledWith(
+        "https://fonts.test/caps.ttf#q=false",
+        ["AB"],
+      );
+    });
+
+    it("should not mutate the caller's FontFamily object when correcting ranges", async () => {
+      const callerFaces = [
+        {
+          url: "https://fonts.test/latin.ttf",
+          unicodeRanges: [{ from: 0x0000, to: 0x02ff }],
+        },
+      ];
+      manager.registerFontFamily({ family: "NoMutate", faces: callerFaces });
+      setupBatchMock("NoMutate");
+      mocks.mockLoadFont.mockResolvedValue({
+        ok: true,
+        cmapRanges: new Uint32Array([0x0000, 0x00ff]),
+      });
+
+      await manager.prepareText("NoMutate", "hi", false);
+
+      expect(callerFaces[0].unicodeRanges).toEqual([
+        { from: 0x0000, to: 0x02ff },
+      ]);
     });
 
     it("should keep spaces with the current face to avoid extra segments", async () => {

@@ -191,7 +191,7 @@ const boxHandle = view.addMesh<BoxMeshDesc>({
 });
 
 // Partial update (only the specified properties are changed)
-boxHandle.update({ width: 200 });
+boxHandle.update({ box: { width: 200 } });
 
 // Toggle visibility
 boxHandle.visible = false;

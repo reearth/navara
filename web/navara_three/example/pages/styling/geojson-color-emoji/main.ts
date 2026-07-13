@@ -1,17 +1,21 @@
-import ThreeView, { Color } from "@navara/three";
-import type { FontFamily } from "@navara/three";
+import ThreeView, { Color, fetchFontFamilyFromCss } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
-import { datasetToSource } from "../../../helpers/attribution-source";
 import { GEOJSON_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 import { addDateControl } from "../../../helpers/control";
-import WORLD_FONT_FAMILY from "../geojson-font-faces/worldCitiesFontFamily.json";
-
-import EMOJI_FONT_FAMILY from "./notoColorEmojiFamily.json";
 
 const FAMILY_NAME = "CityWithEmoji";
+
+// Two @font-face stylesheets combined into one family, in priority order:
+// the self-hosted multi-script city faces, then the sliced COLRv1 Noto
+// Color Emoji subsets straight from the @infolektuell/noto-color-emoji
+// package's own stylesheet on jsDelivr.
+const FONT_CSS_URLS = [
+  "/fonts/woff2/world-cities.css",
+  "https://cdn.jsdelivr.net/npm/@infolektuell/noto-color-emoji@0.2.0/index.css",
+];
 
 // Demo modes — each picks a different emoji per city to exercise different
 // regions of the COLRv1 atlas.
@@ -68,17 +72,11 @@ const run = async () => {
 
   defaultPlugin.addDefaultPhotorealScene();
 
-  // Combine the multi-script city family with the sliced COLRv1 Noto Color
-  // Emoji subsets (from the @infolektuell/noto-color-emoji@0.2.0 package on
-  // jsDelivr). Each emoji subset is its own face declaring the unicode-range
-  // it covers; the FontManager loads only the subsets actually needed by the
+  // Each emoji subset is its own face declaring the unicode-range it
+  // covers; the FontManager loads only the subsets actually needed by the
   // text on screen. The worker detects COLRv1 on load and routes glyphs
   // through the color atlas.
-  const family: FontFamily = {
-    family: FAMILY_NAME,
-    faces: [...WORLD_FONT_FAMILY.faces, ...EMOJI_FONT_FAMILY.faces],
-  };
-  view.addFontFamily(family);
+  view.addFontFamily(await fetchFontFamilyFromCss(FAMILY_NAME, FONT_CSS_URLS));
 
   view.setCamera({
     lng: 30,
@@ -182,7 +180,7 @@ const run = async () => {
       layer?.update({ text: { size: value } });
     });
 
-  attribution.show([datasetToSource(TILE_DATASETS.openstreetmap)]);
+  attribution.show([TILE_DATASETS.openstreetmap]);
 };
 
 run();

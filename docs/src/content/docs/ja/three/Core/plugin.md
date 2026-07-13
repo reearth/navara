@@ -155,7 +155,7 @@ const { sky, sun } = plugin.setupScene();
 
 ### カスタム Descriptor を含むプラグイン
 
-独自に実装したカスタム Descriptor（[Custom Descriptor](../../../three/api/custom-desc/) を参照）を登録するプラグインも作成できます。
+独自に実装したカスタム Descriptor（[Custom Descriptor](../../../three/core/custom-desc/) を参照）を登録するプラグインも作成できます。
 
 ```typescript
 import ThreeView, { Plugin, type ViewContext } from "@navara/three";

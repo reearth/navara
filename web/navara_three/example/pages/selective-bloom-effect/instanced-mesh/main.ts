@@ -17,7 +17,6 @@ import {
 import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
-import { datasetToSource } from "../../../helpers/attribution-source";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 
 const RADIUS = 30000; // 30km
@@ -148,10 +147,7 @@ const run = async () => {
     }
   });
 
-  attribution.show([
-    datasetToSource(TILE_DATASETS.openstreetmap),
-    datasetToSource(TERRAIN_DATASETS.gsi),
-  ]);
+  attribution.show([TILE_DATASETS.openstreetmap, TERRAIN_DATASETS.gsi]);
 };
 
 run();

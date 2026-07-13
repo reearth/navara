@@ -571,6 +571,17 @@ export class TileMesh
       textureFragmentIndex,
       tileMeshToFragmentIds,
     } = this.ctx;
+    // Read the AABB before grabbing the buffer views below. `mesh.aabb` (and its
+    // Vec3 center/extent) are wasm-bindgen getters that allocate WASM objects,
+    // which can grow linear memory and detach any previously-obtained buffer
+    // view. Reading it first keeps position/uv/indices/normals valid until
+    // createSkirtMesh copies them.
+    const aabb = mesh.aabb;
+    const center = aabb.center;
+    const extent = aabb.extent;
+    const aabb_center = new Vector3(center.x, center.y, center.z);
+    const aabb_extent = new Vector3(extent.x, extent.y, extent.z);
+
     const position = buf.f32(mesh.vertices);
     const indices = buf.u32(mesh.indices);
     if (!position || !indices) return;
@@ -579,23 +590,14 @@ export class TileMesh
     const normals = mesh.normals != null ? buf.f32(mesh.normals) : null;
 
     // The buf.* arrays are short-lived views into WASM memory: they must be
-    // consumed before any further WASM call. createSkirtMesh copies them once —
-    // into the combined buffers when a skirt exists, or via slice() otherwise.
+    // consumed before any further WASM call that allocates. createSkirtMesh only
+    // reads non-allocating handle getters and consecutive buf.* views, then
+    // copies them once — into the combined buffers when a skirt exists, or via
+    // slice() otherwise.
     // Terrain-only geometry (for shadow rendering). createSkirtMesh fills it:
     // when a skirt exists it shares the combined geometry's buffers (with the
     // skirt cut off via drawRange).
     const terrainGeometry = new BufferGeometry();
-
-    const aabb_center = new Vector3(
-      mesh.aabb.center.x,
-      mesh.aabb.center.y,
-      mesh.aabb.center.z,
-    );
-    const aabb_extent = new Vector3(
-      mesh.aabb.extent.x,
-      mesh.aabb.extent.y,
-      mesh.aabb.extent.z,
-    );
 
     const geometry = this.createSkirtMesh(
       mesh,

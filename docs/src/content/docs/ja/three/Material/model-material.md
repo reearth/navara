@@ -397,24 +397,6 @@ import { Color } from "@navara/three";
 }
 ```
 
-### selectiveEffectOcclusion
-
-**Type:** `string | undefined`
-
-**Description:** セレクティブエフェクトマスクパスの深度動作を指定します。"normal" または "silhouette" を指定できます。
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  model: {
-    selectiveEffectOcclusion: "normal"
-  }
-}
-```
-
 ### shininess
 
 **Type:** `number | undefined`
@@ -591,24 +573,6 @@ import { Color } from "@navara/three";
 {
   model: {
     water: true
-  }
-}
-```
-
-### waterNormalUrl
-
-**Type:** `string | undefined`
-
-**Description:** 水面の法線マップの URL を指定します。
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  model: {
-    waterNormalUrl: "/textures/water_normal.png"
   }
 }
 ```

@@ -24,7 +24,7 @@
  *   [
  *     {
  *       attribution: "Geospatial Information Authority of Japan (GSI)",
- *       url: "https://maps.gsi.go.jp/development/ichiran.html",
+ *       attributionUrl: "https://maps.gsi.go.jp/development/ichiran.html",
  *       children: [
  *         { attribution: "Nationwide latest aerial photos (seamless)", minZoom: 14, maxZoom: 18 },
  *         { attribution: "GRUS画像（© Axelspace）", minZoom: 14, maxZoom: 18 },
@@ -63,6 +63,7 @@ import {
   aggregateCredits,
   appendSanitizedHtml,
   createSafeAnchor,
+  dedupeAttributionItems,
   isAttributionHtml,
   matchesZoom,
   safeHref,
@@ -77,10 +78,21 @@ import {
 
 type View = ThreeView<DefaultDescriptions>;
 
+/** Which bottom corner the attribution UI anchors to. */
+export type AttributionPosition = "bottom-left" | "bottom-right";
+
 /** Options for {@link AttributionPlugin}. */
 export type AttributionPluginOptions = {
   /** Initial color overrides; tweak later with {@link AttributionPlugin.setStyle}. */
   style?: AttributionStyle;
+  /**
+   * Bottom corner for the ⓘ trigger and its credit card. Defaults to
+   * `"bottom-right"`; use `"bottom-left"` when the bottom-right corner is
+   * occupied (e.g. a page with its own HUD there). The logo frame lives in the
+   * bottom-left area in both modes; in `"bottom-left"` the ⓘ takes the far-left
+   * corner and the logos shift right to sit beside it.
+   */
+  position?: AttributionPosition;
 };
 
 /**
@@ -124,12 +136,16 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
   /** Color overrides, applied as CSS custom properties on the dock. */
   private style: AttributionStyle;
 
+  /** Bottom corner for the ⓘ trigger / credit card. */
+  private position: AttributionPosition;
+
   private boundKeydown: (event: KeyboardEvent) => void;
   private boundPreRender: () => void;
 
   constructor(options: AttributionPluginOptions = {}) {
     super();
     this.style = options.style ?? {};
+    this.position = options.position ?? "bottom-right";
     this.boundKeydown = this.handleKeydown.bind(this);
     this.boundPreRender = this.handlePreRender.bind(this);
   }
@@ -155,10 +171,13 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
    * tracked dynamically; the layer is resolved from the view by id, so callers
    * don't pass the `Layer` object separately.
    *
+   * Exact-duplicate entries are dropped so several data sources that share one
+   * credit (e.g. multiple Overture themes) render a single line, not one each.
+   *
    * @param items - Attribution entries (sources or raw HTML credits)
    */
   show(items: AttributionItem[]): void {
-    this.items = items;
+    this.items = dedupeAttributionItems(items);
     this.apply();
   }
 
@@ -266,6 +285,9 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
 
     const dock = document.createElement("div");
     dock.className = "navara-attr-dock";
+    if (this.position === "bottom-left") {
+      dock.classList.add("navara-attr-dock--left");
+    }
 
     const card = document.createElement("div");
     card.className = "navara-attr-card";
@@ -306,6 +328,11 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     // contractually-mandated marks stay visible independent of the popover.
     const logoFrame = document.createElement("div");
     logoFrame.className = "navara-attr-logoframe";
+    // In bottom-left mode the ⓘ trigger sits at the far left, so shift the logo
+    // frame right of it to keep them in one row instead of overlapping.
+    if (this.position === "bottom-left") {
+      logoFrame.classList.add("navara-attr-logoframe--left");
+    }
     document.body.appendChild(logoFrame);
 
     document.addEventListener("keydown", this.boundKeydown);
@@ -351,7 +378,9 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
         continue;
       }
 
-      const href = item.url ? safeHref(item.url) : undefined;
+      const href = item.attributionUrl
+        ? safeHref(item.attributionUrl)
+        : undefined;
       if (href) {
         text.appendChild(createSafeAnchor(href, item.attribution));
       } else {

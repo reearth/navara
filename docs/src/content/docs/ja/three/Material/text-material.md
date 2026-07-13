@@ -69,7 +69,7 @@ import { Color } from "@navara/three";
 
 ### center
 
-**Type:** [`Vec2`](#vec2) | undefined
+**Type:** [`Vec2`](../../api/types/#vec2) | undefined
 
 **Description:** 中心からのシフト量を指定します。範囲は 0 から 1 の間です。
 
@@ -150,6 +150,8 @@ import { Color } from "@navara/three";
 ファミリ名を指定した場合、`text` に含まれる文字の Unicode 範囲をカバーするフェイスファイルのみが読み込まれるため、CJK などの大きなスクリプトを複数のフェイスに分割してオンデマンドに読み込めます。
 
 各コードポイントには、`faces` の並び順で最初に `unicodeRanges` がそのコードポイントを含むフェイスが使用されるため、範囲が重複する場合は先に定義されたエントリが優先されます。どのフェイスにもカバーされないコードポイントは先頭のフェイス（`faces[0]`）にフォールバックするため、宣言された `unicodeRanges` に含まれない文字のためにも先頭のフェイスがダウンロードされる可能性があります。詳細は [`addFontFamily()`](../../api/threeview-functions/#addfontfamily) を参照してください。
+
+フェイスと Unicode 範囲は手書きする代わりに、スタイルシートの `@font-face` ルール（例: Google Fonts CSS API）から導出することもできます。詳細は [Font Family from CSS](../../api/font-family-from-css/) を参照してください。
 
 **Default:** `undefined`（フォントは読み込まれず、フォントを指定するまでテキストレイヤは描画されません）。
 
@@ -473,20 +475,3 @@ import { Color } from "@navara/three";
 }
 ```
 
-## Vec2
-
-2D ベクトルを表すクラスです。
-
-### Properties
-
-#### x
-
-**Type:** `number`
-
-**Description:** X 座標値。
-
-#### y
-
-**Type:** `number`
-
-**Description:** Y 座標値。

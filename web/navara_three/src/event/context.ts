@@ -75,6 +75,11 @@ export type WorkerTaskHandler = {
     bits: bigint,
     result: DelegatedWorkerTasksResult,
   ) => void;
+  /**
+   * Release the delegator of a task that ended without a deliverable result.
+   * Consumes `delegator_id`; a no-op for a task the engine already cancelled.
+   */
+  triggerWorkerTaskFailed: (delegator_id: ReconstructableEntity) => void;
   hasWorkerTask: (bits: bigint) => boolean;
 };
 

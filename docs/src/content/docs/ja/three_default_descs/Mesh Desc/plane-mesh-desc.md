@@ -233,26 +233,6 @@ import { Color } from "@navara/three";
 }
 ```
 
-### selectiveEffectOcclusion
-
-**Type:** `SelectiveEffectOcclusion` (optional)
-
-**Description:** セレクティブエフェクト（Bloom、Outline など）のオクルージョンモードを指定します。
-
-- `"normal"`: 通常のオクルージョンで、他のオブジェクトに遮られた部分はエフェクトが適用されません
-- `"silhouette"`: シルエットモードで、遮られた部分もエフェクトが適用されます
-
-**Example:**
-
-```typescript
-{
-  plane: {
-    effectIds: ["bloom-effect"],
-    selectiveEffectOcclusion: "normal",
-  }
-}
-```
-
 ## Usage Examples
 
 ```typescript
@@ -260,6 +240,7 @@ import ThreeView, { Color } from "@navara/three";
 import { PlaneMeshDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
+view.registerMesh("plane", PlaneMeshDesc);
 await view.init();
 
 const planeDesc = view.addMesh<PlaneMeshDesc>({

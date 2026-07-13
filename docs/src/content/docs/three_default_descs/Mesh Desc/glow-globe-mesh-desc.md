@@ -7,7 +7,7 @@ sidebar:
 
 The `GlowGlobeMeshDesc` class is a mesh descriptor that displays a Fresnel-effect glow around the globe. It mimics the scattering of light in the atmosphere, creating a beautiful halo effect along the edges of the Earth.
 
-In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-desc-base) for details.
+In addition to the properties below, the common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `visible`) are available. See [MeshDesc](./mesh-desc-base) for details.
 
 ## Properties
 
@@ -114,6 +114,7 @@ import ThreeView, { Color } from "@navara/three";
 import { GlowGlobeMeshDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
+view.registerMesh("glowGlobe", GlowGlobeMeshDesc);
 await view.init();
 
 // Add a GlowGlobeMeshDesc

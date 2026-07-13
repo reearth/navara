@@ -229,7 +229,7 @@ sidebar:
 
 ### points
 
-**Type:** `LngLatHeight[]`
+**Type:** [`LatLngHeight`](../../../three/api/navara_three_api/#latlngheight)`[]`
 
 **Description:** ラインを構成する地点を経度緯度高度の配列で指定します。
 
@@ -256,6 +256,7 @@ import ThreeView from "@navara/three";
 import { SmoothLineMeshDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
+view.registerMesh("smoothLines", SmoothLineMeshDesc);
 await view.init();
 
 // SmoothLineMeshDescを追加

@@ -229,7 +229,7 @@ In addition to the properties below, all common properties from the base class (
 
 ### points
 
-**Type:** `LngLatHeight[]`
+**Type:** [`LatLngHeight`](../../../three/api/navara_three_api/#latlngheight)`[]`
 
 **Description:** Specifies the points that make up the line as an array of longitude, latitude, and height.
 
@@ -256,6 +256,7 @@ import ThreeView from "@navara/three";
 import { SmoothLineMeshDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
+view.registerMesh("smoothLines", SmoothLineMeshDesc);
 await view.init();
 
 // Add a SmoothLineMeshDesc

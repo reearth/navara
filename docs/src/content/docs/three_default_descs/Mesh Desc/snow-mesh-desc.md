@@ -7,7 +7,7 @@ sidebar:
 
 The `SnowMeshDesc` class is a mesh descriptor that displays snow particle effects. It creates realistic snowfall effects using texture-based point sprites.
 
-In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-desc-base) for details.
+In addition to the properties below, the common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `visible`) are available. See [MeshDesc](./mesh-desc-base) for details.
 
 ## Common Properties
 
@@ -282,6 +282,7 @@ import ThreeView from "@navara/three";
 import { SnowMeshDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
+view.registerMesh("snow", SnowMeshDesc);
 await view.init();
 
 // Add a SnowMeshDesc
@@ -307,6 +308,7 @@ import ThreeView, { Color, geodeticToVector3, degreeToRadian, LLE } from "@navar
 import { SnowMeshDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView({ animation: true });
+view.registerMesh("snow", SnowMeshDesc);
 await view.init();
 
 // Calculate the position of Tokyo

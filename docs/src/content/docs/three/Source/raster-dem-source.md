@@ -77,26 +77,26 @@ These constants are functions and must be called with `()`; the call defers to W
 
 You can also pass an explicit decoder object:
 
-| Property    | Type     | Description             |
-| ----------- | -------- | ----------------------- |
-| `rScaler`   | `number` | Red channel scaler.     |
-| `gScaler`   | `number` | Green channel scaler.   |
-| `bScaler`   | `number` | Blue channel scaler.    |
-| `offset`    | `number` | Height offset.          |
-| `maxOffset` | `number` | Maximum offset value.   |
-| `minOffset` | `number` | Minimum offset value.   |
-| `boundary`  | `number` | Boundary value.         |
-| `epsilon`   | `number` | Epsilon (small value).  |
+| Property     | Type     | Description             |
+| ------------ | -------- | ----------------------- |
+| `r_scaler`   | `number` | Red channel scaler.     |
+| `g_scaler`   | `number` | Green channel scaler.   |
+| `b_scaler`   | `number` | Blue channel scaler.    |
+| `offset`     | `number` | Height offset.          |
+| `max_offset` | `number` | Maximum offset value.   |
+| `min_offset` | `number` | Minimum offset value.   |
+| `boundary`   | `number` | Boundary value.         |
+| `epsilon`    | `number` | Epsilon (small value).  |
 
 ```typescript
 {
   elevationDecoder: {
-    rScaler: 256.0,
-    gScaler: 1.0,
-    bScaler: 1.0 / 256.0,
+    r_scaler: 256.0,
+    g_scaler: 1.0,
+    b_scaler: 1.0 / 256.0,
     offset: -32768.0,
-    maxOffset: 8848.0,
-    minOffset: -11034.0,
+    max_offset: 8848.0,
+    min_offset: -11034.0,
     boundary: 0.01,
     epsilon: 0.001,
   },

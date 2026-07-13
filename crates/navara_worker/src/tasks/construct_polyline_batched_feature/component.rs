@@ -1,12 +1,10 @@
-use bevy_ecs::{
-    component::Component, entity::Entity, lifecycle::HookContext, world::DeferredWorld,
-};
+use bevy_ecs::{component::Component, entity::Entity};
 use navara_buffer_store::BufferStore;
 use navara_core::{Extent, Radians};
-use navara_feature_component::{batch::BatchTable, render::TransferablePolylineGeometry};
+use navara_feature_component::render::TransferablePolylineGeometry;
 use navara_math::FloatType;
 
-use crate::component::{WorkerTaskBundle, WorkerTaskResultConsumed};
+use crate::component::{FreeResultBuffers, WorkerTaskBundle, free_unconsumed_buffers};
 
 #[derive(Component)]
 pub struct ConstructPolylineBatchedFeatureMarker;
@@ -27,36 +25,17 @@ pub struct ConstructPolylineBatchedFeatureParameters {
 /// that marker (e.g. its `BatchedFeature` died before transfer) frees its
 /// buffers via the `on_remove` hook.
 #[derive(Component, Clone, Debug)]
-#[component(on_remove = free_unconsumed_buffers)]
+#[component(on_remove = free_unconsumed_buffers::<ConstructPolylineBatchedFeatureResult>)]
 pub struct ConstructPolylineBatchedFeatureResult {
     pub extent: Extent<FloatType, Radians>,
     pub geometry: TransferablePolylineGeometry,
 }
 
-/// `on_remove` hook: free the result's buffers unless a consumer took over
-/// handle ownership (`WorkerTaskResultConsumed`). Consumption shares the live
-/// handles with the spawned `RenderableFeature` instead of removing the
-/// entries, so freeing unconditionally would destroy in-use geometry.
-fn free_unconsumed_buffers(mut world: DeferredWorld, ctx: HookContext) {
-    if world.get::<WorkerTaskResultConsumed>(ctx.entity).is_some() {
-        return;
-    }
-    let Some(result) = world.get::<ConstructPolylineBatchedFeatureResult>(ctx.entity) else {
-        return;
-    };
-    let mut geometry = result.geometry.clone();
-    let Some(mut buf) = world.get_resource_mut::<BufferStore>() else {
-        return;
-    };
-    let batch_ids = geometry.remove_buffers(&mut buf);
-    if batch_ids.is_empty() {
-        return;
-    }
-    let Some(mut batch_table) = world.get_resource_mut::<BatchTable>() else {
-        return;
-    };
-    for id in batch_ids {
-        batch_table.remove(&id);
+impl FreeResultBuffers for ConstructPolylineBatchedFeatureResult {
+    fn remove_from_buf(&self, buf: &mut BufferStore) -> Vec<u32> {
+        // `remove_buffers` takes `&mut self` but the geometry holds only
+        // handles, so cloning is cheap.
+        self.geometry.clone().remove_buffers(buf)
     }
 }
 

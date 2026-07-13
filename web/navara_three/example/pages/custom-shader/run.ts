@@ -27,7 +27,6 @@ import {
 } from "three";
 import { ToonShaderHatching, MarchingCubes } from "three-stdlib";
 
-import { datasetToSource } from "../../helpers/attribution-source";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../helpers/constants";
 import { atZoneTime } from "../../helpers/control";
 
@@ -254,10 +253,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     }
   });
 
-  attribution.show([
-    datasetToSource(TERRAIN_DATASETS.gsi),
-    datasetToSource(TILE_DATASETS.gsiSeamlessphoto),
-  ]);
+  attribution.show([TERRAIN_DATASETS.gsi, TILE_DATASETS.gsiSeamlessphoto]);
 };
 
 // Ref: https://github.com/mrdoob/three.js/blob/master/examples/webgl_marchingcubes.html

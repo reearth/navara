@@ -71,13 +71,13 @@ view.globe.elevationColormap = customColorMap;
 
 ```tsx
 // 日時を設定して太陽位置を変更
-view.atmosphere.setDate(new Date("2024-06-21T12:00:00"));
+view.atmosphere.date = new Date("2024-06-21T12:00:00");
 
 // 太陽の方向ベクトルを取得
 const sunDirection = view.atmosphere.getSunDirection();
 
 // 現在地が夜かどうかを判定
-const isNight = view.atmosphere.isAtNight(view.camera.position);
+const isNight = view.atmosphere.isAtNight(view.camera.positionECEF);
 
 // 太陽方向の変更を監視
 view.atmosphere.on("sunChanged", (sunDirection) => {

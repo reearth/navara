@@ -21,16 +21,16 @@ The `DepthOfFieldEffectDesc` class is a Descriptor that applies a depth of field
 
 **Type:** `number | undefined`
 
-**Description:** Specifies the normalized distance to the focus plane. Range is [0.0, 1.0].
+**Description:** Specifies the distance from the camera to the focus plane, in world units (meters). Objects at this distance appear sharp, while objects nearer or farther are progressively blurred.
 
-**Default:** `0.000006`
+**Default:** `1000`
 
 **Example:**
 
 ```typescript
 {
   depthOfField: {
-    focusDistance: 0.5,
+    focusDistance: 500,
   }
 }
 ```
@@ -39,16 +39,16 @@ The `DepthOfFieldEffectDesc` class is a Descriptor that applies a depth of field
 
 **Type:** `number | undefined`
 
-**Description:** Controls the focal length of the virtual lens. It controls how quickly sharpness falls off around the focus plane. Range is [0.0, 1.0].
+**Description:** Specifies the focus range in world units (meters). It controls how quickly sharpness falls off around the focus plane: a smaller value keeps only a narrow band around the focus distance in focus, while a larger value keeps a wider band sharp.
 
-**Default:** `0.000013`
+**Default:** `1000`
 
 **Example:**
 
 ```typescript
 {
   depthOfField: {
-    focalLength: 0.00001,
+    focalLength: 300,
   }
 }
 ```
@@ -114,8 +114,8 @@ defaultLayers.sun.update({
 const depthOfFieldDesc = view.addEffect<DepthOfFieldEffectDesc>({
   depthOfField: {
     bokehScale: 7,
-    focusDistance: 0.000006,
-    focalLength: 0.000013,
+    focusDistance: 500,
+    focalLength: 300,
   },
   visible: true,
 });

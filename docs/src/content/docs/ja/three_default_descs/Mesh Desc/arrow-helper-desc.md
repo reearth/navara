@@ -7,7 +7,7 @@ sidebar:
 
 `ArrowHelperDesc` は、Three.js の `ArrowHelper` をシーンに追加するためのヘルパーDescriptorです。方向ベクトルの可視化、風向きや進行方向などの表現、デバッグ用途に適しています。
 
-以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-desc-base) を参照してください。
+以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-desc-base) を参照してください。
 
 ## Properties
 
@@ -19,13 +19,13 @@ sidebar:
 
 #### direction
 
-**Type:** `XYZ` (必須)
+**Type:** [`XYZ`](../../../three/api/types/#xyz) (必須)
 
 **Description:** 矢印の方向ベクトル。自動的に正規化されます。
 
 #### origin
 
-**Type:** `XYZ | undefined`
+**Type:** [`XYZ`](../../../three/api/types/#xyz) | undefined
 
 **Description:** 矢印の原点座標。省略時は `{ x: 0, y: 0, z: 0 }`。
 
@@ -64,6 +64,7 @@ import ThreeView, { Color } from "@navara/three";
 import { ArrowHelperDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
+view.registerMesh("arrowHelper", ArrowHelperDesc);
 await view.init();
 
 // 東方向へ長さ 5、緑色の矢印

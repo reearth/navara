@@ -3,7 +3,6 @@ import { DefaultPlugin } from "@navara/three_default_plugin";
 import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
-import { datasetToSource } from "../../../helpers/attribution-source";
 import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
@@ -187,8 +186,8 @@ const run = async () => {
     });
 
   attribution.show([
-    datasetToSource(TILE_DATASETS.openstreetmap),
-    datasetToSource(VECTOR_DATASETS.gsiExperimentalVector),
+    TILE_DATASETS.openstreetmap,
+    VECTOR_DATASETS.gsiExperimentalVector,
   ]);
 };
 

@@ -5,7 +5,6 @@ import {
 } from "@navara/three_default_plugin";
 import { AttributionPlugin } from "@navara/three_plugins";
 
-import { datasetToSource } from "../../../helpers/attribution-source";
 import {
   MVT_DATASETS,
   TERRAIN_DATASETS,
@@ -120,9 +119,9 @@ const run = async () => {
   });
 
   attribution.show([
-    datasetToSource(TILE_DATASETS.openstreetmap),
-    datasetToSource(TERRAIN_DATASETS.gsi),
-    datasetToSource(MVT_DATASETS.plateauWakayamaGen),
+    TILE_DATASETS.openstreetmap,
+    TERRAIN_DATASETS.gsi,
+    MVT_DATASETS.plateauWakayamaGen,
   ]);
 };
 

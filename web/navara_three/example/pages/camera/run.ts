@@ -12,7 +12,6 @@ import { AttributionPlugin } from "@navara/three_plugins";
 import { Vector3 } from "three";
 import { Pane, FolderApi } from "tweakpane";
 
-import { datasetToSource } from "../../helpers/attribution-source";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../helpers/constants";
 import {
   addDateControl,
@@ -126,10 +125,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   addRotateOption(pane, view);
   addCameraControlOptions(pane, view);
 
-  attribution.show([
-    datasetToSource(TERRAIN_DATASETS.gsi),
-    datasetToSource(TILE_DATASETS.openstreetmap),
-  ]);
+  attribution.show([TERRAIN_DATASETS.gsi, TILE_DATASETS.openstreetmap]);
 };
 
 const addChangeCameraOption = (

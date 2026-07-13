@@ -3,10 +3,9 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import { PersonViewPlugin } from "@navara/three_plugins";
+import { AttributionPlugin, PersonViewPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
-import { showAttributions } from "../../../helpers/attributions";
 import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
@@ -95,6 +94,10 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   });
   view.addPlugin(plugin);
   view.addPlugin(personView);
+
+  const attribution = new AttributionPlugin();
+  view.addPlugin(attribution);
+
   await view.init();
 
   view.toneMappingExposure = 10;
@@ -139,6 +142,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       castShadow: true,
       receiveShadow: true,
       height: TAKANAWA_3D_TILES.height,
+      transparent: true,
     },
   });
 
@@ -154,7 +158,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   );
   addTeleportControl(pane, personView);
 
-  showAttributions([
+  attribution.show([
     TERRAIN_DATASETS.gsi,
     TILE_DATASETS.gsiSeamlessphoto,
     TILES_3D_DATASETS.plateauTakanawa,

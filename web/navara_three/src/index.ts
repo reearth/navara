@@ -158,7 +158,17 @@ export { type BlendMode, blendFunction, createReplacer } from "./utils";
 export { Atmosphere, type AtmosphereOptions } from "./atmosphere";
 export type { Quality } from "./quality";
 export type { CustomObject3DEventMap } from "./object3DEvent";
-export type { FontFamily, FontFace } from "@navara/font";
+export type { FontFamily, FontFace, UnicodeRange } from "@navara/font";
+export {
+  fetchFontFamilyFromCss,
+  parseCssUnicodeRange,
+  parseFontFamilyFromCss,
+} from "@navara/font";
+export type {
+  CssFontFaceFilter,
+  FetchCssFontFamilyOptions,
+  ParseCssFontFamilyOptions,
+} from "@navara/font";
 
 // NOTE:
 // This overrides all materials to output a normal buffer, meaning Navara operates using MRT (Multiple Render Targets).
@@ -519,6 +529,14 @@ export default class ThreeView<
     triggerWorkerTaskCompleted: (bits, result) => {
       this._core?.triggerWorkerTaskCompleted(bits, result);
     },
+    triggerWorkerTaskFailed: (delegator_id) => {
+      if (this._core) {
+        this._core.triggerWorkerTaskFailed(delegator_id);
+      } else {
+        // The engine is gone (teardown); still free the boundary object.
+        delegator_id.free();
+      }
+    },
     hasWorkerTask: (bits) => {
       return !!this._core?.hasWorkerTask(bits);
     },
@@ -667,7 +685,7 @@ export default class ThreeView<
     // Background color
     const bgColor = options.backgroundColor
       ? options.backgroundColor.toHex()
-      : 0x0a0a0f;
+      : 0x000000;
     this._renderer.setClearColor(bgColor);
 
     if (!options.disableAutoResize && !isWorker()) {
@@ -1650,6 +1668,20 @@ export default class ThreeView<
    *     },
    *   ],
    * });
+   * ```
+   *
+   * Instead of writing faces and ranges by hand, they can be derived from a
+   * stylesheet's `@font-face` rules (e.g. the Google Fonts CSS API) with
+   * {@link fetchFontFamilyFromCss} / {@link parseFontFamilyFromCss}:
+   *
+   * @example
+   * ```ts
+   * view.addFontFamily(
+   *   await fetchFontFamilyFromCss(
+   *     "MapFont",
+   *     "https://fonts.googleapis.com/css2?family=Noto+Sans&family=Noto+Sans+JP",
+   *   ),
+   * );
    * ```
    */
   addFontFamily(family: FontFamily): this {

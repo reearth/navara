@@ -7,7 +7,7 @@ sidebar:
 
 `RainMeshDesc`クラスは、雨のパーティクルエフェクトを表示するメッシュです。シェーダーベースのパーティクルシステムを使用して、リアルな降雨効果を作成します。
 
-以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-desc-base) を参照してください。
+以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-desc-base) を参照してください。
 
 ## Common Properties
 
@@ -319,6 +319,7 @@ import ThreeView, { Color } from "@navara/three";
 import { RainMeshDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
+view.registerMesh("rain", RainMeshDesc);
 await view.init();
 
 // RainMeshDescを追加
@@ -342,6 +343,7 @@ import ThreeView, { geodeticToVector3, degreeToRadian, LLE } from "@navara/three
 import { RainMeshDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView({ animation: true });
+view.registerMesh("rain", RainMeshDesc);
 await view.init();
 
 // 東京の位置を計算

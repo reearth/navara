@@ -324,22 +324,6 @@ const view = new ThreeView({
 });
 ```
 
-### selectiveEffects
-
-**Type:** `{ debugViews?: boolean } | undefined`
-
-**Description:** セレクティブポストプロセッシングエフェクト（特定のオブジェクトにのみ適用されるエフェクト）の設定。`debugViews` を `true` にすると、セレクティブエフェクトマスクのデバッグビューが表示されます。
-
-**Default:** `{ debugViews: false }`
-
-**Example:**
-
-```typescript
-const view = new ThreeView({
-  selectiveEffects: { debugViews: true },
-});
-```
-
 ### idleThreshold
 
 **Type:** `number | undefined`
@@ -370,7 +354,7 @@ view.on("idle", () => {
 
 **Description:** モバイルデバイス向けの最適化を有効にするかどうか。`true` の場合、低いピクセル比率やエフェクトの軽量化など、モバイルデバイスに適した設定が適用されます。
 
-**Default:** `true`
+**Default:** デバイスから自動検出されます（モバイルデバイスは自動的に最適化されます）。検出結果を上書きしたい場合は明示的に指定してください。
 
 **Example:**
 
@@ -386,7 +370,7 @@ const view = new ThreeView({
 
 **Description:** 共有水テクスチャの設定。有効にすると、水エフェクトを使用するすべてのメッシュで単一の水ノーマルテクスチャが共有されます。これにより、各メッシュが個別にテクスチャを読み込むよりも効率的になります。
 
-**Default:** `{ enabled: true }`
+**Default:** 省略時は無効です（`{ enabled: true }` を渡した場合にのみ共有水テクスチャが読み込まれます）。
 
 ```typescript
 type WaterTextureOptions = {

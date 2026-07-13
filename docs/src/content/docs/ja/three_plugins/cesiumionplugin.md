@@ -2,7 +2,7 @@
 title: CesiumIonPlugin
 description: navara_three 向けの Cesium Ion quantized-mesh 地形プラグイン。
 sidebar:
-  order: 4
+  order: 5
 ---
 
 ## 概要
@@ -69,7 +69,7 @@ addTerrain(options?: CesiumIonTerrainOptions): Layer
 
 ### CesiumIonTerrainOptions
 
-`CesiumIonTerrainOptions` は `view.addLayer()` に渡される `quantizedMesh` マテリアルオプションのうち、`token` フィールドを除いたものです。`token` は解決済みの Cesium Ion エンドポイントからプラグインが補います。
+`CesiumIonTerrainOptions` は、`quantized-mesh` ソースの取得／デコードオプション（`type`、`url`、`token` を除いたもの。これらは解決済みの Cesium Ion エンドポイントからプラグインが補います）と、terrain レイヤーのメッシュ描画オプションをまとめたフラットなオブジェクトです。プラグインは各フィールドを内部で `view.addSource()` または `view.addLayer()` に振り分けます。
 
 主なオプション:
 
@@ -89,7 +89,7 @@ addTerrain(options?: CesiumIonTerrainOptions): Layer
 | `show`                 | `boolean` | 地形を表示するかどうか。                                                                                    |
 | `showBoundingBox`      | `boolean` | タイルごとのバウンディングボックスを描画します（デバッグ用）。                                              |
 
-全フィールドは terrain レイヤー Description の `quantizedMesh` フィールドを参照してください。
+全フィールドは `quantized-mesh` ソースと terrain レイヤーの `terrain` 描画オプションを参照してください。
 
 ## 関連リソース
 

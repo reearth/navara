@@ -40,7 +40,8 @@ use navara_tile_component::{
 use navara_vector_tile::{LayerResources, VectorResolveRevision, resolve_vector_tile_states};
 use navara_window::{Window, WindowResizeEvent};
 use navara_worker::{
-    DelegatedWorkerTasksResult, WorkerTaskCompleted, WorkerTaskCompletedEvent, WorkerTaskMarker,
+    DelegatedWorkerTasksResult, WorkerTaskCompleted, WorkerTaskCompletedEvent,
+    WorkerTaskFailedEvent, WorkerTaskMarker,
 };
 
 mod app;
@@ -290,6 +291,14 @@ impl App {
                 parameters_id: Entity::from_bits(bits),
                 result,
             });
+    }
+
+    /// Report a delegated task that ended without a deliverable result so the
+    /// engine releases its delegator (see [`WorkerTaskFailedEvent`]).
+    pub fn trigger_worker_task_failed(&mut self, delegator_bits: u64) {
+        self.app.world_mut().write_message(WorkerTaskFailedEvent {
+            delegator_id: Entity::from_bits(delegator_bits),
+        });
     }
 
     pub fn add_layer(&mut self, layer_id: &str, desc: LayerDescription) {

@@ -324,22 +324,6 @@ const view = new ThreeView({
 });
 ```
 
-### selectiveEffects
-
-**Type:** `{ debugViews?: boolean } | undefined`
-
-**Description:** Configuration for selective post-processing effects (effects applied only to specific objects). Setting `debugViews` to `true` displays debug views of the selective effect masks.
-
-**Default:** `{ debugViews: false }`
-
-**Example:**
-
-```typescript
-const view = new ThreeView({
-  selectiveEffects: { debugViews: true },
-});
-```
-
 ### idleThreshold
 
 **Type:** `number | undefined`
@@ -370,7 +354,7 @@ See the [`idle` event](./threeview-events#idle) for details on when this event f
 
 **Description:** Whether to enable optimizations for mobile devices. When `true`, settings suitable for mobile devices are applied, such as lower pixel ratios and lighter effects.
 
-**Default:** `true`
+**Default:** Auto-detected from the device (mobile devices are optimized automatically). Set explicitly to override the detection.
 
 **Example:**
 
@@ -386,7 +370,7 @@ const view = new ThreeView({
 
 **Description:** Configuration for shared water textures. When enabled, a single water normal texture is shared across all meshes that use water effects. This is more efficient than each mesh loading its own texture individually.
 
-**Default:** `{ enabled: true }`
+**Default:** Disabled when omitted (the shared water texture is loaded only when `{ enabled: true }` is passed).
 
 ```typescript
 type WaterTextureOptions = {

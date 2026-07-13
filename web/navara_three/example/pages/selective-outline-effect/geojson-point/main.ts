@@ -6,7 +6,6 @@ import {
 import { AttributionPlugin } from "@navara/three_plugins";
 import type { FeatureCollection } from "geojson";
 
-import { datasetToSource } from "../../../helpers/attribution-source";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 import { atZoneTime } from "../../../helpers/control";
 
@@ -115,10 +114,7 @@ const run = async () => {
     rasterTile: { maxZoom: 23 },
   });
 
-  attribution.show([
-    datasetToSource(TILE_DATASETS.openstreetmap),
-    datasetToSource(TERRAIN_DATASETS.gsi),
-  ]);
+  attribution.show([TILE_DATASETS.openstreetmap, TERRAIN_DATASETS.gsi]);
 };
 
 run();

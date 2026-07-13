@@ -7,7 +7,7 @@ sidebar:
 
 `GlowGlobeMeshDesc`クラスは、地球の周りにフレネル効果による光彩(グロー)を表示するメッシュです。大気圏の光の散乱を模倣し、地球の縁に沿った美しいハロ効果を作成します。
 
-以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-desc-base) を参照してください。
+以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-desc-base) を参照してください。
 
 ## Properties
 
@@ -114,6 +114,7 @@ import ThreeView, { Color } from "@navara/three";
 import { GlowGlobeMeshDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
+view.registerMesh("glowGlobe", GlowGlobeMeshDesc);
 await view.init();
 
 // GlowGlobeMeshDescを追加

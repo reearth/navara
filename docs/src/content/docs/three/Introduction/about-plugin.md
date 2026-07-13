@@ -75,7 +75,7 @@ const layers = plugin.addDefaultPhotorealScene();
 
 ## DefaultPlugin
 
-The `DefaultPlugin` provided by the [three_default_plugin](../../../three_default_plugin/about/) package is a plugin that bulk-registers all 32 Descriptors from [three_default_descs](../../../three_default_descs/about/) (16 mesh types, 12 effect types, 4 light types). For most projects, this alone is sufficient.
+The `DefaultPlugin` provided by the [three_default_plugin](../../../three_default_plugin/about/) package is a plugin that bulk-registers all 40 Descriptors from [three_default_descs](../../../three_default_descs/about/) (22 mesh types, 14 effect types, 4 light types). For most projects, this alone is sufficient.
 
 ```typescript
 import ThreeView from "@navara/three";

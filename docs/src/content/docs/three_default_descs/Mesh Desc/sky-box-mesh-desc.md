@@ -7,7 +7,7 @@ sidebar:
 
 `SkyBoxMeshDesc` is a Descriptor that adds a simple skybox to the scene. It allows setting day and night sky colors as well as the sun color, providing a lightweight sky representation without using atmospheric scattering simulation (`SkyMeshDesc`).
 
-In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-desc-base) for details.
+In addition to the properties below, the common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `visible`) are available. See [MeshDesc](./mesh-desc-base) for details.
 
 ## Properties
 
@@ -86,6 +86,7 @@ import ThreeView, { Color } from "@navara/three";
 import { SkyBoxMeshDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
+view.registerMesh("skyBox", SkyBoxMeshDesc);
 await view.init();
 
 // Add a skybox with default settings
@@ -101,6 +102,7 @@ import ThreeView, { Color } from "@navara/three";
 import { SkyBoxMeshDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
+view.registerMesh("skyBox", SkyBoxMeshDesc);
 await view.init();
 
 // Add a skybox with custom colors

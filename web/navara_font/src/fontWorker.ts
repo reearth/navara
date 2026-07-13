@@ -117,16 +117,30 @@ ctx.onmessage = async (e: MessageEvent) => {
         // Map TS quality → WASM mode string. `false` is treated as the SDF
         // path by the Rust side (see `wasm_load_font`).
         const mode = highQuality ? "msdf" : "sdf";
-        const ok = fontCache.loadFont(
-          url,
-          bytes.length,
-          (buf: Uint8Array) => {
-            buf.set(bytes);
+        // On success the worker returns the font's cmap coverage as
+        // flattened [from, to, ...] ranges so the FontManager can correct a
+        // face's declared unicode ranges once per file.
+        const wasmRanges =
+          fontCache.loadFont(
+            url,
+            bytes.length,
+            (buf: Uint8Array) => {
+              buf.set(bytes);
+            },
+            atlasKey,
+            mode,
+          ) ?? null;
+        // Copy before transferring: if the returned array is a view into
+        // WASM memory, transferring its buffer would detach the whole heap.
+        const cmapRanges = wasmRanges ? new Uint32Array(wasmRanges) : null;
+        ctx.postMessage(
+          {
+            id,
+            type: "result",
+            payload: { ok: cmapRanges !== null, cmapRanges },
           },
-          atlasKey,
-          mode,
+          cmapRanges ? [cmapRanges.buffer] : [],
         );
-        ctx.postMessage({ id, type: "result", payload: { ok } });
         break;
       }
 

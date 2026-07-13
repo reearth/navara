@@ -382,3 +382,158 @@ it("should correctly count max limit including skipped events", async () => {
     eventManager.stacks.renderable_feature_added.map((e) => e.gen),
   ).toEqual([2, 4, 6, 7, 8, 9, 10]);
 });
+
+it("should process the remaining events of a batch when one handler rejects", async () => {
+  const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+  const eventManager = new EventManager();
+
+  eventManager.pushEvents(
+    makeEvent({
+      renderable_feature_added: [
+        makeRenderableFeatures(1, 1),
+        makeRenderableFeatures(1, 2),
+        makeRenderableFeatures(1, 3),
+      ],
+    }),
+  );
+
+  const processedIds: number[] = [];
+  await eventManager.forEachStackAsync(
+    "renderable_feature_added",
+    async (event) => {
+      if (event.gen === 2) throw new Error("boom");
+      processedIds.push(event.gen);
+    },
+    10,
+  );
+
+  expect(processedIds).toEqual([1, 3]);
+  // The failed event still counts as processed: it must leave the stack (and
+  // be freed) instead of being retried forever.
+  expect(eventManager.stacks.renderable_feature_added).toHaveLength(0);
+  expect(consoleError).toHaveBeenCalledTimes(1);
+  consoleError.mockRestore();
+});
+
+it("should abort the remaining in-flight adds even when an onAbort handler throws", async () => {
+  const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+  const eventManager = new EventManager();
+
+  const aborted: number[] = [];
+  let releaseAdds!: () => void;
+  const gate = new Promise<void>((resolve) => (releaseAdds = resolve));
+
+  const options = {
+    add: { key: "renderable_feature_added" },
+    remove: { key: "renderable_feature_removed" },
+  } as const;
+  const cb = async ({ type }: { type: string }) => {
+    if (type === "add") await gate;
+  };
+  const handlers = {
+    onAbort: (ev: { gen: number }) => {
+      if (ev.gen === 1) throw new Error("abort boom");
+      aborted.push(ev.gen);
+    },
+  };
+
+  // First frame: two adds start and stay pending on the gate.
+  eventManager.pushEvents(
+    makeEvent({
+      renderable_feature_added: [
+        makeRenderableFeatures(1, 1),
+        makeRenderableFeatures(1, 2),
+      ],
+    }),
+  );
+  eventManager.processTransactionEvents("workerTask", options, cb, handlers);
+
+  // Second frame: removals for both pending adds arrive. The first abort
+  // handler throws; the second must still run.
+  eventManager.pushEvents(
+    makeEvent({
+      renderable_feature_removed: [
+        makeRenderableFeatures(1, 1),
+        makeRenderableFeatures(1, 2),
+      ],
+    }),
+  );
+  eventManager.processTransactionEvents("workerTask", options, cb, handlers);
+
+  expect(aborted).toEqual([2]);
+  expect(consoleError).toHaveBeenCalledTimes(1);
+
+  // Later frames replay the transaction; the pending adds settle and the
+  // remove phase drains the stack.
+  releaseAdds();
+  await vi.waitFor(() => {
+    eventManager.processTransactionEvents("workerTask", options, cb, handlers);
+    expect(eventManager.stacks.renderable_feature_removed).toHaveLength(0);
+  });
+  consoleError.mockRestore();
+});
+
+it("should keep in-flight add tracking isolated between transaction keys", async () => {
+  const eventManager = new EventManager();
+
+  const aborted: number[] = [];
+  let releaseAdds!: () => void;
+  const gate = new Promise<void>((resolve) => (releaseAdds = resolve));
+
+  const optionsA = {
+    add: { key: "renderable_feature_added" },
+    remove: { key: "renderable_feature_removed" },
+  } as const;
+  const cbA = async ({ type }: { type: string }) => {
+    if (type === "add") await gate;
+  };
+  const handlersA = {
+    onAbort: (ev: { gen: number }) => {
+      aborted.push(ev.gen);
+    },
+  };
+
+  // Key A: one add starts and stays pending on the gate.
+  eventManager.pushEvents(
+    makeEvent({
+      renderable_feature_added: [makeRenderableFeatures(1, 1)],
+    }),
+  );
+  eventManager.processTransactionEvents("keyA", optionsA, cbA, handlersA);
+
+  // Key B: runs its add and remove phases to completion, clearing ITS OWN
+  // in-flight tracking. Before the per-key split this wiped key A's ids too
+  // and A's abort below never fired.
+  let processedB = false;
+  eventManager.pushEvents(
+    makeEvent({
+      texture_fragment_removed: [makeRenderableFeatures(9, 9)],
+    }),
+  );
+  const optionsB = {
+    add: { key: "texture_fragment_requested" },
+    remove: { key: "texture_fragment_removed" },
+  } as const;
+  const cbB = async ({ type }: { type: string }) => {
+    if (type === "remove") processedB = true;
+  };
+  // Replay across "frames" until key B's remove phase (which clears its
+  // tracking) has run.
+  await vi.waitFor(() => {
+    eventManager.processTransactionEvents("keyB", optionsB, cbB, {
+      onAbort: () => {},
+    });
+    expect(processedB).toBe(true);
+  });
+
+  // A removal for key A's still-pending add arrives; its abort must fire.
+  eventManager.pushEvents(
+    makeEvent({
+      renderable_feature_removed: [makeRenderableFeatures(1, 1)],
+    }),
+  );
+  eventManager.processTransactionEvents("keyA", optionsA, cbA, handlersA);
+
+  expect(aborted).toEqual([1]);
+  releaseAdds();
+});
