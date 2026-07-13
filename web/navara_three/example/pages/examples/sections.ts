@@ -1,5 +1,5 @@
 /**
- * Curated gallery model for the refreshed examples (see AD_EXAMPLE.md).
+ * Curated gallery model for the refreshed examples.
  *
  * Each example ships a `meta.ts` next to its `main.ts`. The gallery index
  * collects every `meta.ts` via `import.meta.glob` and groups them into the
@@ -85,7 +85,7 @@ export type ExampleMeta = {
   section: SectionKey;
   /** Title shown on the card and detail header. */
   title: Localized;
-  /** One-line summary of what the example does (the "purpose" column in AD_EXAMPLE.md §5). */
+  /** One-line summary of what the example does. */
   description: Localized;
   /** Featured (★). Surfaced in the top "Featured" band. */
   signature?: boolean;
