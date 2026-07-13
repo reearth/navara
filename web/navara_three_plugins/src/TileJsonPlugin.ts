@@ -211,6 +211,7 @@ export class TileJsonPlugin extends Plugin<View, ViewContext> {
 
   dispose(): void {
     // The AttributionPlugin is owned by the caller, so it is not disposed here.
+    if (this.credits.length) this.attribution.show([]);
     this.credits.length = 0;
   }
 
