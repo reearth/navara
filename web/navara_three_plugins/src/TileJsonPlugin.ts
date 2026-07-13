@@ -46,8 +46,8 @@ import type { AttributionPlugin } from "./AttributionPlugin";
 
 type View = ThreeView<DefaultDescriptions>;
 
-/** Matches a TileJSON version such as `"3.0.0"` (major.minor.patch). */
-const TILEJSON_VERSION = /^\d+\.\d+\.\d+$/;
+/** Matches a TileJSON version such as "3.0.0" (major.minor.patch). */
+const TILEJSON_VERSION = /^3\.\d+\.\d+$/;
 
 /**
  * The subset of a TileJSON 3.0.0 document this plugin consumes. Other spec
