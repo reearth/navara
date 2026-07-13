@@ -70,8 +70,15 @@ attribution.add([
   },
 ]);
 
-// データが地図から外れたら、その出典を取り下げます（構造で一致判定）。
-attribution.remove([{ attribution: "Google Maps Photorealistic 3D Tiles", creditLayerId: photoreal.id }]);
+// データが地図から外れたら、その出典を取り下げます。一致判定は構造ベースなので、
+// add したときと同じ形（ここでは `logo` も含む）で渡します。
+attribution.remove([
+  {
+    attribution: "Google Maps Photorealistic 3D Tiles",
+    logo: "/credits/GoogleMaps.png",
+    creditLayerId: photoreal.id,
+  },
+]);
 
 // `show` / `hide` はポップオーバーを開閉します（ⓘ トリガーも同じ状態を切り替えます）。
 attribution.show();

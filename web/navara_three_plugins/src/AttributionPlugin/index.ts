@@ -355,7 +355,8 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
 
     const card = document.createElement("div");
     card.className = "navara-attr-card";
-    card.hidden = true;
+    // Reflect any open intent recorded before the DOM existed (see setOpen).
+    card.hidden = !this.isOpen;
 
     const head = document.createElement("div");
     head.className = "navara-attr-head";
@@ -380,8 +381,11 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     toggle.className = "navara-attr-toggle";
     toggle.type = "button";
     toggle.innerHTML = SVG_ICON_HTML;
-    toggle.setAttribute("aria-expanded", "false");
-    toggle.setAttribute("aria-label", "Show attributions");
+    toggle.setAttribute("aria-expanded", String(this.isOpen));
+    toggle.setAttribute(
+      "aria-label",
+      this.isOpen ? "Hide attributions" : "Show attributions",
+    );
     toggle.addEventListener("click", () => this.setOpen());
 
     dock.appendChild(card);
@@ -527,8 +531,11 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
 
   /** Open / close the popover. Non-modal: no backdrop is added. */
   private setOpen(open?: boolean): void {
-    if (!this.card || !this.toggle) return;
+    // Persist the intent before the DOM guard: show() can run before the first
+    // add()/render builds the dock. ensureDom() reads this state when it later
+    // creates the card, so an early "open from the first frame" isn't lost.
     this.isOpen = open ?? !this.isOpen;
+    if (!this.card || !this.toggle) return;
     this.card.hidden = !this.isOpen;
     this.toggle.setAttribute("aria-expanded", String(this.isOpen));
     // Keep the accessible name in sync with what activating the button does.

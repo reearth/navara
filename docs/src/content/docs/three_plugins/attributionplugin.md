@@ -70,8 +70,15 @@ attribution.add([
   },
 ]);
 
-// Drop a source again when its data leaves the map (matched structurally).
-attribution.remove([{ attribution: "Google Maps Photorealistic 3D Tiles", creditLayerId: photoreal.id }]);
+// Drop a source again when its data leaves the map. Matching is structural, so
+// pass the same shape you added (here, including `logo`).
+attribution.remove([
+  {
+    attribution: "Google Maps Photorealistic 3D Tiles",
+    logo: "/credits/GoogleMaps.png",
+    creditLayerId: photoreal.id,
+  },
+]);
 
 // `show` / `hide` open and close the popover (the ⓘ trigger toggles the same state).
 attribution.show();
