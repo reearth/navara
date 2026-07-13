@@ -190,8 +190,17 @@ impl PmtilesSource {
 
     /// Detect meta requests (header / leaf directory) that failed at the
     /// network layer and reflect that on the archive: a failed bootstrap fails
-    /// the whole archive; a failed leaf is recorded so its tiles resolve to
-    /// `Absent` rather than looping.
+    /// the whole archive; a failed leaf is simply dropped from `leaf_reqs` so
+    /// `resolve` re-emits `NeedLeaf` and the fetch is retried.
+    ///
+    /// A network-layer failure here is transient — it includes an *aborted*
+    /// request (a viewport change, or the `MAX_PENDING_META` throttle deleting
+    /// an excess in-flight leaf), which the JS fetch reports the same as a real
+    /// error. Marking such a leaf permanently failed would resolve every tile
+    /// behind it to `Absent` forever (a leaf can be evicted and re-fetched
+    /// under the byte cap), so a single dropped request would permanently
+    /// vanish a region. Only a malformed *parsed* leaf (see `drive`) is
+    /// recorded as permanently failed.
     ///
     /// This needs the `DataRequester` status — failures never write a buffer,
     /// so `drive`'s `buf` polling cannot observe them. Called from the
@@ -216,7 +225,9 @@ impl PmtilesSource {
             .map(|(offset, (entity, _))| (*offset, *entity))
             .collect();
         for (offset, entity) in failed {
-            self.archive.mark_leaf_failed(offset);
+            // Transient: drop the in-flight request so `resolve` re-emits
+            // `NeedLeaf` and the leaf is retried. Do NOT `mark_leaf_failed` —
+            // that is reserved for malformed parsed bytes (see `drive`).
             self.leaf_reqs.remove(&offset);
             commands.entity(entity).despawn();
         }

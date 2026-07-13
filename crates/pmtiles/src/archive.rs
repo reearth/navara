@@ -92,8 +92,11 @@ struct Ready {
     leaf_order: VecDeque<u64>,
     /// Current resident bytes of `leaves`.
     leaves_bytes: usize,
-    /// Leaf offsets whose fetch failed. Tiles behind them resolve to `Absent`
-    /// instead of being re-requested forever.
+    /// Leaf offsets whose bytes were *permanently* unusable (malformed: a
+    /// refetch would parse identically). Tiles behind them resolve to `Absent`
+    /// instead of looping on re-requests. Transient fetch failures (network
+    /// error, aborted request) are deliberately NOT recorded here — those are
+    /// retried, since a leaf can be evicted and re-fetched under the byte cap.
     failed_leaves: HashSet<u64>,
 }
 
@@ -346,9 +349,15 @@ impl Archive {
         self.state = State::Failed;
     }
 
-    /// Record that the leaf directory at `leaf_offset` failed to fetch. Tiles
-    /// behind it will resolve to [`Resolution::Absent`] rather than looping on
-    /// re-requests. No-op unless the archive is ready.
+    /// Record that the leaf directory at `leaf_offset` is *permanently*
+    /// unusable — its bytes landed but were malformed, so a refetch would fail
+    /// identically. Tiles behind it resolve to [`Resolution::Absent`] rather
+    /// than looping on re-requests. No-op unless the archive is ready.
+    ///
+    /// Do NOT call this for a transient fetch failure (network error or an
+    /// aborted request): those leaves are re-fetchable and must stay
+    /// retryable, otherwise a single dropped request would vanish an entire
+    /// region of the map until reload.
     pub fn mark_leaf_failed(&mut self, leaf_offset: u64) {
         if let State::Ready(ready) = &mut self.state {
             ready.failed_leaves.insert(leaf_offset);

@@ -42,10 +42,15 @@ function textureGpuBytes(tex: Texture): number {
 export function sumModelGpuBytes(obj: Object3D): number {
   let geometryBytes = 0;
   let textureBytes = 0;
+  const seenGeometries = new Set<BufferGeometry>();
   const seenTextures = new Set<Texture>();
   obj.traverse((node) => {
     const geometry = (node as Mesh | Points).geometry;
-    if (geometry instanceof BufferGeometry) {
+    // Dedupe geometries too, not just textures: glTF instancing reuses one
+    // BufferGeometry across many nodes, and its GPU buffers are uploaded once,
+    // so counting it per-node would over-report and trip eviction early.
+    if (geometry instanceof BufferGeometry && !seenGeometries.has(geometry)) {
+      seenGeometries.add(geometry);
       for (const attr of Object.values(geometry.attributes)) {
         const array = (attr as { array?: { byteLength?: number } }).array;
         if (array?.byteLength) geometryBytes += array.byteLength;

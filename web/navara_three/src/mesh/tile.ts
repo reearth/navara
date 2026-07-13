@@ -355,10 +355,18 @@ export class TileMesh
     // targets on top of it scale with terrain subdivision past the vector
     // maxZoom — a cost per-vector-tile accounting cannot see.
     const bytes = this.atlasBytes + rts.length * drapeRtBytes(this.drapeRtSize);
-    if (bytes !== this.reportedDrapeGpuBytes) {
-      this.reportedDrapeGpuBytes = bytes;
-      this.tileHandler.reportDrapeGpuBytes(this.handle, bytes);
-    }
+    if (bytes === this.reportedDrapeGpuBytes) return;
+    // Only the mesh currently registered for this position-stable handle may
+    // report. During a terrain mesh replacement the outgoing mesh briefly
+    // coexists with the incoming one, which has already claimed the handle
+    // (constructor's `tileMapByHandle.set`) and been seeded by
+    // `attach_terrain_mesh_cost`. A stray report from the outgoing mesh would
+    // resolve on the Rust side (via `Without<Deleted>`) to the NEW live entity
+    // and overwrite its freshly-seeded atlas cost — the same hazard the
+    // dispose() 0-report guards against, here on the non-zero path.
+    if (this.ctx.tileMapByHandle.get(this.handle) !== this) return;
+    this.reportedDrapeGpuBytes = bytes;
+    this.tileHandler.reportDrapeGpuBytes(this.handle, bytes);
   }
 
   /**

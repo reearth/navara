@@ -527,16 +527,16 @@ pub fn clear_caches(
                 tile.visited_at
             };
 
-            // One-frame revisit grace, unified with terrain (`survives_purge`):
-            // a tile visited as recently as last_rendered_frame-1 stays active
-            // rather than entering the retention pool, so an immediate pan-back
-            // never refetches. (Vector previously used the strict
-            // `last_rendered_frame <= visited_at`, i.e. no grace.)
-            if tc.last_rendered_frame <= visited_at + 1 {
-                continue;
-            }
-
             if ledger.enabled() {
+                // One-frame revisit grace, unified with terrain
+                // (`survives_purge`): a tile visited as recently as
+                // last_rendered_frame-1 stays active rather than entering the
+                // retention pool, so an immediate pan-back never refetches.
+                // Scoped to the budget path: it only defers entry into the
+                // retention pool, which exists solely when a budget is set.
+                if tc.last_rendered_frame <= visited_at + 1 {
+                    continue;
+                }
                 // Retain: hide the tile's features but keep the entity, the
                 // quadtree node, and the data requester alive so a revisit
                 // reactivates it without refetching.
@@ -557,6 +557,13 @@ pub fn clear_caches(
                         RetainedEntry { retained_at, cost },
                     );
                 }
+                continue;
+            }
+
+            // Budget disabled: restore the original strict destroy-on-unvisited
+            // behavior (no retention pool, so no revisit grace), matching the
+            // requested-tile cleanup below and `clear_raster_caches`.
+            if tc.last_rendered_frame <= visited_at {
                 continue;
             }
 
