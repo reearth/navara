@@ -1,15 +1,14 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
 type PageListProps = {
   pages: PageInfo[];
 };
 
 export const PageList = ({ pages }: PageListProps) => {
   return (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-x-5 gap-y-8">
       {pages.map((page) => {
-        // Convert nested path to URL-safe format: "styling/geojson-billboard" -> "styling-geojson-billboard"
-        const urlName = page.name.replace(/\//g, "-");
+        // Convert nested path to URL-safe format: "styling/geojson-billboard" -> "styling-geojson-billboard".
+        // A trailing "/index" collapses to its parent so "dev/index" -> "dev" (kept in sync with vite.config.example.ts).
+        const urlName = page.name.replace(/\/index$/, "").replace(/\//g, "-");
         const href = `/${urlName}`;
         const src = `/screenshots/${urlName}.avif`;
         const title = page.displayName.replace(/-/g, " ");
@@ -18,26 +17,21 @@ export const PageList = ({ pages }: PageListProps) => {
             key={page.name}
             href={href}
             aria-label={`Open ${title}`}
-            className="no-underline"
+            className="group block no-underline"
           >
-            <Card className="overflow-hidden transition-colors hover:bg-accent">
-              <CardContent className="p-0">
-                <img
-                  src={src}
-                  alt={title}
-                  className="block h-[150px] w-full object-cover bg-muted"
-                  loading="lazy"
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).style.opacity = "0.3";
-                  }}
-                />
-              </CardContent>
-              <CardHeader className="border-t p-3">
-                <CardTitle className="text-sm font-medium capitalize">
-                  {title}
-                </CardTitle>
-              </CardHeader>
-            </Card>
+            {/* Flat tile: bordered thumbnail with a plain label below. */}
+            <div className="overflow-hidden rounded-lg border bg-muted">
+              <img
+                src={src}
+                alt={title}
+                className="block aspect-[16/10] w-full object-cover transition-opacity group-hover:opacity-90"
+                loading="lazy"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.opacity = "0.3";
+                }}
+              />
+            </div>
+            <h3 className="mt-3 text-sm font-medium capitalize">{title}</h3>
           </a>
         );
       })}

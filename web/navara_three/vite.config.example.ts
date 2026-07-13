@@ -83,15 +83,43 @@ export default defineConfig((env) => {
       }),
       createMpaPlugin({
         templatePath: resolve(__dirname, "example/template.html"),
-        pages: examplePages.map(({ name }) => {
-          // Convert nested path to URL-safe name: "styling/geojson-billboard" -> "styling-geojson-billboard"
-          const urlName = name.replace(/\//g, "-");
-          return {
-            name: urlName,
-            filename: `${urlName}.html`,
-            entry: normalizePath(`/example/pages/${name}/main.ts`),
-            data: { title: "Navara" },
-          };
+        pages: examplePages.flatMap(({ name, path: dir }) => {
+          const mainFile = existsSync(resolve(dir, "main.tsx"))
+            ? "main.tsx"
+            : "main.ts";
+
+          // Curated examples get two entries with clean, slash-separated URLs:
+          //   detail (presentation)  -> /<section>/<slug>       (shared React template)
+          //   demo   (iframe target) -> /demo/<section>/<slug>  (the raw full-screen demo)
+          if (name.startsWith("examples/")) {
+            const rel = name.replace(/^examples\//, "");
+            return [
+              {
+                name: rel,
+                filename: `${rel}.html`,
+                entry: normalizePath(`/example/pages/detail/main.tsx`),
+                data: { title: "Navara" },
+              },
+              {
+                name: `demo/${rel}`,
+                filename: `demo/${rel}.html`,
+                entry: normalizePath(`/example/pages/${name}/${mainFile}`),
+                data: { title: "Navara" },
+              },
+            ];
+          }
+
+          // Everything else (gallery index, dev launcher, debug/*, legacy demos):
+          // dash URLs, with a trailing "/index" collapsed to its parent ("dev/index" -> /dev).
+          const urlName = name.replace(/\/index$/, "").replace(/\//g, "-");
+          return [
+            {
+              name: urlName,
+              filename: `${urlName}.html`,
+              entry: normalizePath(`/example/pages/${name}/${mainFile}`),
+              data: { title: "Navara" },
+            },
+          ];
         }),
       }),
       ...(env.mode !== "production" ? [wasm(), topLevelAwait()] : []),

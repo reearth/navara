@@ -685,7 +685,7 @@ export default class ThreeView<
     // Background color
     const bgColor = options.backgroundColor
       ? options.backgroundColor.toHex()
-      : 0x0a0a0f;
+      : 0x000000;
     this._renderer.setClearColor(bgColor);
 
     if (!options.disableAutoResize && !isWorker()) {
