@@ -130,5 +130,5 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       });
     });
 
-  attribution.show([PMTILES_DATASETS.protomapsFirenze]);
+  attribution.add([PMTILES_DATASETS.protomapsFirenze]);
 };

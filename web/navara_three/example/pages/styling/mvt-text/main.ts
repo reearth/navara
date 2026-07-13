@@ -185,7 +185,7 @@ const run = async () => {
       layer?.update({ text: { size: value } });
     });
 
-  attribution.show([
+  attribution.add([
     TILE_DATASETS.openstreetmap,
     VECTOR_DATASETS.gsiExperimentalVector,
   ]);

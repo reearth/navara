@@ -125,7 +125,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   addRotateOption(pane, view);
   addCameraControlOptions(pane, view);
 
-  attribution.show([TERRAIN_DATASETS.gsi, TILE_DATASETS.openstreetmap]);
+  attribution.add([TERRAIN_DATASETS.gsi, TILE_DATASETS.openstreetmap]);
 };
 
 const addChangeCameraOption = (

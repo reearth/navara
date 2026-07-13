@@ -173,5 +173,5 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     rainDropLayer.update({ rainDrop: { ...rainDropDefaults } });
   });
 
-  attribution.show([TILE_DATASETS.gsiSeamlessphoto]);
+  attribution.add([TILE_DATASETS.gsiSeamlessphoto]);
 };

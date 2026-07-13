@@ -185,5 +185,5 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
 
   addDateControl(view, pane);
   addCameraControl(view, pane);
-  attribution.show([TILE_DATASETS.openstreetmap]);
+  attribution.add([TILE_DATASETS.openstreetmap]);
 };

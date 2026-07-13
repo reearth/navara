@@ -153,7 +153,7 @@ const run = async () => {
     layer?.update({ polygon: { outlineShow: value } });
   });
 
-  attribution.show([
+  attribution.add([
     TILE_DATASETS.gsiSeamlessphoto,
     TERRAIN_DATASETS.gsi,
     LOCAL_DATASETS.tokyoFlood,

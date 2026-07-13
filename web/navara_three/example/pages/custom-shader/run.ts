@@ -253,7 +253,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     }
   });
 
-  attribution.show([TERRAIN_DATASETS.gsi, TILE_DATASETS.gsiSeamlessphoto]);
+  attribution.add([TERRAIN_DATASETS.gsi, TILE_DATASETS.gsiSeamlessphoto]);
 };
 
 // Ref: https://github.com/mrdoob/three.js/blob/master/examples/webgl_marchingcubes.html

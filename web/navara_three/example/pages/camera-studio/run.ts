@@ -249,11 +249,13 @@ export const run = async () => {
   let pane: Pane | null = null;
   let switching = false;
 
-  // show() replaces the whole list, so compose the current base's credits with
-  // the Soldier model credit (person view only) in one call — otherwise person
+  // clear() + add() replaces the whole list, so compose the current base's
+  // credits with the Soldier model credit (person view only) in one pass —
+  // otherwise leaving person view would strand the Soldier credit, or person
   // view would drop mandated base credits (e.g. Google Photorealistic 3D Tiles).
   const applyAttribution = (base: AttributionItem[]) => {
-    attribution?.show(
+    attribution?.clear();
+    attribution?.add(
       currentKind === "person" ? [...base, LOCAL_DATASETS.soldierGLTF] : base,
     );
   };

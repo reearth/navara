@@ -802,7 +802,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
 
   // All four Overture sources are declared; base/divisions/buildings share one
   // credit, so the AttributionPlugin collapses them to a single rendered line.
-  attribution.show([
+  attribution.add([
     PMTILES_DATASETS.overtureBase,
     PMTILES_DATASETS.overtureDivisions,
     PMTILES_DATASETS.overtureBuildings,

@@ -117,7 +117,7 @@ const run = async () => {
     rasterTile: { maxZoom: 23 },
   });
 
-  attribution.show([
+  attribution.add([
     TILE_DATASETS.openstreetmap,
     TERRAIN_DATASETS.gsi,
     MVT_DATASETS.plateauWakayamaGen,

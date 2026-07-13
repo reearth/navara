@@ -152,7 +152,7 @@ const run = async () => {
   });
 
   // interiorGeoJSON is local sample data with no attribution, so it is omitted.
-  attribution.show([TILE_DATASETS.gsiSeamlessphoto, TERRAIN_DATASETS.gsi]);
+  attribution.add([TILE_DATASETS.gsiSeamlessphoto, TERRAIN_DATASETS.gsi]);
 };
 
 run();

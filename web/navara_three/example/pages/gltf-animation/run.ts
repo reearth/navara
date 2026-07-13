@@ -176,5 +176,5 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   // Start animation loop
   animate();
 
-  attribution.show([TILE_DATASETS.openstreetmap]);
+  attribution.add([TILE_DATASETS.openstreetmap]);
 };

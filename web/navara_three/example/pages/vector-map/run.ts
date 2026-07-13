@@ -104,7 +104,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     },
   });
 
-  attribution.show([
+  attribution.add([
     TERRAIN_DATASETS.gsi,
     TILE_DATASETS.openstreetmap,
     VECTOR_DATASETS.gsiExperimentalVector,

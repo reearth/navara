@@ -191,7 +191,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   addWaterControl(view, pane);
   addWeatherControl(view, pane, rainDropEffect);
 
-  attribution.show([
+  attribution.add([
     TERRAIN_DATASETS.gsi,
     TILE_DATASETS.gsiSeamlessphoto,
     TILES_3D_DATASETS.plateauChiyoda,

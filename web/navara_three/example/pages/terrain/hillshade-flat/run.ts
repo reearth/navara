@@ -96,7 +96,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
 
   addDateControl(view, pane, date);
   addCameraControl(view, pane);
-  attribution.show([TERRAIN_DATASETS.mapterhorn, TILE_DATASETS.openstreetmap]);
+  attribution.add([TERRAIN_DATASETS.mapterhorn, TILE_DATASETS.openstreetmap]);
 
   const params = {
     exaggeration: 0.5,

@@ -97,7 +97,7 @@ const run = async () => {
     rasterTile: { maxZoom: 23 },
   });
 
-  attribution.show([
+  attribution.add([
     TILE_DATASETS.openstreetmap,
     TERRAIN_DATASETS.gsi,
     TILES_3D_DATASETS.plateauChiyoda,

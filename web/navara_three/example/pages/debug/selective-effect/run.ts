@@ -161,7 +161,7 @@ export const run = async (view: ThreeView<DefaultDescriptions>) => {
     },
   });
 
-  attribution.show([
+  attribution.add([
     TILE_DATASETS.openstreetmap,
     TERRAIN_DATASETS.gsi,
     TILES_3D_DATASETS.plateauChiyoda,

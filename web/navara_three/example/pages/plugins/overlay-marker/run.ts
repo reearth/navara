@@ -97,7 +97,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       creditLayerId: tilesLayer.id,
     });
   }
-  attribution.show(sources);
+  attribution.add(sources);
 
   // Set overlay positions from landmark data
   overlayPlugin.setPositions(

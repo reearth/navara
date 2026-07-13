@@ -180,7 +180,7 @@ const run = async () => {
       layer?.update({ text: { size: value } });
     });
 
-  attribution.show([TILE_DATASETS.openstreetmap]);
+  attribution.add([TILE_DATASETS.openstreetmap]);
 };
 
 run();

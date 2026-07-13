@@ -170,7 +170,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   // Fog Light controls for 3D Tiles scenes
   addFogLightControl(view, pane, sceneChangeHandler);
 
-  attribution.show([
+  attribution.add([
     TERRAIN_DATASETS.gsi,
     TILE_DATASETS.gsiSeamlessphoto,
     TILES_3D_DATASETS.plateauChiyoda,

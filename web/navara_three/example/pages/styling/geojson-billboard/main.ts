@@ -133,7 +133,7 @@ const run = async () => {
     layer?.update({ billboard: { size: value } });
   });
 
-  attribution.show([
+  attribution.add([
     TILE_DATASETS.openstreetmap,
     LOCAL_DATASETS.railwaysTimeSeries,
   ]);

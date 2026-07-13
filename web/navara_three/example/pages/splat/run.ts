@@ -139,7 +139,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     rasterTile: { maxZoom: 23 },
   });
 
-  attribution.show([
+  attribution.add([
     TILE_DATASETS.openstreetmap,
     SPLAT_DATASETS.quechua,
     SPLAT_DATASETS.pencilSharpener,

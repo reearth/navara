@@ -50,7 +50,7 @@ export const run = async (view: ThreeView) => {
     view,
   );
 
-  attribution.show([
+  attribution.add([
     TILE_DATASETS.openstreetmap,
     TILE_DATASETS.gsiStd,
     TILE_DATASETS.gsiSeamlessphoto,

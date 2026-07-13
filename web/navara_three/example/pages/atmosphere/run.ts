@@ -179,7 +179,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   addIBLControl(view, pane);
   addEffectsControl(view, pane, defaultEffects);
 
-  attribution.show([
+  attribution.add([
     TERRAIN_DATASETS.gsi,
     TILE_DATASETS.gsiSeamlessphoto,
     TILES_3D_DATASETS.plateauChiyoda,

@@ -128,7 +128,7 @@ export async function run() {
   addDateControl(view, pane);
   addGlobeControl(view, pane);
 
-  attribution.show([
+  attribution.add([
     TERRAIN_DATASETS.gsi,
     TILE_DATASETS.gsiSeamlessphoto,
     TILES_3D_DATASETS.ChiyodaSubway,

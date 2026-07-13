@@ -114,7 +114,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   addDateControl(view, pane);
   addCloudFogControl(pane, cloudsLayer);
 
-  attribution.show([
+  attribution.add([
     TERRAIN_DATASETS.gsi,
     TILE_DATASETS.gsiSeamlessphoto,
     TILES_3D_DATASETS.plateauChiyoda,

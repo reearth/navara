@@ -67,7 +67,7 @@ export async function run() {
   addTerrainModelControl(view, pane);
   addBuildingModelControl(view, pane);
 
-  attribution.show([
+  attribution.add([
     TERRAIN_DATASETS.gsi,
     TILE_DATASETS.gsiSeamlessphoto,
     TILES_3D_DATASETS.plateauChiyoda,

@@ -155,7 +155,7 @@ const run = async () => {
       layer?.update({ polyline: { maxWidth: value } });
     });
 
-  attribution.show([TILE_DATASETS.openstreetmap, LOCAL_DATASETS.railways]);
+  attribution.add([TILE_DATASETS.openstreetmap, LOCAL_DATASETS.railways]);
 };
 
 run();

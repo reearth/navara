@@ -656,7 +656,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
 
   addCtrlPanel(geoLayersDef, view, materialCtrl as Pane);
 
-  attribution.show([
+  attribution.add([
     TERRAIN_DATASETS.gsi,
     TILE_DATASETS.openstreetmap,
     GEOJSON_DATASETS.calderdaleDefibrillators,

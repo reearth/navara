@@ -116,7 +116,7 @@ const run = async () => {
     rasterTile: { maxZoom: 23 },
   });
 
-  attribution.show([TILE_DATASETS.openstreetmap, TERRAIN_DATASETS.gsi]);
+  attribution.add([TILE_DATASETS.openstreetmap, TERRAIN_DATASETS.gsi]);
 };
 
 run();

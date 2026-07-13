@@ -100,5 +100,5 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
 
   addDateControl(view, pane, date);
 
-  attribution.show([TERRAIN_DATASETS.mapterhorn, TILE_DATASETS.openstreetmap]);
+  attribution.add([TERRAIN_DATASETS.mapterhorn, TILE_DATASETS.openstreetmap]);
 };

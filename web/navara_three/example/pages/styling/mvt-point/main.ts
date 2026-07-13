@@ -145,7 +145,7 @@ const run = async () => {
     layer?.update({ point: { size: value } });
   });
 
-  attribution.show([
+  attribution.add([
     TILE_DATASETS.openstreetmap,
     MVT_DATASETS.plateauWakayamaGen,
   ]);

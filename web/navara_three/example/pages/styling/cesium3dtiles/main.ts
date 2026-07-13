@@ -214,7 +214,7 @@ const run = async () => {
     });
   }
 
-  attribution.show([
+  attribution.add([
     TILE_DATASETS.gsiSeamlessphoto,
     TERRAIN_DATASETS.gsi,
     TILES_3D_DATASETS.plateauShinjuku,

@@ -297,7 +297,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   addArcLines(view, pane);
   addSmoothLines(view, pane);
 
-  attribution.show([TERRAIN_DATASETS.gsi, TILE_DATASETS.openstreetmap]);
+  attribution.add([TERRAIN_DATASETS.gsi, TILE_DATASETS.openstreetmap]);
 };
 
 function intToHexColor(num: number) {

@@ -285,7 +285,7 @@ const buildGoogle = (
     },
   });
 
-  attribution.show([
+  attribution.add([
     {
       ...TILES_3D_DATASETS.googlePhotorealTiles,
       creditLayerId: tiles.id,
@@ -324,7 +324,7 @@ const buildMapterhorn = (
     },
   });
 
-  attribution.show([
+  attribution.add([
     TERRAIN_DATASETS.mapterhorn,
     TILE_DATASETS.gsiSeamlessphoto,
   ]);

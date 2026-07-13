@@ -135,10 +135,10 @@ export const run = async () => {
       mode === "quantizedMesh"
         ? TERRAIN_DATASETS.reearthQuantizedMesh
         : TERRAIN_DATASETS.gsi;
-    attribution.show([terrainDataset, VECTOR_DATASETS.gsiExperimentalVector]);
+    attribution.add([terrainDataset, VECTOR_DATASETS.gsiExperimentalVector]);
   };
 
-  attribution.show([
+  attribution.add([
     TERRAIN_DATASETS.reearthQuantizedMesh,
     VECTOR_DATASETS.gsiExperimentalVector,
   ]);

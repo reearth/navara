@@ -175,7 +175,7 @@ const run = async () => {
       });
   }
 
-  attribution.show([
+  attribution.add([
     TILE_DATASETS.gsiSeamlessphoto,
     TERRAIN_DATASETS.gsi,
     MVT_DATASETS.plateauTokyoHeightControl,

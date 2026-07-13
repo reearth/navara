@@ -202,7 +202,7 @@ export async function run() {
   };
   dashAnimFunc();
 
-  attribution.show([
+  attribution.add([
     LOCAL_DATASETS.blueMarbleNight,
     TILE_DATASETS.gsiSeamlessphoto,
     LOCAL_DATASETS.airportTrafficVolume,

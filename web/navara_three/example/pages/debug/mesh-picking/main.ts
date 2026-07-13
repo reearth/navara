@@ -572,7 +572,7 @@ const run = async () => {
   }
 
   addDateControl(view, pane);
-  attribution.show([TILE_DATASETS.openstreetmap, TERRAIN_DATASETS.gsi]);
+  attribution.add([TILE_DATASETS.openstreetmap, TERRAIN_DATASETS.gsi]);
 };
 
 run();

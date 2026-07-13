@@ -64,7 +64,7 @@ export const run = async (view: ThreeView) => {
   addCameraControl(view, pane);
   addCtrlPanel(geoLayersDef, view, pane);
   addDateControl(view, pane);
-  attribution.show([TILE_DATASETS.openstreetmap]);
+  attribution.add([TILE_DATASETS.openstreetmap]);
 };
 
 const addCameraControl = (view: ThreeView, pane: Pane) => {

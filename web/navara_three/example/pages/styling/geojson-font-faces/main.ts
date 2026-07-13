@@ -151,7 +151,7 @@ const run = async () => {
       layer?.update({ text: { textAlign: value } });
     });
 
-  attribution.show([TILE_DATASETS.openstreetmap, TERRAIN_DATASETS.mapterhorn]);
+  attribution.add([TILE_DATASETS.openstreetmap, TERRAIN_DATASETS.mapterhorn]);
 };
 
 run();

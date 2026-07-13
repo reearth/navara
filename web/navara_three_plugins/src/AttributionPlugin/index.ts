@@ -239,23 +239,14 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
   }
 
   /**
-   * With no argument, opens the attribution popover. Toggling the ⓘ trigger
-   * drives the same state, so this is only needed to open it programmatically.
-   * Affects the popover card only — the always-visible logo frame stays put.
-   * Has no visible effect while the set is empty: the dock is hidden until at
-   * least one attribution is added.
-   *
-   * @param items - **@deprecated** Temporary compatibility path: replaces the
-   * whole displayed set. Retained only until the remaining examples migrate to
-   * {@link add} / {@link remove}; will be removed after that. New code should
-   * call `add()` / `remove()` and the no-argument `show()`.
+   * Open the attribution popover. Toggling the ⓘ trigger drives the same state,
+   * so this is only needed to open it programmatically — e.g. to have the
+   * popover open from the first frame instead of collapsed. Affects the popover
+   * card only — the always-visible logo frame stays put. Has no visible effect
+   * while the set is empty: the dock is hidden until at least one attribution is
+   * added.
    */
-  show(items?: AttributionItem[]): void {
-    if (items) {
-      this.items = dedupeAttributionItems(items);
-      this.apply();
-      return;
-    }
+  show(): void {
     this.setOpen(true);
   }
 

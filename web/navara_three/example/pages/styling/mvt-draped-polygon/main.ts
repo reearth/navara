@@ -143,7 +143,7 @@ const run = async () => {
     });
   }
 
-  attribution.show([
+  attribution.add([
     TILE_DATASETS.gsiSeamlessphoto,
     MVT_DATASETS.plateauTokyoFirePrevention,
   ]);

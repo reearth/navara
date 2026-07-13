@@ -162,7 +162,7 @@ const run = async () => {
     }
   });
 
-  attribution.show([TILE_DATASETS.openstreetmap]);
+  attribution.add([TILE_DATASETS.openstreetmap]);
 };
 
 run();

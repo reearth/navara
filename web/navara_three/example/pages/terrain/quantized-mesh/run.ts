@@ -97,7 +97,7 @@ export const run = async (
       type === "cesiumIon"
         ? TERRAIN_DATASETS.cesiumIon
         : TERRAIN_DATASETS.reearthQuantizedMesh;
-    attribution.show([dataset, TILE_DATASETS.eox]);
+    attribution.add([dataset, TILE_DATASETS.eox]);
   };
 
   // Delete the current terrain layer and its explicit source (if any) on the

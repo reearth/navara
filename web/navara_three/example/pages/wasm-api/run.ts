@@ -214,7 +214,7 @@ export const run = async (
   onDistPosChange();
   onRegisterChange();
 
-  attribution.show([
+  attribution.add([
     TERRAIN_DATASETS.gsi,
     TILE_DATASETS.openstreetmap,
     TILES_3D_DATASETS.plateauChiyoda,
