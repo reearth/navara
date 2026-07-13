@@ -64,8 +64,8 @@ const WORKER_HEAP_CAP_DESKTOP = 256 * MB;
 /** Mobile workers pin at the floor: capping heap growth here frees real RAM
  * headroom, which is what justifies the larger mobile tile-cache budget. */
 const WORKER_HEAP_CAP_MOBILE = 64 * MB;
-const FONT_BUDGET_DESKTOP = 64 * MB;
-const FONT_BUDGET_MOBILE = 32 * MB;
+const FONT_BUDGET_DESKTOP = 128 * MB;
+const FONT_BUDGET_MOBILE = 64 * MB;
 /** In-flight fetch caps (per tile pipeline): a camera move on mobile must
  * not burst 50 simultaneous decodes into a memory-constrained process. */
 const MAX_PENDING_REQUESTS_DESKTOP = 50;
