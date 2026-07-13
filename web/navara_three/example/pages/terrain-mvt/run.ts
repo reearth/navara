@@ -135,6 +135,8 @@ export const run = async () => {
       mode === "quantizedMesh"
         ? TERRAIN_DATASETS.reearthQuantizedMesh
         : TERRAIN_DATASETS.gsi;
+    // Replace, not accumulate: clear before re-adding the swapped credits.
+    attribution.clear();
     attribution.add([terrainDataset, VECTOR_DATASETS.gsiExperimentalVector]);
   };
 

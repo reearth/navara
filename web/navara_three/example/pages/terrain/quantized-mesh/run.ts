@@ -69,6 +69,11 @@ export const run = async (
   let terrainSource: Source | undefined;
   let terrainLayer: Layer | undefined;
 
+  const terrainDataset = (type: TerrainType) =>
+    type === "cesiumIon"
+      ? TERRAIN_DATASETS.cesiumIon
+      : TERRAIN_DATASETS.reearthQuantizedMesh;
+
   const addTerrain = (type: TerrainType) => {
     if (type === "cesiumIon") {
       terrainLayer = cesiumIon.addTerrain({
@@ -93,11 +98,7 @@ export const run = async (
         terrain: { castShadow: true, receiveShadow: true },
       });
     }
-    const dataset =
-      type === "cesiumIon"
-        ? TERRAIN_DATASETS.cesiumIon
-        : TERRAIN_DATASETS.reearthQuantizedMesh;
-    attribution.add([dataset, TILE_DATASETS.eox]);
+    attribution.add([terrainDataset(type), TILE_DATASETS.eox]);
   };
 
   // Delete the current terrain layer and its explicit source (if any) on the
@@ -107,6 +108,8 @@ export const run = async (
     terrainSource?.delete();
     terrainLayer = undefined;
     terrainSource = undefined;
+    // Drop the current terrain's credit (eox stays — permanent base).
+    attribution.remove([terrainDataset(currentTerrainType)]);
   };
 
   // Switch terrain on the live view: delete the current terrain, then add the
