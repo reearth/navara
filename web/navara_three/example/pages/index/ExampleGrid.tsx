@@ -22,11 +22,13 @@ export const ExampleGrid = ({ entries, lang }: ExampleGridProps) => {
             key={entry.path}
             href={href}
             aria-label={`Open ${title}`}
-            className="group block no-underline"
+            className="group block rounded-lg no-underline focus-visible:outline-none"
           >
             {/* Flat tile: only the thumbnail carries a border so it reads
-                against the off-white page; the label sits plainly below. */}
-            <div className="relative overflow-hidden rounded-lg border bg-muted">
+                against the off-white page; the label sits plainly below. On
+                keyboard focus it shows the shared ring color (matching the
+                search input and header buttons) rather than the browser default. */}
+            <div className="relative overflow-hidden rounded-lg border bg-muted ring-ring ring-offset-background group-focus-visible:ring-2 group-focus-visible:ring-offset-2">
               <img
                 src={src}
                 alt={title}

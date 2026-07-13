@@ -20,6 +20,15 @@ type PageInfo = {
 };
 
 /**
+ * Directories under `example/pages` that hold a shared entrypoint (a `main.tsx`
+ * reused by other pages) rather than a standalone page. They must not be
+ * registered as their own MPA page or listed in the launchers. `detail` is the
+ * shared React presentation template rendered at `/<section>/<slug>` for each
+ * curated example.
+ */
+const SHARED_ENTRY_DIRS = new Set(["detail"]);
+
+/**
  * Recursively discover example pages in nested directories.
  * A directory is considered a page if it contains a main.ts file.
  * Otherwise, it's treated as a category directory.
@@ -33,6 +42,10 @@ function getExamplePages(
 
   for (const entry of entries) {
     if (entry.isDirectory()) {
+      if (!prefix && SHARED_ENTRY_DIRS.has(entry.name)) {
+        // Shared entrypoint, not a page of its own.
+        continue;
+      }
       const fullPath = resolve(baseDir, entry.name);
       const mainFile = resolve(fullPath, "main.ts");
       const mainTsxFile = resolve(fullPath, "main.tsx");

@@ -26,7 +26,7 @@ export const LangSelect = ({ lang, setLang, label }: LangSelectProps) => {
     <Select value={lang} onValueChange={(value) => setLang(value as Lang)}>
       <SelectTrigger
         aria-label={label}
-        className="h-9 w-auto gap-1.5 border-0 bg-transparent px-2 font-medium uppercase text-muted-foreground shadow-none hover:bg-accent hover:text-foreground focus:ring-0"
+        className="h-9 w-auto gap-1.5 border-0 bg-transparent px-2 font-medium uppercase text-muted-foreground shadow-none hover:bg-accent hover:text-foreground"
       >
         <Languages className="h-4 w-4" />
         {lang}

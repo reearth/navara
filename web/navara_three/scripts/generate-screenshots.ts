@@ -78,6 +78,13 @@ function matchesTarget(page: ExamplePage, target: string): boolean {
   return page.name === t || url === t || url.replace(/^demo\//, "") === t;
 }
 
+/**
+ * Directories under `example/pages` that hold a shared entrypoint reused by
+ * other pages rather than a standalone page. Mirrors `SHARED_ENTRY_DIRS` in
+ * `vite.config.example.ts`; these must not be captured as their own page.
+ */
+const SHARED_ENTRY_DIRS = new Set(["detail"]);
+
 const DEFAULT_CONFIG: ScreenshotConfig = {
   viewport: { width: 400 * 3, height: 250 * 3 },
   outputDir: path.join(__dirname, "../example/public/screenshots"),
@@ -163,6 +170,11 @@ class ScreenshotGenerator {
     for (const entry of entries) {
       if (!entry.isDirectory()) continue;
 
+      if (!prefix && SHARED_ENTRY_DIRS.has(entry.name)) {
+        // Shared entrypoint, not a page of its own.
+        continue;
+      }
+
       const fullPath = path.join(baseDir, entry.name);
       const relPath = prefix ? `${prefix}/${entry.name}` : entry.name;
       const subEntries = await fs.readdir(fullPath, { withFileTypes: true });
@@ -189,11 +201,20 @@ class ScreenshotGenerator {
     // If specific pages are requested, resolve and return them.
     if (this.targetPages && this.targetPages.length > 0) {
       const matched: ExamplePage[] = [];
+      const seen = new Set<string>();
       const invalid: string[] = [];
       for (const target of this.targetPages) {
         const page = pages.find((p) => matchesTarget(p, target));
-        if (page) matched.push(page);
-        else invalid.push(target);
+        if (!page) {
+          invalid.push(target);
+          continue;
+        }
+        // Different targets can resolve to the same page (e.g. "/demo/" and ""
+        // for one curated demo); keep it once so optimizeScreenshots() doesn't
+        // stat/convert/delete the same PNG twice.
+        if (seen.has(page.name)) continue;
+        seen.add(page.name);
+        matched.push(page);
       }
 
       if (invalid.length > 0) {
