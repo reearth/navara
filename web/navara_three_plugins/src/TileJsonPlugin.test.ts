@@ -220,13 +220,20 @@ describe("TileJsonPlugin attribution wiring", () => {
     ]);
   });
 
-  it("does not dispose the supplied AttributionPlugin (caller owns it)", async () => {
+  it("leaves the caller-owned AttributionPlugin untouched on dispose", async () => {
     const { view } = makeFakeView();
     const attribution = { show: vi.fn(), dispose: vi.fn() };
     const plugin = initPlugin(view, attribution);
 
+    stubTileJson(RASTER_DOC);
+    await plugin.addSource({ type: "raster-tile", url: DOC_URL });
+    attribution.show.mockClear();
+
     plugin.dispose();
+    // The caller owns the AttributionPlugin, so dispose neither disposes it nor
+    // clears what it shows (e.g. no show([]) to wipe the credit list).
     expect(attribution.dispose).not.toHaveBeenCalled();
+    expect(attribution.show).not.toHaveBeenCalled();
   });
 
   it("merges and de-duplicates credits across multiple addSource() calls", async () => {

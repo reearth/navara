@@ -139,7 +139,6 @@ export class TileJsonPlugin extends Plugin<View, ViewContext> {
     this.attribution = options.attribution;
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await
   async init(view: View, _ctx: ViewContext): Promise<void> {
     this.view = view;
   }
@@ -210,8 +209,10 @@ export class TileJsonPlugin extends Plugin<View, ViewContext> {
   }
 
   dispose(): void {
-    // The AttributionPlugin is owned by the caller, so it is not disposed here.
-    if (this.credits.length) this.attribution.show([]);
+    // The AttributionPlugin is owned by the caller: this plugin neither disposes
+    // it nor clears what it shows. Managing its display is the caller's job, just
+    // as addSource() hands source ownership back to the caller. Only this
+    // plugin's own state is released.
     this.credits.length = 0;
   }
 
