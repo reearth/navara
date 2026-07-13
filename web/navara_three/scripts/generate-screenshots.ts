@@ -31,6 +31,60 @@ type PageConfig = {
   waitTime?: number;
 };
 
+/** A discovered example page: its screenshot key and the demo URL to capture. */
+type ExamplePage = {
+  /**
+   * Screenshot key — also the output filename (sans extension) and the id the
+   * gallery references. Curated examples use the nested demo path
+   * ("getting-started/hello-world"); legacy pages use the dash form
+   * ("styling-geojson-billboard").
+   */
+  name: string;
+  /** Dev-server path of the raw full-screen demo, e.g. "/demo/getting-started/hello-world". */
+  url: string;
+};
+
+/**
+ * Map an example directory (relative to `example/pages`, slash form) to its
+ * screenshot key and demo URL. Mirrors the MPA routing in
+ * `vite.config.example.ts` so captured screenshots line up with the URLs the
+ * gallery renders.
+ */
+function toExamplePage(relPath: string): ExamplePage {
+  // Curated examples: presentation at /<section>/<slug>, raw demo at
+  // /demo/<section>/<slug>. Screenshots are keyed by that same demo path.
+  if (relPath.startsWith("examples/")) {
+    const rest = relPath.replace(/^examples\//, "");
+    return { name: rest, url: `/demo/${rest}` };
+  }
+  // Everything else: dash URLs, a trailing "/index" collapsed to its parent.
+  const urlName = relPath.replace(/\/index$/, "").replace(/\//g, "-");
+  return { name: urlName, url: `/${urlName}` };
+}
+
+/**
+ * Match a user-supplied target against a discovered page. Accepts the screenshot
+ * key ("getting-started/hello-world", "atmosphere") as well as URL paths
+ * ("/demo/getting-started/hello-world", "demo/getting-started/hello-world").
+ */
+function matchesTarget(page: ExamplePage, target: string): boolean {
+  const norm = (s: string) =>
+    s
+      .replace(/^\//, "")
+      .replace(/\.html$/, "")
+      .replace(/\/$/, "");
+  const t = norm(target);
+  const url = norm(page.url);
+  return page.name === t || url === t || url.replace(/^demo\//, "") === t;
+}
+
+/**
+ * Directories under `example/pages` that hold a shared entrypoint reused by
+ * other pages rather than a standalone page. Mirrors `SHARED_ENTRY_DIRS` in
+ * `vite.config.example.ts`; these must not be captured as their own page.
+ */
+const SHARED_ENTRY_DIRS = new Set(["detail"]);
+
 const DEFAULT_CONFIG: ScreenshotConfig = {
   viewport: { width: 400 * 3, height: 250 * 3 },
   outputDir: path.join(__dirname, "../example/public/screenshots"),
@@ -100,58 +154,83 @@ class ScreenshotGenerator {
   }
 
   /**
-   * Recursively discover example pages in nested directories.
-   * A directory is considered a page if it contains a main.ts file.
+   * Recursively discover example pages in nested directories, returning each
+   * page's directory path relative to `example/pages` (slash form). A directory
+   * is a page if it contains a `main.ts` / `main.tsx`; otherwise it is a
+   * category directory and we recurse. Non-directory entries (e.g. loose
+   * `sections.ts`) are skipped.
    */
   async discoverPagesRecursive(
     baseDir: string,
     prefix = "",
   ): Promise<string[]> {
     const entries = await fs.readdir(baseDir, { withFileTypes: true });
-    const pages: string[] = [];
+    const paths: string[] = [];
 
     for (const entry of entries) {
-      const fullPath = path.join(baseDir, entry.name);
-      const subEntries = await fs.readdir(fullPath, { withFileTypes: true });
-      const hasFiles = subEntries.some((e) => e.isFile());
+      if (!entry.isDirectory()) continue;
 
-      if (hasFiles) {
-        // This is a page directory
-        const pageName = prefix ? `${prefix}-${entry.name}` : entry.name;
-        pages.push(pageName);
+      if (!prefix && SHARED_ENTRY_DIRS.has(entry.name)) {
+        // Shared entrypoint, not a page of its own.
+        continue;
+      }
+
+      const fullPath = path.join(baseDir, entry.name);
+      const relPath = prefix ? `${prefix}/${entry.name}` : entry.name;
+      const subEntries = await fs.readdir(fullPath, { withFileTypes: true });
+      const isPage = subEntries.some(
+        (e) => e.isFile() && (e.name === "main.ts" || e.name === "main.tsx"),
+      );
+
+      if (isPage) {
+        paths.push(relPath);
       } else {
-        // This is a category directory, recurse
-        const nestedPages = await this.discoverPagesRecursive(
-          fullPath,
-          prefix ? `${prefix}-${entry.name}` : entry.name,
-        );
-        pages.push(...nestedPages);
+        // This is a category directory, recurse.
+        paths.push(...(await this.discoverPagesRecursive(fullPath, relPath)));
       }
     }
 
-    return pages;
+    return paths;
   }
 
-  async discoverPages(): Promise<string[]> {
+  async discoverPages(): Promise<ExamplePage[]> {
     const pagesDir = path.join(__dirname, "../example/pages");
-    const pages = (await this.discoverPagesRecursive(pagesDir)).sort();
+    const relPaths = (await this.discoverPagesRecursive(pagesDir)).sort();
+    const pages = relPaths.map(toExamplePage);
 
-    // If specific pages are requested, validate and return them
+    // If specific pages are requested, resolve and return them.
     if (this.targetPages && this.targetPages.length > 0) {
-      // Validate requested pages exist
-      const invalidPages = this.targetPages.filter(
-        (page) => !pages.includes(page),
-      );
-      if (invalidPages.length > 0) {
-        console.error(`❌ Invalid page(s): ${invalidPages.join(", ")}`);
-        console.log(`Available pages: ${pages.join(", ")}`);
+      const matched: ExamplePage[] = [];
+      const seen = new Set<string>();
+      const invalid: string[] = [];
+      for (const target of this.targetPages) {
+        const page = pages.find((p) => matchesTarget(p, target));
+        if (!page) {
+          invalid.push(target);
+          continue;
+        }
+        // Different targets can resolve to the same page (e.g. "/demo/" and ""
+        // for one curated demo); keep it once so optimizeScreenshots() doesn't
+        // stat/convert/delete the same PNG twice.
+        if (seen.has(page.name)) continue;
+        seen.add(page.name);
+        matched.push(page);
+      }
+
+      if (invalid.length > 0) {
+        console.error(`❌ Invalid page(s): ${invalid.join(", ")}`);
+        console.log(
+          `Available pages:\n${pages.map((p) => `  ${p.name}  →  ${p.url}`).join("\n")}`,
+        );
         process.exit(1);
       }
 
       console.log(
-        `📂 Targeting ${this.targetPages.length} specific page(s): ${this.targetPages.join(", ")}`,
+        `📂 Targeting ${matched.length} specific page(s): ${matched
+          .map((p) => p.name)
+          .join(", ")}`,
       );
-      return this.targetPages;
+      return matched;
     }
 
     console.log(`📂 Found ${pages.length} WebGL example pages to capture`);
@@ -206,8 +285,11 @@ class ScreenshotGenerator {
     }
   }
 
-  async captureScreenshot(pageName: string): Promise<PageScreenshotResult> {
+  async captureScreenshot(
+    examplePage: ExamplePage,
+  ): Promise<PageScreenshotResult> {
     const startTime = Date.now();
+    const pageName = examplePage.name;
     const pageConfig = PAGE_CONFIGS[pageName] || {};
     const viewport = this.config.viewport;
 
@@ -230,8 +312,8 @@ class ScreenshotGenerator {
         // Set longer default timeout for this page
         page.setDefaultTimeout(this.config.timeout);
 
-        // Navigate to the example page
-        const url = `${this.config.serverUrl}/${pageName}`;
+        // Navigate to the example page (raw full-screen demo).
+        const url = `${this.config.serverUrl}${examplePage.url}`;
         console.log(
           `📸 Capturing ${pageName} (attempt ${attempts}/${this.config.retries})...`,
         );
@@ -241,11 +323,13 @@ class ScreenshotGenerator {
         // Wait for WebGL content to load
         await this.waitForWebGL(page, pageConfig);
 
-        // Capture screenshot
+        // Capture screenshot. Curated example keys are nested paths
+        // ("getting-started/hello-world"), so ensure the parent dir exists.
         const screenshotPath = path.join(
           this.config.outputDir,
           `${pageName}.png`,
         );
+        await fs.mkdir(path.dirname(screenshotPath), { recursive: true });
         await page.screenshot({
           path: screenshotPath,
           fullPage: false, // Use viewport size
@@ -398,13 +482,14 @@ function parseArgs(): { pages: string[] | null; forceHeavy?: boolean } {
 
 Usage:
   pnpm run screenshots                    # Capture all pages
-  pnpm run screenshots [page1] [page2]    # Capture specific pages
+  pnpm run screenshots [target1] [target2]  # Capture specific pages
   pnpm run screenshots --help             # Show this help
 
-Examples:
-  pnpm run screenshots atmosphere         # Capture only atmosphere page
-  pnpm run screenshots atmosphere night   # Capture atmosphere and night pages
-  pnpm run screenshots --help            # Show available pages
+A target is either a legacy page name or a curated example's demo path:
+  pnpm run screenshots atmosphere                       # legacy page
+  pnpm run screenshots atmosphere night                 # multiple legacy pages
+  pnpm run screenshots /demo/getting-started/hello-world  # curated example (demo path)
+  pnpm run screenshots getting-started/hello-world        # same, path shorthand
 
 Environment variables:
   SERVER_URL=http://localhost:5173       # Override dev server URL

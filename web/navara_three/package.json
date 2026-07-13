@@ -75,6 +75,7 @@
     "postcss": "8.5.9",
     "postprocessing": "6.38.3",
     "sharp": "0.34.5",
+    "shiki": "4.3.1",
     "tailwind-merge": "3.5.0",
     "tailwindcss": "4.2.2",
     "tailwindcss-animate": "1.0.7",
