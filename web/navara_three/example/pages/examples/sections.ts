@@ -1,5 +1,5 @@
 /**
- * Curated gallery model for the refreshed examples (see AD_EXAMPLE.md).
+ * Curated gallery model for the refreshed examples.
  *
  * Each example ships a `meta.ts` next to its `main.ts`. The gallery index
  * collects every `meta.ts` via `import.meta.glob` and groups them into the
