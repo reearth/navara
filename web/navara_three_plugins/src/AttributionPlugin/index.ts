@@ -47,9 +47,10 @@
  * // Re-theme at runtime (e.g. light / dark switch).
  * attribution.setStyle({ backgroundColor: "#14181c", textColor: "#e6e9ee" });
  *
- * // `show` / `hide` open and close the popover (the ⓘ trigger toggles the same state).
- * attribution.show();
+ * // The popover is open by default so licensing is visible; hide() collapses
+ * // it and show() re-opens it (the ⓘ trigger toggles the same state).
  * attribution.hide();
+ * attribution.show();
  * attribution.dispose();
  * ```
  */
@@ -124,7 +125,9 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
   private listEl?: HTMLUListElement;
   private logosEl?: HTMLDivElement;
   private toggle?: HTMLButtonElement;
-  private isOpen = false;
+  // Open by default so licensing is visible without a click; hide() (or the ⓘ
+  // trigger) collapses it. Set before any DOM exists — ensureDom() reflects it.
+  private isOpen = true;
 
   /** Last computed integer zoom level. Used to skip no-op re-renders. */
   private lastZoomLevel?: number;
@@ -215,7 +218,14 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
 
   /** Resolve/track the current items' credit layers and render. */
   private apply(): void {
-    this.trackLayers(this.resolveCreditLayers(this.items));
+    const layers = this.resolveCreditLayers(this.items);
+    // Retrack only when the credit-layer set changes: trackLayers() clears
+    // accumulated per-feature credits, which unrelated add/remove must not wipe.
+    const nextIds = new Set(layers.map((l) => l.id));
+    const sameSet =
+      nextIds.size === this.layerCredits.size &&
+      [...nextIds].every((id) => this.layerCredits.has(id));
+    if (!sameSet) this.trackLayers(layers);
     this.render();
   }
 
@@ -239,12 +249,11 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
   }
 
   /**
-   * Open the attribution popover. Toggling the ⓘ trigger drives the same state,
-   * so this is only needed to open it programmatically — e.g. to have the
-   * popover open from the first frame instead of collapsed. Affects the popover
-   * card only — the always-visible logo frame stays put. Has no visible effect
-   * while the set is empty: the dock is hidden until at least one attribution is
-   * added.
+   * Open the attribution popover. It is open by default, so this is only needed
+   * to re-open it after {@link hide} (the ⓘ trigger toggles the same state).
+   * Affects the popover card only — the always-visible logo frame stays put. Has
+   * no visible effect while the set is empty: the dock is hidden until at least
+   * one attribution is added.
    */
   show(): void {
     this.setOpen(true);

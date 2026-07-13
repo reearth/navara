@@ -7,7 +7,7 @@ sidebar:
 
 ## Overview
 
-`AttributionPlugin` shows a credit UI for your map's data sources. A small ⓘ trigger sits in the bottom-right corner; clicking it opens a popover that lists the active sources. It is non-modal — the map stays interactive (pan / zoom / rotate) while the popover is open.
+`AttributionPlugin` shows a credit UI for your map's data sources. The popover lists the active sources and is **open by default** so licensing is visible without a click; a small ⓘ trigger in the bottom-right corner toggles it (and `hide()` / `show()` do the same). It is non-modal — the map stays interactive (pan / zoom / rotate) while the popover is open.
 
 It covers the three things map attributions usually need:
 
@@ -80,9 +80,10 @@ attribution.remove([
   },
 ]);
 
-// `show` / `hide` open and close the popover (the ⓘ trigger toggles the same state).
-attribution.show();
+// The popover is open by default; hide() collapses it and show() re-opens it
+// (the ⓘ trigger toggles the same state).
 attribution.hide();
+attribution.show();
 attribution.dispose();
 ```
 
@@ -131,7 +132,7 @@ Removes all displayed attributions while keeping the plugin alive — the popove
 show(): void
 ```
 
-Opens the attribution popover. The ⓘ trigger toggles the same state, so this is only needed to open it programmatically — e.g. to have the popover open from the first frame instead of collapsed. Affects the popover card only — the always-visible logo frame stays put. Has no visible effect while the set is empty: the dock is hidden until at least one attribution is added.
+Opens the attribution popover. It is open by default, so this is only needed to re-open it after `hide()` (the ⓘ trigger toggles the same state). Affects the popover card only — the always-visible logo frame stays put. Has no visible effect while the set is empty: the dock is hidden until at least one attribution is added.
 
 ### hide()
 
