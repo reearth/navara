@@ -142,6 +142,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       castShadow: true,
       receiveShadow: true,
       height: TAKANAWA_3D_TILES.height,
+      transparent: true,
     },
   });
 
