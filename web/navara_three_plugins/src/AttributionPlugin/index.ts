@@ -20,31 +20,35 @@
  * // A 3D-tiles layer whose tiles embed their own copyright (tracked dynamically).
  * const photoreal = view.addLayer({ type: "cesium3dtiles", data: { url } });
  *
- * attribution.show(
- *   [
- *     {
- *       attribution: "Geospatial Information Authority of Japan (GSI)",
- *       attributionUrl: "https://maps.gsi.go.jp/development/ichiran.html",
- *       children: [
- *         { attribution: "Nationwide latest aerial photos (seamless)", minZoom: 14, maxZoom: 18 },
- *         { attribution: "GRUS画像（© Axelspace）", minZoom: 14, maxZoom: 18 },
- *       ],
- *     },
- *     {
- *       // Per-tile copyright is tracked dynamically by resolving this layer id.
- *       attribution: "Google Maps Photorealistic 3D Tiles",
- *       creditLayerId: photoreal.id,
- *     },
- *     {
- *       attributionHtml:
- *         '<a href="https://s2maps.eu">Sentinel-2 cloudless 2020</a> by <a href="https://eox.at">EOX IT Services GmbH</a>',
- *     },
- *   ],
- * );
+ * // `add` / `remove` manage the set of displayed attributions.
+ * attribution.add([
+ *   {
+ *     attribution: "Geospatial Information Authority of Japan (GSI)",
+ *     attributionUrl: "https://maps.gsi.go.jp/development/ichiran.html",
+ *     children: [
+ *       { attribution: "Nationwide latest aerial photos (seamless)", minZoom: 14, maxZoom: 18 },
+ *       { attribution: "GRUS画像（© Axelspace）", minZoom: 14, maxZoom: 18 },
+ *     ],
+ *   },
+ *   {
+ *     // Per-tile copyright is tracked dynamically by resolving this layer id.
+ *     attribution: "Google Maps Photorealistic 3D Tiles",
+ *     creditLayerId: photoreal.id,
+ *   },
+ *   {
+ *     attributionHtml:
+ *       '<a href="https://s2maps.eu">Sentinel-2 cloudless 2020</a> by <a href="https://eox.at">EOX IT Services GmbH</a>',
+ *   },
+ * ]);
+ *
+ * // Drop a source again when its data leaves the map (matched structurally).
+ * attribution.remove([{ attribution: "Google Maps Photorealistic 3D Tiles", creditLayerId: photoreal.id }]);
  *
  * // Re-theme at runtime (e.g. light / dark switch).
  * attribution.setStyle({ backgroundColor: "#14181c", textColor: "#e6e9ee" });
  *
+ * // `show` / `hide` open and close the popover (the ⓘ trigger toggles the same state).
+ * attribution.show();
  * attribution.hide();
  * attribution.dispose();
  * ```
@@ -62,6 +66,7 @@ import type { DefaultDescriptions } from "@navara/three_default_plugin";
 import {
   aggregateCredits,
   appendSanitizedHtml,
+  attributionItemKey,
   createSafeAnchor,
   dedupeAttributionItems,
   isAttributionHtml,
@@ -157,27 +162,54 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     // static map; `preRender` reliably fires while the scene renders. The
     // level-change gate in `handlePreRender` keeps this from churning the DOM.
     view.on("preRender", this.boundPreRender);
-    // `show()` may have run before init (the plugin is created before
+    // `add()` may have run before init (the plugin is created before
     // `view.init()`); apply any pending items now that the view exists, instead
     // of silently dropping them.
     if (this.items.length) this.apply();
   }
 
   /**
-   * Display the given attributions. Re-invoking replaces the current content
-   * (supports dynamic license changes).
+   * Add attributions to the displayed set. Merged with the current entries;
+   * exact duplicates are dropped so several data sources that share one credit
+   * (e.g. multiple Overture themes) render a single line, not one each.
    *
    * Sources that declare a `creditLayerId` have that layer's per-feature credits
    * tracked dynamically; the layer is resolved from the view by id, so callers
    * don't pass the `Layer` object separately.
    *
-   * Exact-duplicate entries are dropped so several data sources that share one
-   * credit (e.g. multiple Overture themes) render a single line, not one each.
-   *
    * @param items - Attribution entries (sources or raw HTML credits)
    */
-  show(items: AttributionItem[]): void {
-    this.items = dedupeAttributionItems(items);
+  add(items: AttributionItem[]): void {
+    this.items = dedupeAttributionItems([...this.items, ...items]);
+    this.apply();
+  }
+
+  /**
+   * Remove attributions from the displayed set. Entries are matched
+   * structurally (same rendered content), so pass the same object shape that
+   * was added — no separate id is needed. Unmatched entries are ignored.
+   *
+   * @param items - Attribution entries to drop
+   */
+  remove(items: AttributionItem[]): void {
+    const keys = new Set(items.map(attributionItemKey));
+    this.items = this.items.filter(
+      (item) => !keys.has(attributionItemKey(item)),
+    );
+    this.apply();
+  }
+
+  /**
+   * Remove all displayed attributions while keeping the plugin alive — the
+   * popover, listeners, and injected styles stay, so a later {@link add} brings
+   * the UI back. With nothing to show the dock and logo frame hide themselves
+   * (see {@link render}). Use {@link dispose} to instead tear the DOM down.
+   *
+   * Not implemented via `dispose()`: `dispose()` destroys the DOM, whereas
+   * `clear()` re-renders an empty set and leaves the plugin reusable.
+   */
+  clear(): void {
+    this.items = [];
     this.apply();
   }
 
@@ -206,16 +238,41 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     return layers;
   }
 
-  /** Hide the attribution UI and clear tracked content. */
+  /**
+   * With no argument, opens the attribution popover. Toggling the ⓘ trigger
+   * drives the same state, so this is only needed to open it programmatically.
+   * Affects the popover card only — the always-visible logo frame stays put.
+   * Has no visible effect while the set is empty: the dock is hidden until at
+   * least one attribution is added.
+   *
+   * @param items - **@deprecated** Temporary compatibility path: replaces the
+   * whole displayed set. Retained only until the remaining examples migrate to
+   * {@link add} / {@link remove}; will be removed after that. New code should
+   * call `add()` / `remove()` and the no-argument `show()`.
+   */
+  show(items?: AttributionItem[]): void {
+    if (items) {
+      this.items = dedupeAttributionItems(items);
+      this.apply();
+      return;
+    }
+    this.setOpen(true);
+  }
+
+  /**
+   * Close the attribution popover. Affects the popover card only; the tracked
+   * attributions and the always-visible logo frame are untouched (use
+   * {@link remove} to drop entries, {@link dispose} to tear everything down).
+   */
   hide(): void {
-    this.teardownDom();
-    this.items = [];
+    this.setOpen(false);
   }
 
   /** Release all DOM nodes, camera listeners, and layer listeners. */
   dispose(): void {
     this.view?.off("preRender", this.boundPreRender);
-    this.hide();
+    this.teardownDom();
+    this.items = [];
     this.view = undefined;
   }
 
@@ -262,6 +319,13 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     this.lastZoomLevel = this.currentZoomLevel();
     this.populateList();
     this.populateLogos();
+    // With nothing to attribute, hide the whole UI (trigger + logo frame) so an
+    // empty ⓘ doesn't linger after remove()/clear(); a later add() reveals it
+    // again. Mandated logos live inside the set, so an empty set means there is
+    // genuinely nothing to keep visible.
+    const empty = this.items.length === 0;
+    if (this.dock) this.dock.hidden = empty;
+    if (this.logosEl) this.logosEl.hidden = empty;
   }
 
   /** Create the dock DOM and inject (or reuse) the shared styles. */

@@ -100,7 +100,7 @@ export function isAttributionHtml(
  * renders. Sources that differ in `creditLayerId` or `children` produce
  * different keys, so distinct per-layer / zoom-banded credits are preserved.
  */
-function attributionItemKey(item: AttributionItem): string {
+export function attributionItemKey(item: AttributionItem): string {
   if (isAttributionHtml(item)) {
     return JSON.stringify(["html", item.attributionHtml]);
   }

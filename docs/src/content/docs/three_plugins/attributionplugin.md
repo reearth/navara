@@ -47,30 +47,34 @@ const photorealSource = view.addSource({
 });
 const photoreal = view.addLayer({ type: "3d-tiles", source: photorealSource });
 
-attribution.show(
-  [
-    {
-      attribution: "Geospatial Information Authority of Japan (GSI)",
-      attributionUrl: "https://maps.gsi.go.jp/development/ichiran.html",
-      children: [
-        { attribution: "Nationwide latest aerial photos (seamless)", minZoom: 14, maxZoom: 18 },
-        { attribution: "GRUS画像（© Axelspace）", minZoom: 14, maxZoom: 18 },
-      ],
-    },
-    {
-      attribution: "Google Maps Photorealistic 3D Tiles",
-      logo: "/credits/GoogleMaps.png",
-      // Nest this layer's per-tile credits under this source. The layer is
-      // resolved from the view by id, so you don't pass it separately.
-      creditLayerId: photoreal.id,
-    },
-    {
-      attributionHtml:
-        '<a href="https://s2maps.eu">Sentinel-2 cloudless 2020</a> by <a href="https://eox.at">EOX IT Services GmbH</a>',
-    },
-  ],
-);
+// `add` / `remove` manage the set of displayed attributions.
+attribution.add([
+  {
+    attribution: "Geospatial Information Authority of Japan (GSI)",
+    attributionUrl: "https://maps.gsi.go.jp/development/ichiran.html",
+    children: [
+      { attribution: "Nationwide latest aerial photos (seamless)", minZoom: 14, maxZoom: 18 },
+      { attribution: "GRUS画像（© Axelspace）", minZoom: 14, maxZoom: 18 },
+    ],
+  },
+  {
+    attribution: "Google Maps Photorealistic 3D Tiles",
+    logo: "/credits/GoogleMaps.png",
+    // Nest this layer's per-tile credits under this source. The layer is
+    // resolved from the view by id, so you don't pass it separately.
+    creditLayerId: photoreal.id,
+  },
+  {
+    attributionHtml:
+      '<a href="https://s2maps.eu">Sentinel-2 cloudless 2020</a> by <a href="https://eox.at">EOX IT Services GmbH</a>',
+  },
+]);
 
+// Drop a source again when its data leaves the map (matched structurally).
+attribution.remove([{ attribution: "Google Maps Photorealistic 3D Tiles", creditLayerId: photoreal.id }]);
+
+// `show` / `hide` open and close the popover (the ⓘ trigger toggles the same state).
+attribution.show();
 attribution.hide();
 attribution.dispose();
 ```
@@ -88,13 +92,39 @@ new AttributionPlugin(options?: {
 
 ## Methods
 
-### show(items)
+### add(items)
 
 ```typescript
-show(items: AttributionItem[]): void
+add(items: AttributionItem[]): void
 ```
 
-Displays the given attributions. Calling it again replaces the content, so you can update credits when the displayed data changes. Sources that set `creditLayerId` have that layer's per-feature credits tracked dynamically — the layer is resolved from the view by id, so you don't pass it separately. Exact-duplicate entries are dropped, so several data sources that share one credit render a single line.
+Adds attributions to the displayed set, merged with the current entries. Exact-duplicate entries are dropped, so several data sources that share one credit render a single line. Sources that set `creditLayerId` have that layer's per-feature credits tracked dynamically — the layer is resolved from the view by id, so you don't pass it separately.
+
+### remove(items)
+
+```typescript
+remove(items: AttributionItem[]): void
+```
+
+Removes attributions from the displayed set. Entries are matched structurally (by their rendered content), so pass the same object shape you added — no separate id is needed. Unmatched entries are ignored.
+
+Use it for statically-added credits you want to toggle by camera or app state — e.g. showing a top-level source only within a range that its `children` zoom bands can't express, by pairing `add()` / `remove()` with camera moves. Credits tracked via `creditLayerId` are dropped automatically when their layer is deleted, so those don't need `remove()`.
+
+### clear()
+
+```typescript
+clear(): void
+```
+
+Removes all displayed attributions while keeping the plugin alive — the popover, listeners, and injected styles stay, so a later `add()` brings the UI back. With nothing to show, the ⓘ trigger and logo frame hide themselves. Use `dispose()` to instead tear the DOM down.
+
+### show()
+
+```typescript
+show(): void
+```
+
+Opens the attribution popover. The ⓘ trigger toggles the same state, so this is only needed to open it programmatically — e.g. to have the popover open from the first frame instead of collapsed. Affects the popover card only — the always-visible logo frame stays put. Has no visible effect while the set is empty: the dock is hidden until at least one attribution is added.
 
 ### hide()
 
@@ -102,7 +132,7 @@ Displays the given attributions. Calling it again replaces the content, so you c
 hide(): void
 ```
 
-Hides the attribution UI and clears the tracked content.
+Closes the attribution popover. Affects the popover card only; the tracked attributions and the always-visible logo frame are untouched. Use `remove()` to drop entries, or `dispose()` to tear everything down.
 
 ### dispose()
 

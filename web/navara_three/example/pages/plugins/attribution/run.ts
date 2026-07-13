@@ -78,7 +78,7 @@ export const run = async () => {
       },
       model: { maxSse: 60, normals: true },
     });
-    attribution.show([
+    attribution.add([
       {
         ...TILES_3D_DATASETS.googlePhotorealTiles,
         creditLayerId: google.id,
@@ -111,7 +111,7 @@ export const run = async () => {
       data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
       rasterTile: { maxZoom: 18 },
     });
-    attribution.show([GSI_ATTRIBUTION, TERRAIN_DATASETS.mapterhorn]);
+    attribution.add([GSI_ATTRIBUTION, TERRAIN_DATASETS.mapterhorn]);
   };
 
   // Build a fresh view for the given mode. Recreating the view (rather than

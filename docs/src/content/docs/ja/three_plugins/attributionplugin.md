@@ -47,30 +47,34 @@ const photorealSource = view.addSource({
 });
 const photoreal = view.addLayer({ type: "3d-tiles", source: photorealSource });
 
-attribution.show(
-  [
-    {
-      attribution: "国土地理院",
-      attributionUrl: "https://maps.gsi.go.jp/development/ichiran.html",
-      children: [
-        { attribution: "全国最新写真（シームレス）", minZoom: 14, maxZoom: 18 },
-        { attribution: "GRUS画像（© Axelspace）", minZoom: 14, maxZoom: 18 },
-      ],
-    },
-    {
-      attribution: "Google Maps Photorealistic 3D Tiles",
-      logo: "/credits/GoogleMaps.png",
-      // このレイヤーのタイル単位のクレジットをこのソース配下にネスト。
-      // レイヤーは id から view 内で解決されるため、別途渡す必要はありません。
-      creditLayerId: photoreal.id,
-    },
-    {
-      attributionHtml:
-        '<a href="https://s2maps.eu">Sentinel-2 cloudless 2020</a> by <a href="https://eox.at">EOX IT Services GmbH</a>',
-    },
-  ],
-);
+// `add` / `remove` で表示する出典の集合を管理します。
+attribution.add([
+  {
+    attribution: "国土地理院",
+    attributionUrl: "https://maps.gsi.go.jp/development/ichiran.html",
+    children: [
+      { attribution: "全国最新写真（シームレス）", minZoom: 14, maxZoom: 18 },
+      { attribution: "GRUS画像（© Axelspace）", minZoom: 14, maxZoom: 18 },
+    ],
+  },
+  {
+    attribution: "Google Maps Photorealistic 3D Tiles",
+    logo: "/credits/GoogleMaps.png",
+    // このレイヤーのタイル単位のクレジットをこのソース配下にネスト。
+    // レイヤーは id から view 内で解決されるため、別途渡す必要はありません。
+    creditLayerId: photoreal.id,
+  },
+  {
+    attributionHtml:
+      '<a href="https://s2maps.eu">Sentinel-2 cloudless 2020</a> by <a href="https://eox.at">EOX IT Services GmbH</a>',
+  },
+]);
 
+// データが地図から外れたら、その出典を取り下げます（構造で一致判定）。
+attribution.remove([{ attribution: "Google Maps Photorealistic 3D Tiles", creditLayerId: photoreal.id }]);
+
+// `show` / `hide` はポップオーバーを開閉します（ⓘ トリガーも同じ状態を切り替えます）。
+attribution.show();
 attribution.hide();
 attribution.dispose();
 ```
@@ -88,13 +92,39 @@ new AttributionPlugin(options?: {
 
 ## メソッド
 
-### show(items)
+### add(items)
 
 ```typescript
-show(items: AttributionItem[]): void
+add(items: AttributionItem[]): void
 ```
 
-指定した出典を表示します。再度呼ぶと内容を置き換えるため、表示中のデータが変わったときにクレジットを更新できます。`creditLayerId` を設定したソースは、そのレイヤーのフィーチャー単位のクレジットが動的に追跡されます。レイヤーは id から view 内で解決されるため、別途渡す必要はありません。完全に重複するエントリは除外されるため、同じクレジットを共有する複数のデータソースは 1 行にまとまります。
+表示する出典を集合に追加します（現在のエントリにマージ）。完全に重複するエントリは除外されるため、同じクレジットを共有する複数のデータソースは 1 行にまとまります。`creditLayerId` を設定したソースは、そのレイヤーのフィーチャー単位のクレジットが動的に追跡されます。レイヤーは id から view 内で解決されるため、別途渡す必要はありません。
+
+### remove(items)
+
+```typescript
+remove(items: AttributionItem[]): void
+```
+
+表示する出典を集合から削除します。エントリは（表示内容による）構造で一致判定されるため、追加時と同じ形のオブジェクトを渡してください。別途 id は不要です。一致しないエントリは無視されます。
+
+静的に `add()` した出典を、カメラやアプリの状態に応じて出し入れするケースで使います（例: `children` のズーム帯では表せない範囲でトップレベル出典を出し入れしたいとき、カメラ移動に合わせて `add()` / `remove()` する）。`creditLayerId` で追跡している出典はレイヤー削除時に自動で消えるため、`remove()` は不要です。
+
+### clear()
+
+```typescript
+clear(): void
+```
+
+表示中の出典をすべて削除しますが、プラグインは生かしたままにします（ポップオーバー・リスナー・注入したスタイルは残るため、あとで `add()` を呼べば UI が戻ります）。表示するものが無くなると ⓘ トリガーとロゴフレームは自動的に隠れます。DOM ごと破棄する場合は `dispose()` を使ってください。
+
+### show()
+
+```typescript
+show(): void
+```
+
+出典ポップオーバーを開きます。ⓘ トリガーが同じ状態を切り替えるため、プログラムから開きたいときにのみ必要です（例: 初期状態で畳まず、最初から開いた状態にしたいとき）。ポップオーバーのカードにのみ作用し、常時表示のロゴフレームはそのままです。集合が空の間は見た目に変化しません（出典が 1 件も追加されるまで dock は隠れています）。
 
 ### hide()
 
@@ -102,7 +132,7 @@ show(items: AttributionItem[]): void
 hide(): void
 ```
 
-出典 UI を非表示にし、追跡中の内容をクリアします。
+出典ポップオーバーを閉じます。ポップオーバーのカードにのみ作用し、追跡中の出典と常時表示のロゴフレームには触れません。エントリの削除は `remove()`、全体の破棄は `dispose()` を使ってください。
 
 ### dispose()
 
