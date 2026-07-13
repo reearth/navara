@@ -639,9 +639,15 @@ fn toggle_rendered_tile_visible(
         .and_then(|id| rendered_tiles.get_mut(id).ok());
     match &mut rendered_tile {
         Some(t) => {
-            t.is_visible = visible;
             // Keep touching if the refine type is `Replace`.
-            t.touched = matches!(tile.refine, Refine::Replace) && touched;
+            let touched = matches!(tile.refine, Refine::Replace) && touched;
+            // Skip the write when nothing changed: a `DerefMut` here marks the
+            // component `Changed`, which re-triggers the traversal system every
+            // frame even with a static camera.
+            if t.is_visible != visible || t.touched != touched {
+                t.is_visible = visible;
+                t.touched = touched;
+            }
             true
         }
         None => false,
