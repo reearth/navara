@@ -19,7 +19,8 @@ navara_three (core: ThreeView, Plugin, addPlugin)
         ├── PersonViewPlugin (keyboard-driven first/third-person view controller)
         ├── OverlayPlugin (world-to-screen HTML overlay projection)
         ├── AttributionPlugin (non-modal, zoom-aware data attribution UI)
-        └── CesiumIonPlugin (Cesium Ion quantized-mesh terrain)
+        ├── CesiumIonPlugin (Cesium Ion quantized-mesh terrain)
+        └── TileJsonPlugin (TileJSON 3.0.0 tile source registration)
 ```
 
 `three_plugins` depends on `navara_three` for the `Plugin` base class and core APIs, and on `three_default_plugin` for the `DefaultDescriptions` type. Each plugin is independent — you can use one without the other.
@@ -33,6 +34,7 @@ import {
   moveOverlayElement,
   AttributionPlugin,
   CesiumIonPlugin,
+  TileJsonPlugin,
 } from "@navara/three_plugins";
 ```
 
@@ -53,6 +55,10 @@ A non-modal data attribution (credit) UI. Lists active data sources in a bottom-
 ### CesiumIonPlugin
 
 Resolves a Cesium Ion asset endpoint at `init()` time and registers it as a quantized-mesh terrain layer via `addTerrain()`. See [CesiumIonPlugin](../cesiumionplugin/) for details.
+
+### TileJsonPlugin
+
+Fetches a TileJSON 3.0.0 document and registers it as a single raster or vector tile source via `addSource()`, deriving the tile URL, zoom range, scheme, and attribution from the document. See [TileJsonPlugin](../tilejsonplugin/) for details.
 
 ## Usage
 
