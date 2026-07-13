@@ -282,14 +282,7 @@ pub fn traverse_cesium_3d_tiles_tree(
 
     let (fog, is_fog_changed) = match fog_query.single() {
         Ok(fog) => (Fog::clone(&fog), fog.is_changed()),
-        Err(_) => (
-            Fog {
-                enabled: false,
-                density: 0.,
-                sse_factor: 0.,
-            },
-            false,
-        ),
+        Err(_) => (Fog::disabled(), false),
     };
 
     for (metadata, mut tree) in &mut tiles {

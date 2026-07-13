@@ -9,6 +9,17 @@ pub struct Fog {
     pub sse_factor: FloatType,
 }
 
+impl Fog {
+    /// Inert fog used as a fallback when no [`Fog`] entity exists yet.
+    pub fn disabled() -> Self {
+        Self {
+            enabled: false,
+            density: 0.,
+            sse_factor: 0.,
+        }
+    }
+}
+
 /// Buffered LOD fog parameters, written by `Core.setLodFog` (via
 /// `App::set_lod_fog`) and applied to the [`Fog`] entity. `init_resource`'d at
 /// plugin build so a `setLodFog` call that arrives BEFORE the first
