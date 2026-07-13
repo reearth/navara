@@ -189,10 +189,15 @@ export const DetailApp = () => {
 
   const copy = () => {
     if (!code) return;
-    navigator.clipboard.writeText(code.source).then(() => {
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1500);
-    });
+    navigator.clipboard
+      .writeText(code.source)
+      .then(() => {
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1500);
+      })
+      .catch(() => {
+        // Ignore clipboard errors (e.g., permissions / insecure context).
+      });
   };
 
   const t = (text: Localized) => localize(text, lang);
