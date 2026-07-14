@@ -95,26 +95,38 @@ export class AbortableImageLoader extends Loader<LoadedImage> {
         }
 
         if (typeof createImageBitmap === "function") {
-          // Decodes off the main thread and needs no object URL. flipY is
-          // baked in (see LoadedImage) and premultiply is disabled to match
-          // what the GL unpack flags do on the <img> path.
+          // Decodes off the main thread and needs no object URL.
+          // - flipY is baked in (see LoadedImage);
+          // - premultiply disabled and colorSpaceConversion "none" so the
+          //   decoded bytes match the old <img> → texImage2D path, where
+          //   three sets UNPACK_PREMULTIPLY_ALPHA/UNPACK_COLORSPACE_CONVERSION
+          //   to NONE (critical for RGB-encoded elevation fragments, whose
+          //   bytes must not be color-managed before the shader decodes them).
           createImageBitmap(blob, {
             imageOrientation: "flipY",
             premultiplyAlpha: "none",
+            colorSpaceConversion: "none",
           })
             .then((bitmap) => {
-              if (settled) {
+              // createImageBitmap cannot be cancelled; if the load already
+              // settled (abort/timeout) while it was decoding, just release
+              // the now-useless bitmap.
+              if (settled || abort?.signal.aborted) {
                 bitmap.close();
-                return;
-              }
-              if (abort?.signal.aborted) {
-                bitmap.close();
-                fail(abortError(), true);
+                if (!settled) fail(abortError(), true);
                 return;
               }
               done(bitmap);
             })
             .catch((e) => fail(e));
+          // Settle promptly on abort instead of blocking itemEnd (and any
+          // loads gated on it) until the un-cancellable decode finishes. The
+          // decode still runs; its .then closes the orphaned bitmap above.
+          abort?.signal.addEventListener(
+            "abort",
+            () => fail(abortError(), true),
+            { once: true },
+          );
           return;
         }
 

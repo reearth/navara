@@ -105,6 +105,7 @@ import {
 } from "./layers/effect";
 import { FinalCopyEffectDesc } from "./layers/effect/FinalCopyEffectDesc";
 import { LayersManager } from "./layersManager";
+import { disposeTexture } from "./loaders";
 import { overrideMaterialsForMRT } from "./material";
 import type { TileMesh } from "./mesh/tile";
 import { RenderPassOrchestrator } from "./orchestrators/RenderPassOrchestrator";
@@ -1531,9 +1532,10 @@ export default class ThreeView<
     }
     this._abortControllers.clear();
 
-    // Dispose loaded textures
+    // Dispose loaded textures (closes any ImageBitmap backing so the decoded
+    // pixels are freed, not just the GL texture).
     for (const tex of this._loadedTexs.values()) {
-      tex.dispose();
+      disposeTexture(tex);
     }
     this._loadedTexs.clear();
 

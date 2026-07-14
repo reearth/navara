@@ -17,9 +17,10 @@ import {
 } from "@navara/engine";
 import { radianToDegree } from "@navara/three_api";
 import { canWorkerProcessImmediately } from "@navara/worker";
-import { LinearFilter, Mesh, Object3D, Sprite } from "three";
+import { Mesh, Object3D, Sprite } from "three";
 
 import { BatchedSdfTextMesh, Layer } from "..";
+import { disposeTexture } from "../loaders";
 import { getImageDataFromBlob } from "../tasks/getImageDataFromBlob";
 
 import { EventContext } from "./context";
@@ -609,7 +610,7 @@ function processDataRequesterRemoved(
   if (loadedTexs) {
     const texture = loadedTexs.get(id);
     if (texture && !texture.isRenderTargetTexture) {
-      texture.dispose();
+      disposeTexture(texture);
     }
     loadedTexs.delete(id);
   }
@@ -646,11 +647,6 @@ async function processTextureFragmentRequested(
 
   await ABORTABLE_TEXTURE_LOADER.loadAsyncWithAbort(req.url, abortController)
     .then((t) => {
-      // Fragments are only ever pasted into the composite atlas at 1:1 or
-      // magnified (ancestor fallback), never minified — mipmaps would cost
-      // +33% VRAM and upload time for nothing.
-      t.generateMipmaps = false;
-      t.minFilter = LinearFilter;
       loadedTexs.set(id, t);
       texFragment.triggerTextureFragmentLoaded(
         req.bits,
@@ -686,7 +682,7 @@ function processTextureFragmentRemoved(ctx: EventContext, req: EntityEvent) {
   // Check isRenderTargetTexture to avoid double-dispose
   const texture = loadedTexs.get(id);
   if (texture && !texture.isRenderTargetTexture) {
-    texture.dispose();
+    disposeTexture(texture);
   }
   loadedTexs.delete(id);
 
