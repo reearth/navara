@@ -135,7 +135,7 @@ export const run = async () => {
     attributions.push(VECTOR_DATASETS.gsiExperimentalVector);
   }
 
-  attribution.show(attributions);
+  attribution.add(attributions);
 
   // -------------------------------------------------------------------------
   // Memory panel
