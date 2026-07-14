@@ -10,6 +10,7 @@ vi.mock("@navara/three", () => ({
   default: class ThreeView {},
   Plugin: class Plugin {},
 }));
+/* eslint-enable @typescript-eslint/no-extraneous-class */
 
 type Handler = (arg?: unknown) => void;
 
