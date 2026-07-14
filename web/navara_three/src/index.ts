@@ -834,9 +834,7 @@ export default class ThreeView<
 
     this._options = options;
 
-    // Attribution UI is on by default so licensing is always available; it
-    // stays inert (no DOM) until credits are added. Skipped in a worker (no DOM)
-    // and when explicitly disabled.
+    // Attribution UI on by default; skip in a worker (no DOM) or when disabled.
     if (options.defaultAttribution !== false && !isWorker()) {
       const cfg =
         typeof options.defaultAttribution === "object"
@@ -1534,8 +1532,7 @@ export default class ThreeView<
   dispose() {
     this._disposed = true;
     this._initialized = false;
-    // The default attribution plugin is owned by the view, so tear it down here
-    // (other plugins are the caller's to dispose).
+    // Dispose the view-owned attribution plugin (other plugins are the caller's).
     this._attribution?.dispose();
     this._attribution = undefined;
     if (!isWorker()) {

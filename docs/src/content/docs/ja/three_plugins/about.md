@@ -44,10 +44,6 @@ import {
 
 毎フレーム、地理座標（緯度/経度/高度）をスクリーン座標に投影するプラグインです。ワールド座標に追従する HTML オーバーレイ（マーカー、ラベル、ツールチップなど）を実現します。詳細は [OverlayPlugin](../overlayplugin/) を参照してください。
 
-### AttributionPlugin
-
-**`@navara/three` へ移動しました。** 出典（クレジット）UI は `ThreeView` に組み込まれ、既定で生成され `view.attribution` からアクセスします（直接使う場合は `@navara/three` から `AttributionPlugin` を import）。詳細は [AttributionPlugin](../../three/plugins/attributionplugin/) を参照してください。
-
 ### CesiumIonPlugin
 
 `init()` 時に Cesium Ion のアセットエンドポイントを解決し、`addTerrain()` を通じて quantized-mesh 地形レイヤーとして登録するプラグインです。詳細は [CesiumIonPlugin](../cesiumionplugin/) を参照してください。

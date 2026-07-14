@@ -44,10 +44,6 @@ A keyboard-driven first-/third-person view controller. Drives a virtual position
 
 Projects geographic positions (lat/lng/alt) to screen coordinates on every render frame, enabling HTML overlays that track world positions. See [OverlayPlugin](../overlayplugin/) for details.
 
-### AttributionPlugin
-
-**Moved to `@navara/three`.** The attribution (credit) UI is now built into `ThreeView` — created by default and accessed via `view.attribution` (import `AttributionPlugin` from `@navara/three` if you need it directly). See [AttributionPlugin](../../three/plugins/attributionplugin/) for details.
-
 ### CesiumIonPlugin
 
 Resolves a Cesium Ion asset endpoint at `init()` time and registers it as a quantized-mesh terrain layer via `addTerrain()`. See [CesiumIonPlugin](../cesiumionplugin/) for details.

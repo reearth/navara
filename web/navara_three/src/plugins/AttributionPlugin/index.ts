@@ -6,22 +6,22 @@
  * corner. Each source can carry zoom-banded child credits that switch as the
  * camera zooms, and per-layer feature credits are tracked dynamically.
  *
+ * `ThreeView` creates one by default and exposes it as `view.attribution`
+ * (pass `defaultAttribution: false` to opt out).
+ *
  * ## Usage
  *
  * ```ts
  * import ThreeView from "@navara/three";
- * import { AttributionPlugin } from "@navara/three_plugins";
  *
  * const view = new ThreeView({ container });
- * const attribution = new AttributionPlugin();
- * view.addPlugin(attribution);
  * await view.init();
  *
  * // A 3D-tiles layer whose tiles embed their own copyright (tracked dynamically).
  * const photoreal = view.addLayer({ type: "cesium3dtiles", data: { url } });
  *
  * // `add` / `remove` manage the set of displayed attributions.
- * attribution.add([
+ * view.attribution?.add([
  *   {
  *     attribution: "Geospatial Information Authority of Japan (GSI)",
  *     attributionUrl: "https://maps.gsi.go.jp/development/ichiran.html",
@@ -42,16 +42,15 @@
  * ]);
  *
  * // Drop a source again when its data leaves the map (matched structurally).
- * attribution.remove([{ attribution: "Google Maps Photorealistic 3D Tiles", creditLayerId: photoreal.id }]);
+ * view.attribution?.remove([{ attribution: "Google Maps Photorealistic 3D Tiles", creditLayerId: photoreal.id }]);
  *
  * // Re-theme at runtime (e.g. light / dark switch).
- * attribution.setStyle({ backgroundColor: "#14181c", textColor: "#e6e9ee" });
+ * view.attribution?.setStyle({ backgroundColor: "#14181c", textColor: "#e6e9ee" });
  *
  * // The popover is open by default so licensing is visible; hide() collapses
  * // it and show() re-opens it (the ⓘ trigger toggles the same state).
- * attribution.hide();
- * attribution.show();
- * attribution.dispose();
+ * view.attribution?.hide();
+ * view.attribution?.show();
  * ```
  */
 import { Plugin } from "@navara/core";
@@ -123,7 +122,9 @@ let styleRefCount = 0;
  * trigger). Top-level sources can carry nested, optionally zoom-banded child
  * credits.
  *
- * Register via `view.addPlugin(plugin)` **before** `view.init()`.
+ * A `ThreeView` creates one by default (`view.attribution`); construct it
+ * manually and `view.addPlugin(plugin)` **before** `view.init()` only when the
+ * view was created with `defaultAttribution: false`.
  */
 export class AttributionPlugin extends Plugin<View, ViewContext> {
   private view?: View;
@@ -135,8 +136,7 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
   private listEl?: HTMLUListElement;
   private logosEl?: HTMLDivElement;
   private toggle?: HTMLButtonElement;
-  // Open by default so licensing is visible without a click; hide() (or the ⓘ
-  // trigger) collapses it. Set before any DOM exists — ensureDom() reflects it.
+  // Open by default so licensing is visible without a click.
   private isOpen = true;
 
   /** Last computed integer zoom level. Used to skip no-op re-renders. */
@@ -175,9 +175,7 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     // static map; `preRender` reliably fires while the scene renders. The
     // level-change gate in `handlePreRender` keeps this from churning the DOM.
     view.on("preRender", this.boundPreRender);
-    // `add()` may have run before init (the plugin is created before
-    // `view.init()`); apply any pending items now that the view exists, instead
-    // of silently dropping them.
+    // Apply any items added before init() now that the view exists.
     if (this.items.length) this.apply();
   }
 
@@ -213,13 +211,8 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
   }
 
   /**
-   * Remove all displayed attributions while keeping the plugin alive — the
-   * popover, listeners, and injected styles stay, so a later {@link add} brings
-   * the UI back. With nothing to show the dock and logo frame hide themselves
-   * (see {@link render}). Use {@link dispose} to instead tear the DOM down.
-   *
-   * Not implemented via `dispose()`: `dispose()` destroys the DOM, whereas
-   * `clear()` re-renders an empty set and leaves the plugin reusable.
+   * Remove all displayed attributions, keeping the plugin usable — a later
+   * {@link add} brings the UI back. Use {@link dispose} to tear the DOM down.
    */
   clear(): void {
     this.items = [];
@@ -229,8 +222,7 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
   /** Resolve/track the current items' credit layers and render. */
   private apply(): void {
     const layers = this.resolveCreditLayers(this.items);
-    // Retrack only when the credit-layer set changes: trackLayers() clears
-    // accumulated per-feature credits, which unrelated add/remove must not wipe.
+    // Retrack only when the credit-layer set changes (avoids wiping tracked credits).
     const nextIds = new Set(layers.map((l) => l.id));
     const sameSet =
       nextIds.size === this.layerCredits.size &&
@@ -317,8 +309,7 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
    */
   private render(): void {
     if (!this.view) return;
-    // Nothing to show and no DOM yet — don't build the dock just to hide it
-    // (keeps clear()/add([]) idempotent on an empty set).
+    // Don't build the dock for an empty set (keeps clear()/add([]) idempotent).
     if (this.items.length === 0 && !this.dock) return;
     this.ensureDom();
     this.hasZoomBands = this.items.some(
@@ -332,10 +323,7 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     this.lastZoomLevel = this.currentZoomLevel();
     this.populateList();
     this.populateLogos();
-    // With nothing to attribute, hide the whole UI (trigger + logo frame) so an
-    // empty ⓘ doesn't linger after remove()/clear(); a later add() reveals it
-    // again. Mandated logos live inside the set, so an empty set means there is
-    // genuinely nothing to keep visible.
+    // Hide the dock + logo frame when there's nothing to attribute.
     const empty = this.items.length === 0;
     if (this.dock) this.dock.hidden = empty;
     if (this.logosEl) this.logosEl.hidden = empty;
@@ -368,7 +356,7 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
 
     const card = document.createElement("div");
     card.className = "navara-attr-card";
-    // Reflect any open intent recorded before the DOM existed (see setOpen).
+    // Reflect the current open intent (see setOpen).
     card.hidden = !this.isOpen;
 
     const head = document.createElement("div");
@@ -544,9 +532,7 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
 
   /** Open / close the popover. Non-modal: no backdrop is added. */
   private setOpen(open?: boolean): void {
-    // Persist the intent before the DOM guard: show() can run before the first
-    // add()/render builds the dock. ensureDom() reads this state when it later
-    // creates the card, so an early "open from the first frame" isn't lost.
+    // Record intent before the DOM guard; ensureDom() applies it when the card is built.
     this.isOpen = open ?? !this.isOpen;
     if (!this.card || !this.toggle) return;
     this.card.hidden = !this.isOpen;
@@ -628,7 +614,8 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
   /**
    * Subscribe to the given layers' feature events and merge per-feature credits
    * into the rendered list as features appear / disappear. Detaches any
-   * previously registered listeners first, so repeated `show()` calls don't leak.
+   * previously registered listeners first, so repeated `add()` / `remove()`
+   * don't leak.
    */
   private trackLayers(layers: Layer[]): void {
     for (const off of this.layerCleanups) off();
@@ -671,7 +658,7 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
       // `deleted` fires once for the layer (no per-feature `featureRemoved`).
       // Fully release the layer — drop its credits entry and detach its
       // listeners (and this cleanup) — so a deleted layer doesn't linger until
-      // the next show()/hide()/dispose().
+      // the next add()/remove()/clear() or dispose().
       const onDeleted = () => {
         detach();
         this.layerCleanups = this.layerCleanups.filter((c) => c !== detach);

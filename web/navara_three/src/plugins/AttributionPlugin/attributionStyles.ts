@@ -87,8 +87,7 @@ export const STYLE_TEXT = `
 .navara-attr-card[hidden] {
   display: none;
 }
-/* The dock / logo frame's authored display:flex would otherwise beat the UA
-   [hidden] rule, so hide them explicitly when there's nothing to attribute. */
+/* display:flex on these beats the UA [hidden] rule, so hide explicitly. */
 .navara-attr-dock[hidden],
 .navara-attr-logoframe[hidden] {
   display: none;

@@ -1,9 +1,9 @@
 /**
  * Attribution data model and framework-agnostic helpers.
  *
- * This module has **no `@navara/three` dependency** so the pure logic (type
- * guards, zoom-band matching, HTML sanitization) is unit-testable without
- * loading the engine. The `AttributionPlugin` class composes these.
+ * This module imports **nothing from the engine (WASM)**, so the pure logic
+ * (type guards, zoom-band matching, HTML sanitization) is unit-testable without
+ * loading it. The `AttributionPlugin` class composes these.
  */
 
 /**
