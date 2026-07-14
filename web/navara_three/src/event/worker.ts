@@ -381,7 +381,7 @@ async function processUpsampleTerrainMesh(
       const parentWatermaskHandle = cachedMeshHandle.watermask;
       const parentWatermask =
         parentWatermaskHandle != null
-          ? (bufHandler.u8(parentWatermaskHandle)?.slice() ?? undefined)
+          ? bufHandler.u8(parentWatermaskHandle)?.slice()
           : undefined;
 
       const upsamplableTerrainGeometry = new UpsamplableTerrainGeometryLike(
