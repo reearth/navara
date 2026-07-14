@@ -799,7 +799,7 @@ export default class ThreeView<
   private viewContext!: ViewContext;
   private plugins: Plugin[] = [];
 
-  /** Built-in attribution UI, unless disabled via `defaultAttribution: false`. */
+  /** Built-in attribution UI; unset when disabled or in a worker (no DOM). */
   private _attribution?: AttributionPlugin;
 
   private pixelRatioMatchedMedia?: MediaQueryList;
