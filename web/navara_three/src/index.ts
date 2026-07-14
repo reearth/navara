@@ -12,6 +12,7 @@ import type {
 import initCore, {
   Core,
   CameraDirection,
+  DynamicSse as EngineDynamicSse,
   LLE,
   type TerrainHeightUpdatedEvent,
   type TextureFragmentStatus,
@@ -71,11 +72,13 @@ import {
 import { Registries } from "./core/Registries";
 import {
   getCompositeAtlasSize,
+  getDefaultDynamicSse,
   getDefaultLodFog,
   getDefaultMemoryBudgets,
   getDefaultMemoryCostHints,
   getDevicePixelRatio,
   isMobileDevice,
+  type DynamicSseSettings,
   type LodFogSettings,
 } from "./device";
 import {
@@ -192,9 +195,11 @@ export type {
 } from "@navara/font";
 export {
   getDefaultCacheBytes,
+  getDefaultDynamicSse,
   getDefaultLodFog,
   getDefaultMemoryBudgets,
   MB,
+  type DynamicSseSettings,
   type LodFogSettings,
   type MemoryBudgets,
 } from "./device";
@@ -290,6 +295,15 @@ export type Options = {
    * @defaultValue device-memory-dependent, see `getDefaultLodFog`
    */
   lodFog?: Partial<LodFogSettings>;
+  /**
+   * Dynamic screen-space error (CesiumJS `dynamicScreenSpaceError`
+   * equivalent): tilted, street-level horizon views tolerate a larger error
+   * for far tiles, cutting the tile working set in exactly the views that
+   * over-refine. Zero effect looking straight down. Partial overrides are
+   * merged over the default.
+   * @defaultValue see `getDefaultDynamicSse`
+   */
+  dynamicSse?: Partial<DynamicSseSettings>;
   /**
    * Overrides for the worker-side memory budgets (per-tile-worker WASM heap
    * recycle threshold and the font worker's cache budget). Defaults derive
@@ -1129,6 +1143,41 @@ export default class ThreeView<
   }
 
   /**
+   * The resolved dynamic-SSE settings (see `Options.dynamicSse`).
+   * `undefined` before `init()`.
+   */
+  get dynamicSse(): DynamicSseSettings | undefined {
+    const dynamicSse = this._options.dynamicSse;
+    if (!dynamicSse) return undefined;
+    return dynamicSse as DynamicSseSettings;
+  }
+  /**
+   * Updates the dynamic SSE at runtime; partial values merge over the
+   * current settings. The next traversal re-selects tile LODs with the new
+   * curve.
+   */
+  set dynamicSse(v: Partial<DynamicSseSettings>) {
+    const dynamicSse = {
+      ...getDefaultDynamicSse(),
+      ...this._options.dynamicSse,
+      ...v,
+    };
+    this._options.dynamicSse = dynamicSse;
+    // The WASM class is constructed internally and consumed (moved) by
+    // `setDynamicSse`, so no `.free()` is needed — per the WASM API policy.
+    this._core?.setDynamicSse(
+      new EngineDynamicSse(
+        dynamicSse.enabled,
+        dynamicSse.density,
+        dynamicSse.sseFactor,
+        dynamicSse.heightFalloff,
+        dynamicSse.minHeight,
+        dynamicSse.maxHeight,
+      ),
+    );
+  }
+
+  /**
    * Updates the memory-pressure SSE degrade range at runtime. `min` is the
    * resting multiplier applied even without budget pressure (> 1 coarsens far
    * tiles at rest); `max` is the ceiling the dynamic degrade can climb to. The
@@ -1286,6 +1335,23 @@ export default class ThreeView<
     };
     this._options.lodFog = lodFog;
     this._core.setLodFog(lodFog.enabled, lodFog.density, lodFog.sseFactor);
+
+    // Dynamic SSE: tilt-scaled relaxation for street-level horizon views.
+    const dynamicSse = {
+      ...getDefaultDynamicSse(),
+      ...this._options.dynamicSse,
+    };
+    this._options.dynamicSse = dynamicSse;
+    this._core.setDynamicSse(
+      new EngineDynamicSse(
+        dynamicSse.enabled,
+        dynamicSse.density,
+        dynamicSse.sseFactor,
+        dynamicSse.heightFalloff,
+        dynamicSse.minHeight,
+        dynamicSse.maxHeight,
+      ),
+    );
 
     this._fontManager.setConcurrencyManager(concurrencyManager);
     this._fontManager.setMemoryBudget(

@@ -4,7 +4,7 @@ use navara_camera::CameraFrustum;
 use navara_core::{
     Aabb, Ellipsoid, Extent, LLE, Meters, Radians, TileXYZ, TilingScheme, vec3_to_xyz, xyz_to_vec3,
 };
-use navara_fog::{Fog, fog};
+use navara_fog::{DynamicSseTerm, Fog, fog};
 use navara_math::{FloatType, Transform, Vec3};
 use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 use navara_quadtree::{Coords, Quadtree, num::PrimInt, to_int};
@@ -105,6 +105,7 @@ pub trait Tile {
     ) -> FloatType;
 
     // Ref: https://github.com/CesiumGS/cesium/blob/3b393448d7e976165c0260fab9ea90843583c3a7/packages/engine/Source/Scene/QuadtreePrimitive.js#L1245
+    #[allow(clippy::too_many_arguments)]
     fn calc_sse(
         &self,
         frustum: &CameraFrustum,
@@ -113,6 +114,7 @@ pub trait Tile {
         height_map_width: FloatType,
         distance_from_camera: FloatType,
         fog_comp: &Fog,
+        dynamic_sse: DynamicSseTerm,
     ) -> FloatType {
         let max_geometric_error =
             self.get_level_maximum_geometric_error(ellipsoid, height_map_width);
@@ -123,6 +125,10 @@ pub trait Tile {
         if fog_comp.enabled {
             error -= fog(distance_from_camera, fog_comp.density) * fog_comp.sse_factor;
         }
+
+        // Tilt-scaled relaxation for horizon views (no-op when disabled).
+        // Ref: https://github.com/CesiumGS/cesium/blob/9e93c9b6aa44a8a490f5ed9aa175a7e92348aaa2/packages/engine/Source/Scene/Cesium3DTile.js#L950-L954
+        error -= dynamic_sse.relaxation(distance_from_camera);
 
         error / window.pixel_ratio
     }

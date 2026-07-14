@@ -62,7 +62,7 @@ use navara_feature_component::{
     model::{ModelBin, ModelGeometry, ModelMarker},
     render::RenderableFeature,
 };
-use navara_fog::Fog;
+use navara_fog::{DynamicSse, Fog};
 use navara_layer::{
     Cesium3dTilesLayer, DeleteCesium3dTilesLayerMarker, LayerId, LayerStore,
     UpdateCesium3dTilesLayerMarker,
@@ -269,7 +269,7 @@ pub fn traverse_cesium_3d_tiles_tree(
         Query<&RenderableFeature>,
         Query<(), (Changed<RenderableFeature>, With<ModelMarker>)>,
     )>,
-    fog_query: Query<Ref<Fog>>,
+    fog_query: Query<(Ref<Fog>, Ref<DynamicSse>)>,
     pressure: Res<SsePressure>,
     pool: Res<crate::Cesium3dTilesRetentionPool>,
 ) {
@@ -280,9 +280,13 @@ pub fn traverse_cesium_3d_tiles_tree(
     let mut rendered_tiles = rendered_tiles.p0();
     let renderable_features = renderable_features.p0();
 
-    let (fog, is_fog_changed) = match fog_query.single() {
-        Ok(fog) => (Fog::clone(&fog), fog.is_changed()),
-        Err(_) => (Fog::disabled(), false),
+    let (fog, dynamic_sse, is_fog_changed) = match fog_query.single() {
+        Ok((fog, dynamic_sse)) => (
+            Fog::clone(&fog),
+            DynamicSse::clone(&dynamic_sse),
+            fog.is_changed() || dynamic_sse.is_changed(),
+        ),
+        Err(_) => (Fog::disabled(), DynamicSse::disabled(), false),
     };
 
     for (metadata, mut tree) in &mut tiles {
@@ -313,6 +317,7 @@ pub fn traverse_cesium_3d_tiles_tree(
                 pressure.min,
                 pressure.max,
             );
+            let dynamic_sse = dynamic_sse.term(camera_pos, camera.forward(), camera_height);
             let is_v1_1 = tree.is_v1_1;
             let base_url = Arc::clone(&tree.base_url);
             select_tiles(
@@ -333,6 +338,7 @@ pub fn traverse_cesium_3d_tiles_tree(
                 &pool,
                 &window,
                 &fog,
+                dynamic_sse,
                 degrade,
                 is_v1_1,
             );

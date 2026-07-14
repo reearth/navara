@@ -364,6 +364,120 @@ const view = new ThreeView({
 });
 ```
 
+### cacheBytes
+
+**Type:** `number | undefined`
+
+**Description:** タイルキャッシュ（WASM バッファ + 推定 GPU コスト）のメモリバジェット（バイト単位）。ビューから外れたタイルはバジェットを超えるまで保持され、超過すると最も長く訪問されていないものから順に破棄されます。パンで戻った際は再フェッチなしで再表示され、合計使用量は上限内に保たれます。
+
+**Default:** デバイス依存 — デスクトップ: 報告されたデバイスメモリの 1/4（上限 2 GB）、モバイル: 512 MB（デバイスが 4 GB 未満と報告する場合は 256 MB）。`getDefaultCacheBytes()` を参照してください。
+
+**Example:**
+
+```typescript
+const view = new ThreeView({
+  cacheBytes: 512 * 1024 * 1024, // 512 MB
+});
+```
+
+:::tip[関連ドキュメント]
+実行時にも [`cacheBytes` プロパティ](./threeview-properties#cachebytes)で変更できます。
+:::
+
+### lodFog
+
+**Type:** `Partial<LodFogSettings> | undefined`
+
+**Description:** LOD fog: タイルの LOD 選択で使用される、距離ベースの screen-space error 緩和です。遠くのタイルほど大きな誤差が許容されて粗いまま維持され、近くのタイルはフル解像度を保ちます。純粋な LOD 制御であり、視覚的なフォグ描画には一切影響しません。部分的な指定はデバイスデフォルトにマージされます。
+
+```typescript
+type LodFogSettings = {
+  enabled: boolean;
+  // 緩和カーブの距離スケール（2.0e-4 ≈ 5km 地点で強度 63%）
+  density: number;
+  // 遠距離での最大 SSE 緩和量（ピクセル単位）
+  sseFactor: number;
+};
+```
+
+**Default:** デバイスメモリ依存 — デスクトップ: `{ density: 2.0e-4, sseFactor: 2.0 }`。低メモリデバイスではタイルのワーキングセットを小さく保つため、より強いカーブが適用されます。`getDefaultLodFog()` を参照してください。
+
+**Example:**
+
+```typescript
+const view = new ThreeView({
+  lodFog: { density: 2.5e-4, sseFactor: 3.0 },
+});
+```
+
+### dynamicSse
+
+**Type:** `Partial<DynamicSseSettings> | undefined`
+
+**Description:** Dynamic screen-space error（CesiumJS の `dynamicScreenSpaceError` 相当）: 地表付近で地平線を望むような傾いたビューでは遠くのタイルに大きな誤差を許容し、過剰に細分化されがちなビューでちょうどタイルのワーキングセットを削減します。真下を見ている場合は効果ゼロで、カメラが `maxHeight` メートルを超えて上昇するにつれてフェードアウトします。部分的な指定はデフォルトにマージされます。
+
+```typescript
+type DynamicSseSettings = {
+  enabled: boolean;
+  // 傾き・高度スケーリング前の緩和カーブの距離スケール
+  density: number;
+  // 最大傾き・飽和時の最大 SSE 緩和量（ピクセル単位）
+  sseFactor: number;
+  // 効果がフル強度になる高度バンドの割合
+  heightFalloff: number;
+  // 効果がフェードするカメラ高度バンド（楕円体上のメートル）
+  minHeight: number;
+  maxHeight: number;
+};
+```
+
+**Default:** `{ enabled: true, density: 2.0e-4, sseFactor: 24.0, heightFalloff: 0.25, minHeight: 0, maxHeight: 8000 }`。`getDefaultDynamicSse()` を参照してください。
+
+**Example:**
+
+```typescript
+const view = new ThreeView({
+  dynamicSse: { sseFactor: 16.0, maxHeight: 4000 },
+});
+```
+
+### memoryBudget
+
+**Type:** `object | undefined`
+
+**Description:** ワーカー側メモリバジェットとメモリ圧 LOD デグレードの上書き設定。デフォルトはデバイスメモリと `cacheBytes` から導出されます — `getDefaultMemoryBudgets()` を参照してください。
+
+```typescript
+type MemoryBudgetOptions = {
+  // タイルワーカーごとの WASM ヒープバジェット。超過するとプールがワーカーをリサイクルします
+  maxWorkerHeapBytes?: number;
+  // フォントワーカーのキャッシュバジェット（フォントデータ + アトラスピクセル。以降の増加を抑制）
+  fontBudgetBytes?: number;
+  // タイルパイプラインごとの同時フェッチ数上限
+  maxPendingRequests?: number;
+  // 安静時（ベース）のメモリ圧 SSE 乗数。1 より大きいと圧がなくても遠くのタイルが粗くなります
+  sseMultiplierMin?: number;
+  // 動的なメモリ圧 SSE デグレードが到達できる上限
+  sseMultiplierMax?: number;
+};
+```
+
+**Example:**
+
+```typescript
+const view = new ThreeView({
+  memoryBudget: {
+    maxWorkerHeapBytes: 128 * 1024 * 1024,
+    sseMultiplierMin: 1.0,
+    sseMultiplierMax: 8.0,
+  },
+});
+```
+
+:::tip[関連ドキュメント]
+SSE 乗数の範囲は実行時にも [`setSseMultiplierRange()`](./threeview-functions#setssemultiplierrange) で変更できます。
+:::
+
 ### waterTexture
 
 **Type:** `{ enabled: boolean; url?: string } | undefined`

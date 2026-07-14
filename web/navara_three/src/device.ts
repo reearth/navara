@@ -1,6 +1,8 @@
 /**
  * Device detection and adaptive quality utilities for mobile optimization.
  */
+import type { NormalizeWASMClass } from "@navara/core";
+import type { DynamicSse as EngineDynamicSse } from "@navara/engine";
 
 /** Cached result of mobile device detection */
 let cachedIsMobile: boolean | undefined;
@@ -352,6 +354,37 @@ export function getDefaultLodFog(
   return deviceMemoryGB !== undefined && deviceMemoryGB < 4
     ? LOD_FOG_DESKTOP_LOW_MEMORY
     : LOD_FOG_DESKTOP;
+}
+
+/**
+ * Dynamic screen-space-error settings (CesiumJS `dynamicScreenSpaceError`
+ * equivalent): tilted, street-level horizon views tolerate a larger error for
+ * far tiles. Zero effect looking straight down; fades out as the camera
+ * climbs past `maxHeight` meters. Never affects visual rendering, only tile
+ * LOD selection.
+ *
+ * Plain-object shape derived from the engine's `DynamicSse` class per the
+ * WASM API policy (the class itself is constructed internally and consumed by
+ * `Core.setDynamicSse`; see the field docs there).
+ */
+export type DynamicSseSettings = Required<NormalizeWASMClass<EngineDynamicSse>>;
+
+/**
+ * Engine default (matches the Rust-side startup values / CesiumJS defaults).
+ * Ref: https://github.com/CesiumGS/cesium/blob/9e93c9b6aa44a8a490f5ed9aa175a7e92348aaa2/packages/engine/Source/Scene/Cesium3DTileset.js#L433-L521
+ */
+export const DYNAMIC_SSE_DEFAULT: DynamicSseSettings = {
+  enabled: true,
+  density: 2.0e-4,
+  sseFactor: 24.0,
+  heightFalloff: 0.25,
+  minHeight: 0,
+  maxHeight: 8000,
+};
+
+/** Default dynamic-SSE settings (device-independent for now). */
+export function getDefaultDynamicSse(): DynamicSseSettings {
+  return DYNAMIC_SSE_DEFAULT;
 }
 
 /**

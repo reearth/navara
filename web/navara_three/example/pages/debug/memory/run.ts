@@ -284,6 +284,63 @@ export const run = async () => {
       if (ev.last) view.lodFog = { sseFactor: ev.value };
     });
 
+  // Dynamic SSE (CesiumJS dynamicScreenSpaceError equivalent): tilt-scaled
+  // relaxation for street-level horizon views — zero looking straight down,
+  // strongest near the ground looking at the horizon. Used to calibrate the
+  // default factor/height band (test with "fly street (horizon)").
+  const dynamicSseState = {
+    enabled: view.dynamicSse?.enabled ?? true,
+    density: view.dynamicSse?.density ?? 2.0e-4,
+    sseFactor: view.dynamicSse?.sseFactor ?? 24.0,
+    heightFalloff: view.dynamicSse?.heightFalloff ?? 0.25,
+    maxHeight: view.dynamicSse?.maxHeight ?? 8000,
+  };
+  pane
+    .addBinding(dynamicSseState, "enabled", { label: "dynSse" })
+    .on("change", (ev) => {
+      if (ev.last) view.dynamicSse = { enabled: ev.value };
+    });
+  pane
+    .addBinding(dynamicSseState, "density", {
+      label: "dynSseDensity",
+      min: 1e-5,
+      max: 1e-3,
+      step: 1e-5,
+    })
+    .on("change", (ev) => {
+      if (ev.last) view.dynamicSse = { density: ev.value };
+    });
+  pane
+    .addBinding(dynamicSseState, "sseFactor", {
+      label: "dynSseFactor",
+      min: 0,
+      max: 48,
+      step: 1,
+    })
+    .on("change", (ev) => {
+      if (ev.last) view.dynamicSse = { sseFactor: ev.value };
+    });
+  pane
+    .addBinding(dynamicSseState, "heightFalloff", {
+      label: "dynSseFalloff",
+      min: 0,
+      max: 1,
+      step: 0.05,
+    })
+    .on("change", (ev) => {
+      if (ev.last) view.dynamicSse = { heightFalloff: ev.value };
+    });
+  pane
+    .addBinding(dynamicSseState, "maxHeight", {
+      label: "dynSseMaxHeight",
+      min: 1000,
+      max: 50000,
+      step: 500,
+    })
+    .on("change", (ev) => {
+      if (ev.last) view.dynamicSse = { maxHeight: ev.value };
+    });
+
   // Memory-pressure SSE degrade range. sseMin is the resting multiplier
   // applied even without budget pressure (> 1 keeps far tiles coarse at rest);
   // sseMax is the ceiling the dynamic degrade can climb to under pressure.
@@ -312,6 +369,12 @@ export const run = async () => {
     .on("click", () => {
       view.flyTo({ ...NEAR_VIEW });
     });
+  // Horizon view at street level: the dynamic-SSE sweet spot (tilt-scaled
+  // relaxation at max). Toggle dynSse / drag dynSseFactor while in this view
+  // and watch wasmMB / gpuEstMB and the far-tile resolution respond.
+  pane.addButton({ title: "fly street (horizon)" }).on("click", () => {
+    view.flyTo({ ...NEAR_VIEW, height: 400, pitch: -8 });
+  });
 
   setInterval(async () => {
     const stats = view.memoryStats();

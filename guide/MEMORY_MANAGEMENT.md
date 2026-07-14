@@ -300,6 +300,42 @@ the pressure degrade is a *feedback* controller reacting to measured usage,
 LOD fog is a *feed-forward* device preset: low-memory devices ship a stronger
 curve so the working set stays small before pressure ever builds.
 
+### Dynamic SSE: the tilt-aware companion
+
+**Dynamic SSE** (`DynamicSse`, also in `navara_fog`) is the CesiumJS
+`dynamicScreenSpaceError` equivalent: the same `fog()` subtraction as LOD fog,
+but with the density rescaled **per traversal from the camera pose**
+(`DynamicSse::term`, `navara_fog/src/comp.rs`) instead of being a fixed device
+preset:
+
+- **Tilt** — the density is scaled by `1 − |forward·up|`: zero looking
+  straight down, full strength looking at the horizon. Street-level horizon
+  views are exactly the views that over-refine (thousands of far tiles reach
+  high screen-space error), and exactly where far-tile detail is least
+  visible.
+- **Height band** — the effect fades as the camera climbs: full strength
+  below `min_height + height_falloff × (max_height − min_height)`, off above
+  `max_height` (defaults 0 / 0.25 / 8000 m). High-altitude views see the
+  globe top-down anyway, where the tilt factor is near zero.
+
+Each traversal computes the term once per run and applies it per tile as
+`error -= term.relaxation(distance)` — the same call sites as LOD fog
+(terrain `TerrainTile::calc_sse`, raster/vector traversals, 3D Tiles
+traversal). A zero-density term is a no-op, so callers apply it
+unconditionally.
+
+Defaults follow CesiumJS (`enabled: true, density: 2.0e-4, sse_factor: 24.0,
+height_falloff: 0.25, min/max_height: 0/8000`), device-independent for now.
+Configured via `Core.setDynamicSse` (buffered in `DynamicSseConfig` when
+called before the `Startup` spawn, mirroring `LodFogConfig`); the TypeScript
+side exposes it as the `dynamicSse` constructor option / runtime property on
+`ThreeView`.
+
+Together the three SSE modifiers layer as: **LOD fog** (feed-forward, device
+preset, distance only) + **dynamic SSE** (feed-forward, camera-pose-scaled) +
+**memory-pressure degrade** (feedback, usage-driven, distance-weighted) — all
+three subtract from / multiply the same per-tile SSE decision.
+
 ## Configuration (TypeScript side)
 
 The budget is chosen per device at init (`web/navara_three/src/device.ts`) and
@@ -315,6 +351,7 @@ single view of the device's memory:
 | In-flight fetch cap per pipeline (`setMaxPendingRequests`) | 50 | 16 | 8 |
 | SSE multiplier range (`setSseMultiplierRange`) | 1.0 – 16.0 | 4.0 – 32.0 | 8.0 – 64.0 |
 | LOD fog (`setLodFog`) | density 2.0e-4, factor 2.0 | 1.0e-2, 6.0 | 1.0e-1, 12.0 |
+| Dynamic SSE (`setDynamicSse`) | density 2.0e-4, factor 24.0, falloff 0.25, band 0–8000 m (device-independent, CesiumJS defaults) | ← same | ← same |
 
 (The unknown-`deviceMemory` mobile case takes the *conservative* column for
 pending requests, SSE range, and fog, but the 512 MB cache tier — modern
@@ -323,10 +360,19 @@ for would defeat it.)
 
 `Core.setMemoryCostHints` passes the atlas (512² × RGBA × 3 MRT attachments
 ≈ 3 MB/tile) and raster (256² × RGBA × 1.33 ≈ 349 KB) costs.
-`Core.getMemoryStats` exposes the full ledger — buffer bytes/count, GPU
-estimate, external CPU bytes, reserved bytes, budget, eviction count, current
-SSE multiplier, and per-pipeline retained-tile counts — for the debug overlay
-and tests.
+`Core.getMemoryStats` exposes the full ledger — buffer bytes/count, JS-side
+external buffer bytes, GPU estimate, external CPU bytes, reserved bytes,
+budget, eviction count, current SSE multiplier, and per-pipeline
+retained-tile counts — for the debug overlay and tests.
+
+All of this surfaces on `ThreeView` as public API: the `cacheBytes`, `lodFog`,
+and `dynamicSse` constructor options double as runtime properties,
+`memoryBudget` overrides the worker/SSE-range defaults,
+`setSseMultiplierRange()` retunes the pressure degrade at runtime, and
+`memoryStats()` / `workerMemoryStats()` return plain-object snapshots (see the
+docs site, `ThreeView` API pages). The `debug/memory` example page
+(`web/navara_three/example/pages/debug/memory/`) wires them all to a live
+tweakpane panel for calibrating the presets above.
 
 ## Scheduling
 

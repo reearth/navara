@@ -82,6 +82,55 @@ pub struct MemoryStats {
     pub retained_tiles3d: u32,
 }
 
+/// Dynamic screen-space-error settings (CesiumJS `dynamicScreenSpaceError`
+/// equivalent): tilted, street-level horizon views tolerate a larger error
+/// for far tiles. Zero effect looking straight down; fades out as the camera
+/// climbs past `maxHeight` meters. Only affects tile LOD selection.
+///
+/// The TS-side `DynamicSseSettings` plain-object type is derived from this
+/// class (`NormalizeWASMClass`), so this is the single source of the shape.
+// Ref: https://github.com/CesiumGS/cesium/blob/9e93c9b6aa44a8a490f5ed9aa175a7e92348aaa2/packages/engine/Source/Scene/Cesium3DTileset.js#L433-L521
+#[wasm_bindgen]
+#[derive(Clone, Copy)]
+pub struct DynamicSse {
+    pub enabled: bool,
+    /// Distance scale of the relaxation ramp before tilt/height scaling.
+    pub density: f64,
+    /// Maximum SSE relaxation (in pixels) at full tilt and saturation.
+    #[wasm_bindgen(js_name = sseFactor)]
+    pub sse_factor: f64,
+    /// Fraction of the height band below which the effect is at full strength.
+    #[wasm_bindgen(js_name = heightFalloff)]
+    pub height_falloff: f64,
+    /// Camera height band (meters above the ellipsoid) the effect fades across.
+    #[wasm_bindgen(js_name = minHeight)]
+    pub min_height: f64,
+    #[wasm_bindgen(js_name = maxHeight)]
+    pub max_height: f64,
+}
+
+#[wasm_bindgen]
+impl DynamicSse {
+    #[wasm_bindgen(constructor)]
+    pub fn new(
+        enabled: bool,
+        density: f64,
+        sse_factor: f64,
+        height_falloff: f64,
+        min_height: f64,
+        max_height: f64,
+    ) -> Self {
+        Self {
+            enabled,
+            density,
+            sse_factor,
+            height_falloff,
+            min_height,
+            max_height,
+        }
+    }
+}
+
 #[wasm_bindgen]
 impl Core {
     #[wasm_bindgen(constructor)]
@@ -965,6 +1014,19 @@ impl Core {
     #[wasm_bindgen(js_name = setLodFog)]
     pub fn set_lod_fog(&mut self, enabled: bool, density: f64, sse_factor: f64) {
         self.app.set_lod_fog(enabled, density, sse_factor);
+    }
+
+    /// Updates the dynamic screen-space-error relaxation; see [`DynamicSse`].
+    #[wasm_bindgen(js_name = setDynamicSse)]
+    pub fn set_dynamic_sse(&mut self, settings: DynamicSse) {
+        self.app.set_dynamic_sse(
+            settings.enabled,
+            settings.density,
+            settings.sse_factor,
+            settings.height_falloff,
+            settings.min_height,
+            settings.max_height,
+        );
     }
 
     /// Caps the number of in-flight data fetches per tile pipeline (raster /

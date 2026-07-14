@@ -6,7 +6,7 @@ use navara_component::{Deleted, Order, OrderByDistance, Priority};
 use navara_core::Ellipsoid;
 use navara_data_requester::DataManager;
 
-use navara_fog::Fog;
+use navara_fog::{DynamicSseTerm, Fog};
 use navara_frame::FrameManager;
 use navara_math::{FloatType, Transform};
 use navara_memory::SseDegrade;
@@ -63,6 +63,7 @@ pub fn traverse_terrain(
     occluder: &EllipsoidalOccluder,
     meshes: &mut Query<&mut Mesh, (With<TileMeshMarker>, Without<Deleted>)>,
     fog: &Fog,
+    dynamic_sse: DynamicSseTerm,
     max_sse: f64,
     degrade: SseDegrade,
     is_ancestor_rendered: bool,
@@ -157,6 +158,7 @@ pub fn traverse_terrain(
         if terrain_layer.is_some() { 65. } else { 64. },
         distance_from_camera,
         fog,
+        dynamic_sse,
     );
 
     let tile = qt.qt.get_mut(handle).unwrap();
@@ -184,6 +186,11 @@ pub fn traverse_terrain(
     // If this tile has a terrain and it's prepared, request its hillshade
     // textures lazily. Regular raster textures are draped from the raster
     // pipeline (see `update_mesh_material`).
+    // Frustum-culled tiles are still requested (they backfill the parent and
+    // prevent flickering) but one priority step lower, so in-view tiles win
+    // the pending-request slots and bandwidth.
+    let demote_if_culled = |p: Priority| if is_culled_by_frustum { p.demote() } else { p };
+
     if terrain_layer.is_some() && is_renderable {
         let tile = qt.qt.get_mut(handle).unwrap();
         request_hillshade_data_requester(
@@ -193,7 +200,7 @@ pub fn traverse_terrain(
             source_store,
             handle,
             data_requesters,
-            Priority::High,
+            demote_if_culled(Priority::High),
             buf,
             data_manager,
         );
@@ -219,11 +226,11 @@ pub fn traverse_terrain(
                 source_store,
                 data_requesters,
                 terrain_data_requester,
-                if is_renderable {
+                demote_if_culled(if is_renderable {
                     Priority::Medium
                 } else {
                     Priority::High
-                },
+                }),
             );
         }
 
@@ -291,6 +298,7 @@ pub fn traverse_terrain(
                 occluder,
                 meshes,
                 fog,
+                dynamic_sse,
                 max_sse,
                 degrade,
                 if meets_sse_ancestors {
@@ -365,13 +373,9 @@ pub fn traverse_terrain(
 
             let tile = qt.qt.get_mut(handle).unwrap();
             tile.were_children_rendered = are_all_children_activated && !hide_children;
-            // Defer spawning children until this tile's mesh is ready so each
-            // level can upsample from a parent that already has a built mesh.
-            // Children's data requests are already issued via
-            // prepare_tile_resource and act as preload while waiting.
             let parent_mesh_ready = tile.cached_mesh_handle.is_some();
 
-            if allow_updating_state_of_children && (!use_terrain || parent_mesh_ready) {
+            if allow_updating_state_of_children {
                 for (i, child) in children.iter().enumerate() {
                     // If this child is not renderable, skip rendering this child.
                     if hidden_children_indices.contains(&i) {
@@ -384,6 +388,26 @@ pub fn traverse_terrain(
                     }
 
                     let handle = *child;
+
+                    // A child with its own ready DEM builds its mesh from its
+                    // own data, so it doesn't wait for this tile's mesh. Until
+                    // this tile's mesh is built, hold back only children
+                    // without ready DEM: a terrain-failed child would render
+                    // an unexpected flat last-resort mesh (#601), while once
+                    // the mesh exists it upsamples instead. Their data
+                    // requests were already issued via prepare_tile_resource
+                    // and act as preload while waiting.
+                    if use_terrain
+                        && !parent_mesh_ready
+                        && !tc.rendered_tile_caches.contains_key(&handle)
+                        && !qt
+                            .qt
+                            .get(handle)
+                            .is_some_and(|t| t.is_terrain_ready(terrain_data_requester))
+                    {
+                        continue;
+                    }
+
                     let tile = match qt.qt.get_mut(handle) {
                         Some(t) => t,
                         None => unreachable!(),
@@ -446,7 +470,7 @@ pub fn traverse_terrain(
                 source_store,
                 data_requesters,
                 terrain_data_requester,
-                Priority::Extreme,
+                demote_if_culled(Priority::Extreme),
             );
         }
         return TraversalResult::NotFound;
@@ -783,6 +807,7 @@ mod tests {
             &occluder,
             &mut meshes,
             &fog,
+            DynamicSseTerm::NONE,
             config.max_sse,
             SseDegrade::NONE,
             false,

@@ -11,9 +11,9 @@ import {
   type Localized,
 } from "../examples/sections";
 
-import { LangSelect } from "@/components/LangSelect";
 import { useDarkMode } from "@/components/hooks/useDarkMode";
 import { useLang } from "@/components/hooks/useLang";
+import { LangSelect } from "@/components/LangSelect";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 

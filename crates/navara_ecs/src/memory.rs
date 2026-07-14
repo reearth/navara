@@ -7,7 +7,7 @@ use navara_buffer_store::BufferStore;
 use navara_cesium3dtiles::ModelContentIndex;
 use navara_component::Deleted;
 use navara_feature_component::render::RenderableFeature;
-use navara_fog::{Fog, LodFogConfig};
+use navara_fog::{DynamicSse, DynamicSseConfig, Fog, LodFogConfig};
 use navara_memory::{MemoryLedger, TileCost};
 use navara_tile_component::{TerrainTileGpuCost, TileHandle, TileMeshMarker};
 
@@ -149,6 +149,39 @@ impl App {
             fog.enabled = enabled;
             fog.density = density;
             fog.sse_factor = sse_factor;
+        }
+    }
+
+    /// Sets the dynamic screen-space-error relaxation (CesiumJS
+    /// `dynamicScreenSpaceError` equivalent) applied by every tile traversal.
+    /// Buffered into [`DynamicSseConfig`] so a call before the first
+    /// `App::update()` is honored, and applied to the live entity directly —
+    /// same two-path shape as [`App::set_lod_fog`].
+    #[allow(clippy::too_many_arguments)]
+    pub fn set_dynamic_sse(
+        &mut self,
+        enabled: bool,
+        density: f64,
+        sse_factor: f64,
+        height_falloff: f64,
+        min_height: f64,
+        max_height: f64,
+    ) {
+        let value = DynamicSse {
+            enabled,
+            density,
+            sse_factor,
+            height_falloff,
+            min_height,
+            max_height,
+        };
+        let world = self.app.world_mut();
+        if let Some(mut config) = world.get_resource_mut::<DynamicSseConfig>() {
+            config.0 = value.clone();
+        }
+        let mut query = world.query::<&mut DynamicSse>();
+        for mut dynamic_sse in query.iter_mut(world) {
+            *dynamic_sse = value.clone();
         }
     }
 
