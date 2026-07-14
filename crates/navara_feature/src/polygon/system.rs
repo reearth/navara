@@ -236,7 +236,11 @@ pub fn update_height_by_terrain(
                     continue;
                 }
 
-                if !material.clamp_to_ground && !render_info.should_recalculate_height {
+                // Unlike polyline, the clamped height derives from
+                // `distance_to_center_from_ellipsoid_surface`, which is fixed at
+                // spawn — not from sampled terrain — so the flag alone gates all
+                // inputs and clamp_to_ground needs no per-frame recompute.
+                if !render_info.should_recalculate_height {
                     continue;
                 }
 

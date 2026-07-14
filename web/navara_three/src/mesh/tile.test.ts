@@ -39,7 +39,7 @@ function state(layerId: string, tileHandle: bigint) {
   };
 }
 
-function makeTile() {
+function makeTile(atlasSize = 512) {
   const texturizedScenes = new TexturizedSceneByTileCoordinates(
     createMockRenderer(),
   );
@@ -47,13 +47,20 @@ function makeTile() {
   const markDirty = vi.fn();
   const compositor = {
     acquire: vi.fn(),
+    release: vi.fn(),
     renderVectorScenes,
     markDirty,
+    // Atlas / drape RT side length the TileMesh reads to size its render
+    // targets and per-tile GPU byte cost. The composite atlas is 512² on both
+    // desktop and mobile; this mock is parameterized so the sizing math can be
+    // exercised at other side lengths too.
+    size: atlasSize,
     // Keep the MRT composite pass out of this test: it runs only when dirty,
     // and _onBeforeRender returns right after the vector bake when it isn't.
     cache: { isDirty: vi.fn().mockReturnValue(false) },
   };
   const getVectorTileStates = vi.fn().mockReturnValue([]);
+  const reportDrapeGpuBytes = vi.fn();
 
   // The vector resolve revision the WASM side exposes: it changes only when the
   // resolved slot set could have changed (a traverse ran / a scene became ready). The
@@ -73,6 +80,7 @@ function makeTile() {
       getVectorTileStates,
       vectorRevision: () => vectorRevision,
       getTile: vi.fn().mockReturnValue({ coords: { x: 0, y: 0, z: 0 } }),
+      reportDrapeGpuBytes,
     },
   } as unknown as ConstructorParameters<typeof TileMesh>[0];
 
@@ -87,8 +95,22 @@ function makeTile() {
     texturizedScenes,
     renderVectorScenes,
     getVectorTileStates,
+    reportDrapeGpuBytes,
     bumpRevision,
   };
+}
+
+const RT_BYTES = 512 * 512 * 4;
+const ATLAS_BYTES = 512 * 512 * 4 * 3;
+// A smaller 256² atlas / drape RT (a quarter of the 512² GPU cost), used to
+// exercise the sizing math at a non-default side length. NOTE: the real mobile
+// atlas is 512², same as desktop — 256² here is just a smaller parametric size.
+const RT_BYTES_SMALL = 256 * 256 * 4;
+const ATLAS_BYTES_SMALL = 256 * 256 * 4 * 3;
+
+function renderTargetCount(tile: TileMesh): number {
+  return (tile as unknown as { texturizedSceneRenderTargets: unknown[] })
+    .texturizedSceneRenderTargets.length;
 }
 
 /** Invoke the private onBeforeRender hook (args are ignored by the impl). */
@@ -206,5 +228,166 @@ describe("TileMesh vector bake dirty-gating", () => {
     frame(tile);
     frame(tile);
     expect(getVectorTileStates).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("TileMesh drape render-target lazy allocation + accounting", () => {
+  it("allocates no render targets and reports nothing while nothing drapes", () => {
+    const { tile, reportDrapeGpuBytes } = makeTile();
+
+    frame(tile);
+
+    expect(renderTargetCount(tile)).toBe(0);
+    // A tile that never draped reports nothing (its footprint never left 0).
+    expect(reportDrapeGpuBytes).not.toHaveBeenCalled();
+  });
+
+  it("allocates one render target per draped layer and reports the footprint", () => {
+    const {
+      tile,
+      texturizedScenes,
+      getVectorTileStates,
+      reportDrapeGpuBytes,
+      bumpRevision,
+    } = makeTile();
+
+    texturizedScenes.add(1n, "a", drapedMesh(), 0);
+    getVectorTileStates.mockReturnValue([state("a", 1n)]);
+    bumpRevision();
+    frame(tile);
+
+    expect(renderTargetCount(tile)).toBe(1);
+    // Footprint = composite atlas + one render target per draped layer.
+    expect(reportDrapeGpuBytes).toHaveBeenLastCalledWith(
+      1n,
+      ATLAS_BYTES + RT_BYTES,
+    );
+
+    // A second draped layer resolves → pool grows to 2, RT footprint doubles.
+    texturizedScenes.add(2n, "b", drapedMesh(), 1);
+    getVectorTileStates.mockReturnValue([state("a", 1n), state("b", 2n)]);
+    bumpRevision();
+    frame(tile);
+
+    expect(renderTargetCount(tile)).toBe(2);
+    expect(reportDrapeGpuBytes).toHaveBeenLastCalledWith(
+      1n,
+      ATLAS_BYTES + 2 * RT_BYTES,
+    );
+  });
+
+  it("disposes render targets and re-reports when a draped layer vanishes", () => {
+    const {
+      tile,
+      texturizedScenes,
+      getVectorTileStates,
+      reportDrapeGpuBytes,
+      bumpRevision,
+    } = makeTile();
+
+    texturizedScenes.add(1n, "a", drapedMesh(), 0);
+    texturizedScenes.add(2n, "b", drapedMesh(), 1);
+    getVectorTileStates.mockReturnValue([state("a", 1n), state("b", 2n)]);
+    bumpRevision();
+    frame(tile);
+    expect(renderTargetCount(tile)).toBe(2);
+
+    // "b" is no longer draped here → pool shrinks to 1, RT footprint halves.
+    getVectorTileStates.mockReturnValue([state("a", 1n)]);
+    bumpRevision();
+    frame(tile);
+
+    expect(renderTargetCount(tile)).toBe(1);
+    expect(reportDrapeGpuBytes).toHaveBeenLastCalledWith(
+      1n,
+      ATLAS_BYTES + RT_BYTES,
+    );
+  });
+
+  it("keeps charging the atlas when the last draped layer vanishes", () => {
+    const {
+      tile,
+      texturizedScenes,
+      getVectorTileStates,
+      reportDrapeGpuBytes,
+      bumpRevision,
+    } = makeTile();
+
+    texturizedScenes.add(1n, "a", drapedMesh(), 0);
+    getVectorTileStates.mockReturnValue([state("a", 1n)]);
+    bumpRevision();
+    frame(tile);
+    expect(renderTargetCount(tile)).toBe(1);
+
+    // All draped layers vanish → the render targets go, but the composite
+    // atlas is held for the tile's lifetime (acquired in the constructor), so
+    // the report must fall back to the atlas cost — not 0, which would wipe
+    // the baseline Rust seeds at mesh-attach time.
+    getVectorTileStates.mockReturnValue([]);
+    bumpRevision();
+    frame(tile);
+
+    expect(renderTargetCount(tile)).toBe(0);
+    expect(reportDrapeGpuBytes).toHaveBeenLastCalledWith(1n, ATLAS_BYTES);
+  });
+
+  it("tracks the compositor's atlas size for the atlas + drape footprint", () => {
+    // Drives the compositor size to 256² to confirm the per-tile cost tracks
+    // `compositor.size` (not a hardcoded 512²). This is a parametric size, not
+    // the mobile default — mobile also uses a 512² atlas.
+    const {
+      tile,
+      texturizedScenes,
+      getVectorTileStates,
+      reportDrapeGpuBytes,
+      bumpRevision,
+    } = makeTile(256);
+
+    texturizedScenes.add(1n, "a", drapedMesh(), 0);
+    getVectorTileStates.mockReturnValue([state("a", 1n)]);
+    bumpRevision();
+    frame(tile);
+
+    // One draped layer → atlas + one 256² render target, a quarter of 512².
+    expect(reportDrapeGpuBytes).toHaveBeenLastCalledWith(
+      1n,
+      ATLAS_BYTES_SMALL + RT_BYTES_SMALL,
+    );
+
+    // Last draped layer vanishes → falls back to the atlas seed, not 0.
+    getVectorTileStates.mockReturnValue([]);
+    bumpRevision();
+    frame(tile);
+    expect(reportDrapeGpuBytes).toHaveBeenLastCalledWith(1n, ATLAS_BYTES_SMALL);
+  });
+
+  it("frees render targets on dispose without a zero drape report", () => {
+    const {
+      tile,
+      texturizedScenes,
+      getVectorTileStates,
+      reportDrapeGpuBytes,
+      bumpRevision,
+    } = makeTile();
+
+    texturizedScenes.add(1n, "a", drapedMesh(), 0);
+    getVectorTileStates.mockReturnValue([state("a", 1n)]);
+    bumpRevision();
+    frame(tile);
+    expect(reportDrapeGpuBytes).toHaveBeenLastCalledWith(
+      1n,
+      ATLAS_BYTES + RT_BYTES,
+    );
+    const callsBeforeDispose = reportDrapeGpuBytes.mock.calls.length;
+
+    tile.dispose();
+
+    // Render targets are freed, but dispose must NOT report a zero cost: the
+    // handle is position-stable and reused by the replacement mesh entity, so a
+    // zero report would resolve (Without<Deleted>) to the NEW live entity and
+    // wipe the atlas cost the Rust side just seeded. The despawn of the old
+    // entity subtracts the cost from the ledger instead.
+    expect(renderTargetCount(tile)).toBe(0);
+    expect(reportDrapeGpuBytes.mock.calls.length).toBe(callsBeforeDispose);
   });
 });

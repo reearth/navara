@@ -1,6 +1,6 @@
 ---
 title: Re:Earth Engineering blog
-description: A guide in my new Starlight docs site.
+description: The Re:Earth Engineering blog by the Eukarya development team.
 sidebar:
   order: 6
 ---

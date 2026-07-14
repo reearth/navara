@@ -5,6 +5,7 @@ use bevy_ecs::{
     system::Query,
 };
 use navara_component::Deleted;
+use navara_memory::RetainedEntry;
 use navara_mesh::Mesh;
 use navara_tile_component::{TileHandle, TileMeshMarker};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -45,6 +46,10 @@ pub struct RenderedTileCache {
 pub struct TileCacheManager {
     pub rendered_tile_caches: FxHashMap<TileHandle, RenderedTileCache>,
     pub requested_tile_caches: FxHashSet<TileHandle>,
+    /// Tiles that left the view but are kept alive (mesh deactivated) until
+    /// the memory budget forces eviction. Keys are also present in
+    /// `rendered_tile_caches`.
+    pub retained: FxHashMap<TileHandle, RetainedEntry>,
     pub last_rendered_frame: usize,
     pub is_updated_in_this_frame: bool,
     pub prev_layers_len: usize,

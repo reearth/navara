@@ -2,10 +2,10 @@
 title: Custom Descriptor
 description: How to implement custom descriptors
 sidebar:
-  order: 21
+  order: 800
 ---
 
-In navara_three, you can implement your own mesh, effect, and light descriptors. For an overview of the layer concept, see [About Layer](../../../three/introduction/about-layer/).
+In navara_three, you can implement your own mesh, effect, and light descriptors. For an overview of the layer concept, see [Layers & Descriptors](../../../three/introduction/about-layer/).
 
 ## Descriptor Base Classes
 
@@ -761,7 +761,7 @@ if (uPicking > 0.0) {
 
 ## Related Resources
 
-- [About Layer](../../../three/introduction/about-layer/) - Layer concepts and types
+- [Layers & Descriptors](../../../three/introduction/about-layer/) - Layer concepts and types
 - [About Plugin](../../../three/introduction/about-plugin/) - Plugin system concepts
 - [Plugin API](../../../three/core/plugin/) - How to implement plugins
 - [three_default_descs](../../../three_default_descs/about/) - Default Descriptor implementation examples

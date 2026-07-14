@@ -11,6 +11,19 @@ pub enum Priority {
     VeryLow,
 }
 
+impl Priority {
+    /// One step lower, saturating at `VeryLow`. Used to demote requests for
+    /// frustum-culled tiles so in-view tiles win the pending-request slots.
+    pub fn demote(self) -> Self {
+        match self {
+            Self::Extreme => Self::High,
+            Self::High => Self::Medium,
+            Self::Medium => Self::Low,
+            Self::Low | Self::VeryLow => Self::VeryLow,
+        }
+    }
+}
+
 impl PartialOrd for Priority {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))

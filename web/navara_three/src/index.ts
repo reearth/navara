@@ -12,17 +12,25 @@ import type {
 import initCore, {
   Core,
   CameraDirection,
+  DynamicSse as EngineDynamicSse,
   LLE,
   type TerrainHeightUpdatedEvent,
   type TextureFragmentStatus,
 } from "@navara/engine";
-import { FontManager, type FontFamily } from "@navara/font";
+import {
+  FontManager,
+  type FontFamily,
+  type FontWorkerMemoryStats,
+} from "@navara/font";
 import FontWorkerURL from "@navara/font/fontWorker?worker&url";
 import { initNavaraApi } from "@navara/three_api";
 import {
   initializeWorkerPool,
+  probeWorkerPoolHeap,
   terminateWorkerPool,
   warmUpWorkerPool,
+  workerPoolHeapStats,
+  type WorkerPoolHeapStats,
 } from "@navara/worker";
 import {
   Scene,
@@ -62,7 +70,17 @@ import {
   type AnyMeshDesc,
 } from "./core/BaseHandle";
 import { Registries } from "./core/Registries";
-import { getDevicePixelRatio, isMobileDevice } from "./device";
+import {
+  getCompositeAtlasSize,
+  getDefaultDynamicSse,
+  getDefaultLodFog,
+  getDefaultMemoryBudgets,
+  getDefaultMemoryCostHints,
+  getDevicePixelRatio,
+  isMobileDevice,
+  type DynamicSseSettings,
+  type LodFogSettings,
+} from "./device";
 import {
   processEvent,
   EventContext,
@@ -77,6 +95,7 @@ import {
   type WorkerTaskHandler,
 } from "./event";
 import { TEXTURE_LOADER } from "./event/loaders";
+import { InMemoryBufferStore } from "./inMemoryBufferStore";
 import { registerInputEvents } from "./input";
 import { Layer, type LayerEvent } from "./layer";
 import {
@@ -86,11 +105,13 @@ import {
 } from "./layers/effect";
 import { FinalCopyEffectDesc } from "./layers/effect/FinalCopyEffectDesc";
 import { LayersManager } from "./layersManager";
+import { disposeTexture } from "./loaders";
 import { overrideMaterialsForMRT } from "./material";
 import type { TileMesh } from "./mesh/tile";
 import { RenderPassOrchestrator } from "./orchestrators/RenderPassOrchestrator";
 import { PickHelper } from "./pick/pickHelper";
 import { TerrainPicker } from "./pick/pickTerrain";
+import { AttributionPlugin, type AttributionPluginOptions } from "./plugins";
 import { TexturizedSceneByTileCoordinates, type Scenes } from "./scene";
 import { ShadowMapViewers } from "./ShadowMapViewers";
 import { Source } from "./source";
@@ -148,6 +169,7 @@ export * from "./shaders";
 export * from "./material";
 export * from "./core";
 export { BufferView } from "./bufferView";
+export * from "./plugins";
 export * from "./layers";
 export * from "./passes";
 export * from "./evaluations";
@@ -158,7 +180,12 @@ export { type BlendMode, blendFunction, createReplacer } from "./utils";
 export { Atmosphere, type AtmosphereOptions } from "./atmosphere";
 export type { Quality } from "./quality";
 export type { CustomObject3DEventMap } from "./object3DEvent";
-export type { FontFamily, FontFace, UnicodeRange } from "@navara/font";
+export type {
+  FontFamily,
+  FontFace,
+  UnicodeRange,
+  FontWorkerMemoryStats,
+} from "@navara/font";
 export {
   fetchFontFamilyFromCss,
   parseCssUnicodeRange,
@@ -169,6 +196,48 @@ export type {
   FetchCssFontFamilyOptions,
   ParseCssFontFamilyOptions,
 } from "@navara/font";
+export {
+  getDefaultCacheBytes,
+  getDefaultDynamicSse,
+  getDefaultLodFog,
+  getDefaultMemoryBudgets,
+  MB,
+  type DynamicSseSettings,
+  type LodFogSettings,
+  type MemoryBudgets,
+} from "./device";
+
+/**
+ * Snapshot of engine memory usage; see {@link ThreeView.memoryStats}. Plain
+ * object (not the WASM-generated class) per the WASM API policy: the class is
+ * copied field-by-field and freed before returning.
+ */
+export type MemoryStats = {
+  bufferTotalBytes: number;
+  /** Bytes held in the JS-side `InMemoryBufferStore` (WASM `External`
+   * entries): fetched MVT pbf and worker-built geometry that never enter WASM
+   * linear memory. Not part of `bufferTotalBytes`. */
+  externalBufferBytes: number;
+  bufferCount: number;
+  gpuBytesEst: number;
+  externalCpuBytes: number;
+  reservedBytes: number;
+  budgetBytes: number | undefined;
+  evictedCount: number;
+  sseMultiplier: number;
+  retainedVector: number;
+  retainedTerrain: number;
+  retainedRaster: number;
+  retainedTiles3d: number;
+};
+
+/** Snapshot of worker-side memory; see {@link ThreeView.workerMemoryStats}. */
+export type WorkerMemoryStats = {
+  /** Tile-worker pool heaps (undefined per slot until first probed). */
+  tileWorkers: WorkerPoolHeapStats | undefined;
+  /** Font worker heap/cache breakdown; undefined while no font is in use. */
+  fontWorker: FontWorkerMemoryStats | undefined;
+};
 
 // NOTE:
 // This overrides all materials to output a normal buffer, meaning Navara operates using MRT (Multiple Render Targets).
@@ -213,6 +282,57 @@ export type Options = {
    */
   idleThreshold?: number;
   /**
+   * Memory budget in bytes for tile caches (WASM buffers + estimated GPU
+   * cost). Tiles leaving the view are retained until the budget is exceeded,
+   * then evicted least-recently-visited first — panning back is refetch-free
+   * while total usage stays capped. Naming follows Cesium3DTileset.cacheBytes.
+   * @defaultValue device-dependent, see `getDefaultCacheBytes`
+   */
+  cacheBytes?: number;
+  /**
+   * LOD fog: distance-based screen-space-error relaxation used by tile LOD
+   * selection — far tiles tolerate a larger error and stay coarser while
+   * near tiles keep full resolution. Purely an LOD control; it never
+   * affects visual fog rendering. Partial overrides are merged over the
+   * device default.
+   * @defaultValue device-memory-dependent, see `getDefaultLodFog`
+   */
+  lodFog?: Partial<LodFogSettings>;
+  /**
+   * Dynamic screen-space error (CesiumJS `dynamicScreenSpaceError`
+   * equivalent): tilted, street-level horizon views tolerate a larger error
+   * for far tiles, cutting the tile working set in exactly the views that
+   * over-refine. Zero effect looking straight down. Partial overrides are
+   * merged over the default.
+   * @defaultValue see `getDefaultDynamicSse`
+   */
+  dynamicSse?: Partial<DynamicSseSettings>;
+  /**
+   * Overrides for the worker-side memory budgets (per-tile-worker WASM heap
+   * recycle threshold and the font worker's cache budget). Defaults derive
+   * from the device memory together with `cacheBytes` — see
+   * `getDefaultMemoryBudgets`. The font budget caps *further growth* of the
+   * font caches; WASM heaps never return memory to the OS.
+   */
+  memoryBudget?: {
+    maxWorkerHeapBytes?: number;
+    fontBudgetBytes?: number;
+    /** In-flight data fetch cap per tile pipeline (see `getDefaultMemoryBudgets`). */
+    maxPendingRequests?: number;
+    /**
+     * Resting (base) memory-pressure SSE multiplier. On mobile a value > 1
+     * keeps far tiles coarser even when the budget is not exceeded. Defaults
+     * per device — see `getDefaultSseMultiplierRange`.
+     */
+    sseMultiplierMin?: number;
+    /**
+     * Ceiling for the dynamic memory-pressure SSE degrade. A larger value lets
+     * the engine shed more of the visible set under pressure before the tab is
+     * killed. Defaults per device — see `getDefaultSseMultiplierRange`.
+     */
+    sseMultiplierMax?: number;
+  };
+  /**
    * Enables shared water texture. When enabled, a single water normal texture
    * is loaded once and shared across all meshes that have water effects enabled.
    */
@@ -222,6 +342,14 @@ export type Options = {
     /** Custom water normal texture URL. Uses built-in texture if not specified. */
     url?: string;
   };
+  /**
+   * Attribution (credit) UI, on by default (accessed via
+   * {@link ThreeView.attribution}). Pass `false` to opt out (e.g. to build your
+   * own UI), or an object to configure the initial style / corner. Skipped in a
+   * worker (no DOM), so `view.attribution` is `undefined` there.
+   * @defaultValue true
+   */
+  defaultAttribution?: boolean | AttributionPluginOptions;
 } & GlobeOptions;
 
 /**
@@ -339,36 +467,77 @@ export default class ThreeView<
   private _hillshadeContext = new HillshadeContext();
   private _initialized = false;
 
+  /**
+   * JS-side store for buffers WASM tracks by byte count only (`External`
+   * entries). Fetched MVT pbf and worker-built geometry live here instead of
+   * being copied into WASM linear memory, whose peak never shrinks. The
+   * `_buf` wrapper prefers this store, falling back to WASM for entries Rust
+   * still owns; handles are evicted per frame via `drainRemovedExternalHandles`.
+   */
+  private _inMemoryBufferStore = new InMemoryBufferStore();
+
   private _buf: BufferLoader = {
+    // Getters prefer the JS store (type-matched) and fall back to the WASM
+    // view for entries Rust still owns.
     u8: (handle) => {
+      const js = this._inMemoryBufferStore.get(handle);
+      if (js instanceof Uint8Array) return js;
       const b = this._core?.getBufferU8(handle);
       return b ?? null;
     },
     f32: (handle) => {
+      const js = this._inMemoryBufferStore.get(handle);
+      if (js instanceof Float32Array) return js;
       const b = this._core?.getBufferF32(handle);
       return b ?? null;
     },
     f64: (handle) => {
+      const js = this._inMemoryBufferStore.get(handle);
+      if (js instanceof Float64Array) return js;
       const b = this._core?.getBufferF64(handle);
       return b ?? null;
     },
     u32: (handle) => {
+      const js = this._inMemoryBufferStore.get(handle);
+      if (js instanceof Uint32Array) return js;
       const b = this._core?.getBufferU32(handle);
       return b ?? null;
     },
+    // remove* take from the JS store when present (and clear the WASM-side
+    // External accounting), else fall back to the owned-copy WASM remover.
     removeU8: (handle) => {
+      const js = this._inMemoryBufferStore.take(handle);
+      if (js instanceof Uint8Array) {
+        this._core?.removeBuffer(handle);
+        return js;
+      }
       const b = this._core?.removeBufferU8(handle);
       return b ?? null;
     },
     removeU32: (handle) => {
+      const js = this._inMemoryBufferStore.take(handle);
+      if (js instanceof Uint32Array) {
+        this._core?.removeBuffer(handle);
+        return js;
+      }
       const b = this._core?.removeBufferU32(handle);
       return b ?? null;
     },
     removeF32: (handle) => {
+      const js = this._inMemoryBufferStore.take(handle);
+      if (js instanceof Float32Array) {
+        this._core?.removeBuffer(handle);
+        return js;
+      }
       const b = this._core?.removeBufferF32(handle);
       return b ?? null;
     },
     removeF64: (handle) => {
+      const js = this._inMemoryBufferStore.take(handle);
+      if (js instanceof Float64Array) {
+        this._core?.removeBuffer(handle);
+        return js;
+      }
       const b = this._core?.removeBufferF64(handle);
       return b ?? null;
     },
@@ -404,8 +573,47 @@ export default class ThreeView<
       });
       // return this._core?.newBufferF32Cloned(b);
     },
+    // adopt* register a JS-owned array (zero-copy) and mint a byte-count-only
+    // External handle; the array bytes never touch WASM linear memory.
+    adoptU8: (array: Uint8Array) => {
+      const handle = this._core?.newExternalBuffer(array.byteLength);
+      if (handle != null) this._inMemoryBufferStore.set(handle, array);
+      return handle;
+    },
+    adoptU32: (array: Uint32Array) => {
+      const handle = this._core?.newExternalBuffer(array.byteLength);
+      if (handle != null) this._inMemoryBufferStore.set(handle, array);
+      return handle;
+    },
+    adoptF32: (array: Float32Array) => {
+      const handle = this._core?.newExternalBuffer(array.byteLength);
+      if (handle != null) this._inMemoryBufferStore.set(handle, array);
+      return handle;
+    },
+    adoptF64: (array: Float64Array) => {
+      const handle = this._core?.newExternalBuffer(array.byteLength);
+      if (handle != null) this._inMemoryBufferStore.set(handle, array);
+      return handle;
+    },
+    setExternal: (handle: number, bits: bigint, array: Uint8Array) => {
+      if (!this._core?.hasDataRequester(bits)) {
+        return;
+      }
+      this._core.setExternalBuffer(handle, bits, array.byteLength);
+      this._inMemoryBufferStore.set(handle, array);
+    },
     remove: (handle: number) => {
+      // Also drop any JS-side entry so the two stores stay in step when a
+      // caller removes an External handle without going through remove*.
+      this._inMemoryBufferStore.delete(handle);
       this._core?.removeBuffer(handle);
+    },
+    drainRemovedExternalHandles: () => {
+      const handles = this._core?.drainRemovedExternalHandles();
+      if (!handles) return;
+      for (const handle of handles) {
+        this._inMemoryBufferStore.delete(handle);
+      }
     },
     triggerDataRequesterLoaded: (bits: bigint, handle: number) => {
       this._core?.triggerDataRequesterLoaded(bits, handle);
@@ -443,6 +651,9 @@ export default class ThreeView<
     // Returns the per-frame cached revision (read once in `_render`), so per-tile
     // `onBeforeRender` gating costs no WASM-boundary call.
     vectorRevision: () => this._vectorRevision,
+    reportDrapeGpuBytes: (handle, bytes) => {
+      this._core?.reportTerrainDrapeGpuBytes(handle, bytes);
+    },
     calcMetersPerTexel: (tileHandle, textureZoom, textureWidth) => {
       return (
         this._core?.calcMetersPerTexel(tileHandle, textureZoom, textureWidth) ??
@@ -551,6 +762,9 @@ export default class ThreeView<
     markFeatureIsRendered: (type, bits) => {
       this._core?.markFeatureIsRendered(type, bits);
     },
+    reportFeatureGpuBytes: (bits, bytes) => {
+      this._core?.reportFeatureGpuBytes(bits, bytes);
+    },
     readAllBatchedProperties: (featureId, f) =>
       this._core?.readAllBatchedProperties(featureId, f),
     readFilteredBatchedProperties: (featureId, keys, f) =>
@@ -580,7 +794,19 @@ export default class ThreeView<
   private viewContext!: ViewContext;
   private plugins: Plugin[] = [];
 
+  /** Built-in attribution UI; unset when disabled or in a worker (no DOM). */
+  private _attribution?: AttributionPlugin;
+
   private pixelRatioMatchedMedia?: MediaQueryList;
+
+  /**
+   * The built-in attribution (credit) UI. `undefined` when disabled via
+   * `defaultAttribution: false`, or in a worker / no-DOM environment. Feed it
+   * credits with `view.attribution?.add([...])`.
+   */
+  get attribution(): AttributionPlugin | undefined {
+    return this._attribution;
+  }
 
   constructor(options: Options = {}) {
     super();
@@ -603,6 +829,16 @@ export default class ThreeView<
     }
 
     this._options = options;
+
+    // Attribution UI on by default; skip in a worker (no DOM) or when disabled.
+    if (options.defaultAttribution !== false && !isWorker()) {
+      const cfg =
+        typeof options.defaultAttribution === "object"
+          ? options.defaultAttribution
+          : undefined;
+      this._attribution = new AttributionPlugin(cfg);
+      this.plugins.push(this._attribution);
+    }
 
     // Initialize terrain picker
     this._terrainPicker = new TerrainPicker();
@@ -657,9 +893,15 @@ export default class ThreeView<
     // vector-scene offscreen render loop that previously lived in TileMesh,
     // and is the seam through which a future MRT composite pass will reduce
     // the main TileMesh shader's texture fetches.
+    // Atlas / drape RT side length is 512² on both desktop and mobile — the
+    // SAME source of truth `getDefaultMemoryCostHints` uses, so the ledger's
+    // per-tile GPU estimate matches the real allocation.
+    // `isMobileOptimized()` only reads `_options.mobileOptimization` (set
+    // above) and the pure `isMobileDevice()`, so it is safe here in the ctor.
     this._tileTextureCompositor = new TileTextureCompositor({
       renderer: this._renderer,
       texturizedSceneByTileCoordinates: this._texturizedSceneByTileCoordinates,
+      size: getCompositeAtlasSize(this.isMobileOptimized()),
     });
 
     this._scenes = {
@@ -685,7 +927,7 @@ export default class ThreeView<
     // Background color
     const bgColor = options.backgroundColor
       ? options.backgroundColor.toHex()
-      : 0x0a0a0f;
+      : 0x000000;
     this._renderer.setClearColor(bgColor);
 
     if (!options.disableAutoResize && !isWorker()) {
@@ -704,13 +946,44 @@ export default class ThreeView<
     if (options.debug) {
       const t = options.container || this._renderer.domElement.parentElement;
       if (t) {
-        this._stats = new RendererStats({
-          beginRender: () => this._renderer.info.reset(),
-          endRender: () => ({
-            ...this._renderer.info.render,
-            memGeometries: this._renderer.info.memory.geometries,
-          }),
-        });
+        this._stats = new RendererStats(
+          {
+            beginRender: () => this._renderer.info.reset(),
+            endRender: () => ({
+              ...this._renderer.info.render,
+              memGeometries: this._renderer.info.memory.geometries,
+            }),
+          },
+          () => {
+            const stats = this._core?.getMemoryStats();
+            // Read the fields off the boxed wasm-bindgen struct, then free it —
+            // the sampler runs ~1/s and the struct otherwise leaks until the
+            // FinalizationRegistry runs (see fontWorker.ts for the pattern).
+            const bufferTotalBytes = stats?.bufferTotalBytes;
+            const externalBufferBytes = stats?.externalBufferBytes;
+            const budgetBytes = stats?.budgetBytes;
+            stats?.free();
+            const memory = (
+              performance as Performance & {
+                memory?: { usedJSHeapSize: number };
+              }
+            ).memory;
+            const MB = 1024 * 1024;
+            return {
+              wasmMB:
+                bufferTotalBytes !== undefined
+                  ? bufferTotalBytes / MB
+                  : undefined,
+              jsBufMB:
+                externalBufferBytes !== undefined
+                  ? externalBufferBytes / MB
+                  : undefined,
+              jsHeapMB: memory ? memory.usedJSHeapSize / MB : undefined,
+              budgetMB:
+                budgetBytes !== undefined ? budgetBytes / MB : undefined,
+            };
+          },
+        );
         t.appendChild(this._stats.dom);
       }
     }
@@ -861,6 +1134,143 @@ export default class ThreeView<
     this.forceUpdate();
   }
 
+  /**
+   * The resolved tile-cache memory budget in bytes (see `Options.cacheBytes`).
+   * `undefined` before `init()` when no explicit option was given.
+   */
+  get cacheBytes(): number | undefined {
+    return this._options.cacheBytes;
+  }
+  /**
+   * Updates the tile-cache memory budget at runtime. Lowering it evicts
+   * retained tiles down to the new budget over the next frames. Passing
+   * `undefined` disables budgeting entirely, restoring the original
+   * destroy-on-unvisited tile lifecycle.
+   */
+  set cacheBytes(v: number | undefined) {
+    this._options.cacheBytes = v;
+    this._core?.setCacheBytes(v);
+  }
+
+  /**
+   * The resolved LOD fog settings (see `Options.lodFog`). `undefined`
+   * before `init()`.
+   */
+  get lodFog(): LodFogSettings | undefined {
+    const lodFog = this._options.lodFog;
+    if (!lodFog) return undefined;
+    return lodFog as LodFogSettings;
+  }
+  /**
+   * Updates the LOD fog at runtime; partial values merge over the current
+   * settings. The next traversal re-selects tile LODs with the new curve.
+   */
+  set lodFog(v: Partial<LodFogSettings>) {
+    const lodFog = {
+      ...getDefaultLodFog({ isMobile: this.isMobileOptimized() }),
+      ...this._options.lodFog,
+      ...v,
+    };
+    this._options.lodFog = lodFog;
+    this._core?.setLodFog(lodFog.enabled, lodFog.density, lodFog.sseFactor);
+  }
+
+  /**
+   * The resolved dynamic-SSE settings (see `Options.dynamicSse`).
+   * `undefined` before `init()`.
+   */
+  get dynamicSse(): DynamicSseSettings | undefined {
+    const dynamicSse = this._options.dynamicSse;
+    if (!dynamicSse) return undefined;
+    return dynamicSse as DynamicSseSettings;
+  }
+  /**
+   * Updates the dynamic SSE at runtime; partial values merge over the
+   * current settings. The next traversal re-selects tile LODs with the new
+   * curve.
+   */
+  set dynamicSse(v: Partial<DynamicSseSettings>) {
+    const dynamicSse = {
+      ...getDefaultDynamicSse(),
+      ...this._options.dynamicSse,
+      ...v,
+    };
+    this._options.dynamicSse = dynamicSse;
+    // The WASM class is constructed internally and consumed (moved) by
+    // `setDynamicSse`, so no `.free()` is needed — per the WASM API policy.
+    this._core?.setDynamicSse(
+      new EngineDynamicSse(
+        dynamicSse.enabled,
+        dynamicSse.density,
+        dynamicSse.sseFactor,
+        dynamicSse.heightFalloff,
+        dynamicSse.minHeight,
+        dynamicSse.maxHeight,
+      ),
+    );
+  }
+
+  /**
+   * Updates the memory-pressure SSE degrade range at runtime. `min` is the
+   * resting multiplier applied even without budget pressure (> 1 coarsens far
+   * tiles at rest); `max` is the ceiling the dynamic degrade can climb to. The
+   * next traversal re-selects tile LODs with the new range.
+   */
+  setSseMultiplierRange(min: number, max: number): void {
+    this._options.memoryBudget = {
+      ...this._options.memoryBudget,
+      sseMultiplierMin: min,
+      sseMultiplierMax: max,
+    };
+    this._core?.setSseMultiplierRange(min, max);
+  }
+
+  /**
+   * Snapshot of engine memory usage (WASM buffer bytes, GPU estimates,
+   * retained tile counts). Returns `undefined` before `init()`.
+   */
+  memoryStats(): MemoryStats | undefined {
+    const stats = this._core?.getMemoryStats();
+    if (!stats) return undefined;
+    // Copy every field into a plain object and free the boxed WASM struct
+    // before returning — the public API must not expose wasm-bindgen classes
+    // (WASM_API_POLICY.md), and returning the class would also leak it.
+    const plain: MemoryStats = {
+      bufferTotalBytes: stats.bufferTotalBytes,
+      externalBufferBytes: stats.externalBufferBytes,
+      bufferCount: stats.bufferCount,
+      gpuBytesEst: stats.gpuBytesEst,
+      externalCpuBytes: stats.externalCpuBytes,
+      reservedBytes: stats.reservedBytes,
+      budgetBytes: stats.budgetBytes,
+      evictedCount: stats.evictedCount,
+      sseMultiplier: stats.sseMultiplier,
+      retainedVector: stats.retainedVector,
+      retainedTerrain: stats.retainedTerrain,
+      retainedRaster: stats.retainedRaster,
+      retainedTiles3d: stats.retainedTiles3d,
+    };
+    stats.free();
+    return plain;
+  }
+
+  /**
+   * Snapshot of worker-side memory: per-tile-worker WASM heaps (point-in-time
+   * samples from the pool's post-task probes — this call also requests fresh
+   * probes, whose results show up on the *next* call) and the font worker's
+   * heap/cache breakdown (`undefined` while no font has been used). Returns
+   * `undefined` before `init()`.
+   */
+  async workerMemoryStats(): Promise<WorkerMemoryStats | undefined> {
+    if (!this._initialized) return undefined;
+    // Request fresh samples for the next read; probes coalesce per worker.
+    probeWorkerPoolHeap();
+    return {
+      tileWorkers: workerPoolHeapStats(),
+      fontWorker: await this._fontManager.memoryStats(),
+    };
+  }
+
   private get globeDepthTexture() {
     return this.renderPass.globeDepthCopyPass.texture;
   }
@@ -901,10 +1311,19 @@ export default class ThreeView<
       this._hillshadeContext.normalMapScale = 0.5;
     }
 
+    // One device-wide view of memory: the main-thread tile cache, the
+    // tile-worker pool, and the font worker derive their budgets together.
+    const budgets = getDefaultMemoryBudgets({
+      isMobile: mobileOptimized,
+      poolSize: concurrencyManager.total,
+    });
+
     initializeWorkerPool(WorkerURL, concurrencyManager, {
       // A worker over this WASM heap budget is recycled; tighter on mobile,
       // where the process is killed at much lower memory pressure.
-      maxWorkerHeapBytes: (mobileOptimized ? 128 : 256) * 1024 * 1024,
+      maxWorkerHeapBytes:
+        this._options.memoryBudget?.maxWorkerHeapBytes ??
+        budgets.maxWorkerHeapBytes,
     });
 
     // Asynchronous initialization in parallel, pre-warming all workers with
@@ -914,7 +1333,63 @@ export default class ThreeView<
     this._core = new Core(newId());
     this._core.start();
 
+    const cacheBytes = this._options.cacheBytes ?? budgets.cacheBytes;
+    this._options.cacheBytes = cacheBytes;
+    this._core.setCacheBytes(cacheBytes);
+
+    // Cap in-flight fetches (per tile pipeline) — mobile presets shrink the
+    // decode/upload burst a camera move can produce.
+    this._core.setMaxPendingRequests(
+      this._options.memoryBudget?.maxPendingRequests ??
+        budgets.maxPendingRequests,
+    );
+
+    // Memory-pressure SSE degrade range. min > 1 (mobile) keeps far tiles
+    // coarser at rest; max is the ceiling the dynamic degrade can climb to
+    // when the visible set alone exceeds the budget.
+    this._core.setSseMultiplierRange(
+      this._options.memoryBudget?.sseMultiplierMin ?? budgets.sseMultiplierMin,
+      this._options.memoryBudget?.sseMultiplierMax ?? budgets.sseMultiplierMax,
+    );
+
+    // Override the Rust CostHints defaults with sizes derived from this
+    // device's actual composite-atlas dimensions (512² with three MRT
+    // attachments, ~3MB per tile) so the ledger's per-tile GPU estimate matches.
+    const costHints = getDefaultMemoryCostHints({ isMobile: mobileOptimized });
+    this._core.setMemoryCostHints(
+      costHints.atlasTileBytes,
+      costHints.rasterTileBytes,
+    );
+
+    // LOD fog: stronger distance-based degrade on low-memory devices.
+    const lodFog = {
+      ...getDefaultLodFog({ isMobile: mobileOptimized }),
+      ...this._options.lodFog,
+    };
+    this._options.lodFog = lodFog;
+    this._core.setLodFog(lodFog.enabled, lodFog.density, lodFog.sseFactor);
+
+    // Dynamic SSE: tilt-scaled relaxation for street-level horizon views.
+    const dynamicSse = {
+      ...getDefaultDynamicSse(),
+      ...this._options.dynamicSse,
+    };
+    this._options.dynamicSse = dynamicSse;
+    this._core.setDynamicSse(
+      new EngineDynamicSse(
+        dynamicSse.enabled,
+        dynamicSse.density,
+        dynamicSse.sseFactor,
+        dynamicSse.heightFalloff,
+        dynamicSse.minHeight,
+        dynamicSse.maxHeight,
+      ),
+    );
+
     this._fontManager.setConcurrencyManager(concurrencyManager);
+    this._fontManager.setMemoryBudget(
+      this._options.memoryBudget?.fontBudgetBytes ?? budgets.fontBudgetBytes,
+    );
 
     this._globe = new Globe(this._globeHandler, this._options);
 
@@ -1053,6 +1528,9 @@ export default class ThreeView<
   dispose() {
     this._disposed = true;
     this._initialized = false;
+    // Dispose the view-owned attribution plugin (other plugins are the caller's).
+    this._attribution?.dispose();
+    this._attribution = undefined;
     if (!isWorker()) {
       window.removeEventListener("resize", this._handleResize);
       this.pixelRatioMatchedMedia?.removeEventListener(
@@ -1089,9 +1567,10 @@ export default class ThreeView<
     }
     this._abortControllers.clear();
 
-    // Dispose loaded textures
+    // Dispose loaded textures (closes any ImageBitmap backing so the decoded
+    // pixels are freed, not just the GL texture).
     for (const tex of this._loadedTexs.values()) {
-      tex.dispose();
+      disposeTexture(tex);
     }
     this._loadedTexs.clear();
 
@@ -1100,6 +1579,7 @@ export default class ThreeView<
 
     // Clear caches and maps
     this._meshes.clear();
+    this._inMemoryBufferStore.clear();
     this._workerPoolPromises.clear();
     this._tileMapByHandle.clear();
     this._textureFragmentIndex.clear();
@@ -1220,6 +1700,11 @@ export default class ThreeView<
     processEvent(this.eventContext, events);
 
     events?.free();
+
+    // Evict JS-side `InMemoryBufferStore` entries whose WASM `External` handles
+    // Rust freed this frame (tile destroy, DataRequester removal, ...), keeping
+    // the two stores in step.
+    this._buf.drainRemovedExternalHandles();
 
     this._camera.raw.updateMatrixWorld();
 

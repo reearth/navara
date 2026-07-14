@@ -104,7 +104,8 @@ fn color_atlas_packs_glyphs_and_refcounts() {
     let raster_font =
         fontdue::Font::from_bytes(COLRV1_FONT, fontdue::FontSettings::default()).unwrap();
     let mut evicted = false;
-    let added = atlas.ensure_glyphs_in_atlas(&raster_font, COLRV1_FONT, 0, &[gid], &mut evicted);
+    let added =
+        atlas.ensure_glyphs_in_atlas(&raster_font, COLRV1_FONT, 0, &[gid], &mut evicted, None);
     assert!(added, "first call should report new glyphs added");
     assert!(!evicted, "nothing should be evicted on first pack");
 
@@ -116,7 +117,7 @@ fn color_atlas_packs_glyphs_and_refcounts() {
 
     // Calling again with the same id is idempotent (atlas unchanged).
     let added_again =
-        atlas.ensure_glyphs_in_atlas(&raster_font, COLRV1_FONT, 0, &[gid], &mut evicted);
+        atlas.ensure_glyphs_in_atlas(&raster_font, COLRV1_FONT, 0, &[gid], &mut evicted, None);
     assert!(!added_again, "no new glyphs on repeat call");
 
     // A retained (visible) glyph is pinned; releasing drops the reference.

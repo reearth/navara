@@ -2,7 +2,7 @@
 title: TextMaterial
 description: Text material for navara_three
 sidebar:
-  order: 38
+  order: 580
 ---
 
 `TextMaterial` represents a material for text rendering.

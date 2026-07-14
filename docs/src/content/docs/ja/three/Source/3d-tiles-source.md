@@ -2,7 +2,7 @@
 title: 3D Tiles Source
 description: 3d-tiles（3D Tiles タイルセット）の Source
 sidebar:
-  order: 17
+  order: 360
 ---
 
 `3d-tiles` Source は 3D Tiles タイルセット（`tileset.json` 階層）を指します。[`3d-tiles`](../../../three/layer/3d-tiles-layer/) レイヤーで描画します。

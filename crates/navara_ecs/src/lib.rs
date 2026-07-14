@@ -46,8 +46,10 @@ use navara_worker::{
 
 mod app;
 mod batch_property;
+mod memory;
 
 pub use batch_property::*;
+pub use memory::*;
 pub use navara_vector_tile::ResolvedVectorTileState;
 
 pub struct App {
@@ -124,6 +126,44 @@ impl App {
                 ty: navara_buffer_store::BufferType::U8,
                 handle,
             });
+    }
+
+    /// Mirror of [`set_buffer_u8`](Self::set_buffer_u8) for the JS-side
+    /// `InMemoryBufferStore`: registers an `External` entry (byte count only —
+    /// the real bytes stay in JS) and fires `BufferStoreLoadedEvent` so the
+    /// DataRequester finalizes exactly like a WASM-resident load. An `External`
+    /// entry carries no element type, so unlike `set_buffer_u8` this is not
+    /// typed; the event's `ty` is nominal (nothing reads it).
+    pub fn set_external_buffer(&mut self, handle: i32, bits: u64, byte_len: usize) {
+        let Some(mut store) = self.app.world_mut().get_resource_mut::<BufferStore>() else {
+            return;
+        };
+        store.set_external(handle, byte_len);
+
+        // TODO: This is only for DataRequester, so curve out this function.
+        self.app
+            .world_mut()
+            .write_message(navara_buffer_store::BufferStoreLoadedEvent {
+                id: Entity::from_bits(bits),
+                ty: navara_buffer_store::BufferType::U8,
+                handle,
+            });
+    }
+
+    /// Issue a handle for a JS-side buffer whose real bytes live in the
+    /// `InMemoryBufferStore` (byte count only tracked here).
+    pub fn new_external_buffer(&mut self, byte_len: usize) -> Option<Handle> {
+        let mut store = self.app.world_mut().get_resource_mut::<BufferStore>()?;
+        Some(store.new_external(byte_len))
+    }
+
+    /// Drain the handles of `External` entries removed since the last call so
+    /// JS can evict them from its `InMemoryBufferStore` map.
+    pub fn drain_removed_external_handles(&mut self) -> Vec<i32> {
+        let Some(mut store) = self.app.world_mut().get_resource_mut::<BufferStore>() else {
+            return Vec::new();
+        };
+        store.drain_removed_external()
     }
 
     pub fn new_buffer_u8(&mut self, data: Vec<u8>) -> Option<Handle> {

@@ -2,7 +2,7 @@
 title: FeatureEvaluator
 description: API Reference for FeatureEvaluator class
 sidebar:
-  order: 17
+  order: 960
 ---
 
 FeatureEvaluator は、地物データへのアクセスと、プロパティに基づいた地物の動的スタイリングを提供するクラスです。Layer の `featureCreated` および `featureUpdated` イベントを通じて取得できます。

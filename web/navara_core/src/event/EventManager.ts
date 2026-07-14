@@ -4,10 +4,13 @@ import { generate_id_from_entity, isEntityEvent } from "../id";
 
 import { TransactionManager } from "./TransactionManager";
 
+// The WASM `Events` class exposes each stack only through a move-out
+// `take_<key>()` method (reading a getter would deep-clone the array and every
+// element). Stack keys and value types are derived from those methods.
 export type JsEvents = {
-  [K in keyof Events as K extends "free" | symbol | number
-    ? never
-    : K]: Events[K];
+  [K in keyof Events as K extends `take_${infer P}`
+    ? P
+    : never]: Events[K] extends (...args: never[]) => infer R ? R : never;
 };
 export type JsEventsKey = keyof JsEvents;
 
@@ -103,8 +106,13 @@ export class EventManager {
   }
 
   pushEvents(events: Events | undefined) {
+    if (!events) return;
     for (const k of Object.keys(this.stacks) as JsEventsKey[]) {
-      const event = events?.[k];
+      // Move the stack out of WASM instead of reading a cloning getter.
+      const take = events[`take_${k}` as keyof Events] as unknown as (
+        this: Events,
+      ) => JsEvents[JsEventsKey];
+      const event = take.call(events);
       if (!event) continue;
       if (Array.isArray(event)) {
         (this.stacks[k] as unknown[]).push(...event);

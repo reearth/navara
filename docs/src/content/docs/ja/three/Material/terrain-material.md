@@ -2,7 +2,7 @@
 title: TerrainMaterial
 description: terrain レイヤーの地形メッシュ描画オプション
 sidebar:
-  order: 36
+  order: 560
 ---
 
 `TerrainMaterial` は、[`terrain`](../../../three/layer/terrain-layer/) レイヤーのメッシュの描画オプションを保持します。`terrain` キーで設定し、Source のデータ形式（[`raster-dem`](../../../three/source/raster-dem-source/)（RGB エンコードされた標高）または [`quantized-mesh`](../../../three/source/quantized-mesh-source/)）にかかわらず適用されます。取得・ジオメトリの設定（ズーム範囲、タイリングスキーム、標高デコーダ、拡張、トークン）はすべて、参照する Source 側にあり、ここにはありません。

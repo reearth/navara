@@ -2,7 +2,7 @@
 title: Raster DEM Source
 description: RGB エンコードされた標高（raster-dem）の Source
 sidebar:
-  order: 14
+  order: 340
 ---
 
 `raster-dem` Source は、RGB エンコードされた標高タイルを記述します。次の両方を駆動します。

@@ -2,7 +2,7 @@
 title: About
 description: Materials (styling options) for layers
 sidebar:
-  order: 20
+  order: 500
 ---
 
 **Materials** are the render (styling) options for a [layer](../../../three/layer/about/). Each material is set via its key on the layer configuration (for example `polygon` on a `vector` layer, or `terrain` on a `terrain` layer). Which materials a layer accepts depends on its type.
@@ -50,5 +50,5 @@ view.addLayer({
 
 ## Related Resources
 
-- [About Layer](../../../three/layer/about/) — layer types and how to add them
+- [Layer Types](../../../three/layer/about/) — layer types and how to add them
 - [About Source](../../../three/source/about/) — the data side

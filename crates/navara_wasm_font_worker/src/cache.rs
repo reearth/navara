@@ -104,11 +104,47 @@ pub struct FontCache {
     pub color_atlases: StdHashMap<String, Atlas>,
     #[wasm_bindgen(skip)]
     pub next_font_index: u32,
+    /// Budget over the cache's modeled resident bytes (font data + atlas
+    /// pixels). `None` = unlimited. Enforced by denying atlas growth — the
+    /// WASM heap itself never shrinks, so the budget caps further growth
+    /// rather than reclaiming memory.
+    #[wasm_bindgen(skip)]
+    pub budget_bytes: Option<usize>,
 }
 
 impl FontCache {
     pub fn is_font_loaded(&self, url: &str) -> bool {
         self.fonts.contains_key(url)
+    }
+
+    pub fn set_budget(&mut self, bytes: Option<usize>) {
+        self.budget_bytes = bytes;
+    }
+
+    /// Modeled resident bytes: (font data, monochrome atlas pixels, color
+    /// atlas pixels). Deliberately excludes transient shaping allocations.
+    pub fn modeled_bytes(&self) -> (usize, usize, usize) {
+        let fonts = self.fonts.values().map(|e| e.data.len()).sum();
+        let atlas = self.atlases.values().map(|a| a.pixel_bytes()).sum();
+        let color = self.color_atlases.values().map(|a| a.pixel_bytes()).sum();
+        (fonts, atlas, color)
+    }
+
+    /// Maximum pixel bytes the given atlas may grow to under the budget:
+    /// budget minus everything else the cache holds (saturating). `None`
+    /// when no budget is set.
+    pub fn max_bytes_for_atlas(&self, atlas_key: &str, is_color: bool) -> Option<usize> {
+        let budget = self.budget_bytes?;
+        let (fonts, atlas, color) = self.modeled_bytes();
+        let this_atlas = if is_color {
+            self.color_atlases.get(atlas_key)
+        } else {
+            self.atlases.get(atlas_key)
+        }
+        .map(|a| a.pixel_bytes())
+        .unwrap_or(0);
+        let others = (fonts + atlas + color).saturating_sub(this_atlas);
+        Some(budget.saturating_sub(others))
     }
 
     pub fn get(&self, url: &str) -> Option<&FontEntry> {
@@ -227,5 +263,57 @@ impl FontCache {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod budget_tests {
+    use super::*;
+
+    fn cache_with_atlas(atlas_bytes_side: i32) -> FontCache {
+        let mut cache = FontCache::default();
+        cache.atlases.insert(
+            "key".to_string(),
+            Atlas::new(atlas_bytes_side, AtlasMode::Sdf),
+        );
+        cache
+    }
+
+    #[test]
+    fn modeled_bytes_sums_atlas_pixels() {
+        let cache = cache_with_atlas(256);
+        let (fonts, atlas, color) = cache.modeled_bytes();
+        assert_eq!(fonts, 0);
+        assert_eq!(atlas, 256 * 256); // R8 = 1 byte/pixel
+        assert_eq!(color, 0);
+    }
+
+    #[test]
+    fn max_bytes_for_atlas_is_budget_minus_everything_else() {
+        let mut cache = cache_with_atlas(256);
+        assert_eq!(cache.max_bytes_for_atlas("key", false), None);
+
+        cache.set_budget(Some(1_000_000));
+        // The atlas's own bytes don't count against itself.
+        assert_eq!(cache.max_bytes_for_atlas("key", false), Some(1_000_000));
+
+        // A second atlas eats into the first one's headroom.
+        cache
+            .atlases
+            .insert("other".to_string(), Atlas::new(256, AtlasMode::Sdf));
+        assert_eq!(
+            cache.max_bytes_for_atlas("key", false),
+            Some(1_000_000 - 256 * 256)
+        );
+    }
+
+    #[test]
+    fn max_bytes_for_atlas_saturates_at_zero() {
+        let mut cache = cache_with_atlas(256);
+        cache
+            .atlases
+            .insert("other".to_string(), Atlas::new(1024, AtlasMode::Sdf));
+        cache.set_budget(Some(1000));
+        assert_eq!(cache.max_bytes_for_atlas("key", false), Some(0));
     }
 }

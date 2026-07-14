@@ -2,7 +2,7 @@
 title: ThreeView Properties
 description: API Reference for ThreeView Class Properties and Events
 sidebar:
-  order: 14
+  order: 940
 ---
 
 このページでは、ThreeView インスタンスで利用可能なすべてのプロパティとイベントを説明します。
@@ -165,4 +165,55 @@ view.shadowMapViewersEnabled = true;
 
 // デバッグビューを非表示
 view.shadowMapViewersEnabled = false;
+```
+
+### cacheBytes
+
+**Type:** `number | undefined`
+
+タイルキャッシュのメモリバジェット（バイト単位）を取得または設定します（[`cacheBytes` オプション](./threeview-class#cachebytes)を参照）。ゲッターは解決済みのバジェットを返します（オプション未指定かつ `init()` 前は `undefined`）。実行時に値を下げると、以降の数フレームで保持中のタイルが新しいバジェットまで破棄されます。`undefined` を設定するとバジェット管理が完全に無効化され、ビューから外れたタイルを即座に破棄する元のライフサイクルに戻ります。
+
+**Example:**
+
+```tsx
+// 解決済みのバジェットを取得
+console.log(`cache budget: ${(view.cacheBytes ?? 0) / 1024 / 1024} MB`);
+
+// 実行時にバジェットを縮小（以降の数フレームでその値まで破棄）
+view.cacheBytes = 256 * 1024 * 1024;
+
+// タイルキャッシュのバジェット管理を無効化
+view.cacheBytes = undefined;
+```
+
+### lodFog
+
+**Type:** getter `LodFogSettings | undefined` / setter `Partial<LodFogSettings>`
+
+LOD fog の設定を取得または設定します（[`lodFog` オプション](./threeview-class#lodfog)を参照）。遠くのタイルを粗いまま保つ、距離ベースの screen-space error 緩和です。ゲッターは解決済みの設定を返します（`init()` 前は `undefined`）。セッターへの部分的な指定は現在の設定にマージされ、次のトラバーサルで新しいカーブによりタイル LOD が再選択されます。
+
+**Example:**
+
+```tsx
+// 距離デグレードを強める — 遠くのタイルがより粗くなる
+view.lodFog = { density: 2.5e-4, sseFactor: 3.0 };
+
+// 1 フィールドだけ変更。他は現在の値を維持
+view.lodFog = { sseFactor: 4.0 };
+```
+
+### dynamicSse
+
+**Type:** getter `DynamicSseSettings | undefined` / setter `Partial<DynamicSseSettings>`
+
+Dynamic screen-space error の設定を取得または設定します（[`dynamicSse` オプション](./threeview-class#dynamicsse)を参照）。地表付近で地平線を望むような傾いたビューでは、遠くのタイルに大きな誤差を許容します。ゲッターは解決済みの設定を返します（`init()` 前は `undefined`）。セッターへの部分的な指定は現在の設定にマージされ、次のトラバーサルで新しいカーブによりタイル LOD が再選択されます。
+
+**Example:**
+
+```tsx
+// dynamic SSE を無効化
+view.dynamicSse = { enabled: false };
+
+// 地平線ビュー向けに緩和の強さを調整
+view.dynamicSse = { sseFactor: 16.0, heightFalloff: 0.25 };
 ```

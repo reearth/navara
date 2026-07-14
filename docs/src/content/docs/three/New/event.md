@@ -2,7 +2,7 @@
 title: Events
 description: Upcoming events and workshops for navara_three
 sidebar:
-  order: 401
+  order: 1210
 ---
 
 ## Event Information

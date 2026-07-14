@@ -8,7 +8,6 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import { AttributionPlugin } from "@navara/three_plugins";
 import { Vector3 } from "three";
 import { Pane, FolderApi } from "tweakpane";
 
@@ -36,8 +35,7 @@ export type CustomDescriptions = DefaultDescriptions;
 export const run = async (view: ThreeView<CustomDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
-  const attribution = new AttributionPlugin();
-  view.addPlugin(attribution);
+  const attribution = view.attribution;
   await view.init();
 
   view.atmosphere.date = atZoneTime(view.atmosphere.date, 8);
@@ -125,7 +123,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   addRotateOption(pane, view);
   addCameraControlOptions(pane, view);
 
-  attribution.show([TERRAIN_DATASETS.gsi, TILE_DATASETS.openstreetmap]);
+  attribution?.add([TERRAIN_DATASETS.gsi, TILE_DATASETS.openstreetmap]);
 };
 
 const addChangeCameraOption = (

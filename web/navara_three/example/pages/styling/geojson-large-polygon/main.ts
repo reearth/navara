@@ -4,7 +4,6 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
 import { FLOOD_RANK_COLOR_MAP } from "../../../helpers/colors";
@@ -24,8 +23,7 @@ const run = async () => {
   });
   view.addPlugin(new DefaultPlugin());
 
-  const attribution = new AttributionPlugin();
-  view.addPlugin(attribution);
+  const attribution = view.attribution;
 
   await view.init();
 
@@ -153,7 +151,7 @@ const run = async () => {
     layer?.update({ polygon: { outlineShow: value } });
   });
 
-  attribution.show([
+  attribution?.add([
     TILE_DATASETS.gsiSeamlessphoto,
     TERRAIN_DATASETS.gsi,
     LOCAL_DATASETS.tokyoFlood,

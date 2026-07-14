@@ -7,7 +7,6 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import { AttributionPlugin } from "@navara/three_plugins";
 import { Vector3 } from "three";
 import { Pane } from "tweakpane";
 
@@ -550,8 +549,7 @@ const geoLayersDef: MaterialDesc[] = [
 export const run = async (view: ThreeView<CustomDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
-  const attribution = new AttributionPlugin();
-  view.addPlugin(attribution);
+  const attribution = view.attribution;
   await view.init();
 
   const defaultAtmospheres = plugin.addDefaultPhotorealScene();
@@ -656,7 +654,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
 
   addCtrlPanel(geoLayersDef, view, materialCtrl as Pane);
 
-  attribution.show([
+  attribution?.add([
     TERRAIN_DATASETS.gsi,
     TILE_DATASETS.openstreetmap,
     GEOJSON_DATASETS.calderdaleDefibrillators,

@@ -2,7 +2,7 @@
 title: Interior Explore
 description: How to explore the interior of 3D buildings with the PersonViewPlugin
 sidebar:
-  order: 8
+  order: 230
 ---
 
 ![Result](@assets/tutorial/model-animation.png)

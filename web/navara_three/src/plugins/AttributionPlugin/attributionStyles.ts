@@ -87,6 +87,11 @@ export const STYLE_TEXT = `
 .navara-attr-card[hidden] {
   display: none;
 }
+/* display:flex on these beats the UA [hidden] rule, so hide explicitly. */
+.navara-attr-dock[hidden],
+.navara-attr-logoframe[hidden] {
+  display: none;
+}
 .navara-attr-head {
   display: flex;
   justify-content: space-between;

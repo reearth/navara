@@ -2,7 +2,7 @@
 title: Quantized Mesh Source
 description: A Cesium quantized-mesh terrain source
 sidebar:
-  order: 15
+  order: 350
 ---
 
 A `quantized-mesh` source describes Cesium quantized-mesh terrain. Render it with a [`terrain`](../../../three/layer/terrain-layer/) layer. By default it is treated as geographic (EPSG:4326) with a TMS (south-origin) Y axis, matching Cesium's convention.

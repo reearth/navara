@@ -2,7 +2,7 @@
 title: FeatureEvaluator
 description: API Reference for FeatureEvaluator class
 sidebar:
-  order: 17
+  order: 960
 ---
 
 FeatureEvaluator is a class that provides access to feature data and dynamic styling of features based on their properties. It can be obtained through the `featureCreated` and `featureUpdated` events of a Layer.

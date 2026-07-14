@@ -2,7 +2,7 @@
 title: ThreeView Functions
 description: API Reference for ThreeView Class Functions
 sidebar:
-  order: 13
+  order: 930
 ---
 
 このページでは、ThreeView インスタンスで利用可能なすべての関数（メソッド）を説明します。
@@ -21,7 +21,7 @@ addLayer(l: LayerDescription): Layer
 
 **Parameters:**
 
-LayerDescription の設定項目については、[About Layer](../../../three/layer/about/) と各レイヤータイプのページを参照してください。
+LayerDescription の設定項目については、[レイヤーの種類](../../../three/layer/about/) と各レイヤータイプのページを参照してください。
 
 **Returns:**
 
@@ -1045,4 +1045,149 @@ removeFontFamily(family: string): this
 
 ```typescript
 view.removeFontFamily("MapFont");
+```
+
+### setSseMultiplierRange()
+
+メモリ圧 SSE デグレードの範囲を実行時に更新します。`min` はバジェット圧がなくても適用される安静時の乗数で（1 より大きい値は安静時でも遠くのタイルを粗くします）、`max` はメモリ圧下で動的デグレードが到達できる上限です。次のトラバーサルで新しい範囲によりタイル LOD が再選択されます。`min = max = 1` を設定すると圧によるデグレードが完全に無効化されます。
+
+**Syntax:**
+
+```tsx
+setSseMultiplierRange(min: number, max: number): void
+```
+
+**Parameters:**
+
+- `min`: バジェット圧なしで適用される安静時（ベース）の SSE 乗数
+- `max`: 動的なメモリ圧デグレードが到達できる上限
+
+**Example:**
+
+```tsx
+// 安静時も遠くのタイルをやや粗く保ち、圧下では最大 8 倍までデグレードを許容
+view.setSseMultiplierRange(1.5, 8.0);
+
+// メモリ圧デグレードを完全に無効化
+view.setSseMultiplierRange(1, 1);
+```
+
+:::tip[関連ドキュメント]
+デバイス依存のデフォルトは [`memoryBudget` オプション](./threeview-class#memorybudget)（`sseMultiplierMin` / `sseMultiplierMax`）で設定できます。
+:::
+
+### memoryStats()
+
+エンジンのメモリ使用量のスナップショット（WASM バッファバイト数、GPU 推定値、保持中タイル数）を返します。`init()` 前は `undefined` を返します。
+
+**Syntax:**
+
+```tsx
+memoryStats(): MemoryStats | undefined
+```
+
+**Returns:**
+
+プレーンな `MemoryStats` オブジェクト。`init()` 前は `undefined`:
+
+```tsx
+type MemoryStats = {
+  // WASM リニアメモリ内のタイルペイロード・ジオメトリ・DEM バッファの合計バイト数
+  bufferTotalBytes: number;
+  // JS 側バッファストアが保持するバイト数（フェッチした MVT pbf やワーカー生成
+  // ジオメトリなど、WASM リニアメモリに入らないもの）。bufferTotalBytes には含まれません。
+  externalBufferBytes: number;
+  // バッファストアが追跡するバッファ数
+  bufferCount: number;
+  // 推定 GPU バイト数（テクスチャ、ジオメトリ、レンダーターゲット）
+  gpuBytesEst: number;
+  // バッファストア外の CPU バイト数（主にフィーチャ属性テーブル）
+  externalCpuBytes: number;
+  // 処理中フェッチの予約バイト数（フェッチ完了時に解放）
+  reservedBytes: number;
+  // 設定されたタイルキャッシュバジェット。バジェット管理が無効の場合は undefined
+  budgetBytes: number | undefined;
+  // 破棄されたタイルの累計数
+  evictedCount: number;
+  // 現在のメモリ圧 SSE 乗数（1 = 圧なし）
+  sseMultiplier: number;
+  // パイプラインごとの保持中（非アクティブ化されキャッシュ済み）タイル数
+  retainedVector: number;
+  retainedTerrain: number;
+  retainedRaster: number;
+  retainedTiles3d: number;
+};
+```
+
+**Example:**
+
+```tsx
+const stats = view.memoryStats();
+if (stats) {
+  const MB = 1024 * 1024;
+  console.log(`WASM buffers: ${(stats.bufferTotalBytes / MB).toFixed(1)} MB`);
+  console.log(`GPU estimate: ${(stats.gpuBytesEst / MB).toFixed(1)} MB`);
+  console.log(`evicted: ${stats.evictedCount}, sse x${stats.sseMultiplier}`);
+}
+```
+
+### workerMemoryStats()
+
+ワーカー側メモリのスナップショットを返します。タイルワーカーごとの WASM ヒープ（プールのタスク後プローブによるポイントインタイムのサンプル — このメソッド呼び出しでも新しいプローブが要求され、その結果は*次回*の呼び出しに反映されます）と、フォントワーカーのヒープ / キャッシュ内訳を含みます。`init()` 前は `undefined` を返します。
+
+**Syntax:**
+
+```tsx
+async workerMemoryStats(): Promise<WorkerMemoryStats | undefined>
+```
+
+**Returns:**
+
+`WorkerMemoryStats` オブジェクトに解決される `Promise`。`init()` 前は `undefined`:
+
+```tsx
+type WorkerMemoryStats = {
+  // タイルワーカープールのヒープ（各スロットは初回プローブまで undefined）
+  tileWorkers:
+    | {
+        // スロットごとの直近プローブ済み WASM ヒープ（undefined = 未プローブ）
+        perSlot: (number | undefined)[];
+        // プローブ済みヒープの合計
+        totalBytes: number;
+        // スロットのリサイクル基準となるワーカーごとのバジェット
+        maxWorkerHeapBytes: number;
+      }
+    | undefined;
+  // フォントワーカーのヒープ / キャッシュ内訳。フォント未使用の間は undefined
+  fontWorker:
+    | {
+        // フォントワーカーの WASM リニアメモリ合計（縮小しません）
+        heapBytes: number;
+        fontCount: number;
+        atlasCount: number;
+        glyphCount: number;
+        // キャッシュが保持する生のフォントファイルバイト数
+        fontBytes: number;
+        // モノクロ（SDF/MSDF）アトラスのピクセルバイト数
+        atlasBytes: number;
+        // COLRv1 カラーアトラスのピクセルバイト数
+        colorAtlasBytes: number;
+        // 設定されたキャッシュバジェット。無制限の場合は undefined
+        budgetBytes?: number;
+      }
+    | undefined;
+};
+```
+
+**Example:**
+
+```tsx
+const stats = await view.workerMemoryStats();
+if (stats?.tileWorkers) {
+  const MB = 1024 * 1024;
+  console.log(`tile workers: ${(stats.tileWorkers.totalBytes / MB).toFixed(1)} MB`);
+}
+if (stats?.fontWorker) {
+  console.log(`font atlas bytes: ${stats.fontWorker.atlasBytes}`);
+}
 ```

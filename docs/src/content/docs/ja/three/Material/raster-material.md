@@ -2,7 +2,7 @@
 title: RasterMaterial
 description: raster レイヤーのラスター画像描画オプション
 sidebar:
-  order: 37
+  order: 570
 ---
 
 `RasterMaterial` は、[`raster`](../../../three/layer/raster-layer/) レイヤーの画像の描画オプションを保持します。`raster` キーで設定します。取得・タイリングの設定（ズーム範囲、TMS など）はすべて、参照する [`raster-tile`](../../../three/source/raster-tile-source/) の Source 側にあり、ここにはありません。

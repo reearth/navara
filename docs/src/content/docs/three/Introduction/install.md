@@ -2,7 +2,7 @@
 title: Install
 description: Installation guide for navara_three
 sidebar:
-  order: 3
+  order: 120
 ---
 
 ## Installing the Package

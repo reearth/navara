@@ -2,7 +2,7 @@
 title: ColorMap Class
 description: API Reference for ColorMap Class - カラーグラデーションを定義するクラス
 sidebar:
-  order: 19
+  order: 980
 ---
 
 `ColorMap` クラスは、標高ヒートマップなどで使用するカラーグラデーション（色の補間）を定義します。ルックアップテーブル（LUT）に基づいて、0.0〜1.0 の値を色に変換します。

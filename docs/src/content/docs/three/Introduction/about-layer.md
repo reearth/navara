@@ -1,8 +1,8 @@
 ---
-title: About Layer
-description: An explanation of the layer concept.
+title: Layers & Descriptors
+description: How layers and descriptors differ, and when to use each.
 sidebar:
-  order: 4
+  order: 130
 ---
 
 ## What is a Layer?
@@ -58,7 +58,7 @@ const imagery = view.addSource({
 view.addLayer({ type: "raster", source: imagery, raster: { opacity: 0.8 } });
 ```
 
-See [About Source](../../../three/source/about/) for source types and [About Layer (types)](../../../three/layer/about/) for the layer types and their render options.
+See [About Source](../../../three/source/about/) for source types and [Layer Types](../../../three/layer/about/) for the layer types and their render options.
 
 ## Differences Between Layers and Other Descriptors
 
@@ -219,6 +219,6 @@ For detailed API reference, see [Descriptor Types](../../../three/api/desc-types
 ## Related Resources
 
 - [About Source](../../../three/source/about/) - where layer data comes from
-- [About Layer (types)](../../../three/layer/about/) - layer types and render options
+- [Layer Types](../../../three/layer/about/) - layer types and render options
 - [Materials](../../../three/material/about/) - styling (materials) reference
 - [three_default_descs](../../../three_default_descs/about/) - Default Descriptor details

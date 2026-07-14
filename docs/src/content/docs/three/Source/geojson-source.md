@@ -2,7 +2,7 @@
 title: GeoJSON Source
 description: A geojson source (from a URL or inline)
 sidebar:
-  order: 11
+  order: 310
 ---
 
 A `geojson` source provides vector data from a GeoJSON document, either fetched from a URL or given inline. Render it with a [`vector`](../../../three/layer/vector-layer/) layer.

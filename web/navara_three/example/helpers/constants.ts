@@ -68,7 +68,7 @@ export const TERRAIN_DATASETS = {
   reearthQuantizedMesh: {
     url: "https://terrain.reearth.land/cesium-mesh/ellipsoid/{z}/{x}/{y}.terrain",
     attribution: "© Re:Earth Terrain",
-    attributionUrl: "https://reearth.io",
+    attributionUrl: "https://terrain.reearth.land/",
   },
   cesiumIon: {
     // The URL is resolved at runtime via the Cesium Ion endpoint API; this

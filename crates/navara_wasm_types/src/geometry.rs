@@ -251,6 +251,7 @@ pub struct UpsamplableTerrainGeometry {
     heights: Vec<f32>,
     indices: Vec<u32>,
     normals: Option<Vec<f32>>,
+    watermask: Option<Vec<u8>>,
 }
 
 #[wasm_bindgen]
@@ -261,12 +262,14 @@ impl UpsamplableTerrainGeometry {
         indices: Vec<u32>,
         heights: Vec<f32>,
         normals: Option<Vec<f32>>,
+        watermask: Option<Vec<u8>>,
     ) -> Self {
         Self {
             uvs,
             indices,
             heights,
             normals,
+            watermask,
         }
     }
 }
@@ -278,6 +281,7 @@ impl<'a> From<navara_geometry::UpsamplableTerrainGeometry<'a>> for UpsamplableTe
             heights: d.heights.to_vec(),
             indices: d.indices.to_vec(),
             normals: d.normals.map(|n| n.to_vec()),
+            watermask: d.watermask.map(|w| w.to_vec()),
         }
     }
 }
@@ -289,6 +293,7 @@ impl<'a> From<&'a UpsamplableTerrainGeometry> for navara_geometry::UpsamplableTe
             heights: &d.heights,
             indices: &d.indices,
             normals: d.normals.as_deref(),
+            watermask: d.watermask.as_deref(),
         }
     }
 }

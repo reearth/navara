@@ -2,7 +2,7 @@
 title: 3D Tiles Source
 description: A 3d-tiles (3D Tiles tileset) source
 sidebar:
-  order: 17
+  order: 360
 ---
 
 A `3d-tiles` source points at a 3D Tiles tileset (a `tileset.json` hierarchy). Render it with a [`3d-tiles`](../../../three/layer/3d-tiles-layer/) layer.

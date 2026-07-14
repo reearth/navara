@@ -2,7 +2,7 @@
 title: Vector Tile Source
 description: vector-tile (MVT) の Source
 sidebar:
-  order: 12
+  order: 320
 ---
 
 `vector-tile` Source は、Mapbox Vector Tiles (MVT) タイルセットを記述します。[`vector`](../../../three/layer/vector-layer/) レイヤーで描画します。タイルセット内のどの Source レイヤーを描画するかは、レイヤーごとにレイヤーの `sourceLayers` プロパティで選択します。

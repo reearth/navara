@@ -7,7 +7,7 @@ sidebar:
 
 ## 概要
 
-`AttributionPlugin` は、地図のデータソースのクレジット UI を表示します。右下に小さな ⓘ トリガーが置かれ、クリックするとアクティブなソースを一覧するポップオーバーが開きます。非モーダルなので、ポップオーバーを開いたままでも地図は操作可能（パン / ズーム / 回転）です。
+`AttributionPlugin` は、地図のデータソースのクレジット UI を表示します。**`ThreeView` が既定で 1 つ生成し、`view.attribution` として公開します**（自前 UI を作る場合は `defaultAttribution: false` で無効化）。ポップオーバーはアクティブなソースを一覧し、**既定で開いた状態**なのでクリックなしでライセンスが見えます。右下の小さな ⓘ トリガーで開閉でき（`hide()` / `show()` も同じ）、非モーダルなので開いたままでも地図は操作可能（パン / ズーム / 回転）です。
 
 地図の出典表示で一般的に必要となる、次の 3 点に対応します。
 
@@ -21,15 +21,9 @@ sidebar:
 
 ```typescript
 import ThreeView from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
-import { AttributionPlugin } from "@navara/three_plugins";
 
+// 出典 UI は既定で生成されます。view.attribution からアクセスします。
 const view = new ThreeView({ container });
-const defaultPlugin = new DefaultPlugin();
-const attribution = new AttributionPlugin();
-
-view.addPlugin(defaultPlugin);
-view.addPlugin(attribution);
 await view.init();
 
 // ラスタの基盤地図: フィーチャー単位のクレジットを持たないため、静的に宣言します。
@@ -47,54 +41,109 @@ const photorealSource = view.addSource({
 });
 const photoreal = view.addLayer({ type: "3d-tiles", source: photorealSource });
 
-attribution.show(
-  [
-    {
-      attribution: "国土地理院",
-      attributionUrl: "https://maps.gsi.go.jp/development/ichiran.html",
-      children: [
-        { attribution: "全国最新写真（シームレス）", minZoom: 14, maxZoom: 18 },
-        { attribution: "GRUS画像（© Axelspace）", minZoom: 14, maxZoom: 18 },
-      ],
-    },
-    {
-      attribution: "Google Maps Photorealistic 3D Tiles",
-      logo: "/credits/GoogleMaps.png",
-      // このレイヤーのタイル単位のクレジットをこのソース配下にネスト。
-      // レイヤーは id から view 内で解決されるため、別途渡す必要はありません。
-      creditLayerId: photoreal.id,
-    },
-    {
-      attributionHtml:
-        '<a href="https://s2maps.eu">Sentinel-2 cloudless 2020</a> by <a href="https://eox.at">EOX IT Services GmbH</a>',
-    },
-  ],
-);
+// `add` / `remove` で表示する出典の集合を管理します。`view.attribution` が
+// `undefined` になるのは `defaultAttribution: false` で無効化した場合、または
+// worker / DOM なし環境です。
+view.attribution?.add([
+  {
+    attribution: "国土地理院",
+    attributionUrl: "https://maps.gsi.go.jp/development/ichiran.html",
+    children: [
+      { attribution: "全国最新写真（シームレス）", minZoom: 14, maxZoom: 18 },
+      { attribution: "GRUS画像（© Axelspace）", minZoom: 14, maxZoom: 18 },
+    ],
+  },
+  {
+    attribution: "Google Maps Photorealistic 3D Tiles",
+    logo: "/credits/GoogleMaps.png",
+    // `logoUrl` を付けるとロゴがリンク化されます（表示専用マークなら省略）。
+    logoUrl: "https://www.google.com/maps",
+    // このレイヤーのタイル単位のクレジットをこのソース配下にネスト。
+    // レイヤーは id から view 内で解決されるため、別途渡す必要はありません。
+    creditLayerId: photoreal.id,
+  },
+  {
+    attributionHtml:
+      '<a href="https://s2maps.eu">Sentinel-2 cloudless 2020</a> by <a href="https://eox.at">EOX IT Services GmbH</a>',
+  },
+]);
 
-attribution.hide();
-attribution.dispose();
+// データが地図から外れたら、その出典を取り下げます。一致判定は構造ベースなので、
+// add したときと同じ形（ここでは `logo` も含む）で渡します。
+view.attribution?.remove([
+  {
+    attribution: "Google Maps Photorealistic 3D Tiles",
+    logo: "/credits/GoogleMaps.png",
+    logoUrl: "https://www.google.com/maps",
+    creditLayerId: photoreal.id,
+  },
+]);
+
+// ポップオーバーは既定で開いています。hide() で畳み、show() で開き直します
+// （ⓘ トリガーも同じ状態を切り替えます）。
+view.attribution?.hide();
+view.attribution?.show();
 ```
 
-## コンストラクタ
+## 有効化とアクセス
+
+`ThreeView` は既定で出典 UI を生成し、readonly getter として公開します。
 
 ```typescript
-new AttributionPlugin(options?: {
-  style?: AttributionStyle;
-  position?: "bottom-left" | "bottom-right";
+view.attribution; // AttributionPlugin | undefined
+```
+
+`defaultAttribution` オプションで設定・無効化できます。
+
+```typescript
+new ThreeView({
+  // `false` で無効化して自前 UI を作る、またはオブジェクトで初期の色 / 角を指定。
+  // 既定は `true`。
+  defaultAttribution?:
+    | boolean
+    | { style?: AttributionStyle; position?: "bottom-left" | "bottom-right" };
 });
 ```
 
-`options.style` は初期の色を設定します（[AttributionStyle](#attributionstyle) を参照。省略すると既定値）。`options.position` は ⓘ トリガーとクレジットカードを置く下部の角を選びます（既定 `"bottom-right"`）。右下がページ独自の HUD などで埋まっている場合は `"bottom-left"` を使ってください。ロゴ枠はどちらのモードでも左下エリアに置かれますが、`"bottom-left"` では ⓘ が左端に入り、ロゴはその右隣にずれて並びます。プラグインは `view.init()` の**前に** `view.addPlugin()` で登録してください。
+`view.attribution` が `undefined` になるのは `defaultAttribution: false` で無効化したとき、または worker / DOM なし環境です（組込プラグインは DOM を必要とします）。`position` は ⓘ トリガーとクレジットカードを置く下部の角を選びます（既定 `"bottom-right"`）。右下がページ独自の HUD などで埋まっている場合は `"bottom-left"` を使ってください。ロゴ枠はどちらのモードでも左下エリアに置かれます。`style` は初期の色を設定します（[AttributionStyle](#attributionstyle) を参照）。
+
+**上級者向け:** `AttributionPlugin` は `@navara/three` からも export されており、手動で生成（`new AttributionPlugin({ style?, position? })`）して `view.init()` の**前に** `view.addPlugin()` で登録することもできます（例: `defaultAttribution: false` で生成した view に付ける場合）。
 
 ## メソッド
 
-### show(items)
+### add(items)
 
 ```typescript
-show(items: AttributionItem[]): void
+add(items: AttributionItem[]): void
 ```
 
-指定した出典を表示します。再度呼ぶと内容を置き換えるため、表示中のデータが変わったときにクレジットを更新できます。`creditLayerId` を設定したソースは、そのレイヤーのフィーチャー単位のクレジットが動的に追跡されます。レイヤーは id から view 内で解決されるため、別途渡す必要はありません。完全に重複するエントリは除外されるため、同じクレジットを共有する複数のデータソースは 1 行にまとまります。
+表示する出典を集合に追加します（現在のエントリにマージ）。完全に重複するエントリは除外されるため、同じクレジットを共有する複数のデータソースは 1 行にまとまります。`creditLayerId` を設定したソースは、そのレイヤーのフィーチャー単位のクレジットが動的に追跡されます。レイヤーは id から view 内で解決されるため、別途渡す必要はありません。
+
+### remove(items)
+
+```typescript
+remove(items: AttributionItem[]): void
+```
+
+表示する出典を集合から削除します。エントリは（表示内容による）構造で一致判定されるため、追加時と同じ形のオブジェクトを渡してください。別途 id は不要です。一致しないエントリは無視されます。
+
+静的に `add()` した出典を、カメラやアプリの状態に応じて出し入れするケースで使います（例: `children` のズーム帯では表せない範囲でトップレベル出典を出し入れしたいとき、カメラ移動に合わせて `add()` / `remove()` する）。`creditLayerId` で追跡している出典はレイヤー削除時に自動で消えるため、`remove()` は不要です。
+
+### clear()
+
+```typescript
+clear(): void
+```
+
+表示中の出典をすべて削除しますが、プラグインは生かしたままにします（ポップオーバー・リスナー・注入したスタイルは残るため、あとで `add()` を呼べば UI が戻ります）。表示するものが無くなると ⓘ トリガーとロゴフレームは自動的に隠れます。DOM ごと破棄する場合は `dispose()` を使ってください。
+
+### show()
+
+```typescript
+show(): void
+```
+
+出典ポップオーバーを開きます。既定で開いているため、`hide()` で閉じた後に開き直すときにのみ必要です（ⓘ トリガーも同じ状態を切り替えます）。ポップオーバーのカードにのみ作用し、常時表示のロゴフレームはそのままです。集合が空の間は見た目に変化しません（出典が 1 件も追加されるまで dock は隠れています）。
 
 ### hide()
 
@@ -102,7 +151,7 @@ show(items: AttributionItem[]): void
 hide(): void
 ```
 
-出典 UI を非表示にし、追跡中の内容をクリアします。
+出典ポップオーバーを閉じます。ポップオーバーのカードにのみ作用し、追跡中の出典と常時表示のロゴフレームには触れません。エントリの削除は `remove()`、全体の破棄は `dispose()` を使ってください。
 
 ### dispose()
 
@@ -110,7 +159,7 @@ hide(): void
 dispose(): void
 ```
 
-UI を削除し、プラグインが確保したすべてを解放します。
+UI を削除し、プラグインが確保したすべてを解放します。既定の `view.attribution` は `view.dispose()` が自動で破棄するため、手動で生成したインスタンスにのみ呼べば十分です。
 
 ### setStyle(style)
 
@@ -121,7 +170,7 @@ setStyle(style: AttributionStyle): void
 実行時に UI の色を更新します。現在のスタイルにマージし、DOM を再構築せずその場で再テーマするため、ライト / ダークモードの切り替えに適しています。
 
 ```typescript
-attribution.setStyle({
+view.attribution?.setStyle({
   backgroundColor: "rgba(20, 24, 28, 0.92)",
   textColor: "#e6e9ee",
   nestedTextColor: "rgba(230, 233, 238, 0.64)",
@@ -188,5 +237,5 @@ type AttributionItem = AttributionSource | AttributionHtml;
 
 ## 関連リソース
 
-- [OverlayPlugin](../overlayplugin/) — ワールド座標からスクリーン座標への HTML オーバーレイ投影
-- [About three_plugins](../about/) — パッケージの概要
+- [OverlayPlugin](../../../three_plugins/overlayplugin/) — ワールド座標からスクリーン座標への HTML オーバーレイ投影
+- [About three_plugins](../../../three_plugins/about/) — パッケージの概要

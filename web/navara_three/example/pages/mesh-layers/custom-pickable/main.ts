@@ -34,7 +34,6 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import { AttributionPlugin } from "@navara/three_plugins";
 import {
   Matrix4,
   Mesh,
@@ -239,8 +238,7 @@ const run = async () => {
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
 
-  const attribution = new AttributionPlugin();
-  view.addPlugin(attribution);
+  const attribution = view.attribution;
 
   await view.init();
 
@@ -334,7 +332,7 @@ const run = async () => {
     idBinding.refresh();
   });
 
-  attribution.show([TILE_DATASETS.openstreetmap]);
+  attribution?.add([TILE_DATASETS.openstreetmap]);
 };
 
 run();

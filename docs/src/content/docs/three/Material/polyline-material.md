@@ -2,7 +2,7 @@
 title: PolylineMaterial
 description: Polyline material for navara_three
 sidebar:
-  order: 35
+  order: 550
 ---
 
 `PolylineMaterial` represents a material for polyline geometry rendering.

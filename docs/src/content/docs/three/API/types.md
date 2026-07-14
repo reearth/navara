@@ -2,7 +2,7 @@
 title: Common Types
 description: API Reference for common primitive types shared across navara_three materials and descriptors
 sidebar:
-  order: 23
+  order: 1030
 ---
 
 This page documents primitive types that are shared across multiple materials and descriptors in `navara_three`.

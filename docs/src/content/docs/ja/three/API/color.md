@@ -2,7 +2,7 @@
 title: Color Class
 description: API Reference for Color Class - 色を表現するクラス
 sidebar:
-  order: 18
+  order: 970
 ---
 
 `Color` クラスは、色を表現するためのクラスです。sRGB カラースペースを基準として色を管理し、様々な形式での色の設定・取得をサポートします。

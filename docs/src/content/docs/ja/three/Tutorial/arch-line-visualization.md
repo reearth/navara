@@ -2,7 +2,7 @@
 title: Arch Line Visualization
 description: 空港間の航空交通量をアーチラインで可視化する方法
 sidebar:
-  order: 7
+  order: 220
 ---
 
 ![実行結果](@assets/tutorial/arch-line-visualization-result.png)

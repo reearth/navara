@@ -8,7 +8,6 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import { AttributionPlugin } from "@navara/three_plugins";
 import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 
@@ -48,8 +47,7 @@ export const run = async () => {
 
   view.addPlugin(new DefaultPlugin());
 
-  const attribution = new AttributionPlugin();
-  view.addPlugin(attribution);
+  const attribution = view.attribution;
 
   await view.init();
 
@@ -135,10 +133,12 @@ export const run = async () => {
       mode === "quantizedMesh"
         ? TERRAIN_DATASETS.reearthQuantizedMesh
         : TERRAIN_DATASETS.gsi;
-    attribution.show([terrainDataset, VECTOR_DATASETS.gsiExperimentalVector]);
+    // Replace, not accumulate: clear before re-adding the swapped credits.
+    attribution?.clear();
+    attribution?.add([terrainDataset, VECTOR_DATASETS.gsiExperimentalVector]);
   };
 
-  attribution.show([
+  attribution?.add([
     TERRAIN_DATASETS.reearthQuantizedMesh,
     VECTOR_DATASETS.gsiExperimentalVector,
   ]);

@@ -1,104 +1,182 @@
-import { Moon, Sun, Search } from "lucide-react";
+import { Moon, Sun, Search, Star } from "lucide-react";
 import { useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import invariant from "tiny-invariant";
 
-import { PageList } from "./PageList";
+import {
+  SECTION_KEYS,
+  SECTION_LABELS,
+  localize,
+  type ExampleEntry,
+  type ExampleMeta,
+} from "../examples/sections";
+
+import { ExampleGrid } from "./ExampleGrid";
 
 import { useDarkMode } from "@/components/hooks/useDarkMode";
+import { useLang } from "@/components/hooks/useLang";
+import { LangSelect } from "@/components/LangSelect";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 
 import "./main.css";
+
+/** UI chrome strings (the gallery's own labels, not example content). */
+const UI = {
+  title: { en: "Navara Three — Examples", ja: "Navara Three — Examples" },
+  featured: { en: "Featured", ja: "注目の機能" },
+  searchPlaceholder: { en: "Search examples…", ja: "Example を検索…" },
+  toggleTheme: { en: "Toggle theme", ja: "テーマを切り替え" },
+  toggleLang: { en: "Switch language", ja: "言語を切り替え" },
+  noMatch: {
+    en: "No examples match",
+    ja: "一致する example がありません",
+  },
+} as const;
+
+/**
+ * Collect every curated example's `meta.ts`. Display section, ordering and the
+ * Featured band are all driven by these files (see examples/sections.ts).
+ */
+const metaModules = import.meta.glob<{ default: ExampleMeta }>(
+  "../examples/**/meta.ts",
+  { eager: true },
+);
+
+const ENTRIES: ExampleEntry[] = Object.entries(metaModules).map(
+  ([key, mod]) => {
+    // "../examples/getting-started/hello-world/meta.ts" -> "getting-started/hello-world"
+    const path = key
+      .replace(/^\.\.\/examples\//, "")
+      .replace(/\/meta\.ts$/, "");
+    return {
+      ...mod.default,
+      path,
+    };
+  },
+);
 
 export const App = () => {
   const [query, setQuery] = useState("");
   const { isDark: dark, toggle } = useDarkMode();
+  const { lang, setLang } = useLang();
 
-  const pages = useMemo(
-    () =>
-      (PAGES || [])
-        .filter((p) => p.name !== "index")
-        .sort((a, b) => a.name.localeCompare(b.name)),
-    [],
+  // Ascending by `order`, then alphabetically by the localized title.
+  const byOrder = useMemo(
+    () => (a: ExampleEntry, b: ExampleEntry) =>
+      (a.order ?? Number.MAX_SAFE_INTEGER) -
+        (b.order ?? Number.MAX_SAFE_INTEGER) ||
+      localize(a.title, lang).localeCompare(localize(b.title, lang)),
+    [lang],
   );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return pages;
-    return pages.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.displayName.toLowerCase().includes(q) ||
-        p.category.toLowerCase().includes(q),
+    if (!q) return ENTRIES;
+    return ENTRIES.filter(
+      (e) =>
+        localize(e.title, lang).toLowerCase().includes(q) ||
+        localize(e.description, lang).toLowerCase().includes(q) ||
+        e.path.toLowerCase().includes(q),
     );
-  }, [pages, query]);
+  }, [query, lang]);
 
-  // Group pages by category
-  const groupedPages = useMemo(() => {
-    const groups: Record<string, PageInfo[]> = {};
-    for (const page of filtered) {
-      if (!groups[page.category]) {
-        groups[page.category] = [];
+  const featured = useMemo(
+    () => filtered.filter((e) => e.signature).sort(byOrder),
+    [filtered, byOrder],
+  );
+
+  // Group by display section (in SECTION_KEYS order), then by sub-group.
+  const sections = useMemo(() => {
+    return SECTION_KEYS.map((key) => {
+      const inSection = filtered.filter((e) => e.section === key).sort(byOrder);
+      // Group by the localized sub-group label, preserving first-seen order.
+      const groups: {
+        label: string;
+        entries: ExampleEntry[];
+      }[] = [];
+      for (const entry of inSection) {
+        const label = localize(entry.group, lang);
+        const existing = groups.find((g) => g.label === label);
+        if (existing) existing.entries.push(entry);
+        else groups.push({ label, entries: [entry] });
       }
-      groups[page.category].push(page);
-    }
-    return groups;
-  }, [filtered]);
+      return { key, groups, count: inSection.length };
+    }).filter((s) => s.count > 0);
+  }, [filtered, byOrder, lang]);
 
   return (
     <div className="h-screen w-screen overflow-auto bg-background text-foreground">
-      <div className="mx-auto max-w-6xl p-6">
-        <Card className="mb-4">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle>Navara Three — Examples</CardTitle>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Toggle theme"
-              onClick={toggle}
-            >
-              {dark ? (
-                <Sun className="h-4 w-4" />
-              ) : (
-                <Moon className="h-4 w-4" />
-              )}
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search examples…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="pl-9"
+      <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-12">
+        <header className="mb-12 flex flex-col gap-6">
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="text-lg font-semibold tracking-tight sm:text-xl">
+              {localize(UI.title, lang)}
+            </h1>
+            <div className="flex items-center gap-1">
+              <LangSelect
+                lang={lang}
+                setLang={setLang}
+                label={localize(UI.toggleLang, lang)}
               />
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={localize(UI.toggleTheme, lang)}
+                onClick={toggle}
+              >
+                {dark ? (
+                  <Sun className="h-4 w-4" />
+                ) : (
+                  <Moon className="h-4 w-4" />
+                )}
+              </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder={localize(UI.searchPlaceholder, lang)}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+        </header>
 
-        <Separator className="mb-4" />
+        {featured.length > 0 && (
+          <section className="mb-12">
+            <h2 className="mb-5 flex items-center gap-2 text-lg font-semibold tracking-tight">
+              <Star className="h-4 w-4 fill-current" />
+              {localize(UI.featured, lang)}
+            </h2>
+            <ExampleGrid entries={featured} lang={lang} />
+          </section>
+        )}
 
-        {Object.entries(groupedPages)
-          .sort(([a], [b]) => {
-            // Sort "uncategorized" to the end
-            if (a === "uncategorized") return 1;
-            if (b === "uncategorized") return -1;
-            if (a === "showcases") return -1;
-            if (b === "showcases") return 1;
-            return a.localeCompare(b);
-          })
-          .map(([category, categoryPages]) => (
-            <section key={category} className="mb-8">
-              <h2 className="mb-4 text-xl font-semibold capitalize">
-                {category.replace(/-/g, " ")}
-              </h2>
-              <PageList pages={categoryPages} />
-            </section>
-          ))}
+        {sections.map((section) => (
+          <section key={section.key} className="mb-12">
+            <h2 className="mb-5 text-lg font-semibold tracking-tight">
+              {SECTION_LABELS[section.key][lang]}
+            </h2>
+            {section.groups.map((group, i) => (
+              <div key={group.label || i} className="mb-6">
+                {group.label && (
+                  <h3 className="mb-2 text-sm font-medium text-muted-foreground">
+                    {group.label}
+                  </h3>
+                )}
+                <ExampleGrid entries={group.entries} lang={lang} />
+              </div>
+            ))}
+          </section>
+        ))}
+
+        {sections.length === 0 && featured.length === 0 && (
+          <p className="text-muted-foreground">
+            {localize(UI.noMatch, lang)} “{query}”.
+          </p>
+        )}
       </div>
     </div>
   );

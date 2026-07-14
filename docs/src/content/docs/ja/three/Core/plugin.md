@@ -2,7 +2,7 @@
 title: Plugin
 description: プラグインの実装について
 sidebar:
-  order: 22
+  order: 810
 ---
 
 プラグインを実装するための API について説明します。プラグインシステムの概念については [About Plugin](../../../three/introduction/about-plugin/) を参照してください。

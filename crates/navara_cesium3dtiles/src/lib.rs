@@ -48,6 +48,7 @@ mod tile_content_parser;
 
 use bevy_ecs::schedule::IntoScheduleConfigs;
 pub use cesium3dtiles::*;
+pub use cleanup_system::{Cesium3dTilesRetentionPool, ModelContentIndex};
 use navara_data_requester::{DataRequesterSet, send_data_request_events_with_priority_and_sort};
 
 /// Plugin that adds Cesium 3D Tiles support to the Navara engine.
@@ -61,6 +62,8 @@ pub struct Cesium3dTilesPlugin;
 impl Plugin for Cesium3dTilesPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Cesium3dTilesNestedTreeMap>();
+        app.init_resource::<cleanup_system::Cesium3dTilesRetentionPool>();
+        app.init_resource::<cleanup_system::ModelContentIndex>();
         // Standalone B3DM layer systems (not part of 3D Tiles)
         app.add_systems(
             Update,
@@ -104,6 +107,7 @@ impl Plugin for Cesium3dTilesPlugin {
                 cleanup_system::remove_invisible_rendered_tiles::<pnts::parser::PntsParser>,
                 cleanup_system::remove_invisible_rendered_tiles::<glb::parser::GlbParser>,
                 cleanup_system::remove_invisible_rendered_tiles::<gltf_features::parser::GltfFeaturesParser>,
+                cleanup_system::enforce_memory_budget,
                 // Phase 5: Layer management
                 cesium3dtiles::system::delete_cesium3dtiles_layer,
                 cesium3dtiles::system::update_cesium3dtiles_layer,
