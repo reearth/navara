@@ -58,13 +58,15 @@ use navara_camera::CameraFrustum;
 use navara_component::{Deleted, Priority};
 use navara_data_requester::DataRequesterStatus;
 use navara_feature_component::{id::FeatureId, render::RenderableFeature};
+use navara_fog::Fog;
 use navara_math::Vec3;
+use navara_memory::SseDegrade;
 use navara_parser::cesium3dtiles::tileset::Refine;
 use navara_window::Window;
 use url::Url;
 
 use crate::{
-    Cesium3dTileContentDataRequesterMarker, Cesium3dTilesNestedTreeMap,
+    Cesium3dTileContentDataRequesterMarker, Cesium3dTilesNestedTreeMap, Cesium3dTilesRetentionPool,
     RenderedCesium3dTileContent, TileOrderByDistance, b3dm::RenderedCesium3dTileContentB3dmMarker,
     cesium3dtiles::Cesium3dTilesNestedMetadataDataRequesterMarker,
     glb::RenderedCesium3dTileContentGlbMarker,
@@ -114,7 +116,10 @@ pub fn select_tiles(
     rendered_tiles: &mut Query<&mut RenderedCesium3dTileContent>,
     features: &Query<&FeatureId>,
     renderable_features: &Query<&RenderableFeature>,
+    pool: &Cesium3dTilesRetentionPool,
     window: &Window,
+    fog: &Fog,
+    degrade: SseDegrade,
     is_v1_1: bool,
 ) {
     let mut rendered_tiles_count = 0;
@@ -129,6 +134,8 @@ pub fn select_tiles(
         frustum,
         requesters,
         window,
+        fog,
+        degrade,
         rendered_tiles,
         features,
         renderable_features,
@@ -151,6 +158,7 @@ pub fn select_tiles(
         tile,
         requesters,
         rendered_tiles,
+        pool,
         &mut rendered_tiles_count,
         is_v1_1,
     );
@@ -191,6 +199,8 @@ fn mark_leaves(
     frustum: &CameraFrustum,
     requesters: &Cesium3dTileContentRequesterQuery,
     window: &Window,
+    fog: &Fog,
+    degrade: SseDegrade,
     rendered_tiles: &mut Query<&mut RenderedCesium3dTileContent>,
     features: &Query<&FeatureId>,
     renderable_features: &Query<&RenderableFeature>,
@@ -210,6 +220,9 @@ fn mark_leaves(
 
     tile.state.is_visible = within_frustum;
 
+    // Memory-pressure degrade: raise the effective threshold for far tiles
+    // (computed from the f64 distance, before the f32 casts below).
+    let mut effective_max_sse = max_sse as f64;
     let (distance_from_camera, sse) = match &tile.bounding_volume {
         Some(bv) => {
             // Tight bounding volumes (OBB for region/box) let us go back to
@@ -218,8 +231,15 @@ fn mark_leaves(
             // produced. `.max(1.0)` only guards against the camera-inside-
             // volume case where distance collapses to 0.
             let distance_from_camera = bv.distance_to_point(camera_position).max(1.0);
-            let sse = (tile_meta.geometric_error)
+            let mut sse = (tile_meta.geometric_error)
                 / (distance_from_camera * (frustum.sse_denominator / window.height));
+            // Distance-weighted LOD fog relaxation, mirroring
+            // `Tile::calc_sse`: far tiles tolerate a larger error and stay
+            // coarser. Negative values simply always meet the threshold.
+            if fog.enabled {
+                sse -= navara_fog::fog(distance_from_camera, fog.density) * fog.sse_factor;
+            }
+            effective_max_sse = degrade.effective_max_sse(max_sse as f64, distance_from_camera);
             (distance_from_camera as f32, sse as f32)
         }
         None => (0., 0.),
@@ -264,7 +284,7 @@ fn mark_leaves(
         return TraversalResult::Selected;
     }
 
-    let meets_sse = sse <= max_sse;
+    let meets_sse = (sse as f64) <= effective_max_sse;
 
     if meets_sse && !can_unconditionally_refine && !were_children_loaded {
         return TraversalResult::Selected;
@@ -321,6 +341,8 @@ fn mark_leaves(
                 frustum,
                 requesters,
                 window,
+                fog,
+                degrade,
                 rendered_tiles,
                 features,
                 renderable_features,
@@ -422,6 +444,15 @@ fn mark_for_preload(tile: &mut Cesium3dTileContent) {
 /// tile is a JSON tile with a loaded nested tileset, the children iterated
 /// below are the synthetic single-element list rooted at the loaded
 /// tileset's root.
+///
+/// Returns whether this tile's subtree still holds an *active* rendered-tile
+/// entity — one that is visible, touched (in-frustum, or a REPLACE parent
+/// mid-refinement), OR retained in the memory-budget pool. Pooled descendants
+/// count as active so the subtree (and every `rendered_tile_id` link down to
+/// them) is kept resident: a pan-back then reactivates the pooled tiles in
+/// place without re-parsing the subtree or refetching content — the retention
+/// pool's core guarantee. Only a subtree with NO visible/touched/pooled
+/// rendered entity is pruned, so pruning never orphans a pool entry.
 #[allow(clippy::too_many_arguments)]
 fn mark_rendered_tiles(
     commands: &mut Commands,
@@ -432,9 +463,10 @@ fn mark_rendered_tiles(
     tile: &mut Cesium3dTileContent,
     requesters: &Cesium3dTileContentRequesterQuery,
     rendered_tiles: &mut Query<&mut RenderedCesium3dTileContent>,
+    pool: &Cesium3dTilesRetentionPool,
     rendered_tiles_count: &mut u32,
     is_v1_1: bool,
-) {
+) -> bool {
     let touched_last_frame = tile.state.touched_last_frame;
     tile.state.touched_last_frame = tile.state.touched;
 
@@ -465,7 +497,9 @@ fn mark_rendered_tiles(
                     is_rendered = true;
                 }
             } else if state.is_visible {
-                request_tile_content(commands, buf, base_url, tile, requesters, priority, is_v1_1);
+                request_tile_content(
+                    commands, buf, base_url, tile, requesters, priority, is_v1_1, layer_id,
+                );
             } else {
                 toggle_rendered_tile_visible(rendered_tiles, tile, false, touched);
             }
@@ -527,13 +561,30 @@ fn mark_rendered_tiles(
         (Arc::clone(base_url), is_v1_1)
     };
 
+    // "Active" = this tile owns a rendered entity that is visible or touched
+    // (in-frustum, or a REPLACE parent mid-refinement), OR is retained in the
+    // memory-budget pool. Pooled entities MUST keep the subtree alive: pruning
+    // `children` would sever their `rendered_tile_id` link and strand them as
+    // unrevivable orphans (the pool purge keeps `!is_visible && !touched`
+    // entries forever, so a revisit would re-parse and refetch the whole
+    // subtree, and each pan cycle would leak one dead orphaned copy into the
+    // budget). Keeping the subtree resident is exactly the retention pool's
+    // guarantee: a pan-back reactivates in place without refetching.
+    let self_active = tile.rendered_tile_id.is_some_and(|id| {
+        rendered_tiles
+            .get(id)
+            .is_ok_and(|t| t.is_visible || t.touched)
+            || pool.entries.contains_key(&id)
+    });
+
     let children = match tile.children.as_mut() {
         Some(c) => c,
-        None => return,
+        None => return self_active,
     };
 
+    let mut children_active = false;
     for child_tile in children.iter_mut() {
-        mark_rendered_tiles(
+        children_active |= mark_rendered_tiles(
             commands,
             buf,
             layer_id,
@@ -542,16 +593,27 @@ fn mark_rendered_tiles(
             child_tile,
             requesters,
             rendered_tiles,
+            pool,
             rendered_tiles_count,
             child_is_v1_1,
         );
     }
 
-    // Reset children once it is out of touch.
-    if !touched {
+    // Reset the reconstructable `children` runtime tree only once this tile is
+    // out of touch AND its subtree holds no active rendered entity — where
+    // "active" now includes pooled (retained) descendants (see `self_active`
+    // above). A subtree that still owns any visible / touched / pooled rendered
+    // tile is kept resident so its `rendered_tile_id` links survive: pruning it
+    // would orphan those entities. Only a subtree with nothing rendered left is
+    // dropped, so this can never strand a pool entry. The metadata is still
+    // reclaimed for genuinely empty subtrees, and a revisit re-parses them from
+    // the resident `tile_meta` / nested-tileset metadata.
+    if !touched && !children_active {
         tile.state.are_all_children_loaded = false;
         tile.children = None;
     }
+
+    self_active || children_active
 }
 
 /// Cleans up tile resources when no rendered tile exists.
@@ -563,8 +625,7 @@ fn mark_rendered_tiles(
 ///
 /// Runtime state for nested tiles (their `Cesium3dTileContent` subtree) is
 /// stored as `tile.children` and is dropped by `mark_rendered_tiles` via its
-/// existing `if !touched { tile.children = None }` path — no extra work
-/// here.
+/// out-of-touch prune (`!touched && !children_active`) — no extra work here.
 fn remove_resources_if_no_rendered_tile(
     commands: &mut Commands,
     tile: &mut Cesium3dTileContent,
@@ -639,9 +700,15 @@ fn toggle_rendered_tile_visible(
         .and_then(|id| rendered_tiles.get_mut(id).ok());
     match &mut rendered_tile {
         Some(t) => {
-            t.is_visible = visible;
             // Keep touching if the refine type is `Replace`.
-            t.touched = matches!(tile.refine, Refine::Replace) && touched;
+            let touched = matches!(tile.refine, Refine::Replace) && touched;
+            // Skip the write when nothing changed: a `DerefMut` here marks the
+            // component `Changed`, which re-triggers the traversal system every
+            // frame even with a static camera.
+            if t.is_visible != visible || t.touched != touched {
+                t.is_visible = visible;
+                t.touched = touched;
+            }
             true
         }
         None => false,
@@ -796,4 +863,197 @@ fn construct_child_tile_url(base_url: &Url, child_url: &str) -> Url {
             .append_pair(key.as_ref(), value.as_ref());
     }
     new_url
+}
+
+#[cfg(test)]
+mod prune_tests {
+    use super::*;
+    use crate::Cesium3dTilesNestedTreeMap;
+    use bevy_app::App;
+    use bevy_ecs::system::{ResMut, SystemState};
+    use navara_math::Transform;
+    use navara_parser::cesium3dtiles::tileset::Refine;
+
+    /// A renderable tile node whose `rendered_tile_id` points at `rendered`.
+    fn renderable_child(rendered: Entity) -> Cesium3dTileContent {
+        Cesium3dTileContent {
+            uri: Some("a.b3dm".to_string()),
+            data_requester_id: None,
+            rendered_tile_id: Some(rendered),
+            children: None,
+            refine: Refine::Replace,
+            is_renderable_content: true,
+            bounding_volume: None,
+            transform: Some(Transform::IDENTITY),
+            state: Default::default(),
+        }
+    }
+
+    /// An out-of-touch renderable parent holding a single `child`.
+    fn untouched_parent(child: Cesium3dTileContent) -> Cesium3dTileContent {
+        Cesium3dTileContent {
+            uri: Some("p.b3dm".to_string()),
+            data_requester_id: None,
+            rendered_tile_id: None,
+            children: Some(vec![child]),
+            refine: Refine::Replace,
+            is_renderable_content: true,
+            bounding_volume: None,
+            transform: Some(Transform::IDENTITY),
+            state: Default::default(),
+        }
+    }
+
+    fn spawn_rendered(app: &mut App, is_visible: bool, touched: bool) -> Entity {
+        let layer_id = app.world_mut().spawn_empty().id();
+        let data_requester_id = app.world_mut().spawn_empty().id();
+        app.world_mut()
+            .spawn(RenderedCesium3dTileContent {
+                layer_id,
+                feature_id: None,
+                data_requester_id,
+                is_visible,
+                touched,
+            })
+            .id()
+    }
+
+    /// Runs `mark_rendered_tiles` on `root`, returning `root` afterward.
+    /// `pooled` lists rendered entities to seed into the retention pool.
+    #[allow(clippy::type_complexity)]
+    fn run_mark(
+        app: &mut App,
+        mut root: Cesium3dTileContent,
+        pooled: &[Entity],
+    ) -> Cesium3dTileContent {
+        let layer_id = app.world_mut().spawn_empty().id();
+        let base_url = Arc::new(Url::parse("https://example.com/t.json").unwrap());
+        let mut pool = Cesium3dTilesRetentionPool::default();
+        for e in pooled {
+            pool.entries.insert(
+                *e,
+                navara_memory::RetainedEntry {
+                    retained_at: 0,
+                    cost: navara_memory::TileCost::default(),
+                },
+            );
+        }
+        let mut state: SystemState<(
+            Commands,
+            ResMut<BufferStore>,
+            ResMut<Cesium3dTilesNestedTreeMap>,
+            Cesium3dTileContentRequesterQuery,
+            Query<&mut RenderedCesium3dTileContent>,
+        )> = SystemState::new(app.world_mut());
+        {
+            let (mut commands, mut buf, mut nested_map, requesters, mut rendered_tiles) =
+                state.get_mut(app.world_mut());
+            let mut count = 0;
+            mark_rendered_tiles(
+                &mut commands,
+                &mut buf,
+                layer_id,
+                &base_url,
+                &mut nested_map,
+                &mut root,
+                &requesters,
+                &mut rendered_tiles,
+                &pool,
+                &mut count,
+                false,
+            );
+        }
+        state.apply(app.world_mut());
+        root
+    }
+
+    fn new_app() -> App {
+        let mut app = App::new();
+        app.init_resource::<BufferStore>();
+        app.init_resource::<Cesium3dTilesNestedTreeMap>();
+        app
+    }
+
+    #[test]
+    fn keeps_children_when_only_pooled_descendant() {
+        // FIX 5: an out-of-touch parent whose sole descendant is a *pooled*
+        // (invisible + untouched, but retention-pool member) rendered tile MUST
+        // keep its `children` subtree resident. Pruning would sever the pooled
+        // tile's `rendered_tile_id` link and strand it as an unrevivable orphan
+        // (the pool purge keeps `!is_visible && !touched` entries forever), so a
+        // pan-back would re-parse and refetch the whole subtree and each pan
+        // cycle would leak one dead orphaned copy into the budget. Keeping the
+        // subtree alive lets the pool reactivate the tile in place on revisit.
+        let mut app = new_app();
+        let pooled = spawn_rendered(&mut app, false, false);
+        let root = untouched_parent(renderable_child(pooled));
+
+        let root = run_mark(&mut app, root, &[pooled]);
+
+        assert!(
+            root.children.is_some(),
+            "a pooled descendant must keep the subtree resident so it is not orphaned"
+        );
+        assert!(app.world().get_entity(pooled).is_ok());
+    }
+
+    #[test]
+    fn prunes_children_when_no_rendered_descendant() {
+        // A subtree with NO rendered entity at all (not visible, not touched,
+        // not pooled) is safely pruned — there is no `rendered_tile_id` to
+        // orphan — so its reconstructable metadata heap is reclaimed.
+        let mut app = new_app();
+        let orphaned = spawn_rendered(&mut app, false, false);
+        // The rendered entity exists but is NOT in the retention pool.
+        let root = untouched_parent(renderable_child(orphaned));
+
+        let root = run_mark(&mut app, root, &[]);
+
+        assert!(
+            root.children.is_none(),
+            "a subtree with no visible/touched/pooled rendered tile is pruned"
+        );
+    }
+
+    #[test]
+    fn keeps_children_when_descendant_active() {
+        // Converse: a visible descendant is *active*, so pruning would orphan
+        // its `rendered_tile_id`; `children` must be retained.
+        let mut app = new_app();
+        let visible = spawn_rendered(&mut app, true, false);
+        let mut child = renderable_child(visible);
+        // Drive the child down the "keep visible" branch of mark_rendered_tiles.
+        child.state.touched = true;
+        child.state.leaf = true;
+        child.state.is_data_loaded = true;
+        child.state.is_visible = true;
+        let root = untouched_parent(child);
+
+        let root = run_mark(&mut app, root, &[]);
+
+        assert!(
+            root.children.is_some(),
+            "an active (visible) descendant must keep the subtree resident"
+        );
+    }
+
+    #[test]
+    fn keeps_children_when_descendant_touched() {
+        // A touched (REPLACE parent mid-refinement) descendant is active too.
+        let mut app = new_app();
+        let touched_entity = spawn_rendered(&mut app, false, true);
+        let mut child = renderable_child(touched_entity);
+        child.state.touched = true;
+        child.state.leaf = true;
+        child.state.is_data_loaded = true;
+        // Not visible, but its rendered entity carries `touched = true`.
+        let root = untouched_parent(child);
+
+        let root = run_mark(&mut app, root, &[]);
+
+        assert!(
+            root.children.is_some(),
+            "a touched descendant must keep the subtree resident"
+        );
+    }
 }

@@ -12,6 +12,7 @@ import { type CommonTasks } from "./worker";
 export type { Promise } from "workerpool";
 export type {
   RecyclingWorkerPoolOptions,
+  WorkerPoolHeapStats,
   WorkerPoolStats,
 } from "./recyclingPool";
 
@@ -21,6 +22,8 @@ const {
   warmUpWorkerPool,
   worker,
   workerPoolStats,
+  workerPoolHeapStats,
+  probeWorkerPoolHeap,
 } = (() => {
   // Restrict access to this object.
   let worker:
@@ -69,6 +72,10 @@ const {
       };
     },
     workerPoolStats: () => worker?.pool.stats(),
+    /** Last-probed WASM heap per worker; see RecyclingWorkerPool.heapStats. */
+    workerPoolHeapStats: () => worker?.pool.heapStats(),
+    /** Requests fresh heap probes (coalesced per worker; display-rate safe). */
+    probeWorkerPoolHeap: () => worker?.pool.probeHeap(),
   };
 })();
 
@@ -77,6 +84,8 @@ export {
   terminateWorkerPool,
   warmUpWorkerPool,
   workerPoolStats,
+  workerPoolHeapStats,
+  probeWorkerPoolHeap,
 };
 
 export const canWorkerProcessImmediately = () => {

@@ -7,6 +7,7 @@ use navara_fog::Fog;
 use navara_frame::FrameManager;
 use navara_layer::TilesLayer;
 use navara_math::{FloatType, Transform};
+use navara_memory::SseDegrade;
 use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 use navara_source::SourceStore;
 use navara_tile_component::{
@@ -50,6 +51,7 @@ pub fn traverse_raster(
     texture_fragment: &TileTextureFragmentQuery,
     fog: &Fog,
     max_sse: f64,
+    degrade: SseDegrade,
     terrain_present: bool,
 ) {
     let extent = match qt.qt.get(handle) {
@@ -116,7 +118,8 @@ pub fn traverse_raster(
         );
     }
 
-    let meets_sse = sse <= max_sse && is_over_min_z;
+    let meets_sse =
+        sse <= degrade.effective_max_sse(max_sse, distance_from_camera) && is_over_min_z;
 
     // Once the screen-space error is satisfied, stop: no need for finer tiles.
     // Beyond max zoom, the layer overscales (parent texture stretched), so we
@@ -154,6 +157,7 @@ pub fn traverse_raster(
                 texture_fragment,
                 fog,
                 max_sse,
+                degrade,
                 terrain_present,
             );
         }
@@ -252,6 +256,7 @@ mod tests {
             &texture_fragment,
             &fog,
             config.max_sse,
+            SseDegrade::NONE,
             config.terrain_present,
         );
     }

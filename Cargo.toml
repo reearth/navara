@@ -121,6 +121,7 @@ navara_layer = { path = "crates/navara_layer" }
 navara_layer_event = { path = "crates/navara_layer_event" }
 navara_material = { path = "crates/navara_material" }
 navara_math = { path = "crates/navara_math" }
+navara_memory = { path = "crates/navara_memory" }
 navara_mesh = { path = "crates/navara_mesh" }
 navara_mock = { path = "crates/navara_mock" }
 navara_mvt = { path = "crates/navara_mvt" }

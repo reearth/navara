@@ -41,9 +41,26 @@ pub enum DataRequesterSet {
     SendRequests,
 }
 
+/// Cap on in-flight (Requested) data fetches per tile pipeline
+/// (raster fragments / terrain DEM / vector tiles / 3D Tiles content /
+/// hillshade DEM each apply it independently). Configurable from JS via
+/// `Core.setMaxPendingRequests` — mobile presets lower it to shrink the
+/// decode/upload burst during camera moves.
+#[derive(bevy_ecs::prelude::Resource, Debug, Clone, Copy)]
+pub struct RequestLimits {
+    pub max_pendings: u32,
+}
+
+impl Default for RequestLimits {
+    fn default() -> Self {
+        Self { max_pendings: 50 }
+    }
+}
+
 impl bevy_app::Plugin for DataRequesterPlugin {
     fn build(&self, app: &mut bevy_app::App) {
         app.init_resource::<DataManager>()
+            .init_resource::<RequestLimits>()
             .configure_sets(
                 PostUpdate,
                 (
@@ -60,6 +77,7 @@ impl bevy_app::Plugin for DataRequesterPlugin {
                     send_data_request_events_with_priority,
                     set_data_requester_loaded,
                     set_data_requester_failed,
+                    release_landed_reservations,
                 )
                     .chain()
                     .in_set(DataRequesterSet::SendRequests),
@@ -307,6 +325,33 @@ pub fn set_data_requester_failed(
         // Without this, new consumers would see fetch_already_enqueued=true,
         // get Requested marker, but no fetch would actually happen.
         data_manager.reset_fetch_enqueued(e.id);
+    }
+}
+
+/// Releases the dispatch-time [`ReservedCost`] the frame a fetch resolves.
+///
+/// A reservation stands in for a tile's cost only while the fetch is in flight.
+/// Once the requester's status leaves `Pending` (success or fail), the actual
+/// [`navara_memory::TileCost`] is about to land (a frame or so later, when the
+/// pipeline parses the loaded payload). Removing the reservation here — before
+/// that measured cost lands — keeps a reservation and its own tile's actual
+/// cost from systematically double-counting: the worst case is a one-frame
+/// conservative *under*-count between release and land, which is harmless (it
+/// only briefly relaxes an already-early gate).
+///
+/// Abort paths (requester despawned while still `Pending`) don't reach here;
+/// the `ReservedCost` `on_remove` hook releases those on despawn instead, so
+/// every exit path is covered.
+pub fn release_landed_reservations(
+    mut commands: Commands,
+    requesters: Query<(Entity, &DataRequester), With<navara_memory::ReservedCost>>,
+) {
+    for (entity, data_req) in requesters.iter() {
+        if !data_req.is_pending() {
+            commands
+                .entity(entity)
+                .remove::<navara_memory::ReservedCost>();
+        }
     }
 }
 

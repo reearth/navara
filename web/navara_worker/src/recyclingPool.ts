@@ -66,10 +66,22 @@ type Slot = {
   draining: boolean;
   /** Whether a heap probe is already in flight (probes are coalesced). */
   probing: boolean;
+  /** WASM heap size from the most recent probe; undefined until the first
+   * probe settles and after a recycle. Point-in-time — see {@link heapStats}. */
+  lastHeapBytes: number | undefined;
 };
 
 export type WorkerPoolStats = ReturnType<Pool["stats"]> & {
   tasksSinceSpawn: number;
+};
+
+export type WorkerPoolHeapStats = {
+  /** Last probed WASM heap per slot (undefined = not probed yet). */
+  perSlot: (number | undefined)[];
+  /** Sum of the probed heaps. */
+  totalBytes: number;
+  /** The per-worker budget slots are recycled against. */
+  maxWorkerHeapBytes: number;
 };
 
 const createPool = (url: string) =>
@@ -106,6 +118,7 @@ export class RecyclingWorkerPool {
       inflight: 0,
       draining: false,
       probing: false,
+      lastHeapBytes: undefined,
     }));
   }
 
@@ -177,6 +190,34 @@ export class RecyclingWorkerPool {
     return aggregated;
   }
 
+  /**
+   * Aggregated WASM heap sizes from the most recent probes. Values are
+   * point-in-time samples taken after task settlements (or {@link probeHeap});
+   * under load they lag by the tasks queued ahead of the probe.
+   */
+  heapStats(): WorkerPoolHeapStats {
+    const perSlot = this.slots.map((slot) => slot.lastHeapBytes);
+    return {
+      perSlot,
+      totalBytes: perSlot.reduce<number>((sum, b) => sum + (b ?? 0), 0),
+      maxWorkerHeapBytes: this.maxWorkerHeapBytes,
+    };
+  }
+
+  /**
+   * Requests a fresh heap probe on every non-draining slot (draining slots
+   * are about to be recycled anyway). Probes coalesce per slot, so calling
+   * this at display frequency is safe.
+   */
+  probeHeap(): void {
+    if (this.terminated) return;
+    for (const slot of this.slots) {
+      if (!slot.draining) {
+        this.probeSlot(slot);
+      }
+    }
+  }
+
   terminate(): void {
     if (this.idleSweepTimer !== undefined) {
       clearTimeout(this.idleSweepTimer);
@@ -222,6 +263,7 @@ export class RecyclingWorkerPool {
     slot.pool = createPool(this.url);
     slot.tasksSinceSpawn = 0;
     slot.draining = false;
+    slot.lastHeapBytes = undefined;
     // Fire-and-forget; a warm-up failure surfaces on the next real task.
     this.warmSlot(slot).catch(() => undefined);
   }
@@ -289,6 +331,9 @@ export class RecyclingWorkerPool {
       slot.pool
         .exec("getWasmMemoryUsage")
         .then((bytes) => {
+          if (typeof bytes === "number") {
+            slot.lastHeapBytes = bytes;
+          }
           settle(typeof bytes === "number" && bytes >= this.maxWorkerHeapBytes);
         })
         .catch(() => {

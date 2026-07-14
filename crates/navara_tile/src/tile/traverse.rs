@@ -9,6 +9,7 @@ use navara_data_requester::DataManager;
 use navara_fog::Fog;
 use navara_frame::FrameManager;
 use navara_math::{FloatType, Transform};
+use navara_memory::SseDegrade;
 
 use navara_mesh::Mesh;
 use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
@@ -63,6 +64,7 @@ pub fn traverse_terrain(
     meshes: &mut Query<&mut Mesh, (With<TileMeshMarker>, Without<Deleted>)>,
     fog: &Fog,
     max_sse: f64,
+    degrade: SseDegrade,
     is_ancestor_rendered: bool,
     // This is used to keep rendering current children when parent tile isn't ready after you zoomed out.
     meets_sse_ancestors: bool,
@@ -174,7 +176,8 @@ pub fn traverse_terrain(
         true
     };
 
-    let meets_sse = sse <= max_sse && is_over_min_z;
+    let meets_sse =
+        sse <= degrade.effective_max_sse(max_sse, distance_from_camera) && is_over_min_z;
 
     let is_renderable = is_rendered_last_frame || is_tile_ready;
 
@@ -289,6 +292,7 @@ pub fn traverse_terrain(
                 meshes,
                 fog,
                 max_sse,
+                degrade,
                 if meets_sse_ancestors {
                     is_ancestor_rendered
                 } else {
@@ -780,6 +784,7 @@ mod tests {
             &mut meshes,
             &fog,
             config.max_sse,
+            SseDegrade::NONE,
             false,
             false,
             None,

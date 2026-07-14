@@ -13,3 +13,4 @@ rustc-hash.workspace = true
 navara_buffer_store.workspace = true
 navara_event_store.workspace = true
 navara_component.workspace = true
+navara_memory.workspace = true

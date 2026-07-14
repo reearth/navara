@@ -24,6 +24,7 @@ navara_geojson.workspace = true
 navara_input.workspace = true
 navara_layer.workspace = true
 navara_layer_event.workspace = true
+navara_memory.workspace = true
 navara_mesh.workspace = true
 navara_occluder.workspace = true
 navara_source.workspace = true

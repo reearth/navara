@@ -107,6 +107,38 @@ describe("TileTextureCache.markDirty + consumeDirty", () => {
   });
 });
 
+describe("TileTextureCache dev refcount diagnostics", () => {
+  it("logs an error on release without acquire", () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { cache } = makeCache();
+    cache.release(999n);
+    expect(spy).toHaveBeenCalledWith(
+      expect.stringContaining("double release or release without acquire"),
+    );
+    spy.mockRestore();
+  });
+
+  it("logs an error on double release", () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { cache } = makeCache();
+    cache.acquire(1n);
+    cache.release(1n);
+    // Entry is gone after the first release, so this is release-without-entry.
+    cache.release(1n);
+    expect(spy).toHaveBeenCalledTimes(1);
+    spy.mockRestore();
+  });
+
+  it("logs an error when disposeAll finds live refcounts", () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { cache } = makeCache();
+    cache.acquire(1n);
+    cache.disposeAll();
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining("leaked acquire"));
+    spy.mockRestore();
+  });
+});
+
 describe("TileTextureCache.disposeAll", () => {
   it("disposes every atlas and clears the cache", () => {
     const { cache } = makeCache();

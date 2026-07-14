@@ -6,11 +6,12 @@ use navara_core::{TileXYZ, TilingScheme, WGS84_64};
 use navara_fog::Fog;
 use navara_frame::FrameManager;
 use navara_math::Transform;
+use navara_memory::{MemoryLedger, RetainedEntry, SseDegrade, SsePressure, TileCost};
 use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 use navara_texture_fragment::TextureFragment;
 use navara_tile_component::{
     ChangedTileTextureFragmentQuery, RasterTile, RasterTileQuadtree, TerrainTileQuadtree,
-    TileTextureFragmentMarker, TileTextureFragmentQuery,
+    TileHandle, TileTextureFragmentMarker, TileTextureFragmentQuery,
 };
 use navara_window::Window;
 
@@ -19,12 +20,18 @@ use navara_layer::{TerrainLayer, TilesLayer};
 use super::tile_cache_manager::RasterTileCacheManager;
 use super::traverse::traverse_raster;
 
-const MAX_PENDINGS: u32 = 50;
-
 /// Rate-limit raster texture fragment requests. Regular textures belong to the
 /// raster quadtree, so the rejected slot is cleared against `RasterTileQuadtree`
 /// (using the fragment's `TileTextureFragmentMarker`, whose handle indexes the
 /// raster quadtree for these entities).
+///
+/// No dispatch-time `ReservedCost` is attached here (unlike terrain / vector /
+/// 3D Tiles): a raster fragment's actual `TileCost` (`raster_tile_bytes`) is
+/// pre-charged to the ledger EAGERLY at spawn by `attach_texture_fragment_cost`
+/// (on `Added<TextureFragment>`), so its in-flight cost is already visible to
+/// the load gate before the fetch resolves. Adding a reservation on the same
+/// entity would systematically double-count that fragment against its own
+/// `TileCost` for the fragment's whole life.
 #[allow(clippy::type_complexity)]
 pub fn filter_requestable_raster_texture_fragment(
     mut commands: Commands,
@@ -43,9 +50,19 @@ pub fn filter_requestable_raster_texture_fragment(
         ),
     >,
     requested_fragments: Query<Entity, (With<TextureFragment>, With<Requested>, Without<Deleted>)>,
+    limits: Res<navara_data_requester::RequestLimits>,
+    pressure: Res<SsePressure>,
 ) {
     let pendings = requested_fragments.iter().count();
-    let num_skip = (MAX_PENDINGS as i32 - pendings as i32).max(0);
+    // Load gate: when the memory budget is exhausted, start ZERO new fetches
+    // and settle on the already-loaded tiles instead of evicting → refetching
+    // in an endless loop. In-flight requests proceed; forcing `num_skip == 0`
+    // rejects every newly-Added fragment this frame so none is dispatched.
+    let num_skip = if pressure.load_gate_closed {
+        0
+    } else {
+        (limits.max_pendings as i32 - pendings as i32).max(0)
+    };
 
     for (e, marker, _, _) in fragments
         .iter()
@@ -106,9 +123,10 @@ pub fn update_raster_tiles(
     changed_texture_fragment: ChangedTileTextureFragmentQuery,
     mut camera_set: ParamSet<(
         Query<(Ref<Transform>, Ref<CameraFrustum>), With<CameraMarker>>,
-        Query<&Fog>,
+        Query<Ref<Fog>>,
     )>,
     occluder: Query<Ref<EllipsoidalOccluder>>,
+    pressure: Res<SsePressure>,
 ) {
     let tiles_len = tiles.iter().len();
     let has_raster_layers = tiles.iter().any(|(t, _)| t.hillshade_config.is_none());
@@ -125,7 +143,11 @@ pub fn update_raster_tiles(
         None => return,
     };
 
-    let fog = camera_set.p1().single().unwrap().clone();
+    let (fog, is_fog_changed) = {
+        let fog_query = camera_set.p1();
+        let fog = fog_query.single().unwrap();
+        (Fog::clone(&fog), fog.is_changed())
+    };
     let camera = camera_set.p0();
     let (camera, frustum) = match camera.single() {
         Ok(c) => c,
@@ -140,7 +162,9 @@ pub fn update_raster_tiles(
         || camera.is_changed()
         || frustum.is_changed()
         || occluder.is_changed()
-        || is_layers_len_changed;
+        || is_layers_len_changed
+        || is_fog_changed
+        || pressure.is_changed();
     if !needs_update {
         return;
     }
@@ -148,6 +172,21 @@ pub fn update_raster_tiles(
     tc.last_rendered_frame = frame.rendered_frame();
     tc.prev_layers_len = tiles_len;
     tc.is_updated_in_this_frame = true;
+
+    // Memory-pressure LOD degrade, shared shape with the terrain traversal so
+    // raster texture depth stays aligned with terrain subdivision.
+    let camera_height = WGS84_64
+        .xyz_to_lle(navara_core::vec3_to_xyz(
+            camera.transform_point(navara_math::Vec3::ZERO),
+        ))
+        .height
+        .val();
+    let degrade = SseDegrade::new(
+        pressure.multiplier,
+        camera_height,
+        pressure.min,
+        pressure.max,
+    );
 
     let terrain_present = terrain_layer.iter().next().is_some();
 
@@ -178,18 +217,71 @@ pub fn update_raster_tiles(
             &texture_fragment,
             &fog,
             globe.max_sse as f64,
+            degrade,
             terrain_present,
         );
     }
 }
 
+/// Attaches a [`TileCost`] to newly spawned texture fragments so the memory
+/// ledger tracks the JS-side texture they will hold. Fragment dimensions are
+/// only known on the JS side, so the per-fragment hint is used.
+pub fn attach_texture_fragment_cost(
+    mut commands: Commands,
+    ledger: Res<MemoryLedger>,
+    fragments: Query<Entity, Added<TextureFragment>>,
+) {
+    for entity in &fragments {
+        commands.entity(entity).insert(TileCost {
+            cpu: 0,
+            gpu_est: ledger.cost_hints.raster_tile_bytes,
+        });
+    }
+}
+
+/// Destroys a raster tile: removes its quadtree node and marks its texture
+/// fragments `Deleted` (which drives the JS-side texture disposal). This is
+/// the single destroy path shared by `clear_raster_caches` (budget disabled)
+/// and `enforce_memory_budget` (eviction).
+fn destroy_raster_tile(
+    commands: &mut Commands,
+    qt: &mut RasterTileQuadtree,
+    tc: &mut RasterTileCacheManager,
+    handle: TileHandle,
+) {
+    tc.active_handles.remove(&handle);
+    tc.retained.remove(&handle);
+    if let Some(mut tile) = qt.qt.remove(handle) {
+        tile.destroy(commands);
+    }
+}
+
 /// Prune raster tiles not visited in the latest traversal. Mirrors the terrain
 /// `clear_caches` lifetime rule (kept for one extra frame to avoid thrashing).
+///
+/// When a memory budget is set, stale tiles move to the retention pool
+/// instead: the quadtree node and texture fragments stay alive, so a revisit
+/// needs no refetch and the JS-side texture disposal is deferred with them.
 pub fn clear_raster_caches(
     mut commands: Commands,
+    ledger: Res<MemoryLedger>,
     mut qt: ResMut<RasterTileQuadtree>,
     mut tc: ResMut<RasterTileCacheManager>,
 ) {
+    // If the budget was disabled at runtime (`setCacheBytes(undefined)`),
+    // retained tiles would otherwise leak forever: the loop below only scans
+    // `active_handles`, and `enforce_memory_budget` returns early with no
+    // budget. Destroy the whole retention pool so the original
+    // destroy-on-unvisited behavior is restored. Runs regardless of
+    // `is_updated_in_this_frame` so the drain is not deferred to the next
+    // traversal.
+    if !ledger.enabled() && !tc.retained.is_empty() {
+        let retained: Vec<TileHandle> = tc.retained.keys().copied().collect();
+        for handle in retained {
+            destroy_raster_tile(&mut commands, &mut qt, &mut tc, handle);
+        }
+    }
+
     if !tc.is_updated_in_this_frame {
         return;
     }
@@ -211,9 +303,287 @@ pub fn clear_raster_caches(
     }
 
     for handle in stale {
-        tc.active_handles.remove(&handle);
-        if let Some(mut tile) = qt.qt.remove(handle) {
-            tile.destroy(&mut commands);
+        if ledger.enabled() && qt.qt.get(handle).is_some() {
+            tc.active_handles.remove(&handle);
+            let fragments = qt
+                .qt
+                .get(handle)
+                .and_then(|t| t.texture_fragment_entity_ids.as_ref())
+                .map(|ids| ids.iter().flatten().count() as u64)
+                .unwrap_or(0);
+            tc.retained.insert(
+                handle,
+                RetainedEntry {
+                    retained_at: last_frame,
+                    cost: TileCost {
+                        cpu: 0,
+                        gpu_est: fragments * ledger.cost_hints.raster_tile_bytes,
+                    },
+                },
+            );
+            continue;
         }
+
+        destroy_raster_tile(&mut commands, &mut qt, &mut tc, handle);
+    }
+}
+
+/// Evicts retained raster tiles, oldest-visited first, until usage drops to
+/// the hysteresis target. Runs right after `clear_raster_caches`.
+pub fn enforce_memory_budget(
+    mut commands: Commands,
+    mut ledger: ResMut<MemoryLedger>,
+    pressure: Res<navara_memory::SsePressure>,
+    buf: Res<navara_buffer_store::BufferStore>,
+    frame: Res<FrameManager>,
+    mut qt: ResMut<RasterTileQuadtree>,
+    mut tc: ResMut<RasterTileCacheManager>,
+) {
+    // Purge entries that were revisited (traversal moved them back to
+    // `active_handles`) or whose tile no longer exists.
+    let active_handles = std::mem::take(&mut tc.active_handles);
+    tc.retained
+        .retain(|handle, _| !active_handles.contains(handle) && qt.qt.get(*handle).is_some());
+    tc.active_handles = active_handles;
+
+    if ledger.budget_bytes.is_none() {
+        return;
+    }
+
+    // While the load gate is closed, evict down to the reopen target even when
+    // not over budget, or usage stranded in the hysteresis band would keep the
+    // gate closed (and all new tile loads blocked) forever.
+    let usage_est = ledger.usage(buf.total_bytes() as u64);
+    if !ledger.needs_eviction(usage_est, pressure.load_gate_closed) {
+        return;
+    }
+
+    let current_frame = frame.rendered_frame();
+    let mut candidates: Vec<(TileHandle, usize, u64)> = tc
+        .retained
+        .iter()
+        .filter(|(_, entry)| {
+            navara_memory::eviction::is_evictable(entry.retained_at, current_frame)
+        })
+        .filter_map(|(handle, entry)| {
+            let tile = qt.qt.get(*handle)?;
+            Some((*handle, tile.visited_at, entry.cost.gpu_est))
+        })
+        .collect();
+
+    // Oldest visit first (shared `order`). Raster tiles carry no per-entity
+    // distance, so the distance tiebreak is fed 0.0 and the sort reduces to
+    // `visited_at` asc — the same head-of-queue policy as the other layers.
+    candidates.sort_by(|a, b| navara_memory::eviction::order((a.1, 0.0), (b.1, 0.0)));
+
+    let mut budget = navara_memory::eviction::EvictBudget::new(usage_est, ledger.evict_target());
+    for (handle, _, gpu_est) in candidates {
+        if !budget.over_target() {
+            break;
+        }
+
+        // `destroy_raster_tile` frees no store bytes synchronously (raster
+        // texture payloads are handed to Three.js and dropped a frame after
+        // upload), so only the GPU estimate is credited here; the exact
+        // `BufferStore` total re-reads next frame.
+        destroy_raster_tile(&mut commands, &mut qt, &mut tc, handle);
+        budget.credit(gpu_est, 0);
+        // Credit the ledger so the other pipelines' enforce systems this frame
+        // exclude this eviction (their `EvictBudget` is stack-local); the
+        // fragment despawn subtracting `gpu_est` from `gpu_bytes_est` is deferred.
+        ledger.credit_pending_eviction(gpu_est);
+        ledger.evicted_count += 1;
+    }
+}
+
+#[cfg(test)]
+mod memory_budget_tests {
+    use super::*;
+    use bevy_app::App;
+    use bevy_app::Update;
+    use navara_buffer_store::BufferStore;
+    use navara_frame::FramePlugin;
+
+    fn setup_app(budget_bytes: Option<u64>) -> (App, TileHandle) {
+        let mut app = App::new();
+        app.add_plugins(FramePlugin);
+        app.init_resource::<BufferStore>();
+        app.init_resource::<navara_memory::SsePressure>();
+        app.insert_resource(MemoryLedger {
+            budget_bytes,
+            ..Default::default()
+        });
+
+        let fragment = app.world_mut().spawn_empty().id();
+
+        let mut qt = RasterTileQuadtree::new_with_linear_qt();
+        qt.qt
+            .initialize_zero(&|(x, y, z)| RasterTile::new(TileXYZ { x, y, z }, 0., 0.));
+        let handle = qt.qt.zero().unwrap().handle();
+        qt.qt.get_mut(handle).unwrap().texture_fragment_entity_ids = Some(vec![Some(fragment)]);
+        app.insert_resource(qt);
+
+        let mut tc = RasterTileCacheManager::default();
+        tc.active_handles.insert(handle);
+        // Past the +1 grace: visited_at == 0, last frame == 2.
+        tc.last_rendered_frame = 2;
+        tc.is_updated_in_this_frame = true;
+        app.insert_resource(tc);
+
+        (app, handle)
+    }
+
+    #[test]
+    fn clear_raster_caches_destroys_when_budget_disabled() {
+        let (mut app, handle) = setup_app(None);
+        app.add_systems(Update, clear_raster_caches);
+
+        app.update();
+
+        let tc = app.world().resource::<RasterTileCacheManager>();
+        assert!(tc.active_handles.is_empty());
+        assert!(tc.retained.is_empty());
+        let qt = app.world().resource::<RasterTileQuadtree>();
+        assert!(qt.qt.get(handle).is_none());
+    }
+
+    #[test]
+    fn clear_raster_caches_retains_when_budget_enabled() {
+        let (mut app, handle) = setup_app(Some(u64::MAX));
+        app.add_systems(Update, clear_raster_caches);
+
+        app.update();
+
+        let tc = app.world().resource::<RasterTileCacheManager>();
+        assert!(!tc.active_handles.contains(&handle));
+        let entry = tc.retained.get(&handle).expect("tile should be retained");
+        // One fragment worth of texture bytes.
+        assert_eq!(
+            entry.cost.gpu_est,
+            app.world()
+                .resource::<MemoryLedger>()
+                .cost_hints
+                .raster_tile_bytes
+        );
+        let qt = app.world().resource::<RasterTileQuadtree>();
+        assert!(qt.qt.get(handle).is_some());
+    }
+
+    #[test]
+    fn enforce_memory_budget_evicts_and_purges() {
+        let (mut app, handle) = setup_app(Some(10));
+        {
+            // Force usage over budget via the ledger's GPU estimate.
+            let mut ledger = app.world_mut().resource_mut::<MemoryLedger>();
+            ledger.gpu_bytes_est = 100;
+            let mut tc = app.world_mut().resource_mut::<RasterTileCacheManager>();
+            tc.active_handles.remove(&handle);
+            tc.retained.insert(
+                handle,
+                RetainedEntry {
+                    retained_at: 0,
+                    cost: TileCost {
+                        cpu: 0,
+                        gpu_est: 100,
+                    },
+                },
+            );
+        }
+        app.add_systems(Update, enforce_memory_budget);
+
+        for _ in 0..navara_memory::MIN_RETAIN_FRAMES {
+            app.update();
+        }
+
+        let tc = app.world().resource::<RasterTileCacheManager>();
+        assert!(tc.retained.is_empty());
+        let qt = app.world().resource::<RasterTileQuadtree>();
+        assert!(qt.qt.get(handle).is_none());
+        assert_eq!(app.world().resource::<MemoryLedger>().evicted_count, 1);
+    }
+
+    #[test]
+    fn enforce_memory_budget_purges_revisited_entries() {
+        let (mut app, handle) = setup_app(Some(0));
+        {
+            // The handle is back in `active_handles` (revisited) but a stale
+            // retained entry remains.
+            let mut tc = app.world_mut().resource_mut::<RasterTileCacheManager>();
+            tc.retained.insert(
+                handle,
+                RetainedEntry {
+                    retained_at: 0,
+                    cost: TileCost::default(),
+                },
+            );
+        }
+        app.add_systems(Update, enforce_memory_budget);
+
+        for _ in 0..navara_memory::MIN_RETAIN_FRAMES {
+            app.update();
+        }
+
+        let tc = app.world().resource::<RasterTileCacheManager>();
+        assert!(tc.retained.is_empty(), "revisited entry should be purged");
+        let qt = app.world().resource::<RasterTileQuadtree>();
+        assert!(qt.qt.get(handle).is_some(), "revisited tile must survive");
+        assert_eq!(app.world().resource::<MemoryLedger>().evicted_count, 0);
+    }
+}
+
+#[cfg(test)]
+mod load_gate_tests {
+    use super::*;
+    use bevy_app::{App, Update};
+    use navara_data_requester::RequestLimits;
+
+    fn setup(gate_closed: bool) -> (App, Entity) {
+        let mut app = App::new();
+        app.init_resource::<RequestLimits>();
+        app.insert_resource(SsePressure {
+            multiplier: 1.0,
+            load_gate_closed: gate_closed,
+            ..Default::default()
+        });
+
+        let mut qt = RasterTileQuadtree::new_with_linear_qt();
+        qt.qt
+            .initialize_zero(&|(x, y, z)| RasterTile::new(TileXYZ { x, y, z }, 0., 0.));
+        let handle = qt.qt.zero().unwrap().handle();
+
+        let e = app
+            .world_mut()
+            .spawn((
+                TextureFragment::default(),
+                TileTextureFragmentMarker(handle),
+                OrderByDistance {
+                    sse: 0.0,
+                    distance: 0.0,
+                },
+                Priority::High,
+            ))
+            .id();
+        qt.qt.get_mut(handle).unwrap().texture_fragment_entity_ids = Some(vec![Some(e)]);
+        app.insert_resource(qt);
+
+        app.add_systems(Update, filter_requestable_raster_texture_fragment);
+        (app, e)
+    }
+
+    #[test]
+    fn closed_gate_rejects_new_fragment() {
+        let (mut app, e) = setup(true);
+        // `Added` sees the previous frame; two ticks so the filter observes it.
+        app.update();
+        app.update();
+        assert!(app.world().get::<Deleted>(e).is_some());
+    }
+
+    #[test]
+    fn open_gate_admits_new_fragment() {
+        let (mut app, e) = setup(false);
+        app.update();
+        app.update();
+        assert!(app.world().get::<Deleted>(e).is_none());
     }
 }

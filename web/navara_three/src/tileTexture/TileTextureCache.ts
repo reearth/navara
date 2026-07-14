@@ -7,6 +7,10 @@ import type {
   DirtyReason,
 } from "./types";
 
+/** Dev-build-only refcount diagnostics (never throws in production). */
+const DEV =
+  typeof import.meta !== "undefined" && !!(import.meta as ImportMeta).env?.DEV;
+
 export type TileTextureCacheOptions = {
   /** Side length (in pixels) of the composite render targets. */
   size: number;
@@ -68,8 +72,20 @@ export class TileTextureCache {
    */
   release(handle: TileHandle): void {
     const entry = this.entries.get(handle);
-    if (!entry) return;
+    if (!entry) {
+      if (DEV) {
+        console.error(
+          `TileTextureCache.release: no entry for handle ${handle} (double release or release without acquire)`,
+        );
+      }
+      return;
+    }
     entry.refCount--;
+    if (DEV && entry.refCount < 0) {
+      console.error(
+        `TileTextureCache.release: refcount went negative for handle ${handle}`,
+      );
+    }
     if (entry.refCount <= 0) {
       entry.atlas.dispose();
       this.entries.delete(handle);
@@ -136,6 +152,11 @@ export class TileTextureCache {
   /** Dispose all atlases and clear. Called on view shutdown. */
   disposeAll(): void {
     for (const entry of this.entries.values()) {
+      if (DEV && entry.refCount > 0) {
+        console.error(
+          `TileTextureCache.disposeAll: handle ${entry.handle} still has refcount ${entry.refCount} (leaked acquire)`,
+        );
+      }
       entry.atlas.dispose();
     }
     this.entries.clear();

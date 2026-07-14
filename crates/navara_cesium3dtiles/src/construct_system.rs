@@ -20,6 +20,7 @@ use navara_feature_component::{
 };
 use navara_layer::{Cesium3dTilesLayer, LayerId};
 use navara_material::Appearance;
+use navara_memory::TileCost;
 
 use crate::{
     Cesium3dTileContentDataRequesterMarker, Cesium3dTilesTree, RenderedCesium3dTileContent,
@@ -47,6 +48,7 @@ pub fn construct_model_by_cesium3dtiles_layer<T: TileContentParser>(
     >,
     mut rendered_tiles: Query<
         (
+            Entity,
             &mut RenderedCesium3dTileContent,
             Option<&TileTransform>,
             Option<&Aabb>,
@@ -56,8 +58,10 @@ pub fn construct_model_by_cesium3dtiles_layer<T: TileContentParser>(
     >,
     layers: Query<(Entity, &Cesium3dTilesLayer)>,
     trees: Query<&Cesium3dTilesTree>,
+    mut estimates: ResMut<navara_memory::ReserveEstimates>,
+    mut model_index: ResMut<crate::cleanup_system::ModelContentIndex>,
 ) {
-    for (mut tile, tile_transform, tile_aabb, _) in
+    for (rendered_tile_entity, mut tile, tile_transform, tile_aabb, _) in
         rendered_tiles.iter_mut().sort::<&TileOrderByDistance>()
     {
         let (_, _, req) = match requesters.get(tile.data_requester_id) {
@@ -90,6 +94,14 @@ pub fn construct_model_by_cesium3dtiles_layer<T: TileContentParser>(
 
         // Copy handle before borrowing buf mutably (Handle is Copy/i32)
         let requester_handle = req.handle;
+
+        // GPU cost estimate: the payload size is a reasonable proxy for the
+        // decoded geometry the JS side uploads to the GPU. The payload's own
+        // heap bytes are already covered by the BufferStore accounting.
+        let payload_gpu_est = buf
+            .get(&requester_handle)
+            .map(|b| b.byte_len() as u64)
+            .unwrap_or(0);
 
         let mut ctx = ParseContext {
             buf: &mut buf,
@@ -131,6 +143,27 @@ pub fn construct_model_by_cesium3dtiles_layer<T: TileContentParser>(
             extra(&mut entity_commands);
         }
 
-        tile.feature_id = Some(entity_commands.id());
+        let model_geometry = entity_commands.id();
+        tile.feature_id = Some(model_geometry);
+        // Index ModelGeometry → content so `report_feature_gpu_bytes` inverts the
+        // link in O(1) instead of scanning every rendered content. Removed on the
+        // content's destroy path (`destroy_rendered_tile_content`).
+        model_index
+            .content_by_model
+            .insert(model_geometry, rendered_tile_entity);
+
+        commands.entity(rendered_tile_entity).insert(TileCost {
+            cpu: 0,
+            gpu_est: payload_gpu_est,
+        });
+        // Feed the per-tileset reservation estimator with the landed actual
+        // cost — the same value the `TileCost` above binds to the ledger, i.e.
+        // what the dispatch-time `ReservedCost` was protecting until this
+        // moment. Failed fetches never reach here (status must be Success and
+        // parse must succeed); an evicted-then-refetched content records again.
+        estimates.record(
+            navara_memory::ReserveKey::Tiles3dLayer(tile.layer_id),
+            payload_gpu_est,
+        );
     }
 }
