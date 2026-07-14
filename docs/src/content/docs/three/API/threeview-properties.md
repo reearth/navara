@@ -166,3 +166,54 @@ view.shadowMapViewersEnabled = true;
 // Hide debug views
 view.shadowMapViewersEnabled = false;
 ```
+
+### cacheBytes
+
+**Type:** `number | undefined`
+
+Gets or sets the tile-cache memory budget in bytes (see the [`cacheBytes` option](./threeview-class#cachebytes)). The getter returns the resolved budget (`undefined` before `init()` when no explicit option was given). Lowering it at runtime evicts retained tiles down to the new budget over the next frames. Setting `undefined` disables budgeting entirely, restoring the original destroy-on-unvisited tile lifecycle.
+
+**Example:**
+
+```tsx
+// Read the resolved budget
+console.log(`cache budget: ${(view.cacheBytes ?? 0) / 1024 / 1024} MB`);
+
+// Shrink the budget at runtime (evicts down to it over the next frames)
+view.cacheBytes = 256 * 1024 * 1024;
+
+// Disable tile-cache budgeting
+view.cacheBytes = undefined;
+```
+
+### lodFog
+
+**Type:** getter `LodFogSettings | undefined` / setter `Partial<LodFogSettings>`
+
+Gets or sets the LOD fog settings (see the [`lodFog` option](./threeview-class#lodfog)): a distance-based screen-space-error relaxation that keeps far tiles coarser. The getter returns the resolved settings (`undefined` before `init()`). Partial values assigned to the setter merge over the current settings; the next traversal re-selects tile LODs with the new curve.
+
+**Example:**
+
+```tsx
+// Strengthen the distance degrade — far tiles settle coarser
+view.lodFog = { density: 2.5e-4, sseFactor: 3.0 };
+
+// Only change one field; the rest keeps its current value
+view.lodFog = { sseFactor: 4.0 };
+```
+
+### dynamicSse
+
+**Type:** getter `DynamicSseSettings | undefined` / setter `Partial<DynamicSseSettings>`
+
+Gets or sets the dynamic screen-space-error settings (see the [`dynamicSse` option](./threeview-class#dynamicsse)): tilted, street-level horizon views tolerate a larger error for far tiles. The getter returns the resolved settings (`undefined` before `init()`). Partial values assigned to the setter merge over the current settings; the next traversal re-selects tile LODs with the new curve.
+
+**Example:**
+
+```tsx
+// Disable dynamic SSE
+view.dynamicSse = { enabled: false };
+
+// Tune the relaxation strength for horizon views
+view.dynamicSse = { sseFactor: 16.0, heightFalloff: 0.25 };
+```
