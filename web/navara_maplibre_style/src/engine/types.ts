@@ -3,7 +3,7 @@
  * These types define the interface between the plugin and the style engine,
  * allowing easy swap between JS and future Rust/WASM implementations.
  */
-import type { GeoJSON } from "geojson";
+
 /**
  * Simplified MapLibre Style specification.
  * For the PoC, we only support a subset of the full spec.
@@ -15,17 +15,9 @@ export type ParsedStyle = {
 };
 
 /**
- * Style source types we support in the PoC.
+ * Vector tile source (only type currently supported).
  */
-export type StyleSource = GeoJSONSource | VectorSource;
-
-export type GeoJSONSource = {
-  type: "geojson";
-  data: string | GeoJSON;
-  maxzoom?: number;
-  buffer?: number;
-  tolerance?: number;
-};
+export type StyleSource = VectorSource;
 
 export type VectorSource = {
   type: "vector";
@@ -111,13 +103,32 @@ export type FeatureContext = {
 };
 
 /**
+ * MapLibre Color object format (consistent with @maplibre/maplibre-gl-style-spec).
+ */
+export type MapLibreColor = {
+  r: number;
+  g: number;
+  b: number;
+  a: number;
+};
+
+/**
  * Possible return types from style expressions.
+ *
+ * Common array-valued properties in MapLibre Style Spec:
+ * - line-dasharray: number[]
+ * - text-offset: [number, number]
+ * - icon-offset: [number, number]
+ * - translate: [number, number]
  */
 export type StyleValue =
   | number
   | string
   | boolean
-  | [number, number, number, number];
+  | MapLibreColor
+  | [number, number, number, number] // Legacy color array format
+  | number[] // Array-valued properties (dasharray, offset, translate, etc.)
+  | [number, number]; // Two-element numeric arrays (offset, translate)
 
 /**
  * Property specification for type checking and defaults.

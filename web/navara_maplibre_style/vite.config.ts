@@ -22,6 +22,7 @@ export default defineConfig((env) => {
         external: [
           "@navara/three",
           "@navara/core",
+          "@navara/engine",
           "three",
           "@maplibre/maplibre-gl-style-spec",
         ],

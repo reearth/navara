@@ -8,10 +8,10 @@
 export { MapLibreStylePlugin } from "./MapLibreStylePlugin";
 export type { StyleEngine } from "./engine/StyleEngine";
 export { JsStyleEngine } from "./engine/JsStyleEngine";
+export { RustStyleEngine } from "./engine/RustStyleEngine";
 export type {
   ParsedStyle,
   StyleSource,
-  GeoJSONSource,
   VectorSource,
   StyleLayer,
   FillLayer,
@@ -21,4 +21,5 @@ export type {
   EvaluationContext,
   FeatureContext,
   StyleValue,
+  MapLibreColor,
 } from "./engine/types";

@@ -5,17 +5,11 @@
 import { Color } from "@navara/three";
 
 import type { StyleEngine } from "../engine/StyleEngine";
-import type { EvaluationContext, StyleLayer } from "../engine/types";
-
-/**
- * MapLibre Color object returned from expression evaluation.
- */
-type MapLibreColor = {
-  r: number;
-  g: number;
-  b: number;
-  a: number;
-};
+import type {
+  EvaluationContext,
+  MapLibreColor,
+  StyleLayer,
+} from "../engine/types";
 
 /**
  * Type guard to check if a value is a MapLibre Color object.
@@ -35,8 +29,6 @@ function isMapLibreColor(value: unknown): value is MapLibreColor {
 
 /**
  * Convert MapLibre color value to Navara Color.
- * MapLibre's expression evaluator returns Color objects for evaluated expressions,
- * but fallback defaults from spec.default are often CSS strings like "#000000".
  */
 function toNavaraColor(value: unknown): Color | undefined {
   try {

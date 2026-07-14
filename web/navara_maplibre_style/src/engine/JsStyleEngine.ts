@@ -9,6 +9,10 @@ import {
   validateStyleMin,
   v8,
 } from "@maplibre/maplibre-gl-style-spec";
+import type {
+  StyleSpecification,
+  StylePropertySpecification,
+} from "@maplibre/maplibre-gl-style-spec";
 
 import type { StyleEngine } from "./StyleEngine";
 import type {
@@ -34,7 +38,7 @@ const PAINT_SPECS_BY_TYPE = {
 
 export class JsStyleEngine implements StyleEngine {
   async parseStyle(raw: unknown): Promise<ParsedStyle> {
-    const errors = validateStyleMin(raw as any);
+    const errors = validateStyleMin(raw as StyleSpecification);
 
     if (errors && errors.length > 0) {
       const errorMessages = errors.map((e: { message: string }) => e.message);
@@ -56,17 +60,20 @@ export class JsStyleEngine implements StyleEngine {
     const { filter } = featureFilter(expr);
 
     return (ctx: FeatureContext) => {
+      // Note: MapLibre's filter evaluator has complex internal type expectations.
+      // While MapLibreFeature type exists, the actual runtime evaluator may expect
+      // a shape closer to GeoJSON Feature or have undocumented requirements.
+      // Using a flexible object with `as any` here is a pragmatic choice to ensure
+      // runtime compatibility, trading type safety at this boundary for correctness.
       const feature = {
-        type: "Feature" as const,
+        type: geometryType, // Geometry type string (e.g., "Point", "Polygon")
         properties: ctx.properties ?? {},
-        geometry: {
-          type: geometryType as any,
-          coordinates: [], // Empty - we don't care about actual geometry coordinates for filtering
-        },
+        geometry: [], // Empty - most filters only check properties
       };
 
       // zoom is required for filter evaluation, but we don't have zoom info in Navara yet,
       // so we just pass 0 for now. In the future, we can pass actual zoom from camera.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return filter({ zoom: 0 }, feature as any);
     };
   }
@@ -76,8 +83,7 @@ export class JsStyleEngine implements StyleEngine {
     spec: PropertySpec,
     geometryType = "Point",
   ): (ctx: EvaluationContext) => T {
-    // Create expression using maplibre-gl-style-spec
-    const result = createExpression(expr, spec as any);
+    const result = createExpression(expr, spec as StylePropertySpecification);
 
     if (result.result === "error") {
       const errorMsg = result.value
@@ -89,19 +95,17 @@ export class JsStyleEngine implements StyleEngine {
     const expression = result.value;
 
     return (ctx: EvaluationContext) => {
-      // Create a minimal GeoJSON feature object for evaluation
-      // We don't have actual geometry coordinates, but most expressions only need the type
+      // Note: Similar to createFilter, we use a flexible feature object to ensure
+      // runtime compatibility with MapLibre's expression evaluator.
       const feature = {
-        type: "Feature" as const,
+        type: geometryType, // Geometry type string
         properties: ctx.properties ?? {},
-        geometry: {
-          type: geometryType as any,
-          coordinates: [], // Empty - we don't care about actual geometry coordinates for evaluation
-        },
+        geometry: [], // Empty - most expressions only access properties
       };
 
-      // zoom is required for filter evaluation, but we don't have zoom info in Navara yet,
+      // zoom is required for expression evaluation, but we don't have zoom info in Navara yet,
       // so we just pass 0 for now. In the future, we can pass actual zoom from camera.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const value = expression.evaluate({ zoom: 0 }, feature as any);
 
       return value as T;
