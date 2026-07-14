@@ -13,6 +13,7 @@ export type {
   ParsedStyle,
   StyleSource,
   VectorSource,
+  GeoJSONSource,
   StyleLayer,
   FillLayer,
   LineLayer,

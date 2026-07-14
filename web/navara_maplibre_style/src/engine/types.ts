@@ -4,6 +4,8 @@
  * allowing easy swap between JS and future Rust/WASM implementations.
  */
 
+import type { GeoJSON } from "geojson";
+
 /**
  * Simplified MapLibre Style specification.
  * For the PoC, we only support a subset of the full spec.
@@ -15,9 +17,14 @@ export type ParsedStyle = {
 };
 
 /**
- * Vector tile source (only type currently supported).
+ * Source types supported in PoC: vector, geojson.
  */
-export type StyleSource = VectorSource;
+export type StyleSource = VectorSource | GeoJSONSource;
+
+export type GeoJSONSource = {
+  type: "geojson";
+  data: GeoJSON | string;
+};
 
 export type VectorSource = {
   type: "vector";

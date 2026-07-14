@@ -240,6 +240,9 @@ importers:
 
   web/navara_maplibre_style:
     dependencies:
+      '@maplibre/maplibre-gl-style-spec':
+        specifier: ^20.3.1
+        version: 20.4.0
       '@navara/core':
         specifier: workspace:*
         version: link:../navara_core
@@ -247,12 +250,12 @@ importers:
         specifier: workspace:*
         version: link:../wasm/navara_engine
     devDependencies:
-      '@maplibre/maplibre-gl-style-spec':
-        specifier: ^20.3.1
-        version: 20.4.0
       '@navara/three':
         specifier: workspace:*
         version: link:../navara_three
+      '@types/geojson':
+        specifier: 7946.0.16
+        version: 7946.0.16
 
   web/navara_three:
     dependencies:

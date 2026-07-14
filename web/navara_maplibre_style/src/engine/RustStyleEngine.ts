@@ -30,8 +30,11 @@ export class RustStyleEngine implements StyleEngine {
     if (style.version !== 8) {
       throw new Error("Invalid style: version must be 8");
     }
-    if (!style.sources) {
+    if (!style.sources || typeof style.sources !== "object") {
       throw new Error("Invalid style: missing sources");
+    }
+    if (!Array.isArray(style.layers)) {
+      throw new Error("Invalid style: missing layers");
     }
     return raw as ParsedStyle;
   }
@@ -41,6 +44,10 @@ export class RustStyleEngine implements StyleEngine {
     _layerType: LayerType,
     _geometryType: string,
   ): (feature: FeatureContext) => boolean {
+    // Match JsStyleEngine behavior: empty filter array means "no filter".
+    if (Array.isArray(expr) && expr.length === 0) {
+      return () => true;
+    }
     // Compile filter in WASM
     const compiled = new CompiledFilter(expr);
 
@@ -70,6 +77,15 @@ export class RustStyleEngine implements StyleEngine {
       typeof expr === "boolean"
     ) {
       const constantValue = this.normalizeConstant(expr, spec) as T;
+      return () => constantValue;
+    }
+
+    // MapLibre also allows literal arrays as property values (these are not expression arrays).
+    if (
+      Array.isArray(expr) &&
+      (expr.length === 0 || typeof expr[0] !== "string")
+    ) {
+      const constantValue = expr as unknown as T;
       return () => constantValue;
     }
 

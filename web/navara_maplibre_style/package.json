@@ -26,11 +26,12 @@
     "@navara/three": "workspace:*"
   },
   "dependencies": {
+    "@maplibre/maplibre-gl-style-spec": "^20.3.1",
     "@navara/core": "workspace:*",
     "@navara/engine": "workspace:*"
   },
   "devDependencies": {
-    "@maplibre/maplibre-gl-style-spec": "^20.3.1",
-    "@navara/three": "workspace:*"
+    "@navara/three": "workspace:*",
+    "@types/geojson": "7946.0.16"
   }
 }

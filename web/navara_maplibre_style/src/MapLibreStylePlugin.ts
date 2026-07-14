@@ -18,7 +18,6 @@ import {
   toEvaluatedValue,
 } from "./adapters/toEvaluatedValue";
 import { toLayerDescription } from "./adapters/toLayerDescription";
-// import { JsStyleEngine } from "./engine/JsStyleEngine";
 import { RustStyleEngine } from "./engine/RustStyleEngine";
 import type { StyleEngine } from "./engine/StyleEngine";
 import type { ParsedStyle, StyleLayer } from "./engine/types";
@@ -35,7 +34,6 @@ export class MapLibreStylePlugin extends Plugin<ThreeView, ViewContext> {
    */
   constructor(
     private readonly style: unknown,
-    // private readonly engine: StyleEngine = new JsStyleEngine(),
     private readonly engine: StyleEngine = new RustStyleEngine(),
   ) {
     super();
