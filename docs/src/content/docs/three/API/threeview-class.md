@@ -2,7 +2,7 @@
 title: ThreeView Class
 description: API Reference for ThreeView Class Overview and Constructor
 sidebar:
-  order: 11
+  order: 910
 ---
 
 ThreeView is the main class for creating and managing 3D map visualizations using Three.js and WebGL. It provides a comprehensive API for layer management, camera control, rendering, and event handling.

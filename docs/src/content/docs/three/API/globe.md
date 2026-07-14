@@ -2,7 +2,7 @@
 title: Globe Class
 description: API Reference for Globe Class - a class for managing globe display settings
 sidebar:
-  order: 21
+  order: 1000
 ---
 
 The Globe class provides an interface for accessing and modifying properties related to globe display. It manages globe display settings shared across different material types such as VectorTile, RasterTile, and RasterTerrain.

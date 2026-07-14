@@ -2,7 +2,7 @@
 title: About
 description: What a Source is and how layers reference it
 sidebar:
-  order: 10
+  order: 300
 ---
 
 A **Source** describes where map data comes from and how it is fetched and decoded (URL, zoom range, tiling scheme, elevation decoder, and so on). A [layer](../../../three/layer/about/) then decides *how* that data is rendered. One source can be referenced by many layers, and the engine deduplicates the underlying fetch and tiling resources.
@@ -14,7 +14,7 @@ Separating "where the data is" (Source) from "how it looks" (layer) lets you:
 - describe a whole map declaratively from JSON by referencing sources by `id`.
 
 :::note
-See [About Layer](../../../three/layer/about/) for the layer types and [Materials](../../../three/material/about/) for the materials reference.
+See [Layer Types](../../../three/layer/about/) for the layer types and [Materials](../../../three/material/about/) for the materials reference.
 :::
 
 ## Creating a source
@@ -144,5 +144,5 @@ Delete the referencing layers before the source. To swap the data of an existing
 ## Related Resources
 
 - [ThreeView functions](../../../three/api/threeview-functions/) — `addSource` (see [Updating and deleting a source](#updating-and-deleting-a-source) for the returned handle's `update()` / `delete()`)
-- [About Layer](../../../three/layer/about/) — layer types
+- [Layer Types](../../../three/layer/about/) — layer types
 - [Materials](../../../three/material/about/) — materials (styling) reference

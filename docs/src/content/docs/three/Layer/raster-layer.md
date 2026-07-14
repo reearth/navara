@@ -2,7 +2,7 @@
 title: Raster Layer
 description: Render a raster-tile or raster-dem source as imagery, hillshade, or elevation heatmap
 sidebar:
-  order: 12
+  order: 420
 ---
 
 A `raster` layer renders a [`raster-tile`](../../../three/source/raster-tile-source/) source as imagery, or a [`raster-dem`](../../../three/source/raster-dem-source/) source as hillshade or an elevation heatmap. When a [`terrain`](../../../three/layer/terrain-layer/) layer is present, the imagery is draped onto the 3D surface; otherwise it renders on the flat globe.

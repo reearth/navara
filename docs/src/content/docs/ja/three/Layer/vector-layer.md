@@ -2,7 +2,7 @@
 title: Vector Layer
 description: geojson または vector-tile の Source をジオメトリごとのマテリアルで描画する
 sidebar:
-  order: 11
+  order: 410
 ---
 
 `vector` レイヤーは、[`geojson`](../../../three/source/geojson-source/) または [`vector-tile`](../../../three/source/vector-tile-source/) の Source のフィーチャーを、ジオメトリごとのマテリアル（点、線、ポリゴンなど）で描画します。

@@ -2,7 +2,7 @@
 title: Arch Line Visualization
 description: Visualizing air traffic volume between airports using arch lines
 sidebar:
-  order: 7
+  order: 220
 ---
 
 ![Result](@assets/tutorial/arch-line-visualization-result.png)

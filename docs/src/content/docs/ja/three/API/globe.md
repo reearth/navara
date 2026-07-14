@@ -2,7 +2,7 @@
 title: Globe Class
 description: API Reference for Globe Class - 地球表示の設定を管理するクラス
 sidebar:
-  order: 21
+  order: 1000
 ---
 
 Globe クラスは、地球表示に関するプロパティへのアクセスと変更を行うためのインターフェースを提供します。VectorTile、RasterTile、RasterTerrain など、異なるマテリアルタイプ間で共有される地球表示の設定を管理します。

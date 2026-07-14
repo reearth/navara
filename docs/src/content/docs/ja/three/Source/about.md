@@ -2,7 +2,7 @@
 title: About
 description: Source とは何か、そしてレイヤーがどのように Source を参照するか
 sidebar:
-  order: 10
+  order: 300
 ---
 
 **Source** は、地図データがどこから来て、どのように取得・デコードされるか（URL、ズーム範囲、タイリングスキーム、標高デコーダなど）を記述します。そして [layer](../../../three/layer/about/) が、そのデータを *どのように* 描画するかを決定します。1 つの Source を複数のレイヤーから参照でき、エンジンは基盤となる取得処理とタイリングリソースを重複排除します。
@@ -14,7 +14,7 @@ sidebar:
 - `id` で Source を参照することで、JSON から地図全体を宣言的に記述する。
 
 :::note
-レイヤーのタイプについては [About Layer](../../../three/layer/about/) を、マテリアルのリファレンスについては [Materials](../../../three/material/about/) を参照してください。
+レイヤーのタイプについては [レイヤーの種類](../../../three/layer/about/) を、マテリアルのリファレンスについては [Materials](../../../three/material/about/) を参照してください。
 :::
 
 ## Source の作成
@@ -144,5 +144,5 @@ Source より先に、それを参照しているレイヤーを削除してく�
 ## 関連リソース
 
 - [ThreeView functions](../../../three/api/threeview-functions/) — `addSource`（返されたハンドルの `update()` / `delete()` については [Source の更新と削除](#source-の更新と削除) を参照）
-- [About Layer](../../../three/layer/about/) — レイヤーのタイプ
+- [レイヤーの種類](../../../three/layer/about/) — レイヤーのタイプ
 - [Materials](../../../three/material/about/) — マテリアル（スタイリング）のリファレンス

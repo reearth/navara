@@ -2,7 +2,7 @@
 title: 3D Tiles Layer
 description: Render a 3d-tiles source (buildings, point clouds, photogrammetry)
 sidebar:
-  order: 14
+  order: 440
 ---
 
 A `3d-tiles` layer renders a [`3d-tiles`](../../../three/source/3d-tiles-source/) source — a large-scale 3D dataset in the 3D Tiles format (building models, point clouds, photorealistic tiles, and more) — with a model appearance.

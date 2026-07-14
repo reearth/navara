@@ -2,7 +2,7 @@
 title: Common Types
 description: navara_three のマテリアルやディスクリプタ間で共有されるプリミティブ型の API リファレンス
 sidebar:
-  order: 23
+  order: 1030
 ---
 
 このページでは、`navara_three` の複数のマテリアルやディスクリプタで共有されるプリミティブ型について説明します。

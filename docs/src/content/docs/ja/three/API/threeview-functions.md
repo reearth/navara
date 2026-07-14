@@ -2,7 +2,7 @@
 title: ThreeView Functions
 description: API Reference for ThreeView Class Functions
 sidebar:
-  order: 13
+  order: 930
 ---
 
 このページでは、ThreeView インスタンスで利用可能なすべての関数（メソッド）を説明します。
@@ -21,7 +21,7 @@ addLayer(l: LayerDescription): Layer
 
 **Parameters:**
 
-LayerDescription の設定項目については、[About Layer](../../../three/layer/about/) と各レイヤータイプのページを参照してください。
+LayerDescription の設定項目については、[レイヤーの種類](../../../three/layer/about/) と各レイヤータイプのページを参照してください。
 
 **Returns:**
 

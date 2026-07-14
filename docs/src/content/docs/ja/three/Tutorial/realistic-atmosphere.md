@@ -2,7 +2,7 @@
 title: Realistic Atmosphere
 description: 大気エフェクトを使用したリアルなビジュアル表現
 sidebar:
-  order: 6
+  order: 210
 ---
 
 ![実行結果](@assets/tutorial/realistic-atmosphere-result.png)

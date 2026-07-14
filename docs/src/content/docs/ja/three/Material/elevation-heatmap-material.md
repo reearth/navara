@@ -2,7 +2,7 @@
 title: ElevationHeatmapMaterial
 description: navara_three の標高ヒートマップマテリアル
 sidebar:
-  order: 40
+  order: 590
 ---
 
 `ElevationHeatmapMaterial` は、[`raster`](../../../three/layer/raster-layer/) レイヤー上で標高を色分けされたヒートマップとして可視化するための描画オプションを保持します。DEM タイルをデコードし、標高値に基づいてカラーマップを適用します。`elevationHeatmap` キーで設定します。

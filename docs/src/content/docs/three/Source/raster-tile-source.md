@@ -2,7 +2,7 @@
 title: Raster Tile Source
 description: A raster-tile (imagery) source
 sidebar:
-  order: 13
+  order: 330
 ---
 
 A `raster-tile` source describes raster imagery tiles (XYZ or TMS). Render it with a [`raster`](../../../three/layer/raster-layer/) layer.

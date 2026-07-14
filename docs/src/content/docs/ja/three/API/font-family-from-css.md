@@ -2,7 +2,7 @@
 title: Font Family from CSS
 description: CSS の @font-face ルールからフォントファミリを構築する API リファレンス
 sidebar:
-  order: 23
+  order: 1020
 ---
 
 これらのユーティリティは、CSS の `@font-face` ルールから `FontFamily`（[`addFontFamily()`](../../../three/api/threeview-functions/#addfontfamily) を参照）を構築します。フェイスと Unicode 範囲を手書きする必要はありません。各 `@font-face` ブロックが 1 つのフェイスになり、その `src` URL と `unicode-range` が取り込まれます。フォントファイルの遅延ダウンロードは維持されます: 事前に取得されるのはスタイルシートだけで、各フェイスのファイルはラベルがそのコードポイントを最初に必要としたときにダウンロードされます。

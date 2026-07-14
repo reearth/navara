@@ -2,7 +2,7 @@
 title: Terrain Layer
 description: Render a raster-dem or quantized-mesh source as 3D terrain
 sidebar:
-  order: 13
+  order: 430
 ---
 
 A `terrain` layer renders a [`raster-dem`](../../../three/source/raster-dem-source/) source (RGB-encoded elevation tiles decoded on the GPU) or a [`quantized-mesh`](../../../three/source/quantized-mesh-source/) source (pre-meshed tiles, e.g. Cesium Ion) as the 3D globe surface. Rendering options are the same regardless of the source's data format; all fetch/geometry config lives on the source.

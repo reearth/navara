@@ -2,7 +2,7 @@
 title: Atmosphere Class
 description: 大気システムと太陽・月の位置計算を管理する Atmosphere クラスの API リファレンス
 sidebar:
-  order: 20
+  order: 990
 ---
 
 `Atmosphere` クラスは、大気レンダリングのコンテキストを管理します。太陽と月の位置を設定された日時から自動計算し、大気散乱シミュレーション用のテクスチャを管理します。

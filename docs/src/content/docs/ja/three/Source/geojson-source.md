@@ -2,7 +2,7 @@
 title: GeoJSON Source
 description: geojson の Source（URL またはインライン）
 sidebar:
-  order: 11
+  order: 310
 ---
 
 `geojson` Source は、URL から取得するか、インラインで指定した GeoJSON からベクターデータを提供します。[`vector`](../../../three/layer/vector-layer/) レイヤーで描画します。

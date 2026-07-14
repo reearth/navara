@@ -2,7 +2,7 @@
 title: Vector Layer
 description: Render a geojson or vector-tile source with per-geometry materials
 sidebar:
-  order: 11
+  order: 410
 ---
 
 A `vector` layer renders the features of a [`geojson`](../../../three/source/geojson-source/) or [`vector-tile`](../../../three/source/vector-tile-source/) source with per-geometry materials (points, lines, polygons, and so on).

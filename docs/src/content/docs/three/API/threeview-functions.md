@@ -2,7 +2,7 @@
 title: ThreeView Functions
 description: API Reference for ThreeView Class Functions
 sidebar:
-  order: 13
+  order: 930
 ---
 
 This page describes all functions (methods) available on a ThreeView instance.
@@ -21,7 +21,7 @@ addLayer(l: LayerDescription): Layer
 
 **Parameters:**
 
-For layer configuration options, see [About Layer](../../../three/layer/about/) and each layer type page.
+For layer configuration options, see [Layer Types](../../../three/layer/about/) and each layer type page.
 
 **Returns:**
 

@@ -1,8 +1,8 @@
 ---
-title: About
+title: Layer Types
 description: What a layer is and how it renders a source
 sidebar:
-  order: 10
+  order: 400
 ---
 
 A **layer** decides *how* map data is rendered. The data itself comes from a [Source](../../../three/source/about/), which a layer references by `source`. Separating "where the data is" (Source) from "how it looks" (layer) lets one source feed several layers, restyle without re-fetching, and describe a whole map declaratively from JSON.

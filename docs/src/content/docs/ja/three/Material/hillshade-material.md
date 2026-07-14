@@ -2,7 +2,7 @@
 title: HillshadeMaterial
 description: navara_three の Hillshade マテリアル
 sidebar:
-  order: 41
+  order: 600
 ---
 
 `HillshadeMaterial` は、[`raster`](../../../three/layer/raster-layer/) レイヤー上の陰影起伏（hillshade）の描画オプションを保持します。DEM の標高値から地表の法線を計算し、光源の方向に基づいてタイルに陰影を付け、尾根や谷といった地形の特徴を強調します。`hillshade` キーで設定します。

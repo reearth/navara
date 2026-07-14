@@ -2,7 +2,7 @@
 title: BillboardMaterial
 description: Billboard material for navara_three
 sidebar:
-  order: 31
+  order: 510
 ---
 
 `BillboardMaterial` represents a material for billboard rendering.
