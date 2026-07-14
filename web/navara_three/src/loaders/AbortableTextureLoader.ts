@@ -34,6 +34,14 @@ export class AbortableTextureLoader extends Loader {
       url,
       function (image) {
         texture.image = image;
+        if (
+          typeof ImageBitmap !== "undefined" &&
+          image instanceof ImageBitmap
+        ) {
+          // The bitmap is already flipped at decode time
+          // (imageOrientation: "flipY" — see AbortableImageLoader).
+          texture.flipY = false;
+        }
         texture.needsUpdate = true;
 
         if (onLoad !== undefined) {

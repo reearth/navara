@@ -17,7 +17,7 @@ import {
 } from "@navara/engine";
 import { radianToDegree } from "@navara/three_api";
 import { canWorkerProcessImmediately } from "@navara/worker";
-import { Mesh, Object3D, Sprite } from "three";
+import { LinearFilter, Mesh, Object3D, Sprite } from "three";
 
 import { BatchedSdfTextMesh, Layer } from "..";
 import { getImageDataFromBlob } from "../tasks/getImageDataFromBlob";
@@ -646,6 +646,11 @@ async function processTextureFragmentRequested(
 
   await ABORTABLE_TEXTURE_LOADER.loadAsyncWithAbort(req.url, abortController)
     .then((t) => {
+      // Fragments are only ever pasted into the composite atlas at 1:1 or
+      // magnified (ancestor fallback), never minified — mipmaps would cost
+      // +33% VRAM and upload time for nothing.
+      t.generateMipmaps = false;
+      t.minFilter = LinearFilter;
       loadedTexs.set(id, t);
       texFragment.triggerTextureFragmentLoaded(
         req.bits,

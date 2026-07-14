@@ -3,6 +3,7 @@ import type { TileHandle } from "@navara/core";
 import type {
   AtlasFactory,
   CacheEntry,
+  CompositeAtlas,
   CompositeOutputs,
   DirtyReason,
 } from "./types";
@@ -11,11 +12,21 @@ import type {
 const DEV =
   typeof import.meta !== "undefined" && !!(import.meta as ImportMeta).env?.DEV;
 
+// Every atlas is the same size and format, but tile churn during pan/zoom
+// used to allocate and dispose a ~3MB MRT render target per terrain tile
+// swap. Keeping a few released atlases around lets the next acquire reuse
+// them. Kept small on purpose: pooled atlases are GPU memory the per-tile
+// ledger accounting does not see (each live tile is charged for its own
+// atlas at mesh-attach time, a pooled spare belongs to no tile).
+const DEFAULT_MAX_POOLED_ATLASES = 4;
+
 export type TileTextureCacheOptions = {
   /** Side length (in pixels) of the composite render targets. */
   size: number;
   /** Builds the MRT trio. Injected so unit tests pass fakes. */
   atlasFactory: AtlasFactory;
+  /** Max spare atlases kept for reuse instead of disposed. 0 disables pooling. */
+  maxPooled?: number;
 };
 
 /**
@@ -30,21 +41,25 @@ export type TileTextureCacheOptions = {
 export class TileTextureCache {
   private readonly entries = new Map<TileHandle, CacheEntry>();
   private readonly opts: TileTextureCacheOptions;
+  private readonly pool: CompositeAtlas[] = [];
+  private readonly maxPooled: number;
 
   constructor(opts: TileTextureCacheOptions) {
     this.opts = opts;
+    this.maxPooled = opts.maxPooled ?? DEFAULT_MAX_POOLED_ATLASES;
   }
 
   /**
    * Acquire (or create) the atlas for a handle. Refcounted: a TileMesh
    * acquires once on construction and releases once on dispose.
    * Newly-created entries start dirty in every category so the first composite
-   * pass paints them.
+   * pass paints them — which also repaints any stale content in a pooled
+   * atlas, so reuse needs no explicit clear.
    */
   acquire(handle: TileHandle): CompositeOutputs {
     let entry = this.entries.get(handle);
     if (!entry) {
-      const atlas = this.opts.atlasFactory(this.opts.size);
+      const atlas = this.pool.pop() ?? this.opts.atlasFactory(this.opts.size);
       entry = {
         handle,
         atlas,
@@ -67,8 +82,8 @@ export class TileTextureCache {
   }
 
   /**
-   * Decrement refcount. When the last holder releases, the atlas is disposed
-   * and the entry forgotten.
+   * Decrement refcount. When the last holder releases, the entry is forgotten
+   * and its atlas is pooled for reuse (or disposed once the pool is full).
    */
   release(handle: TileHandle): void {
     const entry = this.entries.get(handle);
@@ -87,7 +102,11 @@ export class TileTextureCache {
       );
     }
     if (entry.refCount <= 0) {
-      entry.atlas.dispose();
+      if (this.pool.length < this.maxPooled) {
+        this.pool.push(entry.atlas);
+      } else {
+        entry.atlas.dispose();
+      }
       this.entries.delete(handle);
     }
   }
@@ -149,7 +168,12 @@ export class TileTextureCache {
     return this.entries.size;
   }
 
-  /** Dispose all atlases and clear. Called on view shutdown. */
+  /** Number of pooled (unowned) spare atlases — for stats/debugging. */
+  get pooledCount(): number {
+    return this.pool.length;
+  }
+
+  /** Dispose all atlases (live and pooled) and clear. Called on view shutdown. */
   disposeAll(): void {
     for (const entry of this.entries.values()) {
       if (DEV && entry.refCount > 0) {
@@ -160,5 +184,9 @@ export class TileTextureCache {
       entry.atlas.dispose();
     }
     this.entries.clear();
+    for (const atlas of this.pool) {
+      atlas.dispose();
+    }
+    this.pool.length = 0;
   }
 }
