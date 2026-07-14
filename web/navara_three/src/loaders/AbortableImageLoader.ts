@@ -4,6 +4,11 @@ function createElementNS(name: string) {
   return document.createElementNS("http://www.w3.org/1999/xhtml", name);
 }
 
+/** Same shape as a fetch abort rejection: `err.name === "AbortError"`. */
+function abortError() {
+  return new DOMException("The operation was aborted.", "AbortError");
+}
+
 /**
  * Decoded tile image. `ImageBitmap` on browsers with `createImageBitmap`
  * (decode happens off the main thread); `HTMLImageElement` on the fallback
@@ -74,14 +79,20 @@ export class AbortableImageLoader extends Loader<LoadedImage> {
       scope.manager.itemEnd(url);
     }
 
+    // Before any async work, so every done/fail (which call itemEnd) has a
+    // matching itemStart even when the fetch itself rejects or times out.
+    scope.manager.itemStart(url);
+
     fetch(url, { signal: abort?.signal })
       .then((r) => r.blob())
       .then((blob) => {
-        if (abort?.signal.aborted || settled) {
+        if (settled) {
           return;
         }
-
-        scope.manager.itemStart(url);
+        if (abort?.signal.aborted) {
+          fail(abortError(), true);
+          return;
+        }
 
         if (typeof createImageBitmap === "function") {
           // Decodes off the main thread and needs no object URL. flipY is
@@ -92,8 +103,13 @@ export class AbortableImageLoader extends Loader<LoadedImage> {
             premultiplyAlpha: "none",
           })
             .then((bitmap) => {
-              if (settled || abort?.signal.aborted) {
+              if (settled) {
                 bitmap.close();
+                return;
+              }
+              if (abort?.signal.aborted) {
+                bitmap.close();
+                fail(abortError(), true);
                 return;
               }
               done(bitmap);
@@ -122,6 +138,11 @@ export class AbortableImageLoader extends Loader<LoadedImage> {
     fail: (err: unknown, isAborted?: boolean) => void,
     abort?: AbortController,
   ) {
+    if (abort?.signal.aborted) {
+      fail(abortError(), true);
+      return;
+    }
+
     const objectUrl = window.URL.createObjectURL(blob);
     const image = createElementNS("img") as HTMLImageElement;
 
@@ -147,7 +168,7 @@ export class AbortableImageLoader extends Loader<LoadedImage> {
       image.src = "";
       image.remove();
       cleanup();
-      fail(new Error("AbortError"), true);
+      fail(abortError(), true);
     }
 
     image.addEventListener("load", onImageLoad, false);
