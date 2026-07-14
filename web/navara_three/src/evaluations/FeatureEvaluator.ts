@@ -70,7 +70,7 @@ type EvaluatedMaterialProperty = {
   width: number;
   size: number;
   opacity: number;
-  image: string;
+  image: string | null;
 };
 
 /**
@@ -309,7 +309,9 @@ export class FeatureEvaluator {
    * - `size` - Feature size in pixels (for points/text)
    * - `opacity` - Feature opacity 0-1
    * - `image` - Image URL (for billboards); loaded once per distinct URL and
-   *   packed into the layer's texture atlas
+   *   packed into the layer's texture atlas. Return `null` (or `undefined`
+   *   with the key present) to clear a previous per-feature image and revert
+   *   to the material's default `url`; omit the key to leave it unchanged.
    *
    * Note: Evaluated styles override the layer's default styles.
    *
@@ -385,9 +387,10 @@ export class FeatureEvaluator {
       if (evaluated.opacity != null) {
         obj.setFeatureOpacityByBatchId(batchId, evaluated.opacity);
       }
-      if (evaluated.image != null) {
+      if ("image" in evaluated) {
         // Async by nature (the image may need fetching); the atlas dedupes
         // loads by URL so evaluating many features costs one fetch per image.
+        // A nullish url clears the override back to the material default.
         void obj.setFeatureImageByBatchId(batchId, evaluated.image);
       }
       return;

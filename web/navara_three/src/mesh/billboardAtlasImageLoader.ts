@@ -13,15 +13,17 @@ import type { LoadAtlasImage } from "./billboardAtlas";
  */
 export const loadAtlasImageFromUrl: LoadAtlasImage = async (url) => {
   const texture = await TEXTURE_LOADER.loadAsync(url);
-  const img = texture.image as HTMLImageElement | ImageBitmap;
-  const width = img.width;
-  const height = img.height;
+  try {
+    const img = texture.image as HTMLImageElement | ImageBitmap;
+    const width = img.width;
+    const height = img.height;
 
-  const data = await getImageDataFromImageBitmap(
-    await createImageBitmap(img, { imageOrientation: "flipY" }),
-    new OffscreenCanvas(width, height),
-  );
-  texture.dispose();
-
-  return { width, height, data: new Uint8Array(data) };
+    const data = await getImageDataFromImageBitmap(
+      await createImageBitmap(img, { imageOrientation: "flipY" }),
+      new OffscreenCanvas(width, height),
+    );
+    return { width, height, data: new Uint8Array(data) };
+  } finally {
+    texture.dispose();
+  }
 };

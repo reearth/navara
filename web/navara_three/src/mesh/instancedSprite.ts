@@ -19,7 +19,7 @@ import invariant from "tiny-invariant";
 import type { EventContext } from "../event/context";
 import { createInstancedSpriteMaterialEnhancer } from "../material/enhancer";
 
-import { BillboardAtlas } from "./billboardAtlas";
+import { BillboardAtlas, type AtlasRect } from "./billboardAtlas";
 import { loadAtlasImageFromUrl } from "./billboardAtlasImageLoader";
 import { PickableMesh } from "./pickableMesh";
 
@@ -53,9 +53,15 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   private _initialSize = -1.0; // Negative value indicates "use uScale" in shader
   private _atlas?: BillboardAtlas;
   private _defaultUrl?: string;
+  /** Atlas rect of the current default image; re-applied to an instance when
+   * its per-feature override is cleared. */
+  private _defaultRect?: AtlasRect;
   /** Instance ids whose image was overridden per-feature; the default image
    * from the material no longer applies to them. */
   private _imageOverrides = new Set<number>();
+  /** Latest override URL requested per instance. An async pack only applies
+   * if it still matches, so a newer override or a clear wins over slow loads. */
+  private _requestedImageUrls = new Map<number, string>();
   private _active = true;
   readonly ctx: EventContext;
   /** Material enhancer for encapsulated state management */
@@ -483,6 +489,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     // A newer default image won the race while this one was loading.
     if (this._defaultUrl !== url) return;
 
+    this._defaultRect = rect;
     this._syncAtlasUniforms();
     const rectAttr = this.geometry.getAttribute(
       "instanceUvRect",
@@ -588,9 +595,14 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
    * Give one feature its own image, packed into this mesh's texture atlas.
    * Loads are deduplicated by URL, so styling many features with few distinct
    * images fetches each image once. On load failure the feature keeps its
-   * current (default) image. No-op for non-billboard (point) meshes.
+   * current (default) image. Passing a nullish `url` clears the override and
+   * reverts the feature to the material's default image. No-op for
+   * non-billboard (point) meshes.
    */
-  async setFeatureImageByBatchId(batchId: number, url: string): Promise<void> {
+  async setFeatureImageByBatchId(
+    batchId: number,
+    url: string | null | undefined,
+  ): Promise<void> {
     const instanceId = this._batchIdToInstance.get(batchId);
     if (instanceId === undefined) return;
 
@@ -599,8 +611,28 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       | undefined;
     if (!rectAttr) return;
 
+    if (url == null) {
+      this._requestedImageUrls.delete(instanceId);
+      if (!this._imageOverrides.delete(instanceId)) return;
+      // Zero rect (invisible) until the default image finishes loading, same
+      // as instances that never had an override.
+      const rect = this._defaultRect;
+      rectAttr.setXYZW(
+        instanceId,
+        rect?.x ?? 0,
+        rect?.y ?? 0,
+        rect?.w ?? 0,
+        rect?.h ?? 0,
+      );
+      rectAttr.needsUpdate = true;
+      return;
+    }
+
+    this._requestedImageUrls.set(instanceId, url);
     const rect = await this._ensureAtlas().pack(url);
     if (!rect) return;
+    // A newer override or a clear superseded this load while it was in flight.
+    if (this._requestedImageUrls.get(instanceId) !== url) return;
 
     this._imageOverrides.add(instanceId);
     this._syncAtlasUniforms();
@@ -620,5 +652,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     // Clear internal collections to release references
     this._batchIdToInstance.clear();
     this._imageOverrides.clear();
+    this._requestedImageUrls.clear();
   }
 }
