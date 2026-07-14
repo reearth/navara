@@ -307,6 +307,9 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
    */
   private render(): void {
     if (!this.view) return;
+    // Nothing to show and no DOM yet — don't build the dock just to hide it
+    // (keeps clear()/add([]) idempotent on an empty set).
+    if (this.items.length === 0 && !this.dock) return;
     this.ensureDom();
     this.hasZoomBands = this.items.some(
       (item) =>

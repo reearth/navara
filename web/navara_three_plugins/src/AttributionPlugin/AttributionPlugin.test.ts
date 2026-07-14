@@ -116,6 +116,13 @@ describe("AttributionPlugin set management", () => {
     expect(isHidden(".navara-attr-logoframe")).toBe(true);
   });
 
+  it("clear() on an already-empty set builds no DOM", async () => {
+    const { plugin } = await setup();
+    plugin.clear();
+    expect(q(".navara-attr-dock")).toBeNull();
+    expect(q(".navara-attr-logoframe")).toBeNull();
+  });
+
   it("hides the dock while empty and reveals it once populated again", async () => {
     const { plugin } = await setup();
     plugin.add([{ attribution: "A" }]);
