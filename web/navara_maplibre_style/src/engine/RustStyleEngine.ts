@@ -158,7 +158,7 @@ export class RustStyleEngine implements StyleEngine {
     spec: PropertySpec,
   ): StyleValue {
     if (spec.type === "color" && typeof value === "string") {
-      return this.parseColor(value);
+      return value.startsWith("#") ? this.parseColor(value) : value;
     }
     return value as StyleValue;
   }
@@ -176,7 +176,7 @@ export class RustStyleEngine implements StyleEngine {
 
     // Handle color strings
     if (spec.type === "color" && typeof value === "string") {
-      return this.parseColor(value);
+      return value.startsWith("#") ? this.parseColor(value) : value;
     }
 
     // Numbers, strings, booleans pass through

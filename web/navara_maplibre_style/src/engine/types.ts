@@ -124,9 +124,7 @@ export type MapLibreColor = {
  *
  * Common array-valued properties in MapLibre Style Spec:
  * - line-dasharray: number[]
- * - text-offset: [number, number]
- * - icon-offset: [number, number]
- * - translate: [number, number]
+ * - text-offset, icon-offset, translate: number[] (typically 2 elements)
  */
 export type StyleValue =
   | number
@@ -134,8 +132,7 @@ export type StyleValue =
   | boolean
   | MapLibreColor
   | [number, number, number, number] // Legacy color array format
-  | number[] // Array-valued properties (dasharray, offset, translate, etc.)
-  | [number, number]; // Two-element numeric arrays (offset, translate)
+  | number[]; // Array-valued properties (dasharray, offset, translate, etc.)
 
 /**
  * Property specification for type checking and defaults.

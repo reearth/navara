@@ -60,15 +60,15 @@ export class JsStyleEngine implements StyleEngine {
     const { filter } = featureFilter(expr);
 
     return (ctx: FeatureContext) => {
-      // Note: MapLibre's filter evaluator has complex internal type expectations.
-      // While MapLibreFeature type exists, the actual runtime evaluator may expect
-      // a shape closer to GeoJSON Feature or have undocumented requirements.
-      // Using a flexible object with `as any` here is a pragmatic choice to ensure
-      // runtime compatibility, trading type safety at this boundary for correctness.
+      // Construct a valid GeoJSON Feature for MapLibre's filter evaluator.
+      // This ensures filters like ["geometry-type"] work correctly.
       const feature = {
-        type: geometryType, // Geometry type string (e.g., "Point", "Polygon")
+        type: "Feature" as const,
         properties: ctx.properties ?? {},
-        geometry: [], // Empty - most filters only check properties
+        geometry: {
+          type: geometryType, // e.g., "Point", "Polygon", "LineString"
+          coordinates: [], // Empty coordinates - most filters only check properties/type
+        },
       };
 
       // zoom is required for filter evaluation, but we don't have zoom info in Navara yet,
@@ -95,12 +95,14 @@ export class JsStyleEngine implements StyleEngine {
     const expression = result.value;
 
     return (ctx: EvaluationContext) => {
-      // Note: Similar to createFilter, we use a flexible feature object to ensure
-      // runtime compatibility with MapLibre's expression evaluator.
+      // Construct a valid GeoJSON Feature for MapLibre's expression evaluator.
       const feature = {
-        type: geometryType, // Geometry type string
+        type: "Feature" as const,
         properties: ctx.properties ?? {},
-        geometry: [], // Empty - most expressions only access properties
+        geometry: {
+          type: geometryType, // e.g., "Point", "Polygon", "LineString"
+          coordinates: [], // Empty coordinates - most expressions only access properties
+        },
       };
 
       // zoom is required for expression evaluation, but we don't have zoom info in Navara yet,
