@@ -19,6 +19,34 @@ import type {
   ValueExpression,
 } from "./types";
 
+/**
+ * Paint property specifications for Rust engine.
+ * For MVP: hardcoded to match MapLibre Style Spec.
+ * Future: Move these definitions to Rust/WASM.
+ */
+const PAINT_SPECS_BY_TYPE: Record<string, Record<string, PropertySpec>> = {
+  fill: {
+    "fill-color": { type: "color", default: "#000000" },
+    "fill-opacity": { type: "number", default: 1, minimum: 0, maximum: 1 },
+    "fill-outline-color": { type: "color" },
+  },
+  line: {
+    "line-color": { type: "color", default: "#000000" },
+    "line-width": { type: "number", default: 1, minimum: 0 },
+    "line-opacity": { type: "number", default: 1, minimum: 0, maximum: 1 },
+  },
+  circle: {
+    "circle-color": { type: "color", default: "#000000" },
+    "circle-radius": { type: "number", default: 5, minimum: 0 },
+    "circle-opacity": {
+      type: "number",
+      default: 1,
+      minimum: 0,
+      maximum: 1,
+    },
+  },
+};
+
 export class RustStyleEngine implements StyleEngine {
   async parseStyle(raw: unknown): Promise<ParsedStyle> {
     // TODO: Implement style validation in WASM
@@ -131,32 +159,7 @@ export class RustStyleEngine implements StyleEngine {
     layerType: LayerType,
     propertyName: string,
   ): PropertySpec | undefined {
-    // For MVP: Use hardcoded specs matching MapLibre Style Spec
-    // Future: Move these definitions to Rust
-    const specs: Record<string, Record<string, PropertySpec>> = {
-      fill: {
-        "fill-color": { type: "color", default: "#000000" },
-        "fill-opacity": { type: "number", default: 1, minimum: 0, maximum: 1 },
-        "fill-outline-color": { type: "color" },
-      },
-      line: {
-        "line-color": { type: "color", default: "#000000" },
-        "line-width": { type: "number", default: 1, minimum: 0 },
-        "line-opacity": { type: "number", default: 1, minimum: 0, maximum: 1 },
-      },
-      circle: {
-        "circle-color": { type: "color", default: "#000000" },
-        "circle-radius": { type: "number", default: 5, minimum: 0 },
-        "circle-opacity": {
-          type: "number",
-          default: 1,
-          minimum: 0,
-          maximum: 1,
-        },
-      },
-    };
-
-    return specs[layerType]?.[propertyName];
+    return PAINT_SPECS_BY_TYPE[layerType]?.[propertyName];
   }
 
   // Helper methods
