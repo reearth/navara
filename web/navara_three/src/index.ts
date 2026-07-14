@@ -346,10 +346,11 @@ export type Options = {
     url?: string;
   };
   /**
-   * Attribution (credit) UI. On by default so licensing is always available via
-   * {@link ThreeView.attribution}. Pass `false` to opt out (e.g. to build your
-   * own UI), or an object to configure the built-in plugin's initial style /
-   * corner. @defaultValue true
+   * Attribution (credit) UI, on by default (accessed via
+   * {@link ThreeView.attribution}). Pass `false` to opt out (e.g. to build your
+   * own UI), or an object to configure the initial style / corner. Skipped in a
+   * worker (no DOM), so `view.attribution` is `undefined` there.
+   * @defaultValue true
    */
   defaultAttribution?:
     | boolean
@@ -804,9 +805,9 @@ export default class ThreeView<
   private pixelRatioMatchedMedia?: MediaQueryList;
 
   /**
-   * The built-in attribution (credit) UI. `undefined` when the view was created
-   * with `defaultAttribution: false`. Feed it credits with
-   * `view.attribution?.add([...])`.
+   * The built-in attribution (credit) UI. `undefined` when disabled via
+   * `defaultAttribution: false`, or in a worker / no-DOM environment. Feed it
+   * credits with `view.attribution?.add([...])`.
    */
   get attribution(): AttributionPlugin | undefined {
     return this._attribution;
