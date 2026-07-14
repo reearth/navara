@@ -309,9 +309,9 @@ export class FeatureEvaluator {
    * - `size` - Feature size in pixels (for points/text)
    * - `opacity` - Feature opacity 0-1
    * - `image` - Image URL (for billboards); loaded once per distinct URL and
-   *   packed into the layer's texture atlas. Return `null` (or `undefined`
-   *   with the key present) to clear a previous per-feature image and revert
-   *   to the material's default `url`; omit the key to leave it unchanged.
+   *   packed into the layer's texture atlas. Return `null` to clear a
+   *   previous per-feature image and revert to the material's default `url`;
+   *   omit the key to leave it unchanged.
    *
    * Note: Evaluated styles override the layer's default styles.
    *

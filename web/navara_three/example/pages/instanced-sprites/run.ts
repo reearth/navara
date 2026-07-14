@@ -133,14 +133,15 @@ export const run = async (view: ThreeView<DefaultDescriptions>) => {
 
   // Per-feature billboard images: each feature's `icon` property picks an
   // image URL. Every distinct URL is loaded once and packed into the layer's
-  // texture atlas; the material's `url` stays the fallback for features
-  // without an `icon`.
+  // texture atlas. `image: null` reverts to the material's `url`, so features
+  // whose `icon` is removed fall back to the default instead of keeping a
+  // stale override.
   const [billboardLayer] = layerInstances.values();
   billboardLayer?.on("featureUpdated", ({ evaluator }) => {
     evaluator.evaluate(
       ({ properties }) => {
         const icon = properties?.["icon"] as string | undefined;
-        return icon ? { image: `/icons/${icon}.svg` } : {};
+        return { image: icon ? `/icons/${icon}.svg` : null };
       },
       { filters: ["icon"] },
     );
