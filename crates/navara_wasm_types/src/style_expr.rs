@@ -33,6 +33,7 @@ impl CompiledExpression {
     /// # Arguments
     /// * `properties_json` - Feature properties as JSON object
     /// * `zoom` - Current zoom level
+    /// * `geometry_type` - Optional geometry type string (e.g., "Point", "Polygon")
     ///
     /// # Returns
     /// Evaluated value as JsValue. Supported types:
@@ -43,7 +44,12 @@ impl CompiledExpression {
     ///
     /// Unsupported types return `null` with a console warning.
     #[wasm_bindgen]
-    pub fn evaluate(&self, properties_json: JsValue, zoom: f64) -> Result<JsValue, JsValue> {
+    pub fn evaluate(
+        &self,
+        properties_json: JsValue,
+        zoom: f64,
+        geometry_type: Option<String>,
+    ) -> Result<JsValue, JsValue> {
         // 1. Deserialize properties from JSON
         let properties_json: JsonValue = serde_wasm_bindgen::from_value(properties_json)
             .map_err(|e| JsValue::from_str(&format!("Invalid properties: {}", e)))?;
@@ -52,12 +58,10 @@ impl CompiledExpression {
         let properties = json_to_value_map(&properties_json)?;
 
         // 3. Create Feature and EvaluationContext
-        // Note: For MVP, we only populate properties since paint property expressions
-        // (colors, widths, opacity) primarily use feature.properties.
         let feature = Feature {
             id: None,               // Not needed for property-based styling
             properties,             // Main data: feature attributes from GeoJSON
-            geometry_type: None,    // Would be needed for ["geometry-type"] expressions
+            geometry_type,          // Geometry type for ["geometry-type"] expressions
             state: BTreeMap::new(), // Interactive states (hover/selected) set by renderer
             geometry: Vec::new(),   // Coordinates for geometric expressions (distance, area)
         };
@@ -98,8 +102,18 @@ impl CompiledFilter {
     }
 
     /// Test if feature matches filter
+    ///
+    /// # Arguments
+    /// * `properties_json` - Feature properties as JSON object
+    /// * `zoom` - Current zoom level
+    /// * `geometry_type` - Optional geometry type string (e.g., "Point", "Polygon")
     #[wasm_bindgen]
-    pub fn test(&self, properties_json: JsValue, zoom: f64) -> Result<bool, JsValue> {
+    pub fn test(
+        &self,
+        properties_json: JsValue,
+        zoom: f64,
+        geometry_type: Option<String>,
+    ) -> Result<bool, JsValue> {
         // Deserialize properties from JSON
         let properties_json: JsonValue = serde_wasm_bindgen::from_value(properties_json)
             .map_err(|e| JsValue::from_str(&format!("Invalid properties: {}", e)))?;
@@ -107,11 +121,10 @@ impl CompiledFilter {
         let properties = json_to_value_map(&properties_json)?;
 
         // Create context and evaluate
-        // Same as in CompiledExpression: only properties are used for MVP filter evaluation
         let feature = Feature {
             id: None,               // Not needed for property-based filtering
             properties,             // Main data: feature attributes from GeoJSON
-            geometry_type: None,    // Would be needed for geometry type filters
+            geometry_type,          // Geometry type for ["geometry-type"] filters
             state: BTreeMap::new(), // Interactive states not used in filters
             geometry: Vec::new(),   // Coordinates not used in property filters
         };

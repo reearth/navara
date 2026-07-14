@@ -42,14 +42,20 @@ export class RustStyleEngine implements StyleEngine {
   createFilter(
     expr: FilterExpression,
     _layerType: LayerType,
-    _geometryType: string,
+    geometryType: string,
   ): (feature: FeatureContext) => boolean {
     // Match JsStyleEngine behavior: empty filter array means "no filter".
     if (Array.isArray(expr) && expr.length === 0) {
       return () => true;
     }
     // Compile filter in WASM
-    const compiled = new CompiledFilter(expr);
+    let compiled: CompiledFilter;
+    try {
+      compiled = new CompiledFilter(expr);
+    } catch (e) {
+      console.error("Filter compilation error:", e);
+      return () => false; // Hide features when filter can't be compiled
+    }
 
     // Return evaluation function
     return (ctx: FeatureContext) => {
@@ -57,6 +63,7 @@ export class RustStyleEngine implements StyleEngine {
         return compiled.test(
           ctx.properties ?? {},
           0, // TODO: Get actual zoom from camera
+          geometryType, // Pass geometry type for ["geometry-type"] filters
         );
       } catch (e) {
         console.error("Filter evaluation error:", e);
@@ -68,7 +75,7 @@ export class RustStyleEngine implements StyleEngine {
   createValueFn<T extends StyleValue>(
     expr: ValueExpression,
     spec: PropertySpec,
-    _geometryType = "Point",
+    geometryType = "Point",
   ): (ctx: EvaluationContext) => T {
     // Handle constant values directly (optimization)
     if (
@@ -107,6 +114,7 @@ export class RustStyleEngine implements StyleEngine {
         const result = compiled.evaluate(
           ctx.properties ?? {},
           0, // navara currently doesn't provide zoom info, so we pass 0 for now
+          geometryType, // Pass geometry type for expressions that need it
         );
 
         // Convert maplibre-expr Value to expected StyleValue type
