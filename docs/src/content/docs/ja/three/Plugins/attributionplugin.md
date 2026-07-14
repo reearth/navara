@@ -44,7 +44,8 @@ const photorealSource = view.addSource({
 const photoreal = view.addLayer({ type: "3d-tiles", source: photorealSource });
 
 // `add` / `remove` で表示する出典の集合を管理します。`view.attribution` が
-// `undefined` になるのは `defaultAttribution: false` で生成した場合だけです。
+// `undefined` になるのは `defaultAttribution: false` で無効化した場合、または
+// worker / DOM なし環境です。
 view.attribution?.add([
   {
     attribution: "国土地理院",
@@ -103,7 +104,7 @@ new ThreeView({
 });
 ```
 
-`view.attribution` が `undefined` になるのは `defaultAttribution: false` で生成したときだけです。`position` は ⓘ トリガーとクレジットカードを置く下部の角を選びます（既定 `"bottom-right"`）。右下がページ独自の HUD などで埋まっている場合は `"bottom-left"` を使ってください。ロゴ枠はどちらのモードでも左下エリアに置かれます。`style` は初期の色を設定します（[AttributionStyle](#attributionstyle) を参照）。
+`view.attribution` が `undefined` になるのは `defaultAttribution: false` で無効化したとき、または worker / DOM なし環境です（組込プラグインは DOM を必要とします）。`position` は ⓘ トリガーとクレジットカードを置く下部の角を選びます（既定 `"bottom-right"`）。右下がページ独自の HUD などで埋まっている場合は `"bottom-left"` を使ってください。ロゴ枠はどちらのモードでも左下エリアに置かれます。`style` は初期の色を設定します（[AttributionStyle](#attributionstyle) を参照）。
 
 **上級者向け:** `AttributionPlugin` は `@navara/three` からも export されており、手動で生成（`new AttributionPlugin({ style?, position? })`）して `view.init()` の**前に** `view.addPlugin()` で登録することもできます（例: `defaultAttribution: false` で生成した view に付ける場合）。
 

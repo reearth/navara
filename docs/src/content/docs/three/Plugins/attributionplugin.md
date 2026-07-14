@@ -44,7 +44,8 @@ const photorealSource = view.addSource({
 const photoreal = view.addLayer({ type: "3d-tiles", source: photorealSource });
 
 // `add` / `remove` manage the set of displayed attributions. `view.attribution`
-// is `undefined` only if you created the view with `defaultAttribution: false`.
+// is `undefined` if you opted out with `defaultAttribution: false` (or in a
+// worker / no-DOM environment).
 view.attribution?.add([
   {
     attribution: "Geospatial Information Authority of Japan (GSI)",
@@ -103,7 +104,7 @@ new ThreeView({
 });
 ```
 
-`view.attribution` is `undefined` only when the view was created with `defaultAttribution: false`. `position` chooses the bottom corner for the ⓘ trigger and its credit card (default `"bottom-right"`); use `"bottom-left"` when the bottom-right corner is occupied, e.g. a page with its own HUD there. The logo frame lives in the bottom-left area in both modes; in `"bottom-left"` the ⓘ takes the far-left corner and the logos shift right to sit beside it. `style` sets the initial colors (see [AttributionStyle](#attributionstyle)).
+`view.attribution` is `undefined` when disabled via `defaultAttribution: false`, or in a worker / no-DOM environment (the built-in plugin needs the DOM). `position` chooses the bottom corner for the ⓘ trigger and its credit card (default `"bottom-right"`); use `"bottom-left"` when the bottom-right corner is occupied, e.g. a page with its own HUD there. The logo frame lives in the bottom-left area in both modes; in `"bottom-left"` the ⓘ takes the far-left corner and the logos shift right to sit beside it. `style` sets the initial colors (see [AttributionStyle](#attributionstyle)).
 
 **Advanced:** `AttributionPlugin` is also exported from `@navara/three` and can be constructed manually (`new AttributionPlugin({ style?, position? })`) and registered with `view.addPlugin()` **before** `view.init()` — e.g. to attach one to a view created with `defaultAttribution: false`.
 
