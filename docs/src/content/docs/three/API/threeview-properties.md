@@ -2,7 +2,7 @@
 title: ThreeView Properties
 description: API Reference for ThreeView Class Properties and Events
 sidebar:
-  order: 14
+  order: 940
 ---
 
 This page describes all properties and events available on a ThreeView instance.

@@ -2,7 +2,7 @@
 title: Raster DEM Source
 description: An RGB-encoded elevation (raster-dem) source
 sidebar:
-  order: 14
+  order: 340
 ---
 
 A `raster-dem` source describes RGB-encoded elevation tiles. It powers both:

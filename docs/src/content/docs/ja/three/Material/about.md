@@ -2,7 +2,7 @@
 title: About
 description: レイヤーのマテリアル（スタイリングオプション）
 sidebar:
-  order: 20
+  order: 500
 ---
 
 **マテリアル** は、[レイヤー](../../../three/layer/about/)の描画（スタイリング）オプションです。各マテリアルは、レイヤー設定上のそれぞれのキーで設定します（例：`vector` レイヤーの `polygon`、`terrain` レイヤーの `terrain`）。レイヤーがどのマテリアルを受け付けるかは、そのタイプによって異なります。
@@ -50,5 +50,5 @@ view.addLayer({
 
 ## 関連リソース
 
-- [About Layer](../../../three/layer/about/) — レイヤーのタイプと追加方法
+- [レイヤーの種類](../../../three/layer/about/) — レイヤーのタイプと追加方法
 - [About Source](../../../three/source/about/) — データ側

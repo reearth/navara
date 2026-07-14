@@ -2,7 +2,7 @@
 title: TerrainMaterial
 description: Terrain mesh rendering options for a terrain layer
 sidebar:
-  order: 36
+  order: 560
 ---
 
 `TerrainMaterial` holds the render options for a [`terrain`](../../../three/layer/terrain-layer/) layer's mesh. It is set via the `terrain` key and applies regardless of the source's data format — [`raster-dem`](../../../three/source/raster-dem-source/) (RGB-encoded elevation) or [`quantized-mesh`](../../../three/source/quantized-mesh-source/). All fetch/geometry config (zoom range, tiling scheme, elevation decoder, extensions, token) lives on the referenced source, not here.

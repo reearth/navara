@@ -20,6 +20,7 @@ import { canWorkerProcessImmediately } from "@navara/worker";
 import { Mesh, Object3D, Sprite } from "three";
 
 import { BatchedSdfTextMesh, Layer } from "..";
+import { disposeTexture } from "../loaders";
 import { getImageDataFromBlob } from "../tasks/getImageDataFromBlob";
 
 import { EventContext } from "./context";
@@ -609,7 +610,7 @@ function processDataRequesterRemoved(
   if (loadedTexs) {
     const texture = loadedTexs.get(id);
     if (texture && !texture.isRenderTargetTexture) {
-      texture.dispose();
+      disposeTexture(texture);
     }
     loadedTexs.delete(id);
   }
@@ -681,7 +682,7 @@ function processTextureFragmentRemoved(ctx: EventContext, req: EntityEvent) {
   // Check isRenderTargetTexture to avoid double-dispose
   const texture = loadedTexs.get(id);
   if (texture && !texture.isRenderTargetTexture) {
-    texture.dispose();
+    disposeTexture(texture);
   }
   loadedTexs.delete(id);
 

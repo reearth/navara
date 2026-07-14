@@ -2,7 +2,7 @@
 title: Descriptor Types
 description: API Reference for Layer, BaseHandle, and BaseDesc types
 sidebar:
-  order: 15
+  order: 950
 ---
 
 In navara_three, Descriptors are classified into the following 4 types:
@@ -100,7 +100,7 @@ layer.forceUpdate();
 ### Events
 
 :::note
-For the data structure behind these events (Layer, FeatureSet, Feature, Batch), see [About Layer](../../introduction/about-layer/#layer-data-structure). For the `FeatureEvaluator` class used in event callbacks, see [FeatureEvaluator](./feature-evaluator/).
+For the data structure behind these events (Layer, FeatureSet, Feature, Batch), see [Layers & Descriptors](../../introduction/about-layer/#layer-data-structure). For the `FeatureEvaluator` class used in event callbacks, see [FeatureEvaluator](./feature-evaluator/).
 :::
 
 #### featureCreated

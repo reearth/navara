@@ -2,7 +2,7 @@
 title: Plugin
 description: How to implement plugins
 sidebar:
-  order: 22
+  order: 810
 ---
 
 This section describes the API for implementing plugins. For an overview of the plugin system concepts, see [About Plugin](../../../three/introduction/about-plugin/).

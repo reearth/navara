@@ -33,7 +33,6 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import { AttributionPlugin } from "@navara/three_plugins";
 import { Mesh, Vector2, Vector3, Object3D, Group, ArrowHelper } from "three";
 import { Pane, FolderApi } from "tweakpane";
 
@@ -104,8 +103,7 @@ export const run = async (
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
 
-  const attribution = new AttributionPlugin();
-  view.addPlugin(attribution);
+  const attribution = view.attribution;
 
   await view.init();
 
@@ -214,7 +212,7 @@ export const run = async (
   onDistPosChange();
   onRegisterChange();
 
-  attribution.show([
+  attribution?.add([
     TERRAIN_DATASETS.gsi,
     TILE_DATASETS.openstreetmap,
     TILES_3D_DATASETS.plateauChiyoda,

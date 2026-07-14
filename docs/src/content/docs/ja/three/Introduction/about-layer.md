@@ -1,8 +1,8 @@
 ---
-title: About Layer
-description: レイヤーの概念について説明します。
+title: レイヤーと Descriptor
+description: レイヤーと Descriptor の違いと、それぞれの使い分けを説明します。
 sidebar:
-  order: 4
+  order: 130
 ---
 
 ## レイヤーとは
@@ -58,7 +58,7 @@ const imagery = view.addSource({
 view.addLayer({ type: "raster", source: imagery, raster: { opacity: 0.8 } });
 ```
 
-Source の種類については [About Source](../../../three/source/about/) を、レイヤーの種類と描画オプションについては [About Layer (types)](../../../three/layer/about/) を参照してください。
+Source の種類については [About Source](../../../three/source/about/) を、レイヤーの種類と描画オプションについては [レイヤーの種類](../../../three/layer/about/) を参照してください。
 
 ## レイヤーと他の Descriptor の違い
 
@@ -219,6 +219,6 @@ boxHandle.delete();
 ## 関連リソース
 
 - [About Source](../../../three/source/about/) - レイヤーのデータの取得元
-- [About Layer (types)](../../../three/layer/about/) - レイヤーの種類と描画オプション
+- [レイヤーの種類](../../../three/layer/about/) - レイヤーの種類と描画オプション
 - [Materials](../../../three/material/about/) - スタイル設定（Material）のリファレンス
 - [three_default_descs](../../../three_default_descs/about/) - デフォルト Descriptor の詳細

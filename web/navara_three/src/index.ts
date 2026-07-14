@@ -105,11 +105,13 @@ import {
 } from "./layers/effect";
 import { FinalCopyEffectDesc } from "./layers/effect/FinalCopyEffectDesc";
 import { LayersManager } from "./layersManager";
+import { disposeTexture } from "./loaders";
 import { overrideMaterialsForMRT } from "./material";
 import type { TileMesh } from "./mesh/tile";
 import { RenderPassOrchestrator } from "./orchestrators/RenderPassOrchestrator";
 import { PickHelper } from "./pick/pickHelper";
 import { TerrainPicker } from "./pick/pickTerrain";
+import { AttributionPlugin, type AttributionPluginOptions } from "./plugins";
 import { TexturizedSceneByTileCoordinates, type Scenes } from "./scene";
 import { ShadowMapViewers } from "./ShadowMapViewers";
 import { Source } from "./source";
@@ -167,6 +169,7 @@ export * from "./shaders";
 export * from "./material";
 export * from "./core";
 export { BufferView } from "./bufferView";
+export * from "./plugins";
 export * from "./layers";
 export * from "./passes";
 export * from "./evaluations";
@@ -339,6 +342,14 @@ export type Options = {
     /** Custom water normal texture URL. Uses built-in texture if not specified. */
     url?: string;
   };
+  /**
+   * Attribution (credit) UI, on by default (accessed via
+   * {@link ThreeView.attribution}). Pass `false` to opt out (e.g. to build your
+   * own UI), or an object to configure the initial style / corner. Skipped in a
+   * worker (no DOM), so `view.attribution` is `undefined` there.
+   * @defaultValue true
+   */
+  defaultAttribution?: boolean | AttributionPluginOptions;
 } & GlobeOptions;
 
 /**
@@ -783,7 +794,19 @@ export default class ThreeView<
   private viewContext!: ViewContext;
   private plugins: Plugin[] = [];
 
+  /** Built-in attribution UI; unset when disabled or in a worker (no DOM). */
+  private _attribution?: AttributionPlugin;
+
   private pixelRatioMatchedMedia?: MediaQueryList;
+
+  /**
+   * The built-in attribution (credit) UI. `undefined` when disabled via
+   * `defaultAttribution: false`, or in a worker / no-DOM environment. Feed it
+   * credits with `view.attribution?.add([...])`.
+   */
+  get attribution(): AttributionPlugin | undefined {
+    return this._attribution;
+  }
 
   constructor(options: Options = {}) {
     super();
@@ -806,6 +829,16 @@ export default class ThreeView<
     }
 
     this._options = options;
+
+    // Attribution UI on by default; skip in a worker (no DOM) or when disabled.
+    if (options.defaultAttribution !== false && !isWorker()) {
+      const cfg =
+        typeof options.defaultAttribution === "object"
+          ? options.defaultAttribution
+          : undefined;
+      this._attribution = new AttributionPlugin(cfg);
+      this.plugins.push(this._attribution);
+    }
 
     // Initialize terrain picker
     this._terrainPicker = new TerrainPicker();
@@ -1495,6 +1528,9 @@ export default class ThreeView<
   dispose() {
     this._disposed = true;
     this._initialized = false;
+    // Dispose the view-owned attribution plugin (other plugins are the caller's).
+    this._attribution?.dispose();
+    this._attribution = undefined;
     if (!isWorker()) {
       window.removeEventListener("resize", this._handleResize);
       this.pixelRatioMatchedMedia?.removeEventListener(
@@ -1531,9 +1567,10 @@ export default class ThreeView<
     }
     this._abortControllers.clear();
 
-    // Dispose loaded textures
+    // Dispose loaded textures (closes any ImageBitmap backing so the decoded
+    // pixels are freed, not just the GL texture).
     for (const tex of this._loadedTexs.values()) {
-      tex.dispose();
+      disposeTexture(tex);
     }
     this._loadedTexs.clear();
 

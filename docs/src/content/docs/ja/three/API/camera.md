@@ -2,7 +2,7 @@
 title: ThreeViewCamera クラス
 description: ThreeViewCamera クラスの API リファレンス - カメラの位置・向き・操作動作を管理するクラス
 sidebar:
-  order: 22
+  order: 1010
 ---
 
 `ThreeViewCamera` クラスは、カメラの位置・向き・投影・インタラクティブ操作動作を管理します。`ThreeView` インスタンスの `camera` プロパティ経由でアクセスします。

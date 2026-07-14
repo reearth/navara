@@ -2,7 +2,7 @@
 title: About Plugin
 description: An explanation of the plugin system concept.
 sidebar:
-  order: 5
+  order: 140
 ---
 
 ## Why is a Plugin System Needed?
@@ -109,7 +109,7 @@ For details, see the [three_plugins documentation](../../../three_plugins/about/
 
 ## Related Resources
 
-- [About Layer](../../../three/introduction/about-layer/) - Layer concepts and types
+- [Layers & Descriptors](../../../three/introduction/about-layer/) - Layer concepts and types
 - [Plugin API](../../../three/core/plugin/) - How to implement plugins
 - [Custom Descriptor](../../../three/core/custom-desc/) - How to implement custom descriptors
 - [three_default_descs](../../../three_default_descs/about/) - Default Descriptor implementations

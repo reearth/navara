@@ -2,7 +2,7 @@
 title: ModelMaterial
 description: Model material for navara_three
 sidebar:
-  order: 32
+  order: 520
 ---
 
 `ModelMaterial`は、3D モデルレンダリング用のマテリアルを表します。

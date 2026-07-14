@@ -2,7 +2,7 @@
 title: RasterMaterial
 description: Raster imagery rendering options for a raster layer
 sidebar:
-  order: 37
+  order: 570
 ---
 
 `RasterMaterial` holds the render options for a [`raster`](../../../three/layer/raster-layer/) layer's imagery. It is set via the `raster` key. All fetch/tiling config (zoom range, TMS, …) lives on the referenced [`raster-tile`](../../../three/source/raster-tile-source/) source, not here.

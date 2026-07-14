@@ -2,7 +2,7 @@
 title: About Plugin
 description: プラグインシステムの概念について説明します。
 sidebar:
-  order: 5
+  order: 140
 ---
 
 ## なぜプラグインシステムが必要か
@@ -109,7 +109,7 @@ import { PersonViewPlugin, OverlayPlugin } from "@navara/three_plugins";
 
 ## 関連リソース
 
-- [About Layer](../../../three/introduction/about-layer/) - レイヤーとオブジェクトの概念と種類
+- [レイヤーと Descriptor](../../../three/introduction/about-layer/) - レイヤーとオブジェクトの概念と種類
 - [Plugin API](../../../three/core/plugin/) - プラグインの実装方法
 - [Custom Descriptor](../../../three/core/custom-desc/) - カスタム Descriptor の実装方法
 - [three_default_descs](../../../three_default_descs/about/) - デフォルト Descriptor の実装

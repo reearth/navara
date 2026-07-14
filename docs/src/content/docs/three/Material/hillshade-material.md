@@ -2,7 +2,7 @@
 title: HillshadeMaterial
 description: Hillshade material for navara_three
 sidebar:
-  order: 41
+  order: 600
 ---
 
 `HillshadeMaterial` holds the render options for hillshade (shaded relief) on a [`raster`](../../../three/layer/raster-layer/) layer. It computes surface normals from DEM elevation values and shades the tile based on lighting direction, emphasizing terrain features such as ridges and valleys. Set it via the `hillshade` key.

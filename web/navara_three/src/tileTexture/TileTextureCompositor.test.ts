@@ -68,7 +68,7 @@ describe("TileTextureCompositor.acquire/release", () => {
     expect(again.color).toBe(out.color);
   });
 
-  it("release disposes once refCount drops to zero", () => {
+  it("release pools the atlas once refCount drops to zero", () => {
     const { compositor } = setup();
     compositor.acquire(1n);
     compositor.acquire(1n);
@@ -78,8 +78,12 @@ describe("TileTextureCompositor.acquire/release", () => {
 
     compositor.release(1n);
     expect(atlas.dispose).not.toHaveBeenCalled();
+    expect(compositor.cache.pooledCount).toBe(0);
     compositor.release(1n);
-    expect(atlas.dispose).toHaveBeenCalledTimes(1);
+    // The entry is gone but its atlas goes to the reuse pool, not dispose.
+    expect(compositor.cache.getEntry(1n)).toBeUndefined();
+    expect(atlas.dispose).not.toHaveBeenCalled();
+    expect(compositor.cache.pooledCount).toBe(1);
   });
 });
 

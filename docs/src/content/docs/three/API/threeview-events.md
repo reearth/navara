@@ -2,7 +2,7 @@
 title: ThreeView Events
 description: API Reference for ThreeView Class Events
 sidebar:
-  order: 12
+  order: 920
 ---
 
 This page describes all events available on a ThreeView instance.

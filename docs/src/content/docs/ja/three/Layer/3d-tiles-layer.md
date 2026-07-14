@@ -2,7 +2,7 @@
 title: 3D Tiles Layer
 description: 3d-tiles の Source（建物、点群、フォトグラメトリ）を描画する
 sidebar:
-  order: 14
+  order: 440
 ---
 
 `3d-tiles` レイヤーは、[`3d-tiles`](../../../three/source/3d-tiles-source/) の Source（3D Tiles 形式の大規模な 3D データセット。建物モデル、点群、フォトリアルなタイルなど）を、モデルの見た目で描画します。

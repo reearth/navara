@@ -1,9 +1,9 @@
 /**
  * Attribution data model and framework-agnostic helpers.
  *
- * This module has **no `@navara/three` dependency** so the pure logic (type
- * guards, zoom-band matching, HTML sanitization) is unit-testable without
- * loading the engine. The `AttributionPlugin` class composes these.
+ * This module imports **nothing from the engine (WASM)**, so the pure logic
+ * (type guards, zoom-band matching, HTML sanitization) is unit-testable without
+ * loading it. The `AttributionPlugin` class composes these.
  */
 
 /**
@@ -100,7 +100,7 @@ export function isAttributionHtml(
  * renders. Sources that differ in `creditLayerId` or `children` produce
  * different keys, so distinct per-layer / zoom-banded credits are preserved.
  */
-function attributionItemKey(item: AttributionItem): string {
+export function attributionItemKey(item: AttributionItem): string {
   if (isAttributionHtml(item)) {
     return JSON.stringify(["html", item.attributionHtml]);
   }

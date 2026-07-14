@@ -25,3 +25,13 @@ If a change touches only `web/`, the pnpm equivalents are faster: `pnpm run buil
 - [guide/CRATES.md](guide/CRATES.md) — reference for the 40+ Rust crates
 - [guide/WASM_API_POLICY.md](guide/WASM_API_POLICY.md) — read before designing TypeScript APIs that wrap WASM
 - [docs/AGENTS.md](docs/AGENTS.md) — when working in `docs/` (user-facing documentation site)
+
+## Skills
+
+`.claude/skills/` holds distilled best practices for working with Navara: [navara-usage](.claude/skills/navara-usage/SKILL.md) (how to use `@navara/three` — for application code, examples, and docs snippets), [navara-add-example](.claude/skills/navara-add-example/SKILL.md), and [navara-add-docs-example](.claude/skills/navara-add-docs-example/SKILL.md).
+
+**When to record knowledge in a skill vs. docs:**
+
+- A skill captures the distilled form: API-usage invariants (e.g. init order), gotchas that produce broken code when unknown, decision guides (which API tier to use), and proven recipes (goal → composition). When you uncover such a pattern while working, add it to the relevant skill first — keep entries terse and verified against the implementation, never guessed.
+- Knowledge flows **skills → docs**: user-facing content accumulated in skills should then be expanded into the documentation site (`docs/`, published at https://navara-docs.netlify.app/) following its writing rules. Docs are the human-facing, exhaustive form; skills stay the LLM-facing, distilled form.
+- Do not reduce skills to link indexes into the docs, and do not duplicate exhaustive API listings into skills — for exact property names and signatures, skills point to the docs site and TypeScript definitions instead.

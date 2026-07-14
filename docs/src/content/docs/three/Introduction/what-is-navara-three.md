@@ -2,7 +2,7 @@
 title: What is navara_three?
 description: Overview and features of navara_three.
 sidebar:
-  order: 1
+  order: 100
 ---
 
 ## What is navara_three?

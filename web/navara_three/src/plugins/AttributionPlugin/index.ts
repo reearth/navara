@@ -6,62 +6,68 @@
  * corner. Each source can carry zoom-banded child credits that switch as the
  * camera zooms, and per-layer feature credits are tracked dynamically.
  *
+ * `ThreeView` creates one by default and exposes it as `view.attribution`
+ * (pass `defaultAttribution: false` to opt out).
+ *
  * ## Usage
  *
  * ```ts
  * import ThreeView from "@navara/three";
- * import { AttributionPlugin } from "@navara/three_plugins";
  *
  * const view = new ThreeView({ container });
- * const attribution = new AttributionPlugin();
- * view.addPlugin(attribution);
  * await view.init();
  *
  * // A 3D-tiles layer whose tiles embed their own copyright (tracked dynamically).
  * const photoreal = view.addLayer({ type: "cesium3dtiles", data: { url } });
  *
- * attribution.show(
- *   [
- *     {
- *       attribution: "Geospatial Information Authority of Japan (GSI)",
- *       attributionUrl: "https://maps.gsi.go.jp/development/ichiran.html",
- *       children: [
- *         { attribution: "Nationwide latest aerial photos (seamless)", minZoom: 14, maxZoom: 18 },
- *         { attribution: "GRUS画像（© Axelspace）", minZoom: 14, maxZoom: 18 },
- *       ],
- *     },
- *     {
- *       // Per-tile copyright is tracked dynamically by resolving this layer id.
- *       attribution: "Google Maps Photorealistic 3D Tiles",
- *       creditLayerId: photoreal.id,
- *     },
- *     {
- *       attributionHtml:
- *         '<a href="https://s2maps.eu">Sentinel-2 cloudless 2020</a> by <a href="https://eox.at">EOX IT Services GmbH</a>',
- *     },
- *   ],
- * );
+ * // `add` / `remove` manage the set of displayed attributions.
+ * view.attribution?.add([
+ *   {
+ *     attribution: "Geospatial Information Authority of Japan (GSI)",
+ *     attributionUrl: "https://maps.gsi.go.jp/development/ichiran.html",
+ *     children: [
+ *       { attribution: "Nationwide latest aerial photos (seamless)", minZoom: 14, maxZoom: 18 },
+ *       { attribution: "GRUS画像（© Axelspace）", minZoom: 14, maxZoom: 18 },
+ *     ],
+ *   },
+ *   {
+ *     // Per-tile copyright is tracked dynamically by resolving this layer id.
+ *     attribution: "Google Maps Photorealistic 3D Tiles",
+ *     creditLayerId: photoreal.id,
+ *   },
+ *   {
+ *     attributionHtml:
+ *       '<a href="https://s2maps.eu">Sentinel-2 cloudless 2020</a> by <a href="https://eox.at">EOX IT Services GmbH</a>',
+ *   },
+ * ]);
+ *
+ * // Drop a source again when its data leaves the map (matched structurally).
+ * view.attribution?.remove([{ attribution: "Google Maps Photorealistic 3D Tiles", creditLayerId: photoreal.id }]);
  *
  * // Re-theme at runtime (e.g. light / dark switch).
- * attribution.setStyle({ backgroundColor: "#14181c", textColor: "#e6e9ee" });
+ * view.attribution?.setStyle({ backgroundColor: "#14181c", textColor: "#e6e9ee" });
  *
- * attribution.hide();
- * attribution.dispose();
+ * // The popover is open by default so licensing is visible; hide() collapses
+ * // it and show() re-opens it (the ⓘ trigger toggles the same state).
+ * view.attribution?.hide();
+ * view.attribution?.show();
  * ```
  */
-import ThreeView, {
-  Plugin,
-  type Layer,
-  type FeatureCreatedParams,
-  type FeatureRemovedParams,
-  type FeatureVisibilityChangedParams,
-  type ViewContext,
-} from "@navara/three";
-import type { DefaultDescriptions } from "@navara/three_default_plugin";
+import { Plugin } from "@navara/core";
+
+import type { ViewContext } from "../../core";
+import type ThreeView from "../../index";
+import type {
+  Layer,
+  FeatureCreatedParams,
+  FeatureRemovedParams,
+  FeatureVisibilityChangedParams,
+} from "../../layer";
 
 import {
   aggregateCredits,
   appendSanitizedHtml,
+  attributionItemKey,
   createSafeAnchor,
   dedupeAttributionItems,
   isAttributionHtml,
@@ -76,7 +82,16 @@ import {
   SVG_ICON_HTML,
 } from "./attributionStyles";
 
-type View = ThreeView<DefaultDescriptions>;
+export {
+  isAttributionHtml,
+  type AttributionItem,
+  type AttributionSource,
+  type AttributionHtml,
+  type AttributionChild,
+  type AttributionStyle,
+} from "./attribution";
+
+type View = ThreeView;
 
 /** Which bottom corner the attribution UI anchors to. */
 export type AttributionPosition = "bottom-left" | "bottom-right";
@@ -107,7 +122,9 @@ let styleRefCount = 0;
  * trigger). Top-level sources can carry nested, optionally zoom-banded child
  * credits.
  *
- * Register via `view.addPlugin(plugin)` **before** `view.init()`.
+ * A `ThreeView` creates one by default (`view.attribution`); construct it
+ * manually and `view.addPlugin(plugin)` **before** `view.init()` only when the
+ * view was created with `defaultAttribution: false`.
  */
 export class AttributionPlugin extends Plugin<View, ViewContext> {
   private view?: View;
@@ -119,7 +136,8 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
   private listEl?: HTMLUListElement;
   private logosEl?: HTMLDivElement;
   private toggle?: HTMLButtonElement;
-  private isOpen = false;
+  // Open by default so licensing is visible without a click.
+  private isOpen = true;
 
   /** Last computed integer zoom level. Used to skip no-op re-renders. */
   private lastZoomLevel?: number;
@@ -157,33 +175,59 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     // static map; `preRender` reliably fires while the scene renders. The
     // level-change gate in `handlePreRender` keeps this from churning the DOM.
     view.on("preRender", this.boundPreRender);
-    // `show()` may have run before init (the plugin is created before
-    // `view.init()`); apply any pending items now that the view exists, instead
-    // of silently dropping them.
+    // Apply any items added before init() now that the view exists.
     if (this.items.length) this.apply();
   }
 
   /**
-   * Display the given attributions. Re-invoking replaces the current content
-   * (supports dynamic license changes).
+   * Add attributions to the displayed set. Merged with the current entries;
+   * exact duplicates are dropped so several data sources that share one credit
+   * (e.g. multiple Overture themes) render a single line, not one each.
    *
    * Sources that declare a `creditLayerId` have that layer's per-feature credits
    * tracked dynamically; the layer is resolved from the view by id, so callers
    * don't pass the `Layer` object separately.
    *
-   * Exact-duplicate entries are dropped so several data sources that share one
-   * credit (e.g. multiple Overture themes) render a single line, not one each.
-   *
    * @param items - Attribution entries (sources or raw HTML credits)
    */
-  show(items: AttributionItem[]): void {
-    this.items = dedupeAttributionItems(items);
+  add(items: AttributionItem[]): void {
+    this.items = dedupeAttributionItems([...this.items, ...items]);
+    this.apply();
+  }
+
+  /**
+   * Remove attributions from the displayed set. Entries are matched
+   * structurally (same rendered content), so pass the same object shape that
+   * was added — no separate id is needed. Unmatched entries are ignored.
+   *
+   * @param items - Attribution entries to drop
+   */
+  remove(items: AttributionItem[]): void {
+    const keys = new Set(items.map(attributionItemKey));
+    this.items = this.items.filter(
+      (item) => !keys.has(attributionItemKey(item)),
+    );
+    this.apply();
+  }
+
+  /**
+   * Remove all displayed attributions, keeping the plugin usable — a later
+   * {@link add} brings the UI back. Use {@link dispose} to tear the DOM down.
+   */
+  clear(): void {
+    this.items = [];
     this.apply();
   }
 
   /** Resolve/track the current items' credit layers and render. */
   private apply(): void {
-    this.trackLayers(this.resolveCreditLayers(this.items));
+    const layers = this.resolveCreditLayers(this.items);
+    // Retrack only when the credit-layer set changes (avoids wiping tracked credits).
+    const nextIds = new Set(layers.map((l) => l.id));
+    const sameSet =
+      nextIds.size === this.layerCredits.size &&
+      [...nextIds].every((id) => this.layerCredits.has(id));
+    if (!sameSet) this.trackLayers(layers);
     this.render();
   }
 
@@ -206,16 +250,31 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     return layers;
   }
 
-  /** Hide the attribution UI and clear tracked content. */
+  /**
+   * Open the attribution popover. It is open by default, so this is only needed
+   * to re-open it after {@link hide} (the ⓘ trigger toggles the same state).
+   * Affects the popover card only — the always-visible logo frame stays put. Has
+   * no visible effect while the set is empty: the dock is hidden until at least
+   * one attribution is added.
+   */
+  show(): void {
+    this.setOpen(true);
+  }
+
+  /**
+   * Close the attribution popover. Affects the popover card only; the tracked
+   * attributions and the always-visible logo frame are untouched (use
+   * {@link remove} to drop entries, {@link dispose} to tear everything down).
+   */
   hide(): void {
-    this.teardownDom();
-    this.items = [];
+    this.setOpen(false);
   }
 
   /** Release all DOM nodes, camera listeners, and layer listeners. */
   dispose(): void {
     this.view?.off("preRender", this.boundPreRender);
-    this.hide();
+    this.teardownDom();
+    this.items = [];
     this.view = undefined;
   }
 
@@ -250,6 +309,8 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
    */
   private render(): void {
     if (!this.view) return;
+    // Don't build the dock for an empty set (keeps clear()/add([]) idempotent).
+    if (this.items.length === 0 && !this.dock) return;
     this.ensureDom();
     this.hasZoomBands = this.items.some(
       (item) =>
@@ -262,6 +323,10 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     this.lastZoomLevel = this.currentZoomLevel();
     this.populateList();
     this.populateLogos();
+    // Hide the dock + logo frame when there's nothing to attribute.
+    const empty = this.items.length === 0;
+    if (this.dock) this.dock.hidden = empty;
+    if (this.logosEl) this.logosEl.hidden = empty;
   }
 
   /** Create the dock DOM and inject (or reuse) the shared styles. */
@@ -291,7 +356,8 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
 
     const card = document.createElement("div");
     card.className = "navara-attr-card";
-    card.hidden = true;
+    // Reflect the current open intent (see setOpen).
+    card.hidden = !this.isOpen;
 
     const head = document.createElement("div");
     head.className = "navara-attr-head";
@@ -316,8 +382,11 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     toggle.className = "navara-attr-toggle";
     toggle.type = "button";
     toggle.innerHTML = SVG_ICON_HTML;
-    toggle.setAttribute("aria-expanded", "false");
-    toggle.setAttribute("aria-label", "Show attributions");
+    toggle.setAttribute("aria-expanded", String(this.isOpen));
+    toggle.setAttribute(
+      "aria-label",
+      this.isOpen ? "Hide attributions" : "Show attributions",
+    );
     toggle.addEventListener("click", () => this.setOpen());
 
     dock.appendChild(card);
@@ -463,8 +532,9 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
 
   /** Open / close the popover. Non-modal: no backdrop is added. */
   private setOpen(open?: boolean): void {
-    if (!this.card || !this.toggle) return;
+    // Record intent before the DOM guard; ensureDom() applies it when the card is built.
     this.isOpen = open ?? !this.isOpen;
+    if (!this.card || !this.toggle) return;
     this.card.hidden = !this.isOpen;
     this.toggle.setAttribute("aria-expanded", String(this.isOpen));
     // Keep the accessible name in sync with what activating the button does.
@@ -544,7 +614,8 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
   /**
    * Subscribe to the given layers' feature events and merge per-feature credits
    * into the rendered list as features appear / disappear. Detaches any
-   * previously registered listeners first, so repeated `show()` calls don't leak.
+   * previously registered listeners first, so repeated `add()` / `remove()`
+   * don't leak.
    */
   private trackLayers(layers: Layer[]): void {
     for (const off of this.layerCleanups) off();
@@ -587,7 +658,7 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
       // `deleted` fires once for the layer (no per-feature `featureRemoved`).
       // Fully release the layer — drop its credits entry and detach its
       // listeners (and this cleanup) — so a deleted layer doesn't linger until
-      // the next show()/hide()/dispose().
+      // the next add()/remove()/clear() or dispose().
       const onDeleted = () => {
         detach();
         this.layerCleanups = this.layerCleanups.filter((c) => c !== detach);

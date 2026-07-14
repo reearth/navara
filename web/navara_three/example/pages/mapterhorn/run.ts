@@ -4,7 +4,6 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../helpers/constants";
@@ -15,8 +14,7 @@ export type CustomDescriptions = DefaultDescriptions;
 export const run = async (view: ThreeView<CustomDescriptions>) => {
   view.addPlugin(new DefaultPlugin());
 
-  const attribution = new AttributionPlugin();
-  view.addPlugin(attribution);
+  const attribution = view.attribution;
 
   await view.init();
 
@@ -100,5 +98,5 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
 
   addDateControl(view, pane, date);
 
-  attribution.show([TERRAIN_DATASETS.mapterhorn, TILE_DATASETS.openstreetmap]);
+  attribution?.add([TERRAIN_DATASETS.mapterhorn, TILE_DATASETS.openstreetmap]);
 };

@@ -2,7 +2,7 @@
 title: What is navara_three?
 description: navara_three の概要と特徴について説明します。
 sidebar:
-  order: 1
+  order: 100
 ---
 
 ## What is navara_three?

@@ -2,7 +2,7 @@
 title: Raster Layer
 description: raster-tile または raster-dem の Source を画像・陰影起伏・標高ヒートマップとして描画する
 sidebar:
-  order: 12
+  order: 420
 ---
 
 `raster` レイヤーは、[`raster-tile`](../../../three/source/raster-tile-source/) の Source を画像として、または [`raster-dem`](../../../three/source/raster-dem-source/) の Source を陰影起伏や標高ヒートマップとして描画します。[`terrain`](../../../three/layer/terrain-layer/) レイヤーが存在する場合、画像は 3D の地表にドレープ（投影）されます。存在しない場合は平坦なグローブ上に描画されます。

@@ -17,9 +17,13 @@ function makeFakeAtlas(): CompositeAtlas {
   };
 }
 
-function makeCache() {
+function makeCache(maxPooled = 0) {
   const factory = vi.fn<AtlasFactory>(() => makeFakeAtlas());
-  const cache = new TileTextureCache({ size: 512, atlasFactory: factory });
+  const cache = new TileTextureCache({
+    size: 512,
+    atlasFactory: factory,
+    maxPooled,
+  });
   return { cache, factory };
 }
 
@@ -47,7 +51,7 @@ describe("TileTextureCache.acquire", () => {
 });
 
 describe("TileTextureCache.release", () => {
-  it("disposes atlas only when refCount reaches zero", () => {
+  it("disposes atlas only when refCount reaches zero (pooling disabled)", () => {
     const { cache, factory } = makeCache();
     cache.acquire(1n);
     cache.acquire(1n);
@@ -71,6 +75,71 @@ describe("TileTextureCache.release", () => {
   it("is a no-op for unknown handles", () => {
     const { cache } = makeCache();
     expect(() => cache.release(999n)).not.toThrow();
+  });
+});
+
+describe("TileTextureCache atlas pooling", () => {
+  it("pools a fully-released atlas and reuses it for the next acquire", () => {
+    const { cache, factory } = makeCache(2);
+    cache.acquire(1n);
+    const entry = cache.getEntry(1n);
+    if (!entry) throw new Error("expected entry to exist");
+    const atlas = entry.atlas;
+
+    cache.release(1n);
+    expect(atlas.dispose).not.toHaveBeenCalled();
+    expect(cache.pooledCount).toBe(1);
+
+    // Reused for a different handle, without a factory call.
+    const out = cache.acquire(2n);
+    expect(factory).toHaveBeenCalledTimes(1);
+    expect(out.color).toBe(atlas.color);
+    expect(cache.pooledCount).toBe(0);
+  });
+
+  it("marks an entry backed by a pooled atlas fully dirty so it gets repainted", () => {
+    const { cache } = makeCache(2);
+    cache.acquire(1n);
+    cache.consumeDirty(1n);
+    cache.release(1n);
+
+    cache.acquire(2n);
+    const reasons = cache.consumeDirty(2n);
+    expect(reasons?.has("material")).toBe(true);
+    expect(reasons?.has("texture-binding")).toBe(true);
+    expect(reasons?.has("vector-revision")).toBe(true);
+    expect(reasons?.has("hillshade")).toBe(true);
+  });
+
+  it("disposes released atlases once the pool is full", () => {
+    const { cache } = makeCache(1);
+    cache.acquire(1n);
+    cache.acquire(2n);
+    const e1 = cache.getEntry(1n);
+    const e2 = cache.getEntry(2n);
+    if (!e1 || !e2) throw new Error("expected both entries");
+
+    cache.release(1n);
+    expect(e1.atlas.dispose).not.toHaveBeenCalled();
+    expect(cache.pooledCount).toBe(1);
+
+    cache.release(2n);
+    expect(e2.atlas.dispose).toHaveBeenCalledTimes(1);
+    expect(cache.pooledCount).toBe(1);
+  });
+
+  it("disposeAll drains the pool", () => {
+    const { cache } = makeCache(2);
+    cache.acquire(1n);
+    const entry = cache.getEntry(1n);
+    if (!entry) throw new Error("expected entry to exist");
+    const atlas = entry.atlas;
+    cache.release(1n);
+    expect(cache.pooledCount).toBe(1);
+
+    cache.disposeAll();
+    expect(atlas.dispose).toHaveBeenCalledTimes(1);
+    expect(cache.pooledCount).toBe(0);
   });
 });
 
