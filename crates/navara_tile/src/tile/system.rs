@@ -615,6 +615,7 @@ pub fn transfer_mesh(
                         uvs: uvshandle,
                         heights: None,
                         normals: None,
+                        watermask: None,
                     });
                 };
             }
@@ -740,6 +741,7 @@ pub fn transfer_mesh(
                         uvs: uvshandle,
                         heights: Some(heights_handle),
                         normals: terrain_mesh_upsampler.geometry.normals,
+                        watermask: terrain_mesh_upsampler.watermask,
                     });
                     t.upsampled = true;
                 };
@@ -769,7 +771,7 @@ pub fn transfer_mesh(
                         skirt_uvs: terrain_mesh_upsampler.geometry.skirt_uvs,
                         skirt_indices: terrain_mesh_upsampler.geometry.skirt_indices,
                         skirt_normals: terrain_mesh_upsampler.geometry.skirt_normals,
-                        watermask: None,
+                        watermask: terrain_mesh_upsampler.watermask,
                     },
                     material: appearance,
                     object: ObjectBundle {
@@ -847,6 +849,7 @@ pub fn transfer_mesh(
                     uvs: uvshandle,
                     heights: Some(heights_handle),
                     normals: terrain_mesh_constructor.geometry.normals,
+                    watermask: terrain_mesh_constructor.watermask,
                 })
             };
         }
@@ -1522,17 +1525,17 @@ pub fn add_order_to_tiles_layer(
 }
 
 /// Frees the BufferStore handles that exist only on the `Mesh` component
-/// (skirts, watermask). The vertex/index/uv/normal handles are shared with
-/// the quadtree tile's `CachedMeshHandle` and freed by
-/// `TerrainTile::destroy`; nothing frees the mesh-only handles when the mesh
-/// entity despawns, so every mesh teardown must call this or they leak.
+/// (skirts). The vertex/index/uv/normal/watermask handles are shared with
+/// the quadtree tile's `CachedMeshHandle` (the watermask is kept there for
+/// upsample propagation) and freed by `TerrainTile::destroy`; nothing frees
+/// the mesh-only handles when the mesh entity despawns, so every mesh
+/// teardown must call this or they leak.
 pub(crate) fn free_mesh_only_buffers(mesh: &Mesh, buf: &mut BufferStore) {
     for handle in [
         mesh.skirt_vertices,
         mesh.skirt_uvs,
         mesh.skirt_indices,
         mesh.skirt_normals,
-        mesh.watermask,
     ]
     .into_iter()
     .flatten()
@@ -2088,9 +2091,9 @@ mod memory_budget_tests {
     }
 
     /// Eviction must free every BufferStore handle the tile holds: the shared
-    /// vertex/index/uv/heights/normals handles cached on the quadtree tile AND
-    /// the skirt/watermask handles that exist only on the `Mesh` component
-    /// (the leak this guards: skirts were freed by nobody).
+    /// vertex/index/uv/heights/normals/watermask handles cached on the
+    /// quadtree tile AND the skirt handles that exist only on the `Mesh`
+    /// component (the leak this guards: skirts were freed by nobody).
     #[test]
     fn eviction_frees_all_mesh_buffers() {
         let mut app = new_app(Some(50));
@@ -2126,6 +2129,7 @@ mod memory_budget_tests {
                 uvs,
                 heights: Some(heights),
                 normals: Some(normals),
+                watermask: Some(watermask),
             });
             let mut tc = world.resource_mut::<TileCacheManager>();
             tc.retained.insert(
@@ -2300,8 +2304,8 @@ mod memory_budget_tests {
             let world = app.world_mut();
             // 1000 f32 = 4000 bytes per tile. Buffers must live on the quadtree
             // node's `cached_mesh_handle` — those are what `destroy(.., buf)`
-            // frees SYNCHRONOUSLY (skirt/watermask on the Mesh are the only
-            // ones `free_mesh_only_buffers` touches).
+            // frees SYNCHRONOUSLY (skirts on the Mesh are the only ones
+            // `free_mesh_only_buffers` touches).
             bytes_per_tile = 4000u64;
             for handle in handles.iter() {
                 let vbuf = world.resource_mut::<BufferStore>().new_f32(vec![0.; 1000]);
@@ -2316,6 +2320,7 @@ mod memory_budget_tests {
                     uvs: vbuf,
                     heights: None,
                     normals: None,
+                    watermask: None,
                 });
             }
 

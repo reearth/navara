@@ -198,6 +198,7 @@ mod tests {
                 uvs: 0,
                 heights: None,
                 normals: None,
+                watermask: None,
             });
             t
         });

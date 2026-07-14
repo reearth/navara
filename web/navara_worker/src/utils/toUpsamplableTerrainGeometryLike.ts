@@ -9,5 +9,6 @@ export function toUpsamplableTerrainGeometry(
     like.indices,
     like.heights,
     like.normals,
+    like.watermask,
   );
 }

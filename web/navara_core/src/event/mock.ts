@@ -20,12 +20,17 @@ export const makeRenderableFeatures = <
   return { ind, gen, free: noop } as Ev;
 };
 
-export const makeEvent = (events: { [K in JsEventsKey]?: JsEvents[K] }) => {
-  const e = {};
-  for (const key_ of Object.keys(events)) {
-    const key = key_ as JsEventsKey;
-    const event = events[key] as JsEvents[JsEventsKey];
-    Object.assign(e, { [key]: event });
-  }
-  return e as Events;
-};
+// The real `Events` exposes each stack only via a `take_<key>()` method
+// (see EventManager.pushEvents); mimic that shape for any key.
+export const makeEvent = (events: { [K in JsEventsKey]?: JsEvents[K] }) =>
+  new Proxy(
+    {},
+    {
+      get: (_target, prop) => {
+        if (typeof prop === "string" && prop.startsWith("take_")) {
+          return () => events[prop.slice("take_".length) as JsEventsKey];
+        }
+        return undefined;
+      },
+    },
+  ) as Events;
