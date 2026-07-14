@@ -84,7 +84,14 @@ export class AbortableImageLoader extends Loader<LoadedImage> {
     scope.manager.itemStart(url);
 
     fetch(url, { signal: abort?.signal })
-      .then((r) => r.blob())
+      .then((r) => {
+        // Unlike the <img> path (which fires "error" on a 4xx/5xx), fetch
+        // resolves on HTTP error statuses — fail here instead of trying to
+        // decode the error body as an image (e.g. a 404 that returns a
+        // placeholder image would otherwise be shown as a real tile).
+        if (!r.ok) throw new Error(`HTTP ${r.status} while loading ${url}`);
+        return r.blob();
+      })
       .then((blob) => {
         if (settled) {
           return;
