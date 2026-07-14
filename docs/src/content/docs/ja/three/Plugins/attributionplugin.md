@@ -58,6 +58,8 @@ view.attribution?.add([
   {
     attribution: "Google Maps Photorealistic 3D Tiles",
     logo: "/credits/GoogleMaps.png",
+    // `logoUrl` を付けるとロゴがリンク化されます（表示専用マークなら省略）。
+    logoUrl: "https://www.google.com/maps",
     // このレイヤーのタイル単位のクレジットをこのソース配下にネスト。
     // レイヤーは id から view 内で解決されるため、別途渡す必要はありません。
     creditLayerId: photoreal.id,
@@ -74,6 +76,7 @@ view.attribution?.remove([
   {
     attribution: "Google Maps Photorealistic 3D Tiles",
     logo: "/credits/GoogleMaps.png",
+    logoUrl: "https://www.google.com/maps",
     creditLayerId: photoreal.id,
   },
 ]);

@@ -58,6 +58,8 @@ view.attribution?.add([
   {
     attribution: "Google Maps Photorealistic 3D Tiles",
     logo: "/credits/GoogleMaps.png",
+    // `logoUrl` makes the logo a link; omit it for a display-only mark.
+    logoUrl: "https://www.google.com/maps",
     // Nest this layer's per-tile credits under this source. The layer is
     // resolved from the view by id, so you don't pass it separately.
     creditLayerId: photoreal.id,
@@ -74,6 +76,7 @@ view.attribution?.remove([
   {
     attribution: "Google Maps Photorealistic 3D Tiles",
     logo: "/credits/GoogleMaps.png",
+    logoUrl: "https://www.google.com/maps",
     creditLayerId: photoreal.id,
   },
 ]);
