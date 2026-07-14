@@ -44,9 +44,13 @@ export class AbortableImageLoader extends Loader<LoadedImage> {
 
     let settled = false;
 
+    // Report the timeout before aborting: abort() dispatches its event
+    // synchronously, so the reverse order would let the fallback path's
+    // abort listener settle the load as AbortError first and swallow the
+    // TimeoutError.
     const timeoutId = window.setTimeout(() => {
-      abort?.abort();
       fail(new Error("TimeoutError"));
+      abort?.abort();
     }, timeout);
 
     function done(image: LoadedImage) {
