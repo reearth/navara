@@ -1,12 +1,10 @@
 import ThreeView, { Color } from "@navara/three";
-import { AttributionPlugin } from "@navara/three_plugins";
 
 import { TILE_DATASETS } from "../../helpers/constants";
 import { addCtrlPanel } from "../../helpers/panel";
 
 export const run = async (view: ThreeView) => {
-  const attribution = new AttributionPlugin();
-  view.addPlugin(attribution);
+  const attribution = view.attribution;
 
   await view.init();
 
@@ -50,7 +48,7 @@ export const run = async (view: ThreeView) => {
     view,
   );
 
-  attribution.add([
+  attribution?.add([
     TILE_DATASETS.openstreetmap,
     TILE_DATASETS.gsiStd,
     TILE_DATASETS.gsiSeamlessphoto,

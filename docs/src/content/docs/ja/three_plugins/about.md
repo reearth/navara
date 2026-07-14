@@ -12,13 +12,12 @@ sidebar:
 ## 他パッケージとの関係
 
 ```text
-navara_three（コア: ThreeView, Plugin, addPlugin）
+navara_three（コア: ThreeView, Plugin, addPlugin, AttributionPlugin）
   ├── three_default_descs（Descriptor の実装）
   ├── three_default_plugin（DefaultPlugin: Descriptor の一括登録）
   └── three_plugins（ユースケース特化型プラグイン）
         ├── PersonViewPlugin（キーボード操作による一人称 / 三人称ビューコントローラー）
         ├── OverlayPlugin（ワールド座標からスクリーン座標への HTML オーバーレイ投影）
-        ├── AttributionPlugin（非モーダルでズーム連動するデータ出典 UI）
         └── CesiumIonPlugin（Cesium Ion quantized-mesh 地形）
 ```
 
@@ -30,7 +29,6 @@ navara_three（コア: ThreeView, Plugin, addPlugin）
 import {
   PersonViewPlugin,
   OverlayPlugin,
-  AttributionPlugin,
   CesiumIonPlugin,
   moveOverlayElement,
 } from "@navara/three_plugins";
@@ -48,7 +46,7 @@ import {
 
 ### AttributionPlugin
 
-地図データの出典（クレジット）UI です。右下のポップオーバーにアクティブなデータソースを一覧し、ズーム連動のクレジット、レイヤー単位の動的クレジット、掲出義務のあるロゴ用の常時表示フレームを備えます。詳細は [AttributionPlugin](../attributionplugin/) を参照してください。
+**`@navara/three` へ移動しました。** 出典（クレジット）UI は `ThreeView` に組み込まれ、既定で生成され `view.attribution` からアクセスします（直接使う場合は `@navara/three` から `AttributionPlugin` を import）。詳細は [AttributionPlugin](../../three/plugins/attributionplugin/) を参照してください。
 
 ### CesiumIonPlugin
 

@@ -5,7 +5,6 @@ import ThreeView, {
   type PickedFeature,
 } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
-import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
 import { PLATEAU_COLOR_MAP, YlGnBu_COLOR_MAP } from "../../../helpers/colors";
@@ -25,8 +24,7 @@ const run = async () => {
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
 
-  const attribution = new AttributionPlugin();
-  view.addPlugin(attribution);
+  const attribution = view.attribution;
 
   await view.init();
 
@@ -225,7 +223,7 @@ const run = async () => {
     });
   }
 
-  attribution.add([
+  attribution?.add([
     TILE_DATASETS.gsiSeamlessphoto,
     TERRAIN_DATASETS.gsi,
     TILES_3D_DATASETS.plateauAjigasawa,

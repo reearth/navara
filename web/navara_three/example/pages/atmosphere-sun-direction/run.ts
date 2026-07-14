@@ -4,7 +4,6 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import { AttributionPlugin } from "@navara/three_plugins";
 import { AstroTime, Body, Equator, Horizon, Observer } from "astronomy-engine";
 import { Pane } from "tweakpane";
 
@@ -68,8 +67,7 @@ function formatHHMM(decimalHours: number): string {
 
 export const run = async (view: ThreeView<CustomDescriptions>) => {
   view.addPlugin(new DefaultPlugin());
-  const attribution = new AttributionPlugin();
-  view.addPlugin(attribution);
+  const attribution = view.attribution;
   await view.init();
 
   view.toneMappingExposure = 3;
@@ -205,5 +203,5 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     });
   }
 
-  attribution.add([TERRAIN_DATASETS.mapterhorn, TILE_DATASETS.openstreetmap]);
+  attribution?.add([TERRAIN_DATASETS.mapterhorn, TILE_DATASETS.openstreetmap]);
 };

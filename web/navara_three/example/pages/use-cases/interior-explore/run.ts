@@ -3,7 +3,7 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import { AttributionPlugin, PersonViewPlugin } from "@navara/three_plugins";
+import { PersonViewPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
 import {
@@ -95,8 +95,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   view.addPlugin(plugin);
   view.addPlugin(personView);
 
-  const attribution = new AttributionPlugin();
-  view.addPlugin(attribution);
+  const attribution = view.attribution;
 
   await view.init();
 
@@ -158,7 +157,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   );
   addTeleportControl(pane, personView);
 
-  attribution.add([
+  attribution?.add([
     TERRAIN_DATASETS.gsi,
     TILE_DATASETS.gsiSeamlessphoto,
     TILES_3D_DATASETS.plateauTakanawa,

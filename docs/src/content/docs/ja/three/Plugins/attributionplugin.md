@@ -7,7 +7,7 @@ sidebar:
 
 ## 概要
 
-`AttributionPlugin` は、地図のデータソースのクレジット UI を表示します。ポップオーバーはアクティブなソースを一覧し、**既定で開いた状態**なのでクリックなしでライセンスが見えます。右下の小さな ⓘ トリガーで開閉でき（`hide()` / `show()` も同じ）、非モーダルなので開いたままでも地図は操作可能（パン / ズーム / 回転）です。
+`AttributionPlugin` は、地図のデータソースのクレジット UI を表示します。**`ThreeView` が既定で 1 つ生成し、`view.attribution` として公開します**（自前 UI を作る場合は `defaultAttribution: false` で無効化）。ポップオーバーはアクティブなソースを一覧し、**既定で開いた状態**なのでクリックなしでライセンスが見えます。右下の小さな ⓘ トリガーで開閉でき（`hide()` / `show()` も同じ）、非モーダルなので開いたままでも地図は操作可能（パン / ズーム / 回転）です。
 
 地図の出典表示で一般的に必要となる、次の 3 点に対応します。
 
@@ -22,14 +22,10 @@ sidebar:
 ```typescript
 import ThreeView from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
-import { AttributionPlugin } from "@navara/three_plugins";
 
+// 出典 UI は既定で生成されます。view.attribution からアクセスします。
 const view = new ThreeView({ container });
-const defaultPlugin = new DefaultPlugin();
-const attribution = new AttributionPlugin();
-
-view.addPlugin(defaultPlugin);
-view.addPlugin(attribution);
+view.addPlugin(new DefaultPlugin());
 await view.init();
 
 // ラスタの基盤地図: フィーチャー単位のクレジットを持たないため、静的に宣言します。
@@ -47,8 +43,9 @@ const photorealSource = view.addSource({
 });
 const photoreal = view.addLayer({ type: "3d-tiles", source: photorealSource });
 
-// `add` / `remove` で表示する出典の集合を管理します。
-attribution.add([
+// `add` / `remove` で表示する出典の集合を管理します。`view.attribution` が
+// `undefined` になるのは `defaultAttribution: false` で生成した場合だけです。
+view.attribution?.add([
   {
     attribution: "国土地理院",
     attributionUrl: "https://maps.gsi.go.jp/development/ichiran.html",
@@ -72,7 +69,7 @@ attribution.add([
 
 // データが地図から外れたら、その出典を取り下げます。一致判定は構造ベースなので、
 // add したときと同じ形（ここでは `logo` も含む）で渡します。
-attribution.remove([
+view.attribution?.remove([
   {
     attribution: "Google Maps Photorealistic 3D Tiles",
     logo: "/credits/GoogleMaps.png",
@@ -82,21 +79,33 @@ attribution.remove([
 
 // ポップオーバーは既定で開いています。hide() で畳み、show() で開き直します
 // （ⓘ トリガーも同じ状態を切り替えます）。
-attribution.hide();
-attribution.show();
-attribution.dispose();
+view.attribution?.hide();
+view.attribution?.show();
 ```
 
-## コンストラクタ
+## 有効化とアクセス
+
+`ThreeView` は既定で出典 UI を生成し、readonly getter として公開します。
 
 ```typescript
-new AttributionPlugin(options?: {
-  style?: AttributionStyle;
-  position?: "bottom-left" | "bottom-right";
+view.attribution; // AttributionPlugin | undefined
+```
+
+`defaultAttribution` オプションで設定・無効化できます。
+
+```typescript
+new ThreeView({
+  // `false` で無効化して自前 UI を作る、またはオブジェクトで初期の色 / 角を指定。
+  // 既定は `true`。
+  defaultAttribution?:
+    | boolean
+    | { style?: AttributionStyle; position?: "bottom-left" | "bottom-right" };
 });
 ```
 
-`options.style` は初期の色を設定します（[AttributionStyle](#attributionstyle) を参照。省略すると既定値）。`options.position` は ⓘ トリガーとクレジットカードを置く下部の角を選びます（既定 `"bottom-right"`）。右下がページ独自の HUD などで埋まっている場合は `"bottom-left"` を使ってください。ロゴ枠はどちらのモードでも左下エリアに置かれますが、`"bottom-left"` では ⓘ が左端に入り、ロゴはその右隣にずれて並びます。プラグインは `view.init()` の**前に** `view.addPlugin()` で登録してください。
+`view.attribution` が `undefined` になるのは `defaultAttribution: false` で生成したときだけです。`position` は ⓘ トリガーとクレジットカードを置く下部の角を選びます（既定 `"bottom-right"`）。右下がページ独自の HUD などで埋まっている場合は `"bottom-left"` を使ってください。ロゴ枠はどちらのモードでも左下エリアに置かれます。`style` は初期の色を設定します（[AttributionStyle](#attributionstyle) を参照）。
+
+**上級者向け:** `AttributionPlugin` は `@navara/three` からも export されており、手動で生成（`new AttributionPlugin({ style?, position? })`）して `view.init()` の**前に** `view.addPlugin()` で登録することもできます（例: `defaultAttribution: false` で生成した view に付ける場合）。
 
 ## メソッド
 
@@ -148,7 +157,7 @@ hide(): void
 dispose(): void
 ```
 
-UI を削除し、プラグインが確保したすべてを解放します。
+UI を削除し、プラグインが確保したすべてを解放します。既定の `view.attribution` は `view.dispose()` が自動で破棄するため、手動で生成したインスタンスにのみ呼べば十分です。
 
 ### setStyle(style)
 
@@ -159,7 +168,7 @@ setStyle(style: AttributionStyle): void
 実行時に UI の色を更新します。現在のスタイルにマージし、DOM を再構築せずその場で再テーマするため、ライト / ダークモードの切り替えに適しています。
 
 ```typescript
-attribution.setStyle({
+view.attribution?.setStyle({
   backgroundColor: "rgba(20, 24, 28, 0.92)",
   textColor: "#e6e9ee",
   nestedTextColor: "rgba(230, 233, 238, 0.64)",
@@ -226,5 +235,5 @@ type AttributionItem = AttributionSource | AttributionHtml;
 
 ## 関連リソース
 
-- [OverlayPlugin](../overlayplugin/) — ワールド座標からスクリーン座標への HTML オーバーレイ投影
-- [About three_plugins](../about/) — パッケージの概要
+- [OverlayPlugin](../../../three_plugins/overlayplugin/) — ワールド座標からスクリーン座標への HTML オーバーレイ投影
+- [About three_plugins](../../../three_plugins/about/) — パッケージの概要

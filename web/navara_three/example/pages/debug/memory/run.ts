@@ -11,7 +11,6 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
 import {
@@ -68,8 +67,7 @@ export const run = async () => {
   });
 
   view.addPlugin(new DefaultPlugin());
-  const attribution = new AttributionPlugin();
-  view.addPlugin(attribution);
+  const attribution = view.attribution;
 
   await view.init();
 
@@ -135,7 +133,7 @@ export const run = async () => {
     attributions.push(VECTOR_DATASETS.gsiExperimentalVector);
   }
 
-  attribution.add(attributions);
+  attribution?.add(attributions);
 
   // -------------------------------------------------------------------------
   // Memory panel

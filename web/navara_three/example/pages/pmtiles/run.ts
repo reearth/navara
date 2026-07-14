@@ -4,7 +4,6 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import { AttributionPlugin } from "@navara/three_plugins";
 import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 
@@ -16,8 +15,7 @@ export type CustomDescriptions = DefaultDescriptions;
 export const run = async (view: ThreeView<CustomDescriptions>) => {
   view.addPlugin(new DefaultPlugin());
 
-  const attribution = new AttributionPlugin();
-  view.addPlugin(attribution);
+  const attribution = view.attribution;
 
   await view.init();
 
@@ -130,5 +128,5 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       });
     });
 
-  attribution.add([PMTILES_DATASETS.protomapsFirenze]);
+  attribution?.add([PMTILES_DATASETS.protomapsFirenze]);
 };

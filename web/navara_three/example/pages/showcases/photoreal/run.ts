@@ -2,6 +2,7 @@ import ThreeView, {
   TERRARIUM_ELEVATION_DECODER,
   degreeToRadian,
   geodeticToVector3,
+  type AttributionPlugin,
 } from "@navara/three";
 import {
   CloudsEffectDesc,
@@ -17,7 +18,6 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import { AttributionPlugin } from "@navara/three_plugins";
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
@@ -270,7 +270,7 @@ const writeSceneToUrl = (key: string) => {
 
 const buildGoogle = (
   v: ThreeView<CustomDescriptions>,
-  attribution: AttributionPlugin,
+  attribution: AttributionPlugin | undefined,
 ) => {
   const tiles = v.addLayer({
     type: "cesium3dtiles",
@@ -285,7 +285,7 @@ const buildGoogle = (
     },
   });
 
-  attribution.add([
+  attribution?.add([
     {
       ...TILES_3D_DATASETS.googlePhotorealTiles,
       creditLayerId: tiles.id,
@@ -295,7 +295,7 @@ const buildGoogle = (
 
 const buildMapterhorn = (
   v: ThreeView<CustomDescriptions>,
-  attribution: AttributionPlugin,
+  attribution: AttributionPlugin | undefined,
 ) => {
   v.addLayer({
     type: "tiles",
@@ -324,7 +324,7 @@ const buildMapterhorn = (
     },
   });
 
-  attribution.add([
+  attribution?.add([
     TERRAIN_DATASETS.mapterhorn,
     TILE_DATASETS.gsiSeamlessphoto,
   ]);
@@ -332,7 +332,7 @@ const buildMapterhorn = (
 
 export const run = async () => {
   let view: ThreeView<CustomDescriptions> | null = null;
-  let attribution: AttributionPlugin | null = null;
+  let attribution: AttributionPlugin | undefined;
   let pane: Pane | null = null;
   let switching = false;
   let currentScene = readSceneFromUrl();
@@ -346,9 +346,7 @@ export const run = async () => {
     const plugin = new DefaultPlugin();
     v.addPlugin(plugin);
 
-    const attributionPlugin = new AttributionPlugin();
-    attribution = attributionPlugin;
-    v.addPlugin(attributionPlugin);
+    attribution = v.attribution;
 
     await v.init();
 
@@ -379,9 +377,9 @@ export const run = async () => {
     }
 
     if (scene.terrain === "google") {
-      buildGoogle(v, attributionPlugin);
+      buildGoogle(v, attribution);
     } else {
-      buildMapterhorn(v, attributionPlugin);
+      buildMapterhorn(v, attribution);
     }
 
     if (scene.clouds) {
@@ -417,12 +415,10 @@ export const run = async () => {
   const teardown = () => {
     pane?.dispose();
     pane = null;
+    // view.dispose() also tears down the owned attribution UI.
     view?.dispose();
     view = null;
-    // ThreeView.dispose() does not dispose plugins; release the attribution
-    // plugin's DOM explicitly or it leaks across scene switches.
-    attribution?.dispose();
-    attribution = null;
+    attribution = undefined;
   };
 
   const switchScene = async (key: string) => {

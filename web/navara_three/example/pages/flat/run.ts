@@ -4,7 +4,6 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
 import { TILE_DATASETS, TILES_3D_DATASETS } from "../../helpers/constants";
@@ -16,8 +15,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
 
-  const attribution = new AttributionPlugin();
-  view.addPlugin(attribution);
+  const attribution = view.attribution;
 
   await view.init();
 
@@ -124,7 +122,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   addDateControl(view, pane);
   addCameraControl(view, pane);
 
-  attribution.add([
+  attribution?.add([
     TILE_DATASETS.openstreetmap,
     TILES_3D_DATASETS.plateauChiyoda,
   ]);

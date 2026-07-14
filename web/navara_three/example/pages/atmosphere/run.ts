@@ -27,7 +27,6 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import { AttributionPlugin } from "@navara/three_plugins";
 import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 
@@ -56,8 +55,7 @@ type DefaultEffects = ReturnType<DefaultPlugin["addDefaultPhotorealScene"]>;
 export const run = async (view: ThreeView<CustomDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
-  const attribution = new AttributionPlugin();
-  view.addPlugin(attribution);
+  const attribution = view.attribution;
   await view.init();
 
   const defaultEffects = plugin.addDefaultPhotorealScene();
@@ -179,7 +177,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   addIBLControl(view, pane);
   addEffectsControl(view, pane, defaultEffects);
 
-  attribution.add([
+  attribution?.add([
     TERRAIN_DATASETS.gsi,
     TILE_DATASETS.gsiSeamlessphoto,
     TILES_3D_DATASETS.plateauChiyoda,

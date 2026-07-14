@@ -8,4 +8,4 @@ export type {
   DefaultEffectDescription,
 } from "@navara/three_default_plugin";
 export * from "@navara/three_default_descs";
-export { AttributionPlugin } from "@navara/three_plugins";
+export { AttributionPlugin } from "./plugins";

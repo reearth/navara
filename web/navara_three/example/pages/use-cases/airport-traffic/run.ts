@@ -12,7 +12,6 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import { AttributionPlugin } from "@navara/three_plugins";
 import type { FeatureCollection, MultiLineString } from "geojson";
 
 import { PLASMA_COLORMAP } from "../../../helpers/colors";
@@ -106,8 +105,7 @@ export async function run() {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
 
-  const attribution = new AttributionPlugin();
-  view.addPlugin(attribution);
+  const attribution = view.attribution;
 
   await view.init();
 
@@ -202,7 +200,7 @@ export async function run() {
   };
   dashAnimFunc();
 
-  attribution.add([
+  attribution?.add([
     LOCAL_DATASETS.blueMarbleNight,
     TILE_DATASETS.gsiSeamlessphoto,
     LOCAL_DATASETS.airportTrafficVolume,

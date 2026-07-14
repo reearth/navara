@@ -54,15 +54,16 @@
  * attribution.dispose();
  * ```
  */
-import ThreeView, {
-  Plugin,
-  type Layer,
-  type FeatureCreatedParams,
-  type FeatureRemovedParams,
-  type FeatureVisibilityChangedParams,
-  type ViewContext,
-} from "@navara/three";
-import type { DefaultDescriptions } from "@navara/three_default_plugin";
+import { Plugin } from "@navara/core";
+
+import type { ViewContext } from "../../core";
+import type ThreeView from "../../index";
+import type {
+  Layer,
+  FeatureCreatedParams,
+  FeatureRemovedParams,
+  FeatureVisibilityChangedParams,
+} from "../../layer";
 
 import {
   aggregateCredits,
@@ -82,7 +83,16 @@ import {
   SVG_ICON_HTML,
 } from "./attributionStyles";
 
-type View = ThreeView<DefaultDescriptions>;
+export {
+  isAttributionHtml,
+  type AttributionItem,
+  type AttributionSource,
+  type AttributionHtml,
+  type AttributionChild,
+  type AttributionStyle,
+} from "./attribution";
+
+type View = ThreeView;
 
 /** Which bottom corner the attribution UI anchors to. */
 export type AttributionPosition = "bottom-left" | "bottom-right";

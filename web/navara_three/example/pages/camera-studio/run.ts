@@ -2,6 +2,8 @@ import ThreeView, {
   TERRARIUM_ELEVATION_DECODER,
   degreeToRadian,
   radianToDegree,
+  type AttributionItem,
+  type AttributionPlugin,
   type EffectHandle,
   type Layer,
   type MeshHandle,
@@ -17,12 +19,7 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import {
-  AttributionPlugin,
-  type AttributionItem,
-  PersonViewPlugin,
-  type ViewMode,
-} from "@navara/three_plugins";
+import { PersonViewPlugin, type ViewMode } from "@navara/three_plugins";
 import { Vector2 } from "three";
 import { Pane } from "tweakpane";
 
@@ -245,7 +242,7 @@ export const run = async () => {
   let firstSetup = true;
   let view: ThreeView<CustomDescriptions> | null = null;
   let personView: PersonViewPlugin | null = null;
-  let attribution: AttributionPlugin | null = null;
+  let attribution: AttributionPlugin | undefined;
   let pane: Pane | null = null;
   let switching = false;
 
@@ -362,8 +359,7 @@ export const run = async () => {
     const plugin = new DefaultPlugin();
     v.addPlugin(plugin);
 
-    attribution = new AttributionPlugin();
-    v.addPlugin(attribution);
+    attribution = v.attribution;
 
     // PersonViewPlugin must be registered before init(). Seed it from the
     // current camera state so the position carries over from normal mode.
@@ -468,10 +464,9 @@ export const run = async () => {
     // requestAnimationFrame loop are torn down (the view does not own them).
     personView?.dispose();
     personView = null;
-    // ThreeView.dispose() does not dispose plugins; release the attribution
-    // plugin's DOM explicitly or it leaks across view-kind rebuilds.
-    attribution?.dispose();
-    attribution = null;
+    // The attribution UI is owned by the view now, so view.dispose() tears it
+    // down; no manual disposal needed.
+    attribution = undefined;
     view?.dispose();
     view = null;
   };

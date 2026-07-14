@@ -1,12 +1,12 @@
-import ThreeView, { TERRARIUM_ELEVATION_DECODER } from "@navara/three";
+import ThreeView, {
+  TERRARIUM_ELEVATION_DECODER,
+  type AttributionPlugin,
+  type AttributionStyle,
+} from "@navara/three";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import {
-  AttributionPlugin,
-  type AttributionStyle,
-} from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
 import {
@@ -63,13 +63,13 @@ export const run = async () => {
   let darkTheme = false;
   let view: ThreeView<CustomDescriptions> | null = null;
   let pane: Pane | null = null;
-  let attribution: AttributionPlugin | null = null;
+  let attribution: AttributionPlugin | undefined;
   let switching = false;
 
   // Google embeds per-tile copyright — tracked dynamically via the layer.
   const buildGoogle = (
     v: ThreeView<CustomDescriptions>,
-    attribution: AttributionPlugin,
+    attribution: AttributionPlugin | undefined,
   ) => {
     const google = v.addLayer({
       type: "cesium3dtiles",
@@ -78,7 +78,7 @@ export const run = async () => {
       },
       model: { maxSse: 60, normals: true },
     });
-    attribution.add([
+    attribution?.add([
       {
         ...TILES_3D_DATASETS.googlePhotorealTiles,
         creditLayerId: google.id,
@@ -92,7 +92,7 @@ export const run = async () => {
   // + the Mapterhorn terrain.
   const buildMapterhorn = (
     v: ThreeView<CustomDescriptions>,
-    attribution: AttributionPlugin,
+    attribution: AttributionPlugin | undefined,
   ) => {
     v.addLayer({
       type: "terrain",
@@ -111,7 +111,7 @@ export const run = async () => {
       data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
       rasterTile: { maxZoom: 18 },
     });
-    attribution.add([GSI_ATTRIBUTION, TERRAIN_DATASETS.mapterhorn]);
+    attribution?.add([GSI_ATTRIBUTION, TERRAIN_DATASETS.mapterhorn]);
   };
 
   // Build a fresh view for the given mode. Recreating the view (rather than
@@ -120,14 +120,14 @@ export const run = async () => {
   const setup = async (mode: Mode) => {
     currentMode = mode;
 
-    const v = new ThreeView<CustomDescriptions>({});
+    const v = new ThreeView<CustomDescriptions>({
+      defaultAttribution: { style: styleFor(darkTheme) },
+    });
     view = v;
 
     const defaultPlugin = new DefaultPlugin();
-    const attr = new AttributionPlugin({ style: styleFor(darkTheme) });
-    attribution = attr;
+    attribution = v.attribution;
     v.addPlugin(defaultPlugin);
-    v.addPlugin(attr);
 
     await v.init();
 
@@ -144,9 +144,9 @@ export const run = async () => {
     v.setCamera({ ...INITIAL_CAMERA });
 
     if (mode === "google") {
-      buildGoogle(v, attr);
+      buildGoogle(v, attribution);
     } else {
-      buildMapterhorn(v, attr);
+      buildMapterhorn(v, attribution);
     }
 
     // Controls: pick the base layer (attribution follows) and toggle the theme.
@@ -164,7 +164,7 @@ export const run = async () => {
       "change",
       (ev) => {
         darkTheme = ev.value;
-        attr.setStyle(styleFor(darkTheme));
+        attribution?.setStyle(styleFor(darkTheme));
       },
     );
   };
@@ -172,10 +172,8 @@ export const run = async () => {
   const teardown = () => {
     pane?.dispose();
     pane = null;
-    // ThreeView.dispose() doesn't dispose plugins, so remove the attribution UI
-    // explicitly — otherwise its popover/dock would leak across switches.
-    attribution?.dispose();
-    attribution = null;
+    // view.dispose() also tears down the owned attribution UI.
+    attribution = undefined;
     view?.dispose();
     view = null;
   };

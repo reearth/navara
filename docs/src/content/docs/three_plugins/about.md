@@ -12,13 +12,12 @@ sidebar:
 ## Relationship with Other Packages
 
 ```text
-navara_three (core: ThreeView, Plugin, addPlugin)
+navara_three (core: ThreeView, Plugin, addPlugin, AttributionPlugin)
   ├── three_default_descs (descriptor implementations)
   ├── three_default_plugin (DefaultPlugin: bulk descriptor registration)
   └── three_plugins (use-case specific plugins)
         ├── PersonViewPlugin (keyboard-driven first/third-person view controller)
         ├── OverlayPlugin (world-to-screen HTML overlay projection)
-        ├── AttributionPlugin (non-modal, zoom-aware data attribution UI)
         └── CesiumIonPlugin (Cesium Ion quantized-mesh terrain)
 ```
 
@@ -31,7 +30,6 @@ import {
   PersonViewPlugin,
   OverlayPlugin,
   moveOverlayElement,
-  AttributionPlugin,
   CesiumIonPlugin,
 } from "@navara/three_plugins";
 ```
@@ -48,7 +46,7 @@ Projects geographic positions (lat/lng/alt) to screen coordinates on every rende
 
 ### AttributionPlugin
 
-A non-modal data attribution (credit) UI. Lists active data sources in a bottom-right popover with zoom-banded credits, per-layer dynamic credits, and an always-visible logo frame for mandated marks. See [AttributionPlugin](../attributionplugin/) for details.
+**Moved to `@navara/three`.** The attribution (credit) UI is now built into `ThreeView` — created by default and accessed via `view.attribution` (import `AttributionPlugin` from `@navara/three` if you need it directly). See [AttributionPlugin](../../three/plugins/attributionplugin/) for details.
 
 ### CesiumIonPlugin
 

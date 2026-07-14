@@ -7,7 +7,7 @@ sidebar:
 
 ## Overview
 
-`AttributionPlugin` shows a credit UI for your map's data sources. The popover lists the active sources and is **open by default** so licensing is visible without a click; a small ⓘ trigger in the bottom-right corner toggles it (and `hide()` / `show()` do the same). It is non-modal — the map stays interactive (pan / zoom / rotate) while the popover is open.
+`AttributionPlugin` shows a credit UI for your map's data sources. **A `ThreeView` creates one by default and exposes it as `view.attribution`** (pass `defaultAttribution: false` to opt out and build your own UI). The popover lists the active sources and is **open by default** so licensing is visible without a click; a small ⓘ trigger in the bottom-right corner toggles it (and `hide()` / `show()` do the same). It is non-modal — the map stays interactive (pan / zoom / rotate) while the popover is open.
 
 It covers the three things map attributions usually need:
 
@@ -22,14 +22,10 @@ Credits may contain inline `<a>` links; they are sanitized before display. The c
 ```typescript
 import ThreeView from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
-import { AttributionPlugin } from "@navara/three_plugins";
 
+// The attribution UI is created by default; access it via view.attribution.
 const view = new ThreeView({ container });
-const defaultPlugin = new DefaultPlugin();
-const attribution = new AttributionPlugin();
-
-view.addPlugin(defaultPlugin);
-view.addPlugin(attribution);
+view.addPlugin(new DefaultPlugin());
 await view.init();
 
 // Raster basemap: it carries no per-feature credit, so declare it statically.
@@ -47,8 +43,9 @@ const photorealSource = view.addSource({
 });
 const photoreal = view.addLayer({ type: "3d-tiles", source: photorealSource });
 
-// `add` / `remove` manage the set of displayed attributions.
-attribution.add([
+// `add` / `remove` manage the set of displayed attributions. `view.attribution`
+// is `undefined` only if you created the view with `defaultAttribution: false`.
+view.attribution?.add([
   {
     attribution: "Geospatial Information Authority of Japan (GSI)",
     attributionUrl: "https://maps.gsi.go.jp/development/ichiran.html",
@@ -72,7 +69,7 @@ attribution.add([
 
 // Drop a source again when its data leaves the map. Matching is structural, so
 // pass the same shape you added (here, including `logo`).
-attribution.remove([
+view.attribution?.remove([
   {
     attribution: "Google Maps Photorealistic 3D Tiles",
     logo: "/credits/GoogleMaps.png",
@@ -82,21 +79,33 @@ attribution.remove([
 
 // The popover is open by default; hide() collapses it and show() re-opens it
 // (the ⓘ trigger toggles the same state).
-attribution.hide();
-attribution.show();
-attribution.dispose();
+view.attribution?.hide();
+view.attribution?.show();
 ```
 
-## Constructor
+## Enabling & access
+
+A `ThreeView` creates the attribution UI by default and exposes it as a readonly getter:
 
 ```typescript
-new AttributionPlugin(options?: {
-  style?: AttributionStyle;
-  position?: "bottom-left" | "bottom-right";
+view.attribution; // AttributionPlugin | undefined
+```
+
+Configure or disable it with the `defaultAttribution` option:
+
+```typescript
+new ThreeView({
+  // `false` to opt out and build your own UI, or an object to set the initial
+  // colors / corner. Defaults to `true`.
+  defaultAttribution?:
+    | boolean
+    | { style?: AttributionStyle; position?: "bottom-left" | "bottom-right" };
 });
 ```
 
-`options.style` sets the initial colors (see [AttributionStyle](#attributionstyle)); omit it for the defaults. `options.position` chooses the bottom corner for the ⓘ trigger and its credit card (default `"bottom-right"`); use `"bottom-left"` when the bottom-right corner is occupied, e.g. a page with its own HUD there. The logo frame lives in the bottom-left area in both modes; in `"bottom-left"` the ⓘ takes the far-left corner and the logos shift right to sit beside it. Register the plugin with `view.addPlugin()` **before** `view.init()`.
+`view.attribution` is `undefined` only when the view was created with `defaultAttribution: false`. `position` chooses the bottom corner for the ⓘ trigger and its credit card (default `"bottom-right"`); use `"bottom-left"` when the bottom-right corner is occupied, e.g. a page with its own HUD there. The logo frame lives in the bottom-left area in both modes; in `"bottom-left"` the ⓘ takes the far-left corner and the logos shift right to sit beside it. `style` sets the initial colors (see [AttributionStyle](#attributionstyle)).
+
+**Advanced:** `AttributionPlugin` is also exported from `@navara/three` and can be constructed manually (`new AttributionPlugin({ style?, position? })`) and registered with `view.addPlugin()` **before** `view.init()` — e.g. to attach one to a view created with `defaultAttribution: false`.
 
 ## Methods
 
@@ -148,7 +157,7 @@ Closes the attribution popover. Affects the popover card only; the tracked attri
 dispose(): void
 ```
 
-Removes the UI and releases everything the plugin set up.
+Removes the UI and releases everything the plugin set up. The default `view.attribution` is disposed automatically by `view.dispose()`, so you only need to call this on a manually-created instance.
 
 ### setStyle(style)
 
@@ -159,7 +168,7 @@ setStyle(style: AttributionStyle): void
 Updates the UI colors at runtime. Merges over the current style and re-themes the live DOM in place (no rebuild), so it suits switching between light and dark modes.
 
 ```typescript
-attribution.setStyle({
+view.attribution?.setStyle({
   backgroundColor: "rgba(20, 24, 28, 0.92)",
   textColor: "#e6e9ee",
   nestedTextColor: "rgba(230, 233, 238, 0.64)",
@@ -226,5 +235,5 @@ All fields are optional; an unset field keeps the default color. Colors are appl
 
 ## Related Resources
 
-- [OverlayPlugin](../overlayplugin/) — World-to-screen HTML overlay projection
-- [About three_plugins](../about/) — Package overview
+- [OverlayPlugin](../../../three_plugins/overlayplugin/) — World-to-screen HTML overlay projection
+- [About three_plugins](../../../three_plugins/about/) — Package overview

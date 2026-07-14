@@ -1,11 +1,9 @@
-import ThreeView from "@navara/three";
+import ThreeView, { type AttributionSource } from "@navara/three";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import {
-  AttributionPlugin,
-  type AttributionSource,
   PersonViewPlugin,
   OverlayPlugin,
   moveOverlayElement,
@@ -47,13 +45,13 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     fpvForwardOffset: 0.1,
   });
   const overlayPlugin = new OverlayPlugin({ maxDistance: 100_000 });
-  // Bottom-left so the ⓘ credit trigger clears this page's bottom-right HUD.
-  const attribution = new AttributionPlugin({ position: "bottom-left" });
+  // Position (bottom-left) is set on the view via `defaultAttribution` in main.ts
+  // so the ⓘ credit trigger clears this page's bottom-right HUD.
+  const attribution = view.attribution;
 
   view.addPlugin(defaultPlugin);
   view.addPlugin(personViewPlugin);
   view.addPlugin(overlayPlugin);
-  view.addPlugin(attribution);
 
   await view.init();
 
@@ -97,7 +95,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       creditLayerId: tilesLayer.id,
     });
   }
-  attribution.add(sources);
+  attribution?.add(sources);
 
   // Set overlay positions from landmark data
   overlayPlugin.setPositions(
