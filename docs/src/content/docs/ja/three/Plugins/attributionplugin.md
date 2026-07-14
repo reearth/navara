@@ -21,11 +21,9 @@ sidebar:
 
 ```typescript
 import ThreeView from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
 
 // 出典 UI は既定で生成されます。view.attribution からアクセスします。
 const view = new ThreeView({ container });
-view.addPlugin(new DefaultPlugin());
 await view.init();
 
 // ラスタの基盤地図: フィーチャー単位のクレジットを持たないため、静的に宣言します。

@@ -12,7 +12,7 @@ sidebar:
 ## 他パッケージとの関係
 
 ```text
-navara_three（コア: ThreeView, Plugin, addPlugin, AttributionPlugin）
+navara_three（コア: ThreeView, Plugin, addPlugin）
   ├── three_default_descs（Descriptor の実装）
   ├── three_default_plugin（DefaultPlugin: Descriptor の一括登録）
   └── three_plugins（ユースケース特化型プラグイン）

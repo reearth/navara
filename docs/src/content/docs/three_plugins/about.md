@@ -12,7 +12,7 @@ sidebar:
 ## Relationship with Other Packages
 
 ```text
-navara_three (core: ThreeView, Plugin, addPlugin, AttributionPlugin)
+navara_three (core: ThreeView, Plugin, addPlugin)
   ├── three_default_descs (descriptor implementations)
   ├── three_default_plugin (DefaultPlugin: bulk descriptor registration)
   └── three_plugins (use-case specific plugins)

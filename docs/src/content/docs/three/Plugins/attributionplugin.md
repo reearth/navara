@@ -21,11 +21,9 @@ Credits may contain inline `<a>` links; they are sanitized before display. The c
 
 ```typescript
 import ThreeView from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
 
 // The attribution UI is created by default; access it via view.attribution.
 const view = new ThreeView({ container });
-view.addPlugin(new DefaultPlugin());
 await view.init();
 
 // Raster basemap: it carries no per-feature credit, so declare it statically.
