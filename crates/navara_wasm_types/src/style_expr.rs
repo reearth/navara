@@ -40,7 +40,7 @@ impl CompiledExpression {
     /// - Null, Bool, Number, String (primitives)
     /// - Color: `{r, g, b, a}` object
     /// - Array, Object: nested structures
-    /// - NumberArray: optimized number arrays
+    /// - NumberArray: returned as a JS `number[]`
     ///
     /// Unsupported types return `null` with a console warning.
     #[wasm_bindgen]
@@ -159,23 +159,26 @@ fn json_to_value_map(json: &JsonValue) -> Result<BTreeMap<String, Value>, JsValu
 }
 
 fn json_to_value(json: &JsonValue) -> Result<Value, JsValue> {
-    Ok(match json {
-        JsonValue::Null => Value::Null,
-        JsonValue::Bool(b) => Value::Bool(*b),
-        JsonValue::Number(n) => Value::Number(n.as_f64().unwrap_or(0.0)),
-        JsonValue::String(s) => Value::String(s.clone()),
+    match json {
+        JsonValue::Null => Ok(Value::Null),
+        JsonValue::Bool(b) => Ok(Value::Bool(*b)),
+        JsonValue::Number(n) => n
+            .as_f64()
+            .map(Value::Number)
+            .ok_or_else(|| JsValue::from_str("Invalid number: out of range")),
+        JsonValue::String(s) => Ok(Value::String(s.clone())),
         JsonValue::Array(arr) => {
             let values: Result<Vec<_>, _> = arr.iter().map(json_to_value).collect();
-            Value::Array(values?)
+            Ok(Value::Array(values?))
         }
         JsonValue::Object(obj) => {
             let mut map = BTreeMap::new();
             for (k, v) in obj.iter() {
                 map.insert(k.clone(), json_to_value(v)?);
             }
-            Value::Object(map)
+            Ok(Value::Object(map))
         }
-    })
+    }
 }
 
 fn value_to_jsvalue(value: &Value) -> Result<JsValue, JsValue> {
