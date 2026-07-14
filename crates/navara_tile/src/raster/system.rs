@@ -3,7 +3,7 @@ use bevy_ecs::prelude::*;
 use navara_camera::{CameraFrustum, CameraMarker};
 use navara_component::{Deleted, Ignored, Order, OrderByDistance, Priority, Requested};
 use navara_core::{TileXYZ, TilingScheme, WGS84_64};
-use navara_fog::Fog;
+use navara_fog::{DynamicSse, Fog};
 use navara_frame::FrameManager;
 use navara_math::Transform;
 use navara_memory::{MemoryLedger, RetainedEntry, SseDegrade, SsePressure, TileCost};
@@ -123,7 +123,7 @@ pub fn update_raster_tiles(
     changed_texture_fragment: ChangedTileTextureFragmentQuery,
     mut camera_set: ParamSet<(
         Query<(Ref<Transform>, Ref<CameraFrustum>), With<CameraMarker>>,
-        Query<Ref<Fog>>,
+        Query<(Ref<Fog>, Ref<DynamicSse>)>,
     )>,
     occluder: Query<Ref<EllipsoidalOccluder>>,
     pressure: Res<SsePressure>,
@@ -143,10 +143,14 @@ pub fn update_raster_tiles(
         None => return,
     };
 
-    let (fog, is_fog_changed) = {
+    let (fog, dynamic_sse, is_fog_changed) = {
         let fog_query = camera_set.p1();
-        let fog = fog_query.single().unwrap();
-        (Fog::clone(&fog), fog.is_changed())
+        let (fog, dynamic_sse) = fog_query.single().unwrap();
+        (
+            Fog::clone(&fog),
+            DynamicSse::clone(&dynamic_sse),
+            fog.is_changed() || dynamic_sse.is_changed(),
+        )
     };
     let camera = camera_set.p0();
     let (camera, frustum) = match camera.single() {
@@ -175,10 +179,9 @@ pub fn update_raster_tiles(
 
     // Memory-pressure LOD degrade, shared shape with the terrain traversal so
     // raster texture depth stays aligned with terrain subdivision.
+    let camera_pos = camera.transform_point(navara_math::Vec3::ZERO);
     let camera_height = WGS84_64
-        .xyz_to_lle(navara_core::vec3_to_xyz(
-            camera.transform_point(navara_math::Vec3::ZERO),
-        ))
+        .xyz_to_lle(navara_core::vec3_to_xyz(camera_pos))
         .height
         .val();
     let degrade = SseDegrade::new(
@@ -187,6 +190,7 @@ pub fn update_raster_tiles(
         pressure.min,
         pressure.max,
     );
+    let dynamic_sse = dynamic_sse.term(camera_pos, camera.forward(), camera_height);
 
     let terrain_present = terrain_layer.iter().next().is_some();
 
@@ -216,6 +220,7 @@ pub fn update_raster_tiles(
             &occluder,
             &texture_fragment,
             &fog,
+            dynamic_sse,
             globe.max_sse as f64,
             degrade,
             terrain_present,

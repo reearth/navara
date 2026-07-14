@@ -5,7 +5,7 @@ use navara_core::{TileXYZ, WGS84_64};
 use navara_feature_component::{
     batch::BatchTable, batch::BatchedFeature, id::FeatureId, render::RenderableFeature,
 };
-use navara_fog::Fog;
+use navara_fog::{DynamicSse, Fog};
 use navara_frame::FrameManager;
 use navara_globe::Globe;
 use navara_math::Transform;
@@ -63,7 +63,7 @@ pub fn update_tiles(
     mut source_query: Query<(Ref<VectorTileSourceResources>, &mut TileSource), Without<Deleted>>,
     mut camera_set: ParamSet<(
         Query<(&CameraMarker, Ref<Transform>, &CameraFrustum)>,
-        Query<Ref<Fog>>,
+        Query<(Ref<Fog>, Ref<DynamicSse>)>,
     )>,
     mut data_requester: ParamSet<(
         VectorTileDataRequesterQuery,
@@ -92,10 +92,14 @@ pub fn update_tiles(
 
     let occluder = occluder.iter().next().unwrap();
 
-    let (fog, is_fog_changed) = {
+    let (fog, dynamic_sse, is_fog_changed) = {
         let fog_query = camera_set.p1();
-        let fog = fog_query.single().unwrap();
-        (Fog::clone(&fog), fog.is_changed())
+        let (fog, dynamic_sse) = fog_query.single().unwrap();
+        (
+            Fog::clone(&fog),
+            DynamicSse::clone(&dynamic_sse),
+            fog.is_changed() || dynamic_sse.is_changed(),
+        )
     };
     let camera = camera_set.p0();
 
@@ -140,10 +144,9 @@ pub fn update_tiles(
 
             // Memory-pressure LOD degrade, same factor shape as terrain so
             // texturized-vector subdivision stays aligned for draping.
+            let camera_pos = camera.transform_point(navara_math::Vec3::ZERO);
             let camera_height = WGS84_64
-                .xyz_to_lle(navara_core::vec3_to_xyz(
-                    camera.transform_point(navara_math::Vec3::ZERO),
-                ))
+                .xyz_to_lle(navara_core::vec3_to_xyz(camera_pos))
                 .height
                 .val();
             let degrade = SseDegrade::new(
@@ -152,6 +155,7 @@ pub fn update_tiles(
                 pressure.min,
                 pressure.max,
             );
+            let dynamic_sse = dynamic_sse.term(camera_pos, camera.forward(), camera_height);
 
             // TODO: Use `root_handles` to cover geographic tiles.
             let zero_tile = match qt.qt.zero() {
@@ -195,6 +199,7 @@ pub fn update_tiles(
                 &features,
                 &mut renderable_features,
                 &fog,
+                dynamic_sse,
                 degrade,
                 false,
                 false,

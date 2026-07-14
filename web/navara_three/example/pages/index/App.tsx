@@ -13,9 +13,9 @@ import {
 
 import { ExampleGrid } from "./ExampleGrid";
 
-import { LangSelect } from "@/components/LangSelect";
 import { useDarkMode } from "@/components/hooks/useDarkMode";
 import { useLang } from "@/components/hooks/useLang";
+import { LangSelect } from "@/components/LangSelect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 

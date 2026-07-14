@@ -58,7 +58,7 @@ use navara_camera::CameraFrustum;
 use navara_component::{Deleted, Priority};
 use navara_data_requester::DataRequesterStatus;
 use navara_feature_component::{id::FeatureId, render::RenderableFeature};
-use navara_fog::Fog;
+use navara_fog::{DynamicSseTerm, Fog};
 use navara_math::Vec3;
 use navara_memory::SseDegrade;
 use navara_parser::cesium3dtiles::tileset::Refine;
@@ -119,6 +119,7 @@ pub fn select_tiles(
     pool: &Cesium3dTilesRetentionPool,
     window: &Window,
     fog: &Fog,
+    dynamic_sse: DynamicSseTerm,
     degrade: SseDegrade,
     is_v1_1: bool,
 ) {
@@ -135,6 +136,7 @@ pub fn select_tiles(
         requesters,
         window,
         fog,
+        dynamic_sse,
         degrade,
         rendered_tiles,
         features,
@@ -200,6 +202,7 @@ fn mark_leaves(
     requesters: &Cesium3dTileContentRequesterQuery,
     window: &Window,
     fog: &Fog,
+    dynamic_sse: DynamicSseTerm,
     degrade: SseDegrade,
     rendered_tiles: &mut Query<&mut RenderedCesium3dTileContent>,
     features: &Query<&FeatureId>,
@@ -239,6 +242,9 @@ fn mark_leaves(
             if fog.enabled {
                 sse -= navara_fog::fog(distance_from_camera, fog.density) * fog.sse_factor;
             }
+            // Tilt-scaled relaxation for horizon views (no-op when disabled).
+            // Ref: https://github.com/CesiumGS/cesium/blob/9e93c9b6aa44a8a490f5ed9aa175a7e92348aaa2/packages/engine/Source/Scene/Cesium3DTile.js#L950-L954
+            sse -= dynamic_sse.relaxation(distance_from_camera);
             effective_max_sse = degrade.effective_max_sse(max_sse as f64, distance_from_camera);
             (distance_from_camera as f32, sse as f32)
         }
@@ -342,6 +348,7 @@ fn mark_leaves(
                 requesters,
                 window,
                 fog,
+                dynamic_sse,
                 degrade,
                 rendered_tiles,
                 features,

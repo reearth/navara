@@ -4,7 +4,7 @@ use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, Order, OrderByDistance, Priority, Rendered};
 use navara_core::{Aabb, TileXYZ, WGS84_64, vec3_to_xyz};
 use navara_data_requester::{DataManager, DataRequester, DataRequesterStatus};
-use navara_fog::Fog;
+use navara_fog::{DynamicSse, Fog};
 use navara_frame::FrameManager;
 use navara_geometry::{
     TileUvTransform, add_skirt_separate, calculate_skirt_height, make_wgs84_down_dir_fn,
@@ -136,7 +136,7 @@ pub fn update_terrain(
     mut terrain_layer_set: ParamSet<(Query<&TerrainLayer>, Query<(), Added<TerrainLayer>>)>,
     mut camera_set: ParamSet<(
         Query<(Ref<Transform>, Ref<CameraFrustum>), With<CameraMarker>>,
-        Query<Ref<Fog>>,
+        Query<(Ref<Fog>, Ref<DynamicSse>)>,
     )>,
     changed_texture_fragment: ChangedTileTextureFragmentQuery,
     mut data_requesters_set: ParamSet<(
@@ -185,10 +185,14 @@ pub fn update_terrain(
 
     let occluder = occluder.iter().next().unwrap();
 
-    let (fog, is_fog_changed) = {
+    let (fog, dynamic_sse, is_fog_changed) = {
         let fog_query = camera_set.p1();
-        let fog = fog_query.single().unwrap();
-        (Fog::clone(&fog), fog.is_changed())
+        let (fog, dynamic_sse) = fog_query.single().unwrap();
+        (
+            Fog::clone(&fog),
+            DynamicSse::clone(&dynamic_sse),
+            fog.is_changed() || dynamic_sse.is_changed(),
+        )
     };
     let (globe, pressure) = globe;
     let camera = camera_set.p0();
@@ -229,16 +233,15 @@ pub fn update_terrain(
 
     // Memory-pressure LOD degrade, weighted by distance relative to the
     // camera's height above the ellipsoid.
-    let camera_height = WGS84_64
-        .xyz_to_lle(vec3_to_xyz(camera.transform_point(navara_math::Vec3::ZERO)))
-        .height
-        .val();
+    let camera_pos = camera.transform_point(navara_math::Vec3::ZERO);
+    let camera_height = WGS84_64.xyz_to_lle(vec3_to_xyz(camera_pos)).height.val();
     let degrade = navara_memory::SseDegrade::new(
         pressure.multiplier,
         camera_height,
         pressure.min,
         pressure.max,
     );
+    let dynamic_sse = dynamic_sse.term(camera_pos, camera.forward(), camera_height);
 
     let root_coords: Vec<TileXYZ> = globe.tiling_scheme.root_tiles();
 
@@ -286,6 +289,7 @@ pub fn update_terrain(
             &occluder,
             &mut meshes,
             &fog,
+            dynamic_sse,
             globe.max_sse as f64,
             degrade,
             false,
