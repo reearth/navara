@@ -110,11 +110,7 @@ import type { TileMesh } from "./mesh/tile";
 import { RenderPassOrchestrator } from "./orchestrators/RenderPassOrchestrator";
 import { PickHelper } from "./pick/pickHelper";
 import { TerrainPicker } from "./pick/pickTerrain";
-import {
-  AttributionPlugin,
-  type AttributionPosition,
-  type AttributionStyle,
-} from "./plugins";
+import { AttributionPlugin, type AttributionPluginOptions } from "./plugins";
 import { TexturizedSceneByTileCoordinates, type Scenes } from "./scene";
 import { ShadowMapViewers } from "./ShadowMapViewers";
 import { Source } from "./source";
@@ -352,9 +348,7 @@ export type Options = {
    * worker (no DOM), so `view.attribution` is `undefined` there.
    * @defaultValue true
    */
-  defaultAttribution?:
-    | boolean
-    | { style?: AttributionStyle; position?: AttributionPosition };
+  defaultAttribution?: boolean | AttributionPluginOptions;
 } & GlobeOptions;
 
 /**
