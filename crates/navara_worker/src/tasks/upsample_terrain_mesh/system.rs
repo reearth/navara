@@ -53,6 +53,7 @@ pub(crate) fn upsample_terrain_mesh(
             (Some(u), Some(h), Some(i)) => (u, h, i),
             _ => continue,
         };
+        let watermask = cached_mesh_handle.watermask.and_then(|h| buf.get_u8(&h));
 
         let returned = tile
             .upsample(
@@ -63,6 +64,7 @@ pub(crate) fn upsample_terrain_mesh(
                     heights,
                     indices,
                     normals: None,
+                    watermask,
                 },
             )
             .unwrap();
@@ -72,6 +74,8 @@ pub(crate) fn upsample_terrain_mesh(
             heights: buf.new_f32(returned.heights),
             max_height: returned.max_height,
             min_height: returned.min_height,
+            rtc_translation: returned.rtc_translation,
+            watermask: returned.watermask.map(|w| buf.new_u8(w)),
         });
     }
 }

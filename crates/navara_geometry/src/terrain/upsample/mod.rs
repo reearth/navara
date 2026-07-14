@@ -19,6 +19,9 @@ pub struct UpsamplableTerrainGeometry<'a> {
     pub indices: &'a [u32],
     /// Optional per-vertex normals from the parent (stride 3).
     pub normals: Option<&'a [f32]>,
+    /// Optional quantized-mesh watermask from the parent (1 byte uniform or
+    /// 65536 byte 256x256 grid).
+    pub watermask: Option<&'a [u8]>,
 }
 
 /// Upsample a terrain mesh which is one of the four split child tiles.
@@ -32,6 +35,8 @@ pub struct UpsampledTerrainGeometry {
     pub heights: Option<Vec<f32>>,
     pub indices: Option<Vec<u32>>,
     pub normals: Option<Vec<f32>>,
+    /// Watermask cropped from the parent to this child's quadrant.
+    pub watermask: Option<Vec<u8>>,
     pub max_height: FloatType,
     pub min_height: FloatType,
     is_east: bool,
@@ -55,11 +60,16 @@ impl UpsampledTerrainGeometry {
         let (new_uvs, new_heights, new_normals, new_indices, max_height, min_height) =
             clip(uvs, heights, normals, indices, is_east, is_north);
 
+        let watermask = upsamplable_geometry
+            .watermask
+            .and_then(|w| upsample_watermask(w, is_east, is_north));
+
         Self {
             uvs: Some(new_uvs),
             heights: Some(new_heights),
             indices: Some(new_indices),
             normals: new_normals,
+            watermask,
             max_height,
             min_height,
             is_east,
@@ -118,6 +128,37 @@ impl UpsampledTerrainGeometry {
             },
             heights,
         )
+    }
+}
+
+const WATERMASK_SIZE: usize = 256;
+
+/// Crop a parent quantized-mesh watermask to one child quadrant.
+///
+/// A uniform mask (1 byte) is inherited as-is. A 256x256 grid is cropped to
+/// the child's 128x128 quadrant and upscaled back to 256x256 with nearest
+/// neighbor, so the child mask keeps the same layout a directly decoded mask
+/// has. Row 0 is the NORTH edge (masks are uploaded with `flipY` and sampled
+/// at tile UVs where v=0 is the south edge), so a north child reads the first
+/// 128 rows. Returns `None` for unexpected sizes.
+pub fn upsample_watermask(parent: &[u8], is_east: bool, is_north: bool) -> Option<Vec<u8>> {
+    match parent.len() {
+        1 => Some(vec![parent[0]]),
+        len if len == WATERMASK_SIZE * WATERMASK_SIZE => {
+            const HALF: usize = WATERMASK_SIZE / 2;
+            let src_row0 = if is_north { 0 } else { HALF };
+            let src_col0 = if is_east { HALF } else { 0 };
+            let mut out = vec![0u8; WATERMASK_SIZE * WATERMASK_SIZE];
+            for y in 0..WATERMASK_SIZE {
+                let src_row = (src_row0 + y / 2) * WATERMASK_SIZE;
+                let dst_row = y * WATERMASK_SIZE;
+                for x in 0..WATERMASK_SIZE {
+                    out[dst_row + x] = parent[src_row + src_col0 + x / 2];
+                }
+            }
+            Some(out)
+        }
+        _ => None,
     }
 }
 
@@ -480,6 +521,7 @@ mod test {
                 heights: &heights,
                 indices: &indices,
                 normals: None,
+                watermask: None,
             },
             &TileRegion::SouthWest,
         );
@@ -489,6 +531,7 @@ mod test {
                 heights: &heights,
                 indices: &indices,
                 normals: None,
+                watermask: None,
             },
             &TileRegion::SouthEast,
         );
@@ -551,6 +594,7 @@ mod test {
                 heights: &heights,
                 indices: &indices,
                 normals: None,
+                watermask: None,
             },
             &TileRegion::NorthEast,
         );
@@ -588,6 +632,7 @@ mod test {
                 heights: &child_heights,
                 indices: &child_geom.indices,
                 normals: None,
+                watermask: None,
             },
             &TileRegion::NorthEast,
         );
@@ -625,6 +670,7 @@ mod test {
                 heights: &[0., 50., 100.],
                 indices: &[0, 1, 2],
                 normals: None,
+                watermask: None,
             },
             &TileRegion::NorthEast,
         );
@@ -656,6 +702,7 @@ mod test {
                 heights: &[0., 50., 100., 50.],
                 indices: &[0, 1, 2, 0, 2, 3],
                 normals: None,
+                watermask: None,
             },
             &TileRegion::NorthEast,
         );
@@ -666,5 +713,79 @@ mod test {
         );
         assert_all_f32(&mesh.heights.unwrap(), &[50.0, 50.0, 25.0, 62.5, 75.0]);
         assert_eq!(mesh.indices.unwrap(), [1, 2, 3, 1, 3, 4, 2, 0, 3]);
+    }
+
+    #[test]
+    fn it_should_inherit_uniform_watermask() {
+        assert_eq!(
+            super::upsample_watermask(&[255], true, false),
+            Some(vec![255])
+        );
+        assert_eq!(super::upsample_watermask(&[0], false, true), Some(vec![0]));
+    }
+
+    #[test]
+    fn it_should_reject_unexpected_watermask_size() {
+        assert_eq!(super::upsample_watermask(&[0; 100], true, true), None);
+    }
+
+    #[test]
+    fn it_should_crop_grid_watermask_to_quadrant() {
+        const SIZE: usize = 256;
+        const HALF: usize = SIZE / 2;
+        // Fill each quadrant of the parent with a distinct value. Row 0 is the
+        // north edge, so rows [0, 128) are north and columns [128, 256) are east.
+        let mut parent = vec![0u8; SIZE * SIZE];
+        for y in 0..SIZE {
+            for x in 0..SIZE {
+                let north = y < HALF;
+                let east = x >= HALF;
+                parent[y * SIZE + x] = match (east, north) {
+                    (false, true) => 10,  // NW
+                    (true, true) => 20,   // NE
+                    (false, false) => 30, // SW
+                    (true, false) => 40,  // SE
+                };
+            }
+        }
+
+        for (is_east, is_north, expected) in [
+            (false, true, 10u8),
+            (true, true, 20),
+            (false, false, 30),
+            (true, false, 40),
+        ] {
+            let child = super::upsample_watermask(&parent, is_east, is_north).unwrap();
+            assert_eq!(child.len(), SIZE * SIZE);
+            assert!(
+                child.iter().all(|&v| v == expected),
+                "quadrant (east={}, north={}) should be uniformly {}",
+                is_east,
+                is_north,
+                expected
+            );
+        }
+    }
+
+    #[test]
+    fn it_should_upscale_cropped_watermask_with_nearest_neighbor() {
+        const SIZE: usize = 256;
+        // Single water texel at the parent's northwest corner (row 0, col 0).
+        let mut parent = vec![0u8; SIZE * SIZE];
+        parent[0] = 255;
+
+        let child = super::upsample_watermask(&parent, false, true).unwrap();
+
+        // The NW child doubles that texel into a 2x2 block at its own NW corner.
+        for y in 0..SIZE {
+            for x in 0..SIZE {
+                let expected = if x < 2 && y < 2 { 255 } else { 0 };
+                assert_eq!(child[y * SIZE + x], expected, "at ({}, {})", x, y);
+            }
+        }
+
+        // The other children see no water at all.
+        let se_child = super::upsample_watermask(&parent, true, false).unwrap();
+        assert!(se_child.iter().all(|&v| v == 0));
     }
 }

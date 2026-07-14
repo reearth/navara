@@ -378,11 +378,18 @@ async function processUpsampleTerrainMesh(
           ? bufHandler.f32(parentNormalsHandle)?.slice()
           : undefined;
 
+      const parentWatermaskHandle = cachedMeshHandle.watermask;
+      const parentWatermask =
+        parentWatermaskHandle != null
+          ? (bufHandler.u8(parentWatermaskHandle)?.slice() ?? undefined)
+          : undefined;
+
       const upsamplableTerrainGeometry = new UpsamplableTerrainGeometryLike(
         parentUvs,
         parentIndices,
         parentHeights,
         parentNormals,
+        parentWatermask,
       );
 
       let promise: ReturnType<
@@ -425,6 +432,10 @@ async function processUpsampleTerrainMesh(
       const { geometry, heights } = built;
 
       const rtcTranslation = result.rtc_translation;
+      const watermaskHandle = result.watermask
+        ? bufHandler.adoptU8(result.watermask)
+        : undefined;
+
       const upsampleTerrainMeshResult = new UpsampleTerrainMeshResult(
         geometry,
         heights,
@@ -434,6 +445,9 @@ async function processUpsampleTerrainMesh(
           ? new Vec3(rtcTranslation.x, rtcTranslation.y, rtcTranslation.z)
           : undefined,
       );
+      if (watermaskHandle != null) {
+        upsampleTerrainMeshResult.watermask = watermaskHandle;
+      }
 
       task.complete((delegator_id) =>
         DelegatedWorkerTasksResult.withUpsampleTerrainMesh(

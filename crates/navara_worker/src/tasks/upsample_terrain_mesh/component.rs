@@ -35,12 +35,18 @@ pub struct UpsampleTerrainMeshResult {
     pub min_height: FloatType,
     pub max_height: FloatType,
     pub rtc_translation: Option<Vec3>,
+    /// Watermask cropped from the parent tile's mask (1 byte uniform or
+    /// 65536 byte 256x256 grid).
+    pub watermask: Option<Handle>,
 }
 
 impl FreeResultBuffers for UpsampleTerrainMeshResult {
     fn remove_from_buf(&self, buf: &mut BufferStore) -> Vec<u32> {
         self.geometry.remove_from_buf(buf);
         buf.remove(&self.heights);
+        if let Some(watermask) = &self.watermask {
+            buf.remove(watermask);
+        }
         Vec::new()
     }
 }
@@ -73,6 +79,7 @@ mod test {
             min_height: 0.,
             max_height: 0.,
             rtc_translation: None,
+            watermask: Some(buf.new_u8(vec![1])),
         }
     }
 
@@ -83,7 +90,7 @@ mod test {
         let mut world = World::new();
         let mut buf = BufferStore::new();
         let result = spawn_result(&mut buf);
-        assert_eq!(buf.len(), 4);
+        assert_eq!(buf.len(), 5);
         world.insert_resource(buf);
         let e = world.spawn(result).id();
 
@@ -104,6 +111,6 @@ mod test {
 
         world.despawn(e);
 
-        assert_eq!(world.resource::<BufferStore>().len(), 4);
+        assert_eq!(world.resource::<BufferStore>().len(), 5);
     }
 }
