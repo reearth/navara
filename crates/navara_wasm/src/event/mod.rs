@@ -13,27 +13,92 @@ use worker::WorkerTaskDelegatedEvent;
 
 use navara_wasm_types::{CameraFrustum, Globe, LLE, RasterTileInternalMaterial, Transform};
 
-#[wasm_bindgen(getter_with_clone)]
+// Fields are private on purpose: exposing them via `getter_with_clone` would
+// deep-clone every Vec (and each element) on each JS read. JS consumes each
+// stack exactly once per frame through the move-out `take_*` accessors below.
+#[wasm_bindgen]
 #[derive(Debug, Clone, Serialize)]
 pub struct Events {
-    pub camera_transform_updated: Option<Transform>,
-    pub camera_frustum_updated: Option<CameraFrustum>,
-    pub object_transform_updated: Vec<ObjectTransformEvent>,
-    pub mesh_removed: Vec<EntityEvent>,
-    pub mesh_added: Vec<MeshAdded>,
-    pub mesh_updated: Vec<MeshChanged>,
-    pub data_requested: Vec<DataRequestEvent>,
-    pub data_requester_removed: Vec<DataRequesterRemovedEvent>,
-    pub texture_fragment_requested: Vec<TextureFragmentRequestedEvent>,
-    pub texture_fragment_removed: Vec<EntityEvent>,
-    pub worker_task_delegated: Vec<WorkerTaskDelegatedEvent>,
-    pub worker_task_removed: Vec<EntityEvent>,
-    pub renderable_feature_added: Vec<RenderableFeatureAddedEvent>,
-    pub renderable_feature_changed: Vec<RenderableFeatureChangedEvent>,
-    pub renderable_feature_removed: Vec<RenderableFeatureRemovedEvent>,
-    pub update_sample_terrain_height: Vec<TerrainHeightUpdatedEvent>,
-    pub hillshade_backfilled: Vec<HillshadeBackfilledEvent>,
-    pub hillshade_canceled: Vec<EntityEvent>,
+    camera_transform_updated: Option<Transform>,
+    camera_frustum_updated: Option<CameraFrustum>,
+    object_transform_updated: Vec<ObjectTransformEvent>,
+    mesh_removed: Vec<EntityEvent>,
+    mesh_added: Vec<MeshAdded>,
+    mesh_updated: Vec<MeshChanged>,
+    data_requested: Vec<DataRequestEvent>,
+    data_requester_removed: Vec<DataRequesterRemovedEvent>,
+    texture_fragment_requested: Vec<TextureFragmentRequestedEvent>,
+    texture_fragment_removed: Vec<EntityEvent>,
+    worker_task_delegated: Vec<WorkerTaskDelegatedEvent>,
+    worker_task_removed: Vec<EntityEvent>,
+    renderable_feature_added: Vec<RenderableFeatureAddedEvent>,
+    renderable_feature_changed: Vec<RenderableFeatureChangedEvent>,
+    renderable_feature_removed: Vec<RenderableFeatureRemovedEvent>,
+    update_sample_terrain_height: Vec<TerrainHeightUpdatedEvent>,
+    hillshade_backfilled: Vec<HillshadeBackfilledEvent>,
+    hillshade_canceled: Vec<EntityEvent>,
+}
+
+// Move-out accessors: each hands the stack's ownership to JS (elements are
+// boxed once for their JS wrappers, nothing is cloned). Method names must be
+// `take_<stack key>` — `EventManager.pushEvents` derives the method name from
+// its stack keys.
+#[wasm_bindgen]
+impl Events {
+    pub fn take_camera_transform_updated(&mut self) -> Option<Transform> {
+        self.camera_transform_updated.take()
+    }
+    pub fn take_camera_frustum_updated(&mut self) -> Option<CameraFrustum> {
+        self.camera_frustum_updated.take()
+    }
+    pub fn take_object_transform_updated(&mut self) -> Vec<ObjectTransformEvent> {
+        std::mem::take(&mut self.object_transform_updated)
+    }
+    pub fn take_mesh_removed(&mut self) -> Vec<EntityEvent> {
+        std::mem::take(&mut self.mesh_removed)
+    }
+    pub fn take_mesh_added(&mut self) -> Vec<MeshAdded> {
+        std::mem::take(&mut self.mesh_added)
+    }
+    pub fn take_mesh_updated(&mut self) -> Vec<MeshChanged> {
+        std::mem::take(&mut self.mesh_updated)
+    }
+    pub fn take_data_requested(&mut self) -> Vec<DataRequestEvent> {
+        std::mem::take(&mut self.data_requested)
+    }
+    pub fn take_data_requester_removed(&mut self) -> Vec<DataRequesterRemovedEvent> {
+        std::mem::take(&mut self.data_requester_removed)
+    }
+    pub fn take_texture_fragment_requested(&mut self) -> Vec<TextureFragmentRequestedEvent> {
+        std::mem::take(&mut self.texture_fragment_requested)
+    }
+    pub fn take_texture_fragment_removed(&mut self) -> Vec<EntityEvent> {
+        std::mem::take(&mut self.texture_fragment_removed)
+    }
+    pub fn take_worker_task_delegated(&mut self) -> Vec<WorkerTaskDelegatedEvent> {
+        std::mem::take(&mut self.worker_task_delegated)
+    }
+    pub fn take_worker_task_removed(&mut self) -> Vec<EntityEvent> {
+        std::mem::take(&mut self.worker_task_removed)
+    }
+    pub fn take_renderable_feature_added(&mut self) -> Vec<RenderableFeatureAddedEvent> {
+        std::mem::take(&mut self.renderable_feature_added)
+    }
+    pub fn take_renderable_feature_changed(&mut self) -> Vec<RenderableFeatureChangedEvent> {
+        std::mem::take(&mut self.renderable_feature_changed)
+    }
+    pub fn take_renderable_feature_removed(&mut self) -> Vec<RenderableFeatureRemovedEvent> {
+        std::mem::take(&mut self.renderable_feature_removed)
+    }
+    pub fn take_update_sample_terrain_height(&mut self) -> Vec<TerrainHeightUpdatedEvent> {
+        std::mem::take(&mut self.update_sample_terrain_height)
+    }
+    pub fn take_hillshade_backfilled(&mut self) -> Vec<HillshadeBackfilledEvent> {
+        std::mem::take(&mut self.hillshade_backfilled)
+    }
+    pub fn take_hillshade_canceled(&mut self) -> Vec<EntityEvent> {
+        std::mem::take(&mut self.hillshade_canceled)
+    }
 }
 
 #[wasm_bindgen]
