@@ -2,7 +2,7 @@
 title: Custom Descriptor
 description: カスタム Descriptor の実装について
 sidebar:
-  order: 800
+  order: 1070
 ---
 
 navara_three では、メッシュ・エフェクト・ライトの各 Descriptor を独自に実装できます。概念については [レイヤーと Descriptor](../../../three/introduction/about-layer/) を参照してください。

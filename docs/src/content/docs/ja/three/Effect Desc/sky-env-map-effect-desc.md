@@ -2,7 +2,7 @@
 title: SkyEnvMapEffectDesc
 description: Sky environment map effect descriptor for navara_three
 sidebar:
-  order: 710
+  order: 1060
 ---
 
 `SkyEnvMapEffectDesc`クラスは、空の環境マップをレンダリングするパスです。環境マッピングや反射に使用される空のテクスチャを生成します。

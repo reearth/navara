@@ -2,7 +2,7 @@
 title: Custom Descriptor
 description: How to implement custom descriptors
 sidebar:
-  order: 800
+  order: 1070
 ---
 
 In navara_three, you can implement your own mesh, effect, and light descriptors. For an overview of the layer concept, see [Layers & Descriptors](../../../three/introduction/about-layer/).

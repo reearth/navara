@@ -2,7 +2,7 @@
 title: AttributionPlugin
 description: navara_three 向けの、非モーダルでズーム連動するデータ出典（クレジット）UI プラグイン。
 sidebar:
-  order: 4
+  order: 1040
 ---
 
 ## 概要

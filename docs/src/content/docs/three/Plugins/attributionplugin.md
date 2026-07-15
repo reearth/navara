@@ -2,7 +2,7 @@
 title: AttributionPlugin
 description: Non-modal, zoom-aware data attribution (credit) UI plugin for navara_three.
 sidebar:
-  order: 4
+  order: 1040
 ---
 
 ## Overview
