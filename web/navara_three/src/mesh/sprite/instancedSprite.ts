@@ -16,12 +16,12 @@ import {
 } from "three";
 import invariant from "tiny-invariant";
 
-import type { EventContext } from "../event/context";
-import { createInstancedSpriteMaterialEnhancer } from "../material/enhancer";
+import type { EventContext } from "../../event/context";
+import { createInstancedSpriteMaterialEnhancer } from "../../material/enhancer";
+import { PickableMesh } from "../pickableMesh";
 
 import { BillboardAtlas, type AtlasRect } from "./billboardAtlas";
 import { loadAtlasImageFromUrl } from "./billboardAtlasImageLoader";
-import { PickableMesh } from "./pickableMesh";
 
 export type InstancedSpriteOptions = {
   renderOrder?: number;

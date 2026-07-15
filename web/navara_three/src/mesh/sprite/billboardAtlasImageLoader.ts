@@ -1,5 +1,5 @@
-import { TEXTURE_LOADER } from "../event/loaders";
-import { getImageDataFromImageBitmap } from "../tasks/getImageDataFromImageBitmap";
+import { TEXTURE_LOADER } from "../../event/loaders";
+import { getImageDataFromImageBitmap } from "../../tasks/getImageDataFromImageBitmap";
 
 import type { LoadAtlasImage } from "./billboardAtlas";
 

@@ -10,7 +10,7 @@ export * from "./tile";
 export * from "./pickableMesh";
 export * from "./pickableMeshWrapper";
 export * from "./rtcRteHelper";
-export * from "./instancedSprite";
+export * from "./sprite";
 export * from "./sdfText";
 export * from "./batchedSdfText";
 export * from "./DrapedMesh";
