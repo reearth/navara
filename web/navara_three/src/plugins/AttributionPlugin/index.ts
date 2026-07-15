@@ -1,7 +1,7 @@
 /**
  * AttributionPlugin — Navara Plugin for map data attribution (credit) UI.
  *
- * Renders a non-modal popover (bottom-right ⓘ button) listing data-source
+ * Renders a non-modal popover (ⓘ button, bottom-right by default) listing data-source
  * attributions, with a separate always-visible logo frame in the bottom-left
  * corner. Each source can carry zoom-banded child credits that switch as the
  * camera zooms, and per-layer feature credits are tracked dynamically.
@@ -128,8 +128,8 @@ const NAVARA_CREDIT: AttributionItem = {
 };
 
 /**
- * Renders map data attributions as a non-modal popover (bottom-right ⓘ
- * button). Top-level sources can carry nested, optionally zoom-banded child
+ * Renders map data attributions as a non-modal popover (ⓘ button, bottom-right
+ * by default). Top-level sources can carry nested, optionally zoom-banded child
  * credits.
  *
  * A `ThreeView` creates one by default (`view.attribution`); construct it
