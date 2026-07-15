@@ -106,8 +106,9 @@ export function toEvaluatedValue(
 ) {
   const result: {
     color?: Color;
+    opacity?: number;
     show?: boolean;
-    // Future: extrudedHeight, height, text
+    // TODO: extrudedHeight, height, size, width, etc. can be added here as needed
   } = {};
 
   // Map paint properties to Navara properties based on layer type
@@ -116,15 +117,27 @@ export function toEvaluatedValue(
     if (color) {
       result.color = color;
     }
+    const opacity = paintValues["fill-opacity"];
+    if (typeof opacity === "number") {
+      result.opacity = opacity;
+    }
   } else if (styleLayer.type === "line") {
     const color = toNavaraColor(paintValues["line-color"]);
     if (color) {
       result.color = color;
     }
+    const opacity = paintValues["line-opacity"];
+    if (typeof opacity === "number") {
+      result.opacity = opacity;
+    }
   } else if (styleLayer.type === "circle") {
     const color = toNavaraColor(paintValues["circle-color"]);
     if (color) {
       result.color = color;
+    }
+    const opacity = paintValues["circle-opacity"];
+    if (typeof opacity === "number") {
+      result.opacity = opacity;
     }
   }
 
