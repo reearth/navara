@@ -134,15 +134,9 @@ describe("AttributionPlugin set management", () => {
 });
 
 describe("AttributionPlugin popover visibility", () => {
-  it("is open by default and hide()/show() toggle card + aria-expanded", async () => {
+  it("is collapsed by default and show()/hide() toggle card + aria-expanded", async () => {
     const { plugin } = await setup();
     plugin.add([{ attribution: "A" }]);
-    expect(isHidden(".navara-attr-card")).toBe(false);
-    expect(q(".navara-attr-toggle")?.getAttribute("aria-expanded")).toBe(
-      "true",
-    );
-
-    plugin.hide();
     expect(isHidden(".navara-attr-card")).toBe(true);
     expect(q(".navara-attr-toggle")?.getAttribute("aria-expanded")).toBe(
       "false",
@@ -153,17 +147,23 @@ describe("AttributionPlugin popover visibility", () => {
     expect(q(".navara-attr-toggle")?.getAttribute("aria-expanded")).toBe(
       "true",
     );
+
+    plugin.hide();
+    expect(isHidden(".navara-attr-card")).toBe(true);
+    expect(q(".navara-attr-toggle")?.getAttribute("aria-expanded")).toBe(
+      "false",
+    );
   });
 
   it("keeps an open/closed intent set before the DOM exists", async () => {
     const view = makeView();
     const plugin = new AttributionPlugin();
     created.push(plugin);
-    plugin.hide(); // recorded before init/DOM — must not be lost
+    plugin.show(); // recorded before init/DOM — must not be lost
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await plugin.init(view as any, {} as any);
     plugin.add([{ attribution: "A" }]);
-    expect(isHidden(".navara-attr-card")).toBe(true);
+    expect(isHidden(".navara-attr-card")).toBe(false);
   });
 });
 
@@ -184,6 +184,7 @@ describe("AttributionPlugin dynamic layer credits", () => {
     const layer = makeLayer("L");
     const { plugin } = await setup({ L: layer });
     plugin.add([{ attribution: "Base", creditLayerId: "L" }]);
+    plugin.show(); // sub-credits only render while the popover is open
 
     layer.emit("featureCreated", { featureSetId: 1n, credit: "DynCredit" });
     expect(subCredits()).toContain("DynCredit");
