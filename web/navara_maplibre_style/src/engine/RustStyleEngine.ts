@@ -10,44 +10,17 @@ import type { StyleSpecification } from "@maplibre/maplibre-gl-style-spec";
 import { CompiledExpression, CompiledFilter } from "@navara/engine";
 
 import type { StyleEngine } from "./StyleEngine";
-import type {
-  EvaluationContext,
-  FeatureContext,
-  FilterExpression,
-  LayerType,
-  ParsedStyle,
-  PropertySpec,
-  StyleValue,
-  ValueExpression,
+import {
+  PAINT_SPECS_BY_TYPE,
+  type EvaluationContext,
+  type FeatureContext,
+  type FilterExpression,
+  type LayerType,
+  type ParsedStyle,
+  type PropertySpec,
+  type StyleValue,
+  type ValueExpression,
 } from "./types";
-
-/**
- * Paint property specifications for Rust engine.
- * For MVP: hardcoded to match MapLibre Style Spec.
- * Future: Move these definitions to Rust/WASM.
- */
-const PAINT_SPECS_BY_TYPE: Record<string, Record<string, PropertySpec>> = {
-  fill: {
-    "fill-color": { type: "color", default: "#000000" },
-    "fill-opacity": { type: "number", default: 1, minimum: 0, maximum: 1 },
-    "fill-outline-color": { type: "color" },
-  },
-  line: {
-    "line-color": { type: "color", default: "#000000" },
-    "line-width": { type: "number", default: 1, minimum: 0 },
-    "line-opacity": { type: "number", default: 1, minimum: 0, maximum: 1 },
-  },
-  circle: {
-    "circle-color": { type: "color", default: "#000000" },
-    "circle-radius": { type: "number", default: 5, minimum: 0 },
-    "circle-opacity": {
-      type: "number",
-      default: 1,
-      minimum: 0,
-      maximum: 1,
-    },
-  },
-};
 
 export class RustStyleEngine implements StyleEngine {
   async parseStyle(raw: unknown): Promise<ParsedStyle> {
@@ -105,7 +78,7 @@ export class RustStyleEngine implements StyleEngine {
       typeof expr === "number" ||
       typeof expr === "boolean"
     ) {
-      const constantValue = this.normalizeConstant(expr, spec) as T;
+      const constantValue = expr as T;
       return () => constantValue;
     }
 
@@ -136,8 +109,8 @@ export class RustStyleEngine implements StyleEngine {
           geometryType, // Pass geometry type for expressions that need it
         );
 
-        // Convert maplibre-expr Value to expected StyleValue type
-        return this.normalizeValue(result, spec) as T;
+        // Return result as-is; maplibre-expr handles type conversion
+        return result as T;
       } catch (e) {
         console.error("Expression evaluation error:", e);
         // Return default on evaluation error
@@ -150,88 +123,13 @@ export class RustStyleEngine implements StyleEngine {
     layerType: LayerType,
     propertyName: string,
   ): PropertySpec | undefined {
-    return PAINT_SPECS_BY_TYPE[layerType]?.[propertyName];
-  }
-
-  // Helper methods
-
-  private normalizeConstant(
-    value: string | number | boolean,
-    spec: PropertySpec,
-  ): StyleValue {
-    if (spec.type === "color" && typeof value === "string") {
-      return value.startsWith("#") ? this.parseColor(value) : value;
-    }
-    return value as StyleValue;
-  }
-
-  private normalizeValue(value: unknown, spec: PropertySpec): StyleValue {
-    // Handle null/undefined by returning default value
-    if (value === null || value === undefined) {
-      return (spec.default ?? this.getTypeDefault(spec.type)) as StyleValue;
+    const paintSpecs = PAINT_SPECS_BY_TYPE[layerType];
+    if (!paintSpecs) {
+      return undefined;
     }
 
-    // Handle color objects from maplibre-expr: { r, g, b, a }
-    if (spec.type === "color" && this.isValidMapLibreColor(value)) {
-      return value as StyleValue;
-    }
-
-    // Handle color strings
-    if (spec.type === "color" && typeof value === "string") {
-      return value.startsWith("#") ? this.parseColor(value) : value;
-    }
-
-    // Numbers, strings, booleans pass through
-    return value as StyleValue;
-  }
-
-  private isValidMapLibreColor(value: unknown): boolean {
-    if (!value || typeof value !== "object") {
-      return false;
-    }
-    const obj = value as Record<string, unknown>;
-    return (
-      typeof obj.r === "number" &&
-      typeof obj.g === "number" &&
-      typeof obj.b === "number" &&
-      typeof obj.a === "number" &&
-      Number.isFinite(obj.r) &&
-      Number.isFinite(obj.g) &&
-      Number.isFinite(obj.b) &&
-      Number.isFinite(obj.a)
-    );
-  }
-
-  private parseColor(colorStr: string): {
-    r: number;
-    g: number;
-    b: number;
-    a: number;
-  } {
-    // Parse hex color (#RRGGBB or #RRGGBBAA)
-    // Return MapLibreColor object format to match JsStyleEngine
-    if (colorStr.startsWith("#")) {
-      const hex = colorStr.slice(1);
-      if (hex.length === 6) {
-        return {
-          r: parseInt(hex.slice(0, 2), 16) / 255,
-          g: parseInt(hex.slice(2, 4), 16) / 255,
-          b: parseInt(hex.slice(4, 6), 16) / 255,
-          a: 1.0,
-        };
-      } else if (hex.length === 8) {
-        return {
-          r: parseInt(hex.slice(0, 2), 16) / 255,
-          g: parseInt(hex.slice(2, 4), 16) / 255,
-          b: parseInt(hex.slice(4, 6), 16) / 255,
-          a: parseInt(hex.slice(6, 8), 16) / 255,
-        };
-      }
-    }
-
-    // Fallback to black
-    console.warn(`Unsupported color format: ${colorStr}`);
-    return { r: 0, g: 0, b: 0, a: 1.0 };
+    const spec = paintSpecs[propertyName as keyof typeof paintSpecs];
+    return spec as PropertySpec | undefined;
   }
 
   private getTypeDefault(type: PropertySpec["type"]): StyleValue {

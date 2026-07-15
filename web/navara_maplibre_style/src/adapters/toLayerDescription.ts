@@ -39,9 +39,7 @@ export function toLayerDescription(
 
   if (source.type === "vector") {
     // TODO: Handle vector tile sources
-    throw new Error(
-      `Vector tile sources are not yet supported in toLayerDescription`,
-    );
+    throw new Error("Unsupported source type: vector");
   }
 
   // TODO: Handle other source types

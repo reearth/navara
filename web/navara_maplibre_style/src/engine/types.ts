@@ -4,9 +4,10 @@
  * allowing easy swap between JS and future Rust/WASM implementations.
  */
 
-import type {
-  GeoJSONSourceSpecification,
-  VectorSourceSpecification,
+import {
+  v8,
+  type GeoJSONSourceSpecification,
+  type VectorSourceSpecification,
 } from "@maplibre/maplibre-gl-style-spec";
 
 /**
@@ -125,6 +126,27 @@ export type MapLibreColor = {
 };
 
 /**
+ * Type guard to check if a value is a valid MapLibre Color object.
+ * Validates that r, g, b are finite numbers and a (if present) is also finite.
+ */
+export function isMapLibreColor(value: unknown): value is MapLibreColor {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+  const obj = value as Record<string, unknown>;
+  return (
+    typeof obj.r === "number" &&
+    typeof obj.g === "number" &&
+    typeof obj.b === "number" &&
+    Number.isFinite(obj.r) &&
+    Number.isFinite(obj.g) &&
+    Number.isFinite(obj.b) &&
+    (obj.a === undefined ||
+      (typeof obj.a === "number" && Number.isFinite(obj.a)))
+  );
+}
+
+/**
  * Possible return types from style expressions.
  *
  * Common array-valued properties in MapLibre Style Spec:
@@ -152,4 +174,14 @@ export type PropertySpec = {
     interpolated: boolean;
     parameters: string[];
   };
+};
+
+/**
+ * MapLibre's official paint property specifications by layer type.
+ * Using the official specs ensures compatibility with the MapLibre Style spec.
+ */
+export const PAINT_SPECS_BY_TYPE = {
+  fill: v8.paint_fill,
+  line: v8.paint_line,
+  circle: v8.paint_circle,
 };

@@ -7,7 +7,6 @@ import {
   createExpression,
   featureFilter,
   validateStyleMin,
-  v8,
 } from "@maplibre/maplibre-gl-style-spec";
 import type {
   StyleSpecification,
@@ -15,26 +14,17 @@ import type {
 } from "@maplibre/maplibre-gl-style-spec";
 
 import type { StyleEngine } from "./StyleEngine";
-import type {
-  EvaluationContext,
-  FeatureContext,
-  FilterExpression,
-  LayerType,
-  ParsedStyle,
-  PropertySpec,
-  StyleValue,
-  ValueExpression,
+import {
+  PAINT_SPECS_BY_TYPE,
+  type EvaluationContext,
+  type FeatureContext,
+  type FilterExpression,
+  type LayerType,
+  type ParsedStyle,
+  type PropertySpec,
+  type StyleValue,
+  type ValueExpression,
 } from "./types";
-
-/**
- * MapLibre's official paint property specifications by layer type.
- * Using the official specs ensures compatibility with the MapLibre Style spec.
- */
-const PAINT_SPECS_BY_TYPE = {
-  fill: v8.paint_fill,
-  line: v8.paint_line,
-  circle: v8.paint_circle,
-};
 
 export class JsStyleEngine implements StyleEngine {
   async parseStyle(raw: unknown): Promise<ParsedStyle> {

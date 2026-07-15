@@ -5,45 +5,32 @@
 import { Color } from "@navara/three";
 
 import type { StyleEngine } from "../engine/StyleEngine";
-import type {
-  EvaluationContext,
-  MapLibreColor,
-  StyleLayer,
+import {
+  isMapLibreColor,
+  type EvaluationContext,
+  type StyleLayer,
 } from "../engine/types";
 
 /**
- * Type guard to check if a value is a MapLibre Color object.
- * Alpha channel is optional (defaults to 1 if missing).
+ * Convert MapLibre color value to Navara Color and extract alpha.
+ * Returns tuple of [color, alpha] where alpha is from the color's alpha channel.
  */
-function isMapLibreColor(value: unknown): value is MapLibreColor {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-  const obj = value as Record<string, unknown>;
-  return (
-    typeof obj.r === "number" &&
-    typeof obj.g === "number" &&
-    typeof obj.b === "number" &&
-    Number.isFinite(obj.r) &&
-    Number.isFinite(obj.g) &&
-    Number.isFinite(obj.b) &&
-    (obj.a === undefined ||
-      (typeof obj.a === "number" && Number.isFinite(obj.a)))
-  );
-}
-
-/**
- * Convert MapLibre color value to Navara Color.
- */
-function toNavaraColor(value: unknown): Color | undefined {
+function toNavaraColor(
+  value: unknown,
+): { color: Color; alpha: number } | undefined {
   try {
     if (typeof value === "string") {
       // CSS color string from spec.default fallback (e.g., "#000000", "rgb(255, 0, 0)")
-      return new Color().setStyle(value);
+      const color = new Color().setStyle(value);
+      // TODO: Parse alpha from CSS strings like rgba(r,g,b,a) or #RRGGBBAA
+      // Three.js Color doesn't store alpha, so it's lost during parsing
+      return { color, alpha: 1.0 };
     }
     if (isMapLibreColor(value)) {
-      // MapLibre Color object with r, g, b values (0-1 range)
-      return new Color().setRGB(value.r, value.g, value.b);
+      // MapLibre Color object with r, g, b, a values (0-1 range)
+      const color = new Color().setRGB(value.r, value.g, value.b);
+      const alpha = value.a ?? 1.0;
+      return { color, alpha };
     }
   } catch {
     // Ignore invalid color values.
@@ -113,31 +100,37 @@ export function toEvaluatedValue(
 
   // Map paint properties to Navara properties based on layer type
   if (styleLayer.type === "fill") {
-    const color = toNavaraColor(paintValues["fill-color"]);
-    if (color) {
-      result.color = color;
-    }
-    const opacity = paintValues["fill-opacity"];
-    if (typeof opacity === "number") {
-      result.opacity = opacity;
+    const colorResult = toNavaraColor(paintValues["fill-color"]);
+    if (colorResult) {
+      result.color = colorResult.color;
+      // Combine color alpha with fill-opacity
+      const paintOpacity = paintValues["fill-opacity"];
+      result.opacity =
+        typeof paintOpacity === "number"
+          ? colorResult.alpha * paintOpacity
+          : colorResult.alpha;
     }
   } else if (styleLayer.type === "line") {
-    const color = toNavaraColor(paintValues["line-color"]);
-    if (color) {
-      result.color = color;
-    }
-    const opacity = paintValues["line-opacity"];
-    if (typeof opacity === "number") {
-      result.opacity = opacity;
+    const colorResult = toNavaraColor(paintValues["line-color"]);
+    if (colorResult) {
+      result.color = colorResult.color;
+      // Combine color alpha with line-opacity
+      const paintOpacity = paintValues["line-opacity"];
+      result.opacity =
+        typeof paintOpacity === "number"
+          ? colorResult.alpha * paintOpacity
+          : colorResult.alpha;
     }
   } else if (styleLayer.type === "circle") {
-    const color = toNavaraColor(paintValues["circle-color"]);
-    if (color) {
-      result.color = color;
-    }
-    const opacity = paintValues["circle-opacity"];
-    if (typeof opacity === "number") {
-      result.opacity = opacity;
+    const colorResult = toNavaraColor(paintValues["circle-color"]);
+    if (colorResult) {
+      result.color = colorResult.color;
+      // Combine color alpha with circle-opacity
+      const paintOpacity = paintValues["circle-opacity"];
+      result.opacity =
+        typeof paintOpacity === "number"
+          ? colorResult.alpha * paintOpacity
+          : colorResult.alpha;
     }
   }
 

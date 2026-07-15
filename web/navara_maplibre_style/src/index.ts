@@ -9,18 +9,19 @@ export { MapLibreStylePlugin } from "./MapLibreStylePlugin";
 export type { StyleEngine } from "./engine/StyleEngine";
 export { JsStyleEngine } from "./engine/JsStyleEngine";
 export { RustStyleEngine } from "./engine/RustStyleEngine";
-export type {
-  ParsedStyle,
-  StyleSource,
-  VectorSource,
-  GeoJSONSource,
-  StyleLayer,
-  FillLayer,
-  LineLayer,
-  CircleLayer,
-  LayerType,
-  EvaluationContext,
-  FeatureContext,
-  StyleValue,
-  MapLibreColor,
+export {
+  isMapLibreColor,
+  type ParsedStyle,
+  type StyleSource,
+  type VectorSource,
+  type GeoJSONSource,
+  type StyleLayer,
+  type FillLayer,
+  type LineLayer,
+  type CircleLayer,
+  type LayerType,
+  type EvaluationContext,
+  type FeatureContext,
+  type StyleValue,
+  type MapLibreColor,
 } from "./engine/types";
