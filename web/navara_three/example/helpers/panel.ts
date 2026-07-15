@@ -214,6 +214,7 @@ export const addCtrlPanel = (
     surfaceShow: true,
     pointSize: 0.3,
     offsetDepth: true,
+    depthTest: true,
   };
 
   pane
@@ -468,6 +469,10 @@ export const addCtrlPanel = (
         material.offsetDepth = paneParams.offsetDepth;
       }
 
+      if ("depthTest" in material) {
+        material.depthTest = paneParams.depthTest;
+      }
+
       // Spread the whole layer description so source-based layers keep their
       // `source` (and legacy layers keep their `data`) on update.
       view.updateLayerById(layerId, {
@@ -711,6 +716,11 @@ function createParamCtrl(
     if ("offsetDepth" in material) {
       paneParams.offsetDepth = material.offsetDepth;
       f.addBinding(paneParams, "offsetDepth").on("change", changeFunc);
+    }
+
+    if ("depthTest" in material) {
+      paneParams.depthTest = material.depthTest;
+      f.addBinding(paneParams, "depthTest").on("change", changeFunc);
     }
 
     return f;
