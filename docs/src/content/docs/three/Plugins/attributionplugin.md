@@ -7,7 +7,7 @@ sidebar:
 
 ## Overview
 
-`AttributionPlugin` shows an attribution (credit) UI for your map's data sources. **A `ThreeView` creates the attribution UI and exposes it as `view.attribution`** (pass `defaultAttribution: false` to opt out and build your own UI). A built-in **"Navara" credit is always shown first**, so the UI is visible even before you add any source. The popover lists the active sources and is **collapsed by default**; a small ⓘ button — in a bottom corner, bottom-right by default — opens it (and `hide()` / `show()` do the same). It is non-modal — the map stays interactive (pan / zoom / rotate) while the popover is open.
+`AttributionPlugin` shows an attribution (credit) UI for your map's data sources. **A `ThreeView` creates the attribution UI by default and exposes it as `view.attribution`** (pass `defaultAttribution: false` to opt out and build your own UI). A built-in **"Navara" credit is always shown first**, so the UI is visible even before you add any source. The popover lists the active sources and is **collapsed by default**; a small ⓘ button — in a bottom corner, bottom-right by default — opens it (and `hide()` / `show()` do the same). It is non-modal — the map stays interactive (pan / zoom / rotate) while the popover is open.
 
 It covers the three things map attributions usually need:
 
@@ -22,7 +22,7 @@ Credits may contain inline `<a>` links; they are sanitized before display. The c
 ```typescript
 import ThreeView from "@navara/three";
 
-// The attribution UI is created by ThreeView; access it via view.attribution.
+// The attribution UI is created by default; access it via view.attribution.
 const view = new ThreeView({ container });
 await view.init();
 
@@ -87,7 +87,7 @@ view.attribution?.show();
 
 ## Enabling & access
 
-A `ThreeView` creates the attribution UI and exposes it as a readonly getter:
+A `ThreeView` creates the attribution UI by default and exposes it as a readonly getter:
 
 ```typescript
 view.attribution; // AttributionPlugin | undefined

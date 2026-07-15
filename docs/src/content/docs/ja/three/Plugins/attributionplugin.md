@@ -7,7 +7,7 @@ sidebar:
 
 ## 概要
 
-`AttributionPlugin` は、地図のデータソースに関するアトリビューション（クレジット）UI を表示します。**`ThreeView` が生成し、`view.attribution` として公開します**（自前 UI を作る場合は `defaultAttribution: false` で無効化）。**組み込みの「Navara」クレジットが常に先頭に表示される**ため、ソースを 1 つも追加していなくても UI は表示されます。ポップオーバーはアクティブなソースを一覧し、**デフォルトでは畳まれた状態**です。下部の角（デフォルトでは右下）にある小さな ⓘ ボタンで開閉でき（`hide()` / `show()` も同じ）、非モーダルなので開いたままでも地図は操作可能（パン / ズーム / 回転）です。
+`AttributionPlugin` は、地図のデータソースに関するアトリビューション（クレジット）UI を表示します。**`ThreeView` がデフォルトで生成し、`view.attribution` として公開します**（自前 UI を作る場合は `defaultAttribution: false` で無効化）。**組み込みの「Navara」クレジットが常に先頭に表示される**ため、ソースを 1 つも追加していなくても UI は表示されます。ポップオーバーはアクティブなソースを一覧し、**デフォルトでは畳まれた状態**です。下部の角（デフォルトでは右下）にある小さな ⓘ ボタンで開閉でき（`hide()` / `show()` も同じ）、非モーダルなので開いたままでも地図は操作可能（パン / ズーム / 回転）です。
 
 地図のアトリビューション表示で一般的に必要となる、次の 3 点に対応します。
 
@@ -22,7 +22,7 @@ sidebar:
 ```typescript
 import ThreeView from "@navara/three";
 
-// アトリビューション UI は ThreeView が生成します。
+// アトリビューション UI は ThreeView がデフォルトで生成します。
 // view.attribution からアクセスします。
 const view = new ThreeView({ container });
 await view.init();
@@ -88,7 +88,7 @@ view.attribution?.show();
 
 ## 有効化とアクセス
 
-`ThreeView` はアトリビューション UI を生成し、readonly getter として公開します。
+`ThreeView` はアトリビューション UI をデフォルトで生成し、readonly getter として公開します。
 
 ```typescript
 view.attribution; // AttributionPlugin | undefined
