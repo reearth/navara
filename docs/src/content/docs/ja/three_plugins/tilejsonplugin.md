@@ -176,6 +176,3 @@ TileJSON ドキュメントをどの Navara ソースタイプとして具体化
 - [About three_plugins](../about/) — パッケージ概要
 - [Raster Layer](../../three/layer/raster-layer/) — Raster レイヤーのリファレンス
 
-```
-
-```
