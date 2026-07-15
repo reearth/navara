@@ -136,8 +136,8 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
   private listEl?: HTMLUListElement;
   private logosEl?: HTMLDivElement;
   private toggle?: HTMLButtonElement;
-  // Open by default so licensing is visible without a click.
-  private isOpen = true;
+  // Collapsed by default; users open it with the toggle.
+  private isOpen = false;
 
   /** Last computed integer zoom level. Used to skip no-op re-renders. */
   private lastZoomLevel?: number;
