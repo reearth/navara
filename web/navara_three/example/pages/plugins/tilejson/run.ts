@@ -23,14 +23,12 @@ export async function run() {
 
   // Even, un-tinted lighting suits a flat cartographic basemap (no sun/shadows).
   view.addLight({ ambient: {} });
-  view.toneMappingExposure = 3;
 
   // Fetch the TileJSON and register it as a raster source. The document's
   // `minzoom`/`maxzoom` are forwarded to the source, and its `attribution` is
   // shown by the view's built-in attribution UI.
   const source = await tilejson.addSource({
     type: "raster-tile",
-    id: "papers-light",
     url: TILEJSON_URL,
   });
   view.addLayer({ type: "raster", source });
