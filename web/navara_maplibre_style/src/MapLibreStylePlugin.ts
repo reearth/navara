@@ -40,8 +40,13 @@ export class MapLibreStylePlugin extends Plugin<ThreeView, ViewContext> {
   }
 
   async init(view: ThreeView, _ctx: ViewContext): Promise<void> {
-    // Parse and validate the style
-    this.parsedStyle = await this.engine.parseStyle(this.style);
+    try {
+      // Parse and validate the style
+      this.parsedStyle = await this.engine.parseStyle(this.style);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      throw new Error(`Failed to parse MapLibre style: ${message}`);
+    }
 
     // Process each layer in the style
     for (const styleLayer of this.parsedStyle.layers) {

@@ -13,17 +13,22 @@ import type {
 
 /**
  * Type guard to check if a value is a MapLibre Color object.
+ * Alpha channel is optional (defaults to 1 if missing).
  */
 function isMapLibreColor(value: unknown): value is MapLibreColor {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+  const obj = value as Record<string, unknown>;
   return (
-    typeof value === "object" &&
-    value !== null &&
-    "r" in value &&
-    "g" in value &&
-    "b" in value &&
-    typeof (value as MapLibreColor).r === "number" &&
-    typeof (value as MapLibreColor).g === "number" &&
-    typeof (value as MapLibreColor).b === "number"
+    typeof obj.r === "number" &&
+    typeof obj.g === "number" &&
+    typeof obj.b === "number" &&
+    Number.isFinite(obj.r) &&
+    Number.isFinite(obj.g) &&
+    Number.isFinite(obj.b) &&
+    (obj.a === undefined ||
+      (typeof obj.a === "number" && Number.isFinite(obj.a)))
   );
 }
 

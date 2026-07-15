@@ -5,6 +5,8 @@
  * providing better performance and type safety through the maplibre-expr crate.
  */
 
+import { validateStyleMin } from "@maplibre/maplibre-gl-style-spec";
+import type { StyleSpecification } from "@maplibre/maplibre-gl-style-spec";
 import { CompiledExpression, CompiledFilter } from "@navara/engine";
 
 import type { StyleEngine } from "./StyleEngine";
@@ -49,21 +51,13 @@ const PAINT_SPECS_BY_TYPE: Record<string, Record<string, PropertySpec>> = {
 
 export class RustStyleEngine implements StyleEngine {
   async parseStyle(raw: unknown): Promise<ParsedStyle> {
-    // TODO: Implement style validation in WASM
-    // For MVP: basic checks in TypeScript, full validation later
-    if (!raw || typeof raw !== "object") {
-      throw new Error("Invalid style: must be an object");
+    const errors = validateStyleMin(raw as StyleSpecification);
+
+    if (errors && errors.length > 0) {
+      const errorMessages = errors.map((e: { message: string }) => e.message);
+      throw new Error(`Invalid MapLibre Style: ${errorMessages.join(", ")}`);
     }
-    const style = raw as Record<string, unknown>;
-    if (style.version !== 8) {
-      throw new Error("Invalid style: version must be 8");
-    }
-    if (!style.sources || typeof style.sources !== "object") {
-      throw new Error("Invalid style: missing sources");
-    }
-    if (!Array.isArray(style.layers)) {
-      throw new Error("Invalid style: missing layers");
-    }
+
     return raw as ParsedStyle;
   }
 

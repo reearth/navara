@@ -4,7 +4,10 @@
  * allowing easy swap between JS and future Rust/WASM implementations.
  */
 
-import type { GeoJSON } from "geojson";
+import type {
+  GeoJSONSourceSpecification,
+  VectorSourceSpecification,
+} from "@maplibre/maplibre-gl-style-spec";
 
 /**
  * Simplified MapLibre Style specification.
@@ -18,21 +21,21 @@ export type ParsedStyle = {
 
 /**
  * Source types supported in PoC: vector, geojson.
+ * Re-exported from MapLibre Style Spec for consistency.
  */
 export type StyleSource = VectorSource | GeoJSONSource;
 
-export type GeoJSONSource = {
-  type: "geojson";
-  data: GeoJSON | string;
-};
+/**
+ * GeoJSON source from MapLibre Style Spec.
+ * @see https://maplibre.org/maplibre-style-spec/sources/#geojson
+ */
+export type GeoJSONSource = GeoJSONSourceSpecification;
 
-export type VectorSource = {
-  type: "vector";
-  url?: string;
-  tiles?: string[];
-  minzoom?: number;
-  maxzoom?: number;
-};
+/**
+ * Vector tile source from MapLibre Style Spec.
+ * @see https://maplibre.org/maplibre-style-spec/sources/#vector
+ */
+export type VectorSource = VectorSourceSpecification;
 
 /**
  * Layer types supported in PoC: fill, line, circle.
