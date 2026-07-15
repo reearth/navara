@@ -103,34 +103,43 @@ export function toEvaluatedValue(
     const colorResult = toNavaraColor(paintValues["fill-color"]);
     if (colorResult) {
       result.color = colorResult.color;
-      // Combine color alpha with fill-opacity
-      const paintOpacity = paintValues["fill-opacity"];
+    }
+    // Handle opacity independently of color (MapLibre treats them separately)
+    const paintOpacity = paintValues["fill-opacity"];
+    const colorAlpha = colorResult?.alpha ?? 1.0;
+    if (typeof paintOpacity === "number" || colorResult) {
       result.opacity =
         typeof paintOpacity === "number"
-          ? colorResult.alpha * paintOpacity
-          : colorResult.alpha;
+          ? colorAlpha * paintOpacity
+          : colorAlpha;
     }
   } else if (styleLayer.type === "line") {
     const colorResult = toNavaraColor(paintValues["line-color"]);
     if (colorResult) {
       result.color = colorResult.color;
-      // Combine color alpha with line-opacity
-      const paintOpacity = paintValues["line-opacity"];
+    }
+    // Handle opacity independently of color
+    const paintOpacity = paintValues["line-opacity"];
+    const colorAlpha = colorResult?.alpha ?? 1.0;
+    if (typeof paintOpacity === "number" || colorResult) {
       result.opacity =
         typeof paintOpacity === "number"
-          ? colorResult.alpha * paintOpacity
-          : colorResult.alpha;
+          ? colorAlpha * paintOpacity
+          : colorAlpha;
     }
   } else if (styleLayer.type === "circle") {
     const colorResult = toNavaraColor(paintValues["circle-color"]);
     if (colorResult) {
       result.color = colorResult.color;
-      // Combine color alpha with circle-opacity
-      const paintOpacity = paintValues["circle-opacity"];
+    }
+    // Handle opacity independently of color
+    const paintOpacity = paintValues["circle-opacity"];
+    const colorAlpha = colorResult?.alpha ?? 1.0;
+    if (typeof paintOpacity === "number" || colorResult) {
       result.opacity =
         typeof paintOpacity === "number"
-          ? colorResult.alpha * paintOpacity
-          : colorResult.alpha;
+          ? colorAlpha * paintOpacity
+          : colorAlpha;
     }
   }
 

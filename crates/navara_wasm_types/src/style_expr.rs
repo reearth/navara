@@ -327,7 +327,7 @@ mod tests {
         // Test ["==", ["get", "type"], "park"] filter
         let filter_json = json!(["==", ["get", "type"], "park"]);
         let expr = parse(&filter_json).expect("Failed to parse");
-        let expr = typecheck(&expr, None, false).expect("Failed to typecheck");
+        let expr = typecheck(&expr, Some(&Type::Boolean), false).expect("Failed to typecheck");
 
         // Test matching feature
         let mut properties = BTreeMap::new();
