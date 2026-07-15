@@ -330,7 +330,7 @@ export type SetupMaterialForMRTOptions = {
    * Ignored for `LineMaterial`, which derives a screen-space normal itself.
    */
   normal?: string;
-}
+};
 
 // LineMaterial MRT Support. Injects normalBuffer, effectIdBuffer, emissiveBuffer outputs.
 // When USE_SELECTIVE_EFFECT is defined, outputs effectIdsMask (emissive not supported for LineMaterial).
