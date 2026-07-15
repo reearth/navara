@@ -13,7 +13,10 @@ import {
 
 /**
  * Convert MapLibre color value to Navara Color and extract alpha.
- * Returns object { color, alpha } where alpha is from the color's alpha channel.
+ *
+ * Returns object { color, alpha } where:
+ * - For MapLibreColor objects: alpha is extracted from the `a` field (or defaults to 1.0)
+ * - For CSS color strings: alpha is always 1.0 (alpha from rgba/hsla/#RRGGBBAA is NOT parsed)
  */
 function toNavaraColor(
   value: unknown,
@@ -22,8 +25,8 @@ function toNavaraColor(
     if (typeof value === "string") {
       // CSS color string from spec.default fallback (e.g., "#000000", "rgb(255, 0, 0)")
       const color = new Color().setStyle(value);
+      // Alpha from rgba/hsla/#RRGGBBAA is not extracted (Three.js Color doesn't store alpha)
       // TODO: Parse alpha from CSS strings like rgba(r,g,b,a) or #RRGGBBAA
-      // Three.js Color doesn't store alpha, so it's lost during parsing
       return { color, alpha: 1.0 };
     }
     if (isMapLibreColor(value)) {

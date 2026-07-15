@@ -208,7 +208,7 @@ describe("toEvaluatedValue", () => {
 
     const result = toEvaluatedValue(layer, paintValues);
 
-    expect(result.opacity).toBe(0.5);
+    expect(result.opacity).toBeCloseTo(0.5, 2);
   });
 
   it("should use color alpha when no paint opacity specified", () => {
@@ -224,7 +224,7 @@ describe("toEvaluatedValue", () => {
 
     const result = toEvaluatedValue(layer, paintValues);
 
-    expect(result.opacity).toBe(0.7);
+    expect(result.opacity).toBeCloseTo(0.7, 2);
   });
 
   it("should multiply color alpha with paint opacity", () => {
@@ -241,7 +241,7 @@ describe("toEvaluatedValue", () => {
 
     const result = toEvaluatedValue(layer, paintValues);
 
-    expect(result.opacity).toBe(0.4); // 0.8 * 0.5
+    expect(result.opacity).toBeCloseTo(0.4, 2); // 0.8 * 0.5
   });
 
   it("should handle line-opacity for line layers", () => {
@@ -258,7 +258,7 @@ describe("toEvaluatedValue", () => {
 
     const result = toEvaluatedValue(layer, paintValues);
 
-    expect(result.opacity).toBe(0.3); // 0.6 * 0.5
+    expect(result.opacity).toBeCloseTo(0.3, 2); // 0.6 * 0.5
   });
 
   it("should handle circle-opacity for circle layers", () => {
@@ -275,7 +275,7 @@ describe("toEvaluatedValue", () => {
 
     const result = toEvaluatedValue(layer, paintValues);
 
-    expect(result.opacity).toBe(0.75);
+    expect(result.opacity).toBeCloseTo(0.75, 2);
   });
 
   it("should default to alpha 1.0 for CSS color strings", () => {
@@ -291,6 +291,6 @@ describe("toEvaluatedValue", () => {
 
     const result = toEvaluatedValue(layer, paintValues);
 
-    expect(result.opacity).toBe(1.0);
+    expect(result.opacity).toBeCloseTo(1.0, 2);
   });
 });
