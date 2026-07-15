@@ -176,6 +176,3 @@ The document is validated when fetched: `addSource()` rejects if `tilejson` is m
 - [About three_plugins](../about/) — Package overview
 - [Raster Layer](../../three/layer/raster-layer/) — Raster layer reference
 
-```
-
-```
