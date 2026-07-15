@@ -123,11 +123,8 @@ export class RustStyleEngine implements StyleEngine {
     try {
       compiled = new CompiledExpression(expr);
     } catch (e) {
-      console.error("Expression compilation error:", e);
-      // Return default value on compilation error
-      const defaultValue = (spec.default ??
-        this.getTypeDefault(spec.type)) as T;
-      return () => defaultValue;
+      // Let the caller add property/layer context (and decide the fallback).
+      throw e instanceof Error ? e : new Error(String(e));
     }
 
     // Return evaluation function

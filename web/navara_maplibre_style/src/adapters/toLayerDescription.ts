@@ -37,6 +37,13 @@ export function toLayerDescription(
     };
   }
 
+  if (source.type === "vector") {
+    // TODO: Handle vector tile sources
+    throw new Error(
+      `Vector tile sources are not yet supported in toLayerDescription`,
+    );
+  }
+
   // TODO: Handle other source types
   throw new Error(
     `Unsupported source type: ${(source as { type: string }).type}`,

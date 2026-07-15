@@ -20,8 +20,9 @@ export type ParsedStyle = {
 };
 
 /**
- * Source types supported in PoC: vector, geojson.
- * Re-exported from MapLibre Style Spec for consistency.
+ * Source types from MapLibre Style Spec.
+ * Currently only GeoJSON sources are supported in the PoC implementation.
+ * Vector sources are defined for type completeness but will throw at runtime.
  */
 export type StyleSource = VectorSource | GeoJSONSource;
 
