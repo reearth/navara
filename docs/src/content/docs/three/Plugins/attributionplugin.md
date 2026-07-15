@@ -7,7 +7,7 @@ sidebar:
 
 ## Overview
 
-`AttributionPlugin` shows an attribution (credit) UI for your map's data sources. **A `ThreeView` creates the attribution UI by default and exposes it as `view.attribution`** (pass `defaultAttribution: false` to opt out and build your own UI). A built-in **"Navara" credit is always shown first**, so the UI is visible even before you add any source. The popover lists the active sources and is **collapsed by default**; a small ⓘ button — in a bottom corner, bottom-right by default — opens it (and `hide()` / `show()` do the same). It is non-modal — the map stays interactive (pan / zoom / rotate) while the popover is open.
+`AttributionPlugin` shows an attribution (credit) UI for your map's data sources. **`ThreeView` creates the attribution UI by default and exposes it as `view.attribution`** (pass `defaultAttribution: false` to opt out and build your own UI). A built-in **"Navara" credit is always shown first**, so the UI is visible even before you add any source. The popover lists the active sources and is **collapsed by default**; a small ⓘ button — in a bottom corner, bottom-right by default — toggles it (`show()` opens it and `hide()` closes it). It is non-modal — the map stays interactive (pan / zoom / rotate) while the popover is open.
 
 It covers the three things map attributions usually need:
 
@@ -22,7 +22,7 @@ Credits may contain inline `<a>` links; they are sanitized before display. The c
 ```typescript
 import ThreeView from "@navara/three";
 
-// The attribution UI is created by default; access it via view.attribution.
+// ThreeView creates the attribution UI by default; access it via view.attribution.
 const view = new ThreeView({ container });
 await view.init();
 
@@ -87,7 +87,7 @@ view.attribution?.show();
 
 ## Enabling & access
 
-A `ThreeView` creates the attribution UI by default and exposes it as a readonly getter:
+`ThreeView` creates the attribution UI by default and exposes it as a readonly getter:
 
 ```typescript
 view.attribution; // AttributionPlugin | undefined
@@ -117,7 +117,7 @@ new ThreeView({
 add(items: AttributionItem[]): void
 ```
 
-Adds attributions to the displayed set, merging them with the current entries. Exact-duplicate entries are dropped, so several data sources that share one credit render a single line. Sources that set `creditLayerId` have the credits supplied by that layer tracked dynamically — the layer is resolved from the view by id, so you don't pass it separately.
+Adds the specified credits to the attribution UI, merging them with the current entries. Exact-duplicate entries are dropped, so several data sources that share one credit render a single line. Sources that set `creditLayerId` have the credits supplied by that layer tracked dynamically — the layer is resolved from the view by id, so you don't pass it separately.
 
 ### remove(items)
 
@@ -125,7 +125,7 @@ Adds attributions to the displayed set, merging them with the current entries. E
 remove(items: AttributionItem[]): void
 ```
 
-Removes attributions from the displayed set. Entries are matched structurally (by their rendered content), so pass the same object shape you added — no separate id is needed. Unmatched entries are ignored.
+Removes the specified credits from the attribution UI. Entries are matched structurally (by their rendered content), so pass the same object shape you added — no separate id is needed. Unmatched entries are ignored.
 
 Use it for statically-added credits you want to toggle by camera or app state — for example, pair `add()` / `remove()` with camera moves to show a top-level source only within a range that its `children` zoom bands can't express. Credits tracked via `creditLayerId` are dropped automatically when their layer is deleted, so those don't need `remove()`.
 
@@ -135,7 +135,7 @@ Use it for statically-added credits you want to toggle by camera or app state �
 clear(): void
 ```
 
-Removes all user-added attributions while keeping the plugin alive — the popover, listeners, and injected styles stay, so calling `add()` again restores the UI. The built-in "Navara" credit and the ⓘ button stay visible; the logo frame hides itself when no logo remains. Use `dispose()` to tear the DOM down instead.
+Removes all user-added credits while keeping the plugin alive — the popover, listeners, and styles it added stay, so you can add credits again later with `add()`. The built-in "Navara" credit and the ⓘ button stay visible; the logo frame hides itself when no logo remains. Use `dispose()` to tear the DOM down instead.
 
 ### show()
 
@@ -143,7 +143,7 @@ Removes all user-added attributions while keeping the plugin alive — the popov
 show(): void
 ```
 
-Opens the attribution popover. It is collapsed by default — call this method or use the ⓘ button to open it (both toggle the same state). Affects the popover card only — the always-visible logo frame stays put.
+Opens the attribution popover. It is collapsed by default, so call this method or use the ⓘ button to open it. Affects the popover card only — the always-visible logo frame stays put.
 
 ### hide()
 
@@ -151,7 +151,7 @@ Opens the attribution popover. It is collapsed by default — call this method o
 hide(): void
 ```
 
-Closes the attribution popover. Affects the popover card only; the tracked attributions and the always-visible logo frame are untouched. Use `remove()` to drop entries, or `dispose()` to tear everything down.
+Closes the attribution popover. Affects the popover card only; the tracked credits and the always-visible logo frame are untouched. Use `remove()` to drop entries, or `dispose()` to tear everything down.
 
 ### dispose()
 
@@ -231,7 +231,7 @@ All fields are optional; an unset field keeps the default color. Colors are appl
 
 - **Zoom ranges are for raster sources you declare yourself.** Tiles like GSI or OpenStreetMap don't carry their own credits, so describe their zoom-dependent credits with `children`.
 - **Per-layer credits come from the tiles.** Only sources that embed a copyright (such as Google Photorealistic 3D Tiles) produce credits through `creditLayerId`; for everything else, use `children`.
-- **Mandated logos go in the logo frame, not the popover.** Use `logo` only for marks you are required to keep visible at all times; ordinary sources are best shown as text. A logo is a plain image by default — set `logoUrl` to make it link to the provider's page. Some marks must be shown but not turned into a link, so leave `logoUrl` unset for those.
+- **Mandated logos go in the logo frame, not the popover.** Use `logo` only for marks you are required to keep visible at all times; ordinary sources are best shown as text. A logo is an unlinked image by default — set `logoUrl` to make it link to the provider's page. Some marks must be shown but not turned into a link, so leave `logoUrl` unset for those.
 - **Links are scheme-checked.** Every credit link — `attributionUrl`, `logoUrl`, inline `<a>` in `attributionHtml` / `attribution`, and `<a>` embedded in credits supplied by a layer — is kept only for safe schemes (`http` / `https` / `mailto`, or relative URLs); anything else (e.g. `javascript:`) is dropped to plain text. This makes it safe to render links even from untrusted tile metadata.
 - **Bare URLs are auto-linked.** A plain `http(s)` URL inside credit text is turned into a clickable link automatically, so you can paste an official notice verbatim without hand-wrapping the URL in `<a>` — the wording (and the URL) stays unchanged.
 
