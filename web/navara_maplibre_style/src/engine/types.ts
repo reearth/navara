@@ -114,12 +114,13 @@ export type FeatureContext = {
 
 /**
  * MapLibre Color object format (consistent with @maplibre/maplibre-gl-style-spec).
+ * Alpha channel is optional (defaults to 1 when missing).
  */
 export type MapLibreColor = {
   r: number;
   g: number;
   b: number;
-  a: number;
+  a?: number;
 };
 
 /**

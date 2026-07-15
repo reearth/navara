@@ -45,7 +45,9 @@ export class MapLibreStylePlugin extends Plugin<ThreeView, ViewContext> {
       this.parsedStyle = await this.engine.parseStyle(this.style);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      throw new Error(`Failed to parse MapLibre style: ${message}`);
+      const wrapped = new Error(`Failed to parse MapLibre style: ${message}`);
+      (wrapped as Error & { cause?: unknown }).cause = err;
+      throw wrapped;
     }
 
     // Process each layer in the style
