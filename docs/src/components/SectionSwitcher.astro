@@ -19,9 +19,7 @@ const groups = families
 <div class="section-switch">
   <button
     class="section-switch__trigger"
-    aria-haspopup="true"
     aria-expanded="false"
-    aria-controls="section-switch-menu"
   >
     <span class="section-switch__label">{currentLabel}</span>
     <span class="section-switch__caret" aria-hidden="true">
@@ -30,10 +28,9 @@ const groups = families
       </svg>
     </span>
   </button>
-  <div class="section-switch__menu" id="section-switch-menu" role="menu" hidden>
+  <div class="section-switch__menu" hidden>
     {ungrouped.map((s) => (
       <a
-        role="menuitem"
         class:list={["section-switch__item", { active: s.slug === activeSection }]}
         href={localizedHref(s.href, locale)}
         aria-current={s.slug === activeSection ? "page" : undefined}
@@ -46,7 +43,6 @@ const groups = families
       <div class="section-switch__group">
         {g.items.map((s) => (
           <a
-            role="menuitem"
             class:list={["section-switch__item", { active: s.slug === activeSection }]}
             href={localizedHref(s.href, locale)}
             aria-current={s.slug === activeSection ? "page" : undefined}
@@ -82,7 +78,10 @@ const groups = families
       if (!root.contains(event.target as Node)) setOpen(false);
     });
     document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape" && root.classList.contains("is-open")) {
+        setOpen(false);
+        trigger.focus();
+      }
     });
   }
 
