@@ -415,11 +415,13 @@ function injectGBufferToLineMaterial(lineMaterial: LineMaterial) {
  * `LineMaterial` is detected and routed automatically; the `normal` option is
  * only used for plain `ShaderMaterial`.
  *
- * Injects `normalBuffer` (location 1), `effectIdBuffer` (location 2),
- * `emissiveBuffer` (location 3), plus the `logdepthbuf` modules. When
- * `USE_SELECTIVE_EFFECT` is defined, `effectIdBuffer`/`emissiveBuffer` are
- * populated (emissive is unsupported for `LineMaterial`). Idempotent — calling
- * it more than once on the same material is a no-op.
+ * Injects `normalBuffer` (location 1), `effectIdBuffer` (location 2), and
+ * `emissiveBuffer` (location 3). For `ShaderMaterial` it also injects the
+ * `logdepthbuf` modules; `LineMaterial` already has its own vertex setup, so
+ * those are not added. When `USE_SELECTIVE_EFFECT` is defined,
+ * `effectIdBuffer`/`emissiveBuffer` are populated (emissive is unsupported for
+ * `LineMaterial`). Idempotent — calling it more than once on the same material
+ * is a no-op.
  *
  * Requirements for `ShaderMaterial`: the fragment shader must expose a
  * view-space normal (named by `options.normal`, default `"normal"`), and the
