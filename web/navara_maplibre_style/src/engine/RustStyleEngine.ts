@@ -111,6 +111,10 @@ export class RustStyleEngine implements StyleEngine {
           geometryType, // Pass geometry type for expressions that need it
         );
 
+        if (result == null) {
+          return (spec.default ?? this.getTypeDefault(spec.type)) as T;
+        }
+
         // Return result as-is; maplibre-expr handles type conversion
         return result as T;
       } catch (e) {
