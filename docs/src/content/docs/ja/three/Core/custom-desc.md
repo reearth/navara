@@ -98,6 +98,57 @@ Descriptor の種類に応じて、対応する基底クラスを継承して実
 | `ctx.applyShadowMaterial(material)`  | CSM シャドウをマテリアルに適用   |
 | `ctx.removeShadowMaterial(material)` | CSM シャドウをマテリアルから削除 |
 
+## G-Buffer（MRT）への出力
+
+Navara は複数のレンダーターゲット（MRT）からなる G-buffer にレンダリングします。色に加えて、すべてのマテリアルはビュー空間の**法線**、**エフェクト ID** ビットマスク、**エミッシブ**バッファも書き込みます。深度・法線を利用するエフェクト（SSAO、SSR、アウトライン、大気透視、雲）や選択的エフェクト（Bloom / Outline）はこれらのアタッチメントを読み取るため、メッシュがそれらのエフェクトに参加できるのは、そのマテリアルが G-buffer に書き込む場合だけです。
+
+| アタッチメント | ロケーション | 内容                                       |
+| -------------- | ------------ | ------------------------------------------ |
+| Color          | 0            | `gl_FragColor`                             |
+| Normal         | 1            | ビュー空間の法線（＋マテリアルプロパティ） |
+| Effect ID      | 2            | 選択的エフェクトのビットマスク             |
+| Emissive       | 3            | 選択的エフェクトの加算エミッシブ           |
+
+### 組み込みマテリアルは自動対応
+
+`@navara/three` を import すると、組み込みの Three.js マテリアル（`MeshStandardMaterial`、`MeshBasicMaterial`、`MeshLambertMaterial`、`MeshPhongMaterial`、`SpriteMaterial`、`PointsMaterial`）は G-buffer に書き込むよう自動的にパッチされます。カスタム Descriptor がこれらを使う場合、何もする必要はありません。
+
+### カスタムマテリアルは明示的な有効化が必要
+
+`ShaderMaterial` と three-stdlib の `LineMaterial` は Three.js の `ShaderLib` を経由しないため、Navara は自動でパッチできません。`setupMaterialForMRT()` で有効化してください。
+
+```typescript
+import { setupMaterialForMRT } from "@navara/three";
+
+const material = new ShaderMaterial({ uniforms, vertexShader, fragmentShader });
+
+// フラグメントシェーダー内のビュー空間法線変数名を指定します（既定は "normal"）。
+setupMaterialForMRT(material, { normal: "vNormal" });
+
+// LineMaterial は自動的に検出・振り分けされます（その場合 `normal` は無視されます）。
+setupMaterialForMRT(lineMaterial);
+```
+
+| パラメータ       | 型               | 説明                                                                                                                                     |
+| ---------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `material`       | `ShaderMaterial` | パッチ対象のカスタムマテリアル。`LineMaterial`（`ShaderMaterial` を継承）は自動的に検出・処理されます                                    |
+| `options.normal` | `string`         | フラグメントシェーダー内の**ビュー空間**法線変数名。既定は `"normal"`。`packNormalToVec2` でパックされるため、ビュー空間である必要があります |
+
+これを省略すると、メッシュは法線 / エフェクト ID / エミッシブのアタッチメントに何も書き込まないため、深度・法線ベースのエフェクトや選択的エフェクトがそのメッシュ上で壊れます（法線が不正になり、Bloom やアウトラインが効かなくなります）。
+
+要件と挙動：
+
+- フラグメントシェーダーは `options.normal` で指定した名前のビュー空間法線を公開している必要があります。
+- 頂点・フラグメントシェーダーの最後の `}` は `main()` を閉じるものとみなされます。
+- WebGL2 / GLSL 3 が必要です（Navara の既定）。
+- 冪等です。同じマテリアルに対して再度呼んでも何も起こりません。
+
+組み込みマテリアルの自動パッチは、import 時に内部の `overrideMaterialsForMRT()` が実行します。アプリケーションコードから呼ぶことはありません。
+
+### G-Buffer の読み取り
+
+これらのバッファをカスタムエフェクトから読み取るには、`ctx` の [バッファ / テクスチャアクセス](#バッファ--テクスチャアクセス) アクセサを使うか、[`find<MRTPassEffectDesc>("mrt")`](#他のエフェクトを参照) で他のエフェクトから MRT パスを参照します。
+
 ## カスタムメッシュ
 
 ### 型パラメータ
