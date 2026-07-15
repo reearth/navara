@@ -1,7 +1,7 @@
 /**
  * AttributionPlugin — Navara Plugin for map data attribution (credit) UI.
  *
- * Renders a non-modal popover (bottom-right ⓘ trigger) listing data-source
+ * Renders a non-modal popover (ⓘ button, bottom-right by default) listing data-source
  * attributions, with a separate always-visible logo frame in the bottom-left
  * corner. Each source can carry zoom-banded child credits that switch as the
  * camera zooms, and per-layer feature credits are tracked dynamically.
@@ -47,8 +47,8 @@
  * // Re-theme at runtime (e.g. light / dark switch).
  * view.attribution?.setStyle({ backgroundColor: "#14181c", textColor: "#e6e9ee" });
  *
- * // The popover is open by default so licensing is visible; hide() collapses
- * // it and show() re-opens it (the ⓘ trigger toggles the same state).
+ * // The popover is collapsed by default; show() opens it and hide() collapses
+ * // it (the ⓘ button toggles the same state).
  * view.attribution?.hide();
  * view.attribution?.show();
  * ```
@@ -101,7 +101,7 @@ export type AttributionPluginOptions = {
   /** Initial color overrides; tweak later with {@link AttributionPlugin.setStyle}. */
   style?: AttributionStyle;
   /**
-   * Bottom corner for the ⓘ trigger and its credit card. Defaults to
+   * Bottom corner for the ⓘ button and its popover card. Defaults to
    * `"bottom-right"`; use `"bottom-left"` when the bottom-right corner is
    * occupied (e.g. a page with its own HUD there). The logo frame lives in the
    * bottom-left area in both modes; in `"bottom-left"` the ⓘ takes the far-left
@@ -128,8 +128,8 @@ const NAVARA_CREDIT: AttributionItem = {
 };
 
 /**
- * Renders map data attributions as a non-modal popover (bottom-right ⓘ
- * trigger). Top-level sources can carry nested, optionally zoom-banded child
+ * Renders map data attributions as a non-modal popover (ⓘ button, bottom-right
+ * by default). Top-level sources can carry nested, optionally zoom-banded child
  * credits.
  *
  * A `ThreeView` creates one by default (`view.attribution`); construct it
@@ -164,7 +164,7 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
   /** Color overrides, applied as CSS custom properties on the dock. */
   private style: AttributionStyle;
 
-  /** Bottom corner for the ⓘ trigger / credit card. */
+  /** Bottom corner for the ⓘ button / popover card. */
   private position: AttributionPosition;
 
   private boundKeydown: (event: KeyboardEvent) => void;
@@ -272,7 +272,7 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
 
   /**
    * Open the attribution popover. It is collapsed by default, so call this (or
-   * use the ⓘ trigger, which toggles the same state) to open it. Affects the
+   * use the ⓘ button, which toggles the same state) to open it. Affects the
    * popover card only — the always-visible logo frame stays put.
    */
   show(): void {
@@ -417,7 +417,7 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     // contractually-mandated marks stay visible independent of the popover.
     const logoFrame = document.createElement("div");
     logoFrame.className = "navara-attr-logoframe";
-    // In bottom-left mode the ⓘ trigger sits at the far left, so shift the logo
+    // In bottom-left mode the ⓘ button sits at the far left, so shift the logo
     // frame right of it to keep them in one row instead of overlapping.
     if (this.position === "bottom-left") {
       logoFrame.classList.add("navara-attr-logoframe--left");
