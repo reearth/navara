@@ -17,7 +17,7 @@ import {
 } from "three-stdlib";
 
 import type { EventContext } from "../event/context";
-import { overrideLineMaterialForMRT } from "../material";
+import { setupMaterialForMRT } from "../material";
 import { createReplacer } from "../utils/replacer";
 
 import { FEATURE_BATCH_TEXTURE_CONFIG } from "./batchedFeature";
@@ -273,7 +273,7 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
     };
 
     // Apply MRT compatibility
-    overrideLineMaterialForMRT(material);
+    setupMaterialForMRT(material);
 
     // Update based on initial state
     this._update(meshMaterial, mesh.active);

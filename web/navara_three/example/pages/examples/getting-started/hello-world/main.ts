@@ -18,6 +18,13 @@ const run = async () => {
     maxZoom: 8,
   });
   view.addLayer({ type: "raster", source: imagery });
+
+  view.attribution?.add([
+    {
+      attributionHtml:
+        '<a href="https://papers.reearth.land">Re:Earth Papers</a> · Imagery courtesy of <a href="https://earthdata.nasa.gov/gibs">NASA EOSDIS GIBS</a> · Blue Marble: Next Generation (public domain)',
+    },
+  ]);
 };
 
 run();

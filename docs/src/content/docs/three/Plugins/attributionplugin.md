@@ -2,12 +2,12 @@
 title: AttributionPlugin
 description: Non-modal, zoom-aware data attribution (credit) UI plugin for navara_three.
 sidebar:
-  order: 4
+  order: 1040
 ---
 
 ## Overview
 
-`AttributionPlugin` shows a credit UI for your map's data sources. **A `ThreeView` creates one by default and exposes it as `view.attribution`** (pass `defaultAttribution: false` to opt out and build your own UI). The popover lists the active sources and is **open by default** so licensing is visible without a click; a small ⓘ trigger in the bottom-right corner toggles it (and `hide()` / `show()` do the same). It is non-modal — the map stays interactive (pan / zoom / rotate) while the popover is open.
+`AttributionPlugin` shows a credit UI for your map's data sources. **A `ThreeView` creates one by default and exposes it as `view.attribution`** (pass `defaultAttribution: false` to opt out and build your own UI). A built-in **"Navara" credit is always shown first**, so the UI is visible even before you add any source. The popover lists the active sources and is **collapsed by default**; a small ⓘ trigger in the bottom-right corner opens it (and `hide()` / `show()` do the same). It is non-modal — the map stays interactive (pan / zoom / rotate) while the popover is open.
 
 It covers the three things map attributions usually need:
 
@@ -79,7 +79,7 @@ view.attribution?.remove([
   },
 ]);
 
-// The popover is open by default; hide() collapses it and show() re-opens it
+// The popover is collapsed by default; show() opens it and hide() collapses it
 // (the ⓘ trigger toggles the same state).
 view.attribution?.hide();
 view.attribution?.show();
@@ -135,7 +135,7 @@ Use it for statically-added credits you want to toggle by camera or app state �
 clear(): void
 ```
 
-Removes all displayed attributions while keeping the plugin alive — the popover, listeners, and injected styles stay, so a later `add()` brings the UI back. With nothing to show, the ⓘ trigger and logo frame hide themselves. Use `dispose()` to instead tear the DOM down.
+Removes all user-added attributions while keeping the plugin alive — the popover, listeners, and injected styles stay. The built-in Navara credit and the ⓘ trigger stay visible; the logo frame hides itself when no logo remains. Use `dispose()` to instead tear the DOM down.
 
 ### show()
 
@@ -143,7 +143,7 @@ Removes all displayed attributions while keeping the plugin alive — the popove
 show(): void
 ```
 
-Opens the attribution popover. It is open by default, so this is only needed to re-open it after `hide()` (the ⓘ trigger toggles the same state). Affects the popover card only — the always-visible logo frame stays put. Has no visible effect while the set is empty: the dock is hidden until at least one attribution is added.
+Opens the attribution popover. It is collapsed by default, so call this (or use the ⓘ trigger, which toggles the same state) to open it. Affects the popover card only — the always-visible logo frame stays put.
 
 ### hide()
 

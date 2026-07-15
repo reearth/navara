@@ -1,7 +1,7 @@
 import type { LatLngHeight } from "@navara/three";
 import {
   createReplacer,
-  overrideLineMaterialForMRT,
+  setupMaterialForMRT,
   geodeticToVector3,
   degreeToRadian,
   calcCameraPosition,
@@ -247,7 +247,7 @@ export class SmoothLine extends Object3D {
     }
 
     material.resolution.set(1920, 1080);
-    overrideLineMaterialForMRT(material);
+    setupMaterialForMRT(material);
 
     // Inject RTE shader code via onBeforeCompile
     this.injectRTEShaderCode(material);

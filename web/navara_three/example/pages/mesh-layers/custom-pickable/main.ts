@@ -25,7 +25,7 @@ import ThreeView, {
   degreeToRadian,
   geodeticToVector3,
   northUpEastToFixedFrame,
-  overrideShaderMaterialForMRT,
+  setupMaterialForMRT,
   type MeshConfig,
   type MeshUpdate,
   type ViewContext,
@@ -192,7 +192,7 @@ class TorusKnotMeshDesc extends MeshDesc<
     // emissive G-buffers). Custom ShaderMaterials must opt in so those
     // buffers get written — otherwise the pipeline sees undefined outputs
     // and the geometry fails to render.
-    overrideShaderMaterialForMRT(material, "vNormal");
+    setupMaterialForMRT(material, { normal: "vNormal" });
 
     const mesh = new Mesh(geometry, material);
 

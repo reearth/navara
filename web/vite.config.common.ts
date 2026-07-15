@@ -73,7 +73,7 @@ export const commonConfig = (name: string, env: ConfigEnv) => ({
       fileName: "index",
     },
     outDir: "dist",
-    emptyOutDir: false,
+    emptyOutDir: true,
     rollupOptions: {
       external: ["@navara/engine", "@navara/engine-worker", "@navara/engine-font-worker", "@navara/engine-api"],
     },
