@@ -13,7 +13,7 @@ import {
 
 /**
  * Convert MapLibre color value to Navara Color and extract alpha.
- * Returns tuple of [color, alpha] where alpha is from the color's alpha channel.
+ * Returns object { color, alpha } where alpha is from the color's alpha channel.
  */
 function toNavaraColor(
   value: unknown,

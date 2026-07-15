@@ -85,7 +85,9 @@ export class RustStyleEngine implements StyleEngine {
     // MapLibre also allows literal arrays as property values (these are not expression arrays).
     if (
       Array.isArray(expr) &&
-      (expr.length === 0 || typeof expr[0] !== "string")
+      (expr.length === 0 ||
+        typeof expr[0] !== "string" ||
+        (spec.type === "array" && spec.expression == null))
     ) {
       const constantValue = expr as unknown as T;
       return () => constantValue;
