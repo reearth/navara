@@ -1,6 +1,7 @@
 ---
 import SidebarPersister from '@astrojs/starlight/components/SidebarPersister.astro';
 import SidebarSublist from '@astrojs/starlight/components/SidebarSublist.astro';
+import SectionSwitcher from './SectionSwitcher.astro';
 import { getFilteredSidebar } from '../utils/sidebar';
 import { translateFolderName } from '../utils/translations';
 import type { SidebarEntry } from '../utils/sidebar';
@@ -27,30 +28,8 @@ function translateSidebarEntries(entries: SidebarEntry[]): SidebarEntry[] {
 
 const filteredSidebar = getFilteredSidebar(sidebar, pathname);
 const translatedSidebar = translateSidebarEntries(filteredSidebar);
-
-// Extract content title from URL, handling locale prefix
-const segments = Astro.url.pathname.split("/").filter(Boolean);
-const contentTitle = locale ? segments[1] : segments[0];
-
-// Human-friendly display labels for package-named top-level sections.
-const sectionLabels: Record<string, string> = {
-    three_default_descs: "Default Descriptors",
-    three_default_plugin: "Default Plugin",
-    three_plugins: "Plugins",
-};
-const displayTitle = sectionLabels[contentTitle] ?? contentTitle;
 ---
-<span class="sidebar-title">
-    {displayTitle}
-</span>
+<SectionSwitcher />
 <SidebarPersister>
     <SidebarSublist sublist={translatedSidebar} />
 </SidebarPersister>
-
-<style>
-    .sidebar-title {
-        padding-left: 0.5rem;
-        font-size: 1.3rem;
-        font-weight: bold;
-    }
-</style>
