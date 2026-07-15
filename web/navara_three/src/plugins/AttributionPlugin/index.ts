@@ -47,8 +47,8 @@
  * // Re-theme at runtime (e.g. light / dark switch).
  * view.attribution?.setStyle({ backgroundColor: "#14181c", textColor: "#e6e9ee" });
  *
- * // The popover is open by default so licensing is visible; hide() collapses
- * // it and show() re-opens it (the ⓘ trigger toggles the same state).
+ * // The popover is collapsed by default; show() opens it and hide() collapses
+ * // it (the ⓘ trigger toggles the same state).
  * view.attribution?.hide();
  * view.attribution?.show();
  * ```
