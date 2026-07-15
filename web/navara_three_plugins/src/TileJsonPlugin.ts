@@ -6,23 +6,26 @@
  * document and registers it as a single Navara source. {@link TileJsonPlugin.addSource}
  * mirrors {@link ThreeView.addSource}: a discriminated `type` plus an optional
  * `id`, with `url` pointing at the TileJSON document. The plugin derives the tile
- * URL, `minzoom`/`maxzoom`, and `scheme` from the document, and surfaces its
- * `attribution` automatically through an {@link AttributionPlugin}.
+ * URL, `minzoom`/`maxzoom`, and `scheme` from the document.
+ *
+ * Each document's `attribution` is surfaced automatically through the view's
+ * built-in attribution UI (`view.attribution`). Callers who want a custom credit
+ * UI can opt out of the built-in one (`new ThreeView({ defaultAttribution: false })`)
+ * and read credits from the {@link TileJsonPlugin.on | `loaded`} event instead.
  *
  * ## Usage
  *
  * ```ts
  * import ThreeView from "@navara/three";
- * import { AttributionPlugin, TileJsonPlugin } from "@navara/three_plugins";
+ * import { TileJsonPlugin } from "@navara/three_plugins";
  *
  * const view = new ThreeView({ container });
- * const attribution = new AttributionPlugin();
- * const tilejson = new TileJsonPlugin({ attribution });
- * view.addPlugin(attribution);
+ * const tilejson = new TileJsonPlugin();
  * view.addPlugin(tilejson);
  * await view.init();
  *
- * // Fetch a TileJSON document and register it as a source.
+ * // Fetch a TileJSON document and register it as a source. Its `attribution`
+ * // shows in the built-in credit UI automatically.
  * const source = await tilejson.addSource({
  *   type: "raster-tile",
  *   id: "basemap",
@@ -34,15 +37,28 @@
  * // ...or directly by the id passed above.
  * view.addLayer({ type: "raster", source: "basemap" });
  * ```
+ *
+ * ### Custom attribution UI
+ *
+ * ```ts
+ * // Turn off the built-in UI and render credits yourself.
+ * const view = new ThreeView({ container, defaultAttribution: false });
+ * const tilejson = new TileJsonPlugin();
+ * view.addPlugin(tilejson);
+ * await view.init();
+ *
+ * tilejson.on("loaded", ({ source, attribution }) => {
+ *   if (attribution) renderMyCredit(source.id, attribution);
+ * });
+ * ```
  */
 import ThreeView, {
   Plugin,
+  EventHandler,
   type Source,
   type ViewContext,
 } from "@navara/three";
 import type { DefaultDescriptions } from "@navara/three_default_plugin";
-
-import type { AttributionPlugin } from "./AttributionPlugin";
 
 type View = ThreeView<DefaultDescriptions>;
 
@@ -58,7 +74,7 @@ export type TileJson = {
   tilejson: string;
   /** Tile URL templates (`{z}/{x}/{y}`). Required and non-empty per the spec. */
   tiles: string[];
-  /** Attribution/credit HTML shown through the AttributionPlugin. */
+  /** Attribution/credit HTML shown through the view's attribution UI. */
   attribution?: string;
   /** Minimum zoom level. Applied to raster sources only. @defaultValue 0 */
   minzoom?: number;
@@ -94,18 +110,27 @@ export type TileJsonSourceDescription = {
   id?: string;
 };
 
-/** Options for {@link TileJsonPlugin}. */
-export type TileJsonPluginOptions = {
+/** Detail passed to the {@link TileJsonPlugin} `loaded` event. */
+export type TileJsonLoadedEvent = {
+  /** The Navara source created for the document. */
+  source: Source;
+  /** The fetched and validated TileJSON document. */
+  tilejson: TileJson;
+  /** The document's `attribution` HTML, when it declares one. */
+  attribution?: string;
+};
+
+/**
+ * Events emitted by {@link TileJsonPlugin}. Subscribe via
+ * {@link TileJsonPlugin.on} / {@link TileJsonPlugin.once}.
+ */
+export type TileJsonPluginEventMap = {
   /**
-   * AttributionPlugin used to surface each TileJSON's `attribution` credit. Its
-   * lifecycle is the caller's responsibility (register it via `view.addPlugin`).
-   *
-   * Note: attributions collected by this plugin are rendered by replacing the
-   * shown list, so this AttributionPlugin should be dedicated to TileJSON-sourced
-   * credits. This wiring is expected to be replaced by `view.attribution` in the
-   * future.
+   * Fired once per successful {@link TileJsonPlugin.addSource}, after the source
+   * is registered. Carries the created source, the parsed document, and its
+   * attribution so callers can drive a custom credit UI.
    */
-  attribution: AttributionPlugin;
+  loaded: (event: TileJsonLoadedEvent) => void;
 };
 
 /**
@@ -130,17 +155,39 @@ function validateTileJson(doc: TileJson): void {
 
 export class TileJsonPlugin extends Plugin<View, ViewContext> {
   private view?: View;
-  private readonly attribution: AttributionPlugin;
-  /** Credits collected from every added TileJSON, deduped and re-shown together. */
+  private readonly events = new EventHandler<TileJsonPluginEventMap>();
+  /** Credits pushed into `view.attribution`, tracked so dispose() can drop them. */
   private readonly credits: string[] = [];
-
-  constructor(options: TileJsonPluginOptions) {
-    super();
-    this.attribution = options.attribution;
-  }
 
   async init(view: View, _ctx: ViewContext): Promise<void> {
     this.view = view;
+  }
+
+  /**
+   * Subscribe to a plugin event. Use `loaded` to receive each document's
+   * attribution (and the created source) for a custom credit UI.
+   */
+  on<E extends keyof TileJsonPluginEventMap>(
+    event: E,
+    listener: TileJsonPluginEventMap[E],
+  ): void {
+    this.events.on(event, listener);
+  }
+
+  /** Subscribe to a plugin event for a single emission, then auto-unsubscribe. */
+  once<E extends keyof TileJsonPluginEventMap>(
+    event: E,
+    listener: TileJsonPluginEventMap[E],
+  ): void {
+    this.events.once(event, listener);
+  }
+
+  /** Remove a previously registered listener. */
+  off<E extends keyof TileJsonPluginEventMap>(
+    event: E,
+    listener: TileJsonPluginEventMap[E],
+  ): void {
+    this.events.off(event, listener);
   }
 
   /**
@@ -149,7 +196,8 @@ export class TileJsonPlugin extends Plugin<View, ViewContext> {
    * `desc.url` is the TileJSON document URL; the plugin fetches it, then creates
    * one source of the requested `desc.type` using the document's first tile
    * endpoint, `minzoom`/`maxzoom`, and `scheme`. The document's `attribution` is
-   * surfaced through the AttributionPlugin.
+   * surfaced through the view's built-in attribution UI (`view.attribution`), and
+   * a `loaded` event is emitted carrying the source, document, and attribution.
    *
    * A TileJSON `tiles` array lists mirror endpoints for the same tileset (as in
    * MapLibre, which shards requests across them). Navara sources take a single
@@ -205,15 +253,29 @@ export class TileJsonPlugin extends Plugin<View, ViewContext> {
       this.addCredit(doc.attribution);
     }
 
+    this.events.emit("loaded", {
+      source,
+      tilejson: doc,
+      attribution: doc.attribution,
+    });
+
     return source;
   }
 
   dispose(): void {
-    // The AttributionPlugin is owned by the caller: this plugin neither disposes
-    // it nor clears what it shows. Managing its display is the caller's job, just
-    // as addSource() hands source ownership back to the caller. Only this
-    // plugin's own state is released.
+    // Drop the credits this plugin contributed to the view-owned attribution UI
+    // so a disposed plugin doesn't leave stale credits behind on a live view.
+    // The view owns the UI's lifecycle; when the view is disposed first,
+    // `view.attribution` is already gone and this is a no-op.
+    const attribution = this.view?.attribution;
+    if (attribution && this.credits.length > 0) {
+      attribution.remove(
+        this.credits.map((attributionHtml) => ({ attributionHtml })),
+      );
+    }
     this.credits.length = 0;
+    this.events.clear("loaded");
+    this.view = undefined;
   }
 
   private async fetchTileJson(url: string): Promise<TileJson> {
@@ -226,12 +288,14 @@ export class TileJsonPlugin extends Plugin<View, ViewContext> {
     return (await res.json()) as TileJson;
   }
 
-  /** Collect a credit and re-render the merged, de-duplicated list. */
+  /**
+   * Add a credit to the view's built-in attribution UI, deduped so repeated or
+   * shared credits render once. No-op when the built-in UI is disabled
+   * (`defaultAttribution: false`) — those callers use the `loaded` event instead.
+   */
   private addCredit(attribution: string): void {
     if (this.credits.includes(attribution)) return;
     this.credits.push(attribution);
-    this.attribution.show(
-      this.credits.map((attributionHtml) => ({ attributionHtml })),
-    );
+    this.view?.attribution?.add([{ attributionHtml: attribution }]);
   }
 }

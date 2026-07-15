@@ -30,5 +30,6 @@ export {
   type TileJson,
   type TileJsonSourceType,
   type TileJsonSourceDescription,
-  type TileJsonPluginOptions,
+  type TileJsonLoadedEvent,
+  type TileJsonPluginEventMap,
 } from "./TileJsonPlugin";

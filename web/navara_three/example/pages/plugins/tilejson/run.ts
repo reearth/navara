@@ -3,7 +3,7 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import { AttributionPlugin, TileJsonPlugin } from "@navara/three_plugins";
+import { TileJsonPlugin } from "@navara/three_plugins";
 
 export type CustomDescriptions = DefaultDescriptions;
 
@@ -16,10 +16,7 @@ export async function run() {
 
   view.addPlugin(new DefaultPlugin());
 
-  // TileJsonPlugin surfaces each document's `attribution` through this plugin.
-  const attribution = new AttributionPlugin();
-  view.addPlugin(attribution);
-  const tilejson = new TileJsonPlugin({ attribution });
+  const tilejson = new TileJsonPlugin();
   view.addPlugin(tilejson);
 
   await view.init();
@@ -30,7 +27,7 @@ export async function run() {
 
   // Fetch the TileJSON and register it as a raster source. The document's
   // `minzoom`/`maxzoom` are forwarded to the source, and its `attribution` is
-  // shown by the AttributionPlugin.
+  // shown by the view's built-in attribution UI.
   const source = await tilejson.addSource({
     type: "raster-tile",
     id: "papers-light",

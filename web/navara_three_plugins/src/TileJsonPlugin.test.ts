@@ -3,19 +3,59 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { TileJsonPlugin, type TileJson } from "./TileJsonPlugin";
 
 // Importing the real @navara/three touches WASM/os at module load, which fails
-// in the test environment. TileJsonPlugin only needs `Plugin` as a runtime base
-// class (everything else it imports from there is type-only), so stub the module.
+// in the test environment. TileJsonPlugin only needs `Plugin` and `EventHandler`
+// as runtime values (everything else it imports from there is type-only), so
+// stub the module. The EventHandler stub mirrors the real on/once/off/emit/clear.
 /* eslint-disable @typescript-eslint/no-extraneous-class */
 vi.mock("@navara/three", () => ({
   default: class ThreeView {},
   Plugin: class Plugin {},
+  EventHandler: class EventHandler {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    private listeners = new Map<string, Set<(...a: any[]) => void>>();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    on(k: string, f: (...a: any[]) => void) {
+      let set = this.listeners.get(k);
+      if (!set) {
+        set = new Set();
+        this.listeners.set(k, set);
+      }
+      set.add(f);
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    once(k: string, f: (...a: any[]) => void) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const wrap = (...a: any[]) => {
+        this.off(k, wrap);
+        f(...a);
+      };
+      this.on(k, wrap);
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    off(k: string, f: (...a: any[]) => void) {
+      this.listeners.get(k)?.delete(f);
+    }
+    clear(k: string) {
+      this.listeners.get(k)?.clear();
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    emit(k: string, ...a: any[]) {
+      [...(this.listeners.get(k) ?? [])].forEach((f) => f(...a));
+    }
+  },
 }));
 /* eslint-enable @typescript-eslint/no-extraneous-class */
 
+// A spyable fake of the view-owned attribution UI (`view.attribution`).
+function makeFakeAttribution() {
+  return { add: vi.fn(), remove: vi.fn() };
+}
+
 // A minimal fake of the pieces of ThreeView / Source that TileJsonPlugin touches.
-function makeFakeView() {
+function makeFakeView(attribution: unknown = makeFakeAttribution()) {
   let counter = 0;
   const view = {
+    attribution,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     addSource: vi.fn((desc: any) => ({
       id: desc.id ?? `src-${counter++}`,
@@ -25,19 +65,8 @@ function makeFakeView() {
   return { view };
 }
 
-// A spyable fake AttributionPlugin; the caller owns its lifecycle.
-function makeFakeAttribution() {
-  return { show: vi.fn() };
-}
-
-function initPlugin(
-  view: unknown,
-  attribution: unknown = makeFakeAttribution(),
-) {
-  const plugin = new TileJsonPlugin(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    { attribution } as any,
-  );
+function initPlugin(view: unknown) {
+  const plugin = new TileJsonPlugin();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   plugin.init(view as any, {} as any);
   return plugin;
@@ -197,10 +226,7 @@ describe("TileJsonPlugin.addSource", () => {
   });
 
   it("throws when called before init()", async () => {
-    const plugin = new TileJsonPlugin({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      attribution: makeFakeAttribution() as any,
-    });
+    const plugin = new TileJsonPlugin();
     await expect(
       plugin.addSource({ type: "raster-tile", url: DOC_URL }),
     ).rejects.toThrow(/after view\.init/);
@@ -208,38 +234,60 @@ describe("TileJsonPlugin.addSource", () => {
 });
 
 describe("TileJsonPlugin attribution wiring", () => {
-  it("shows the document's attribution through the supplied AttributionPlugin", async () => {
-    const { view } = makeFakeView();
+  it("shows the document's attribution through the view's built-in attribution UI", async () => {
     const attribution = makeFakeAttribution();
-    const plugin = initPlugin(view, attribution);
+    const { view } = makeFakeView(attribution);
+    const plugin = initPlugin(view);
     stubTileJson(RASTER_DOC);
 
     await plugin.addSource({ type: "raster-tile", url: DOC_URL });
-    expect(attribution.show).toHaveBeenLastCalledWith([
+    expect(attribution.add).toHaveBeenCalledWith([
       { attributionHtml: "© Example" },
     ]);
   });
 
-  it("leaves the caller-owned AttributionPlugin untouched on dispose", async () => {
-    const { view } = makeFakeView();
-    const attribution = { show: vi.fn(), dispose: vi.fn() };
-    const plugin = initPlugin(view, attribution);
+  it("skips attribution when the built-in UI is disabled (view.attribution undefined)", async () => {
+    const { view } = makeFakeView(undefined);
+    const plugin = initPlugin(view);
+    stubTileJson(RASTER_DOC);
+
+    // No throw even though there's no attribution UI to feed.
+    await expect(
+      plugin.addSource({ type: "raster-tile", url: DOC_URL }),
+    ).resolves.toMatchObject({ type: "raster-tile" });
+  });
+
+  it("removes only its own credits from the view-owned UI on dispose", async () => {
+    const attribution = makeFakeAttribution();
+    const { view } = makeFakeView(attribution);
+    const plugin = initPlugin(view);
 
     stubTileJson(RASTER_DOC);
     await plugin.addSource({ type: "raster-tile", url: DOC_URL });
-    attribution.show.mockClear();
+    attribution.add.mockClear();
 
     plugin.dispose();
-    // The caller owns the AttributionPlugin, so dispose neither disposes it nor
-    // clears what it shows (e.g. no show([]) to wipe the credit list).
-    expect(attribution.dispose).not.toHaveBeenCalled();
-    expect(attribution.show).not.toHaveBeenCalled();
+    // The view owns the UI, so dispose drops only the credits this plugin added
+    // (not the whole UI), matched structurally by their html.
+    expect(attribution.remove).toHaveBeenCalledWith([
+      { attributionHtml: "© Example" },
+    ]);
+    expect(attribution.add).not.toHaveBeenCalled();
   });
 
-  it("merges and de-duplicates credits across multiple addSource() calls", async () => {
-    const { view } = makeFakeView();
+  it("does not touch the view-owned UI on dispose when it contributed no credits", async () => {
     const attribution = makeFakeAttribution();
-    const plugin = initPlugin(view, attribution);
+    const { view } = makeFakeView(attribution);
+    const plugin = initPlugin(view);
+
+    plugin.dispose();
+    expect(attribution.remove).not.toHaveBeenCalled();
+  });
+
+  it("de-duplicates credits across multiple addSource() calls", async () => {
+    const attribution = makeFakeAttribution();
+    const { view } = makeFakeView(attribution);
+    const plugin = initPlugin(view);
 
     stubTileJson(RASTER_DOC);
     await plugin.addSource({ type: "raster-tile", url: DOC_URL });
@@ -251,7 +299,7 @@ describe("TileJsonPlugin attribution wiring", () => {
     } satisfies TileJson);
     await plugin.addSource({ type: "raster-tile", url: DOC_URL });
 
-    // Same credit again — should not duplicate.
+    // Same credit again — should not be re-added to the UI.
     stubTileJson({
       tilejson: "3.0.0",
       tiles: ["https://d/{z}/{x}/{y}.png"],
@@ -259,9 +307,65 @@ describe("TileJsonPlugin attribution wiring", () => {
     } satisfies TileJson);
     await plugin.addSource({ type: "raster-tile", url: DOC_URL });
 
-    expect(attribution.show).toHaveBeenLastCalledWith([
+    expect(attribution.add).toHaveBeenCalledTimes(2);
+    expect(attribution.add).toHaveBeenNthCalledWith(1, [
       { attributionHtml: "© Example" },
+    ]);
+    expect(attribution.add).toHaveBeenNthCalledWith(2, [
       { attributionHtml: "© Other" },
     ]);
+  });
+});
+
+describe("TileJsonPlugin loaded event", () => {
+  it("emits `loaded` with the source, document, and attribution after addSource", async () => {
+    const { view } = makeFakeView();
+    const plugin = initPlugin(view);
+    stubTileJson(RASTER_DOC);
+
+    const onLoaded = vi.fn();
+    plugin.on("loaded", onLoaded);
+
+    const source = await plugin.addSource({
+      type: "raster-tile",
+      url: DOC_URL,
+    });
+
+    expect(onLoaded).toHaveBeenCalledTimes(1);
+    expect(onLoaded).toHaveBeenCalledWith({
+      source,
+      tilejson: RASTER_DOC,
+      attribution: "© Example",
+    });
+  });
+
+  it("emits `loaded` with attribution undefined when the document declares none", async () => {
+    const { view } = makeFakeView();
+    const plugin = initPlugin(view);
+    stubTileJson({
+      tilejson: "3.0.0",
+      tiles: ["https://a/{z}/{x}/{y}.png"],
+    } satisfies TileJson);
+
+    const onLoaded = vi.fn();
+    plugin.on("loaded", onLoaded);
+
+    await plugin.addSource({ type: "raster-tile", url: DOC_URL });
+    expect(onLoaded).toHaveBeenCalledWith(
+      expect.objectContaining({ attribution: undefined }),
+    );
+  });
+
+  it("off() stops delivery to a listener", async () => {
+    const { view } = makeFakeView();
+    const plugin = initPlugin(view);
+    stubTileJson(RASTER_DOC);
+
+    const onLoaded = vi.fn();
+    plugin.on("loaded", onLoaded);
+    plugin.off("loaded", onLoaded);
+
+    await plugin.addSource({ type: "raster-tile", url: DOC_URL });
+    expect(onLoaded).not.toHaveBeenCalled();
   });
 });
