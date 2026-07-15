@@ -2,7 +2,7 @@
 title: Terrain Layer
 description: raster-dem または quantized-mesh の Source を 3D 地形として描画する
 sidebar:
-  order: 13
+  order: 430
 ---
 
 `terrain` レイヤーは、[`raster-dem`](../../../three/source/raster-dem-source/) の Source（GPU 上でデコードされる RGB エンコードされた標高タイル）または [`quantized-mesh`](../../../three/source/quantized-mesh-source/) の Source（あらかじめメッシュ化されたタイル、例：Cesium Ion）を、3D グローブの地表として描画します。描画オプションは Source のデータ形式にかかわらず同じで、取得・ジオメトリの設定はすべて Source 側にあります。

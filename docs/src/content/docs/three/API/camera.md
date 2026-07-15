@@ -2,7 +2,7 @@
 title: ThreeViewCamera Class
 description: API Reference for ThreeViewCamera Class - manages camera position, orientation, and control behavior
 sidebar:
-  order: 22
+  order: 1010
 ---
 
 The `ThreeViewCamera` class manages the camera's position, orientation, projection, and interactive control behavior. It is accessed via the `camera` property of a `ThreeView` instance.

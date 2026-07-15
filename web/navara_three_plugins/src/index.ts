@@ -20,19 +20,6 @@ export {
 } from "./OverlayPlugin";
 
 export {
-  AttributionPlugin,
-  type AttributionPluginOptions,
-} from "./AttributionPlugin";
-export {
-  isAttributionHtml,
-  type AttributionItem,
-  type AttributionSource,
-  type AttributionHtml,
-  type AttributionChild,
-  type AttributionStyle,
-} from "./AttributionPlugin/attribution";
-
-export {
   CesiumIonPlugin,
   type CesiumIonConfig,
   type CesiumIonTerrainOptions,

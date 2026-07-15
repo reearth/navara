@@ -17,6 +17,14 @@ pub struct Cesium3dTilesMetadataDataRequesterMarker(pub Entity);
 #[derive(Component)]
 pub struct Cesium3dTileContentDataRequesterMarker;
 
+/// Layer (tileset) entity that owns a content data requester, attached at
+/// spawn so the dispatch-time reservation (`filter_requestable_data_requester`)
+/// can key the per-tileset cost estimator — different tilesets have wildly
+/// different content sizes, so their landed-cost statistics must not be
+/// pooled globally.
+#[derive(Component, Clone, Copy)]
+pub struct Cesium3dTileContentLayerId(pub Entity);
+
 /// Marker for the [`DataRequester`] that fetches a *nested* `tileset.json`.
 ///
 /// Distinguishes nested-tileset metadata requesters from the layer's root
@@ -36,6 +44,7 @@ pub(crate) fn request_tile_content(
     requesters: &Cesium3dTileContentRequesterQuery,
     priority: Priority,
     is_v1_1: bool,
+    layer_id: Entity,
 ) -> bool {
     let data_requester_entity_id = tile.data_requester_id;
     if let Some(id) = data_requester_entity_id
@@ -59,6 +68,7 @@ pub(crate) fn request_tile_content(
             let id = commands
                 .spawn((
                     Cesium3dTileContentDataRequesterMarker,
+                    Cesium3dTileContentLayerId(layer_id),
                     PntsDataRequesterMarker,
                     priority,
                     request_order,
@@ -72,6 +82,7 @@ pub(crate) fn request_tile_content(
             let id = commands
                 .spawn((
                     Cesium3dTileContentDataRequesterMarker,
+                    Cesium3dTileContentLayerId(layer_id),
                     B3dmDataRequesterMarker,
                     priority,
                     request_order,
@@ -85,6 +96,7 @@ pub(crate) fn request_tile_content(
             let id = commands
                 .spawn((
                     Cesium3dTileContentDataRequesterMarker,
+                    Cesium3dTileContentLayerId(layer_id),
                     GltfFeaturesDataRequesterMarker,
                     priority,
                     request_order,
@@ -98,6 +110,7 @@ pub(crate) fn request_tile_content(
             let id = commands
                 .spawn((
                     Cesium3dTileContentDataRequesterMarker,
+                    Cesium3dTileContentLayerId(layer_id),
                     GlbDataRequesterMarker,
                     priority,
                     request_order,

@@ -2,7 +2,7 @@
 title: Vector Tile Source
 description: A vector-tile (MVT) source
 sidebar:
-  order: 12
+  order: 320
 ---
 
 A `vector-tile` source describes a Mapbox Vector Tiles (MVT) tileset. Render it with a [`vector`](../../../three/layer/vector-layer/) layer. Which source layers inside the tileset to render is chosen per layer via the layer's `sourceLayers` property.

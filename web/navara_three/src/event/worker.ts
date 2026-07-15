@@ -192,11 +192,13 @@ function buildTerrainTransferableGeometry(
   bufHandler: EventContext["buf"],
   result: ReturnedConstructedTerrainMeshLike,
 ): { geometry: TransferableGeometry; heights: number } | undefined {
+  // Rust reads none of these terrain arrays (only their handles + byte counts),
+  // so adopt them JS-side (zero-copy) instead of copying into WASM memory.
   const registered = trackRegisteredHandles(bufHandler);
-  const vertices = registered.register(bufHandler.newF32(result.vertices));
-  const uvs = registered.register(bufHandler.newF32(result.uvs));
-  const indices = registered.register(bufHandler.newU32(result.indices));
-  const heights = registered.register(bufHandler.newF32(result.heights));
+  const vertices = registered.register(bufHandler.adoptF32(result.vertices));
+  const uvs = registered.register(bufHandler.adoptF32(result.uvs));
+  const indices = registered.register(bufHandler.adoptU32(result.indices));
+  const heights = registered.register(bufHandler.adoptF32(result.heights));
   if (vertices == null || uvs == null || indices == null || heights == null) {
     registered.free();
     return undefined;
@@ -205,17 +207,17 @@ function buildTerrainTransferableGeometry(
   const geometry = new TransferableGeometry(vertices, uvs, indices);
 
   if (result.normals) {
-    const normals = bufHandler.newF32(result.normals);
+    const normals = bufHandler.adoptF32(result.normals);
     if (normals != null) geometry.normals = normals;
   }
 
   // Set skirt data if available
   if (result.skirt_vertices && result.skirt_uvs && result.skirt_indices) {
-    const skirtVertices = bufHandler.newF32(result.skirt_vertices);
-    const skirtUvs = bufHandler.newF32(result.skirt_uvs);
-    const skirtIndices = bufHandler.newU32(result.skirt_indices);
+    const skirtVertices = bufHandler.adoptF32(result.skirt_vertices);
+    const skirtUvs = bufHandler.adoptF32(result.skirt_uvs);
+    const skirtIndices = bufHandler.adoptU32(result.skirt_indices);
     const skirtNormals = result.skirt_normals
-      ? bufHandler.newF32(result.skirt_normals)
+      ? bufHandler.adoptF32(result.skirt_normals)
       : undefined;
 
     if (skirtVertices != null) {
@@ -304,7 +306,7 @@ async function processConstructTerrainMesh(
 
       const rtcTranslation = result.rtc_translation;
       const watermaskHandle = result.watermask
-        ? bufHandler.newU8(result.watermask)
+        ? bufHandler.adoptU8(result.watermask)
         : undefined;
 
       const constructTerrainMeshResult = new ConstructTerrainMeshResult(
@@ -376,11 +378,18 @@ async function processUpsampleTerrainMesh(
           ? bufHandler.f32(parentNormalsHandle)?.slice()
           : undefined;
 
+      const parentWatermaskHandle = cachedMeshHandle.watermask;
+      const parentWatermask =
+        parentWatermaskHandle != null
+          ? bufHandler.u8(parentWatermaskHandle)?.slice()
+          : undefined;
+
       const upsamplableTerrainGeometry = new UpsamplableTerrainGeometryLike(
         parentUvs,
         parentIndices,
         parentHeights,
         parentNormals,
+        parentWatermask,
       );
 
       let promise: ReturnType<
@@ -423,6 +432,10 @@ async function processUpsampleTerrainMesh(
       const { geometry, heights } = built;
 
       const rtcTranslation = result.rtc_translation;
+      const watermaskHandle = result.watermask
+        ? bufHandler.adoptU8(result.watermask)
+        : undefined;
+
       const upsampleTerrainMeshResult = new UpsampleTerrainMeshResult(
         geometry,
         heights,
@@ -432,6 +445,9 @@ async function processUpsampleTerrainMesh(
           ? new Vec3(rtcTranslation.x, rtcTranslation.y, rtcTranslation.z)
           : undefined,
       );
+      if (watermaskHandle != null) {
+        upsampleTerrainMeshResult.watermask = watermaskHandle;
+      }
 
       task.complete((delegator_id) =>
         DelegatedWorkerTasksResult.withUpsampleTerrainMesh(
@@ -494,29 +510,36 @@ async function processConstructPolygonBatchedFeature(
 
       if (!workerTaskHandler.hasWorkerTask(delegator_id[0])) return;
 
+      // Rust reads none of these polygon draw attributes (only handles + byte
+      // counts), so adopt them JS-side (zero-copy) rather than copy into WASM.
+      // Exception: batch_id must stay WASM-resident — when a feature is
+      // evicted before JS consumes the geometry, Rust's
+      // `TransferablePolygonGeometry::remove_buffers` reads its contents to
+      // purge the `BatchTable`, and an External entry would silently skip
+      // that purge and leak the table rows.
       const registered = trackRegisteredHandles(bufHandler);
       const batchId = result.batch_id
         ? registered.register(bufHandler.newF32(result.batch_id))
         : undefined;
       const batchIndex = result.batch_index
-        ? registered.register(bufHandler.newU32(result.batch_index))
+        ? registered.register(bufHandler.adoptU32(result.batch_index))
         : undefined;
       const normal = result.normal
-        ? registered.register(bufHandler.newF32(result.normal))
+        ? registered.register(bufHandler.adoptF32(result.normal))
         : undefined;
       const position = result.position
-        ? registered.register(bufHandler.newF32(result.position))
+        ? registered.register(bufHandler.adoptF32(result.position))
         : undefined;
       const position3dHigh = result.position_3d_high
-        ? registered.register(bufHandler.newF32(result.position_3d_high))
+        ? registered.register(bufHandler.adoptF32(result.position_3d_high))
         : undefined;
       const position3dLow = result.position_3d_low
-        ? registered.register(bufHandler.newF32(result.position_3d_low))
+        ? registered.register(bufHandler.adoptF32(result.position_3d_low))
         : undefined;
       const scaleNormalAndCap = result.scale_normal_and_cap
-        ? registered.register(bufHandler.newF32(result.scale_normal_and_cap))
+        ? registered.register(bufHandler.adoptF32(result.scale_normal_and_cap))
         : undefined;
-      const indices = registered.register(bufHandler.newU32(result.indices));
+      const indices = registered.register(bufHandler.adoptU32(result.indices));
       if (!indices) {
         registered.free();
         return;
@@ -574,16 +597,16 @@ async function processConstructPolygonBatchedFeature(
       // Construct outline geometry if present
       let outlineGeometry: TransferablePolygonOutlineGeometry | undefined;
       if (result.outline_position) {
-        const outlinePosition = bufHandler.newF32(result.outline_position);
+        const outlinePosition = bufHandler.adoptF32(result.outline_position);
         const outlineScaleNormalAndCap = result.outline_scale_normal_and_cap
-          ? bufHandler.newF32(result.outline_scale_normal_and_cap)
+          ? bufHandler.adoptF32(result.outline_scale_normal_and_cap)
           : undefined;
         const outlineSkipIndices = result.outline_skip_indices
-          ? bufHandler.newU32(result.outline_skip_indices)
+          ? bufHandler.adoptU32(result.outline_skip_indices)
           : undefined;
 
         const outlineBatchIndex = result.outline_batch_index
-          ? bufHandler.newF32(result.outline_batch_index)
+          ? bufHandler.adoptF32(result.outline_batch_index)
           : undefined;
 
         outlineGeometry = new TransferablePolygonOutlineGeometry(
@@ -689,53 +712,62 @@ async function processConstructPolylineBatchedFeature(
 
       if (!workerTaskHandler.hasWorkerTask(delegator_id[0])) return;
 
+      // Rust reads none of these polyline draw attributes (only handles + byte
+      // counts), so adopt them JS-side (zero-copy) rather than copy into WASM.
+      // Exception: batch_id must stay WASM-resident — when a feature is
+      // evicted before JS consumes the geometry, Rust's
+      // `TransferablePolylineGeometry::remove_buffers` reads its contents to
+      // purge the `BatchTable`, and an External entry would silently skip
+      // that purge and leak the table rows.
       const registered = trackRegisteredHandles(bufHandler);
-      const position = registered.register(bufHandler.newF32(result.position));
+      const position = registered.register(
+        bufHandler.adoptF32(result.position),
+      );
       const positionHigh = result.position_high
-        ? registered.register(bufHandler.newF32(result.position_high))
+        ? registered.register(bufHandler.adoptF32(result.position_high))
         : undefined;
       const positionLow = result.position_low
-        ? registered.register(bufHandler.newF32(result.position_low))
+        ? registered.register(bufHandler.adoptF32(result.position_low))
         : undefined;
       const start = result.start
-        ? registered.register(bufHandler.newF32(result.start))
+        ? registered.register(bufHandler.adoptF32(result.start))
         : undefined;
       const startHigh = result.start_high
-        ? registered.register(bufHandler.newF32(result.start_high))
+        ? registered.register(bufHandler.adoptF32(result.start_high))
         : undefined;
       const startLow = result.start_low
-        ? registered.register(bufHandler.newF32(result.start_low))
+        ? registered.register(bufHandler.adoptF32(result.start_low))
         : undefined;
       const startNormals = result.start_normals
-        ? registered.register(bufHandler.newF32(result.start_normals))
+        ? registered.register(bufHandler.adoptF32(result.start_normals))
         : undefined;
       const forwardOffset = result.forward_offset
-        ? registered.register(bufHandler.newF32(result.forward_offset))
+        ? registered.register(bufHandler.adoptF32(result.forward_offset))
         : undefined;
       const endHigh = result.end_high
-        ? registered.register(bufHandler.newF32(result.end_high))
+        ? registered.register(bufHandler.adoptF32(result.end_high))
         : undefined;
       const endLow = result.end_low
-        ? registered.register(bufHandler.newF32(result.end_low))
+        ? registered.register(bufHandler.adoptF32(result.end_low))
         : undefined;
       const endNormalAndTextureCoordinateNormalizationX =
         result.end_normal_and_texture_coordinate_normalization_x
           ? registered.register(
-              bufHandler.newF32(
+              bufHandler.adoptF32(
                 result.end_normal_and_texture_coordinate_normalization_x,
               ),
             )
           : undefined;
       const rightNormalAndTextureCoordinateNormalizationY = registered.register(
-        bufHandler.newF32(
+        bufHandler.adoptF32(
           result.right_normal_and_texture_coordinate_normalization_y,
         ),
       );
       const batchId = registered.register(bufHandler.newF32(result.batch_id));
       const batchIndex = registered.register(
-        bufHandler.newU32(result.batch_index),
+        bufHandler.adoptU32(result.batch_index),
       );
-      const indices = registered.register(bufHandler.newU32(result.indices));
+      const indices = registered.register(bufHandler.adoptU32(result.indices));
       if (
         !batchId ||
         !batchIndex ||

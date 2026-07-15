@@ -15,8 +15,6 @@ use navara_tile_component::{
 };
 use navara_tile_component::{TerrainTileQuadtree, TileTextureFragmentMarker};
 
-const MAX_HILLSHADE_PENDINGS: u32 = 50;
-
 /// Marker component to identify hillshade DEM texture requests
 /// This distinguishes hillshade DataRequesters from other types
 #[derive(Debug, Clone, Copy, Component)]
@@ -52,7 +50,16 @@ enum EdgeDirection {
 /// System that limits concurrent hillshade DataRequester entities
 /// Prevents too many simultaneous requests by pruning lowest-priority tiles
 /// Works similarly to filter_requestable_texture_fragment but for hillshade DataRequesters
-#[allow(clippy::type_complexity)]
+///
+/// Each requester actually dispatched gets a dispatch-time `ReservedCost`: the
+/// DEM payload and the extracted boundary edge strips only become gate-visible
+/// (BufferStore `cpu_bytes`) AFTER the fetch lands, so the in-flight window has
+/// the same overshoot hole as the other pipelines. The estimate comes from the
+/// pipeline-wide hillshade estimator pool (payloads are a per-source constant,
+/// so per-layer pools would buy nothing), seeded by
+/// `CostHints::hillshade_reserve_seed` (raster tile bytes + the 1/64 edge-strip
+/// overhead) while cold.
+#[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn filter_requestable_hillshade_data_requester(
     mut commands: Commands,
     mut qt: ResMut<TerrainTileQuadtree>,
@@ -79,6 +86,9 @@ pub fn filter_requestable_hillshade_data_requester(
             Without<Deleted>,
         ),
     >,
+    limits: Res<navara_data_requester::RequestLimits>,
+    pressure: Res<navara_memory::SsePressure>,
+    ledger: Res<navara_memory::MemoryLedger>,
 ) {
     // Count only Pending DataRequesters with Requested marker.
     // Success+Requested entities exist (shared-handle consumers with already-loaded data)
@@ -87,20 +97,43 @@ pub fn filter_requestable_hillshade_data_requester(
         .iter()
         .filter(|dr| dr.status == navara_data_requester::DataRequesterStatus::Pending)
         .count();
-    let num_skip = (MAX_HILLSHADE_PENDINGS as i32 - pendings as i32).max(0);
+    // Load gate: when the memory budget is exhausted, start ZERO new fetches
+    // and settle on the already-loaded tiles instead of evicting → refetching
+    // in an endless loop. In-flight requests proceed; forcing `num_skip == 0`
+    // rejects every newly-Added requester this frame so none is dispatched.
+    let num_skip = if pressure.load_gate_closed {
+        0
+    } else {
+        (limits.max_pendings as i32 - pendings as i32).max(0)
+    };
 
     // Limit the number of hillshade requests in this frame.
     // Skip DataRequesters with Success status - they already have
     // their data (loaded by previous consumers) and should not be subject to the
-    // MAX_HILLSHADE_PENDINGS limit. Rejecting them would cause create-delete loops.
-    for (e, marker, _, _, _) in hillshade_requesters
+    // max_pendings limit. Rejecting them would cause create-delete loops.
+    let admissible: Vec<_> = hillshade_requesters
         .iter()
         .sort::<(&Priority, &OrderByDistance)>()
         .filter(|(_, _, data_req, _, _)| {
             data_req.status != navara_data_requester::DataRequesterStatus::Success
         })
-        .skip(num_skip as usize)
-    {
+        .collect();
+
+    // Reserve the adaptive estimate for the requesters actually dispatched
+    // this frame (the admitted prefix — the rejected tail below gets none).
+    // The amount is resolved by the `ReservedCost` on_insert hook; released on
+    // resolve or despawn; see `ReservedCost`.
+    if ledger.enabled() {
+        for (e, _, _, _, _) in admissible.iter().take(num_skip as usize) {
+            commands
+                .entity(*e)
+                .try_insert(navara_memory::ReservedCost::for_key(
+                    navara_memory::ReserveKey::Hillshade,
+                ));
+        }
+    }
+
+    for (e, marker, _, _, _) in admissible.into_iter().skip(num_skip as usize) {
         let handle = marker.0;
         let tile = qt.qt.get_mut(handle);
         if let Some(tile) = tile {
@@ -146,6 +179,7 @@ pub fn backfill_hillshade_on_loaded(
             Without<Ignored>,
         ),
     >,
+    mut estimates: ResMut<navara_memory::ReserveEstimates>,
 ) {
     // Collect all successfully loaded hillshade entities in this frame for deduplication
     let newly_loaded_entities: std::collections::HashSet<Entity> = query
@@ -179,6 +213,26 @@ pub fn backfill_hillshade_on_loaded(
         } else {
             None
         };
+
+        // First load only: feed the hillshade reservation estimator with the
+        // tile's ACTUAL landed footprint — the DEM payload plus the four edge
+        // strips about to be stored in `BufferStore` — i.e. what the
+        // dispatch-time `ReservedCost` was protecting until now. Failed
+        // fetches never reach here (`is_succeeded` gate above); a refetched
+        // tile simply records again.
+        if let Some(edges) = &extracted_edges {
+            let payload_bytes = buf
+                .get_u8(&data_req.handle)
+                .map(|b| b.len() as u64)
+                .unwrap_or(0);
+            let edge_bytes =
+                (edges.left.len() + edges.right.len() + edges.top.len() + edges.bottom.len())
+                    as u64;
+            estimates.record(
+                navara_memory::ReserveKey::Hillshade,
+                payload_bytes + edge_bytes,
+            );
+        }
 
         // Collect edge exchanges with all loaded neighbors
         let edges_to_store = collect_neighbor_edge_exchanges(
@@ -820,5 +874,171 @@ mod tests {
         app.update();
         let events = app.world().resource::<EventStore>();
         assert!(events.hillshade_canceled.is_empty());
+    }
+}
+
+#[cfg(test)]
+mod load_gate_tests {
+    use super::*;
+    use bevy_app::{App, Update};
+    use navara_core::TileXYZ;
+    use navara_data_requester::RequestLimits;
+    use navara_memory::{MemoryLedger, SsePressure};
+    use navara_tile_component::TerrainTile;
+
+    fn setup(gate_closed: bool) -> (App, Entity) {
+        let mut app = App::new();
+        app.init_resource::<RequestLimits>();
+        app.init_resource::<MemoryLedger>();
+        app.init_resource::<navara_memory::ReserveEstimates>();
+        app.insert_resource(SsePressure {
+            multiplier: 1.0,
+            load_gate_closed: gate_closed,
+            ..Default::default()
+        });
+
+        let mut qt = TerrainTileQuadtree::new_with_linear_qt();
+        qt.qt
+            .initialize_zero(&|(x, y, z)| TerrainTile::new(TileXYZ { x, y, z }, 0., 0.));
+        let handle = qt.qt.zero().unwrap().handle();
+        app.insert_resource(qt);
+
+        let e = app
+            .world_mut()
+            .spawn((
+                DataRequester::default(),
+                TileTextureFragmentMarker(handle),
+                HillshadeTextureMarker,
+                OrderByDistance {
+                    sse: 0.0,
+                    distance: 0.0,
+                },
+                Priority::High,
+            ))
+            .id();
+
+        app.add_systems(Update, filter_requestable_hillshade_data_requester);
+        (app, e)
+    }
+
+    #[test]
+    fn closed_gate_rejects_new_request() {
+        let (mut app, e) = setup(true);
+        // `Added` sees the previous frame; two ticks so the filter observes it.
+        app.update();
+        app.update();
+        assert!(app.world().get::<Deleted>(e).is_some());
+    }
+
+    #[test]
+    fn open_gate_admits_new_request() {
+        let (mut app, e) = setup(false);
+        app.update();
+        app.update();
+        assert!(app.world().get::<Deleted>(e).is_none());
+    }
+}
+
+#[cfg(test)]
+mod reservation_tests {
+    use super::*;
+    use bevy_app::{App, PreUpdate, Update};
+    use navara_core::TileXYZ;
+    use navara_data_requester::{RequestLimits, remove_removed_data_requesters};
+    use navara_memory::{MemoryLedger, ReservedCost, SsePressure};
+    use navara_tile_component::TerrainTile;
+
+    /// Budget-enabled app with `max_pendings = 1` so exactly one of two
+    /// hillshade requesters is admitted (reserved) and the other rejected.
+    fn setup() -> (App, Vec<Entity>) {
+        let mut app = App::new();
+        app.insert_resource(RequestLimits { max_pendings: 1 });
+        app.insert_resource(MemoryLedger {
+            budget_bytes: Some(1_000_000_000),
+            ..Default::default()
+        });
+        app.init_resource::<navara_memory::ReserveEstimates>();
+        app.init_resource::<SsePressure>();
+
+        let mut qt = TerrainTileQuadtree::new_with_linear_qt();
+        qt.qt
+            .initialize_zero(&|(x, y, z)| TerrainTile::new(TileXYZ { x, y, z }, 0., 0.));
+        let handle = qt.qt.zero().unwrap().handle();
+        app.insert_resource(qt);
+
+        let entities: Vec<Entity> = (0..2)
+            .map(|i| {
+                app.world_mut()
+                    .spawn((
+                        DataRequester::default(),
+                        TileTextureFragmentMarker(handle),
+                        HillshadeTextureMarker,
+                        OrderByDistance {
+                            sse: i as f64,
+                            distance: i as f64,
+                        },
+                        Priority::High,
+                    ))
+                    .id()
+            })
+            .collect();
+
+        app.add_systems(Update, filter_requestable_hillshade_data_requester);
+        (app, entities)
+    }
+
+    #[test]
+    fn dispatched_requester_gets_a_reservation_skipped_does_not() {
+        let (mut app, entities) = setup();
+        // `Added` sees the previous frame; two ticks so the filter observes it.
+        app.update();
+        app.update();
+
+        let seed = app
+            .world()
+            .resource::<MemoryLedger>()
+            .cost_hints
+            .hillshade_reserve_seed();
+        let reserved: Vec<_> = entities
+            .iter()
+            .filter(|e| app.world().get::<ReservedCost>(**e).is_some())
+            .collect();
+        let deleted: Vec<_> = entities
+            .iter()
+            .filter(|e| app.world().get::<Deleted>(**e).is_some())
+            .collect();
+        assert_eq!(reserved.len(), 1, "one dispatched requester is reserved");
+        assert_eq!(deleted.len(), 1, "one requester is rejected");
+        // Cold estimator: the reservation equals the derived hillshade seed.
+        assert_eq!(app.world().resource::<MemoryLedger>().reserved_bytes, seed);
+    }
+
+    #[test]
+    fn despawn_while_pending_releases_the_reservation() {
+        // Abort path: a still-`Pending` hillshade requester marked `Deleted`
+        // despawns via `remove_removed_data_requesters`; the `ReservedCost`
+        // on_remove hook must release its bytes.
+        let mut app = App::new();
+        app.init_resource::<navara_buffer_store::BufferStore>();
+        app.init_resource::<navara_data_requester::DataManager>();
+        app.init_resource::<navara_event_store::EventStore>();
+        app.init_resource::<MemoryLedger>();
+        app.add_systems(PreUpdate, remove_removed_data_requesters);
+
+        let e = app
+            .world_mut()
+            .spawn((
+                DataRequester::default(),
+                HillshadeTextureMarker,
+                ReservedCost::fixed(4096),
+            ))
+            .id();
+        assert_eq!(app.world().resource::<MemoryLedger>().reserved_bytes, 4096);
+
+        app.world_mut().entity_mut(e).insert(Deleted);
+        app.update();
+
+        assert!(app.world().get_entity(e).is_err(), "requester despawned");
+        assert_eq!(app.world().resource::<MemoryLedger>().reserved_bytes, 0);
     }
 }

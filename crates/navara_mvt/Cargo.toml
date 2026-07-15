@@ -41,3 +41,7 @@ navara_fog.workspace = true
 navara_globe.workspace = true
 navara_vector_tile.workspace = true
 navara_pmtiles.workspace = true
+# The worker finalize path both charges the geometry `TileCost` and records the
+# landed cost into the per-layer reservation estimator (`ReserveEstimates`), so
+# the crate depends on `navara_memory` directly.
+navara_memory.workspace = true

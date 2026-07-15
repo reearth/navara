@@ -22,6 +22,7 @@ pub use source_cache::{
     SourceId, TraversalConfig, VectorTileSourceCache, VectorTileSourceResources,
 };
 pub use tile::render::RenderedTile;
+pub use tile::system::estimate_vector_tile_cost;
 pub use tile::traverse::{
     TraversalResult, activate_all_renderable_features, are_all_renderable_features_active,
     spawn_tile_entity, traverse_tile,
@@ -73,6 +74,7 @@ impl Plugin for VectorTilePlugin {
                 tile::system::transfer_mesh,
                 data_requester::system::filter_requestable_data_requester,
                 tile::system::clear_caches,
+                tile::system::enforce_memory_budget,
             )
                 .chain()
                 .in_set(VectorTileSet::Process),

@@ -2,7 +2,7 @@
 title: Color Class
 description: API Reference for Color Class - a class for representing colors
 sidebar:
-  order: 18
+  order: 970
 ---
 
 The `Color` class is a class for representing colors. It manages colors based on the sRGB color space and supports setting and getting colors in various formats.

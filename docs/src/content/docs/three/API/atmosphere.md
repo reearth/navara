@@ -2,7 +2,7 @@
 title: Atmosphere Class
 description: API reference for the Atmosphere class that manages the atmospheric system and sun/moon position calculations
 sidebar:
-  order: 20
+  order: 990
 ---
 
 The `Atmosphere` class manages the context for atmospheric rendering. It automatically calculates the positions of the sun and moon from the configured date and time, and manages textures for atmospheric scattering simulation.

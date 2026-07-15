@@ -2,7 +2,7 @@
 title: Basic Visualization
 description: 地図表示、地形表示、GIS データ表示の基本的な実装方法
 sidebar:
-  order: 4
+  order: 200
 ---
 
 このチュートリアルでは、navara_three を使って地図を表示する基本的な方法を説明します。

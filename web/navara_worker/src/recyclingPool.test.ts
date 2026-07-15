@@ -308,3 +308,62 @@ it("aggregates stats across slots", async () => {
     tasksSinceSpawn: 1,
   });
 });
+
+it("stores probed heap bytes and aggregates them in heapStats()", async () => {
+  const pool = new RecyclingWorkerPool("https://example.com", 2, {
+    maxWorkerHeapBytes: 1000,
+  });
+
+  expect(pool.heapStats()).toEqual({
+    perSlot: [undefined, undefined],
+    totalBytes: 0,
+    maxWorkerHeapBytes: 1000,
+  });
+
+  // A settled task triggers a probe on its slot.
+  const task = pool.exec("test");
+  settleTask(pools[0]);
+  await vi.advanceTimersByTimeAsync(0);
+  respondToProbe(pools[0], 300);
+  await vi.advanceTimersByTimeAsync(0);
+  await task;
+
+  const stats = pool.heapStats();
+  expect(stats.perSlot[0]).toBe(300);
+  expect(stats.totalBytes).toBe(300);
+});
+
+it("probeHeap() probes idle slots and coalesces with in-flight probes", async () => {
+  const pool = new RecyclingWorkerPool("https://example.com", 2);
+
+  pool.probeHeap();
+  // Calling again while probes are in flight must not enqueue duplicates.
+  pool.probeHeap();
+  expect(pools[0].executions.filter((e) => e.method === PROBE)).toHaveLength(1);
+  expect(pools[1].executions.filter((e) => e.method === PROBE)).toHaveLength(1);
+
+  respondToProbe(pools[0], 111);
+  respondToProbe(pools[1], 222);
+  await vi.advanceTimersByTimeAsync(0);
+
+  expect(pool.heapStats().totalBytes).toBe(333);
+});
+
+it("clears a slot's heap sample when it is recycled", async () => {
+  const pool = new RecyclingWorkerPool("https://example.com", 1, {
+    maxWorkerHeapBytes: 1000,
+  });
+
+  const task = pool.exec("test");
+  settleTask(pools[0]);
+  await vi.advanceTimersByTimeAsync(0);
+  // Over budget: the probe both records the sample and drains the slot,
+  // which recycles immediately (inflight is 0) — the sample must not
+  // survive into the fresh worker.
+  respondToProbe(pools[0], 2000);
+  await vi.advanceTimersByTimeAsync(0);
+  await task;
+
+  expect(pool.heapStats().perSlot[0]).toBeUndefined();
+  expect(pool.heapStats().totalBytes).toBe(0);
+});

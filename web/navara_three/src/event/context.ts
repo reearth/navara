@@ -58,7 +58,23 @@ export type BufferLoader = {
   newU32: (bytes: Uint32Array) => number | undefined;
   newF32: (bytes: Float32Array) => number | undefined;
   newF64: (bytes: Float64Array) => number | undefined;
+  // The `adopt*` variants register a JS-owned array in the `InMemoryBufferStore`
+  // (zero-copy — the array is kept as-is) and hand WASM a byte-count-only
+  // `External` handle, so worker-built geometry never round-trips through WASM
+  // linear memory. The getters (u8/f32/...) return it directly; remove* takes it
+  // and clears the WASM-side accounting.
+  adoptU8: (array: Uint8Array) => number | undefined;
+  adoptU32: (array: Uint32Array) => number | undefined;
+  adoptF32: (array: Float32Array) => number | undefined;
+  adoptF64: (array: Float64Array) => number | undefined;
+  /** DataRequester mirror of `adoptU8`: registers an `External` entry under an
+   * existing handle and fires the loaded event. Guards on `hasDataRequester`.
+   * An `External` entry carries no element type, so this is not typed. */
+  setExternal: (handle: number, bits: bigint, array: Uint8Array) => void;
   remove: (handle: number) => void;
+  /** Evict handles Rust removed from the WASM `BufferStore` out of the JS-side
+   * `InMemoryBufferStore`; called once per frame. */
+  drainRemovedExternalHandles: () => void;
   triggerDataRequesterLoaded: (bits: bigint, handle: number) => void;
   triggerDataRequesterFailed: (bits: bigint) => void;
 };
@@ -90,6 +106,10 @@ export type TileHandler = {
   getTileElevationDecoder: (handle: bigint) => ElevationDecoder | undefined;
   getVectorTileStates: (handle: bigint) => VectorTileState[] | undefined;
   vectorRevision: () => number;
+  /** Reports a terrain tile's drape render-target GPU footprint (bytes) so the
+   * memory ledger tracks clamp-to-ground vector bakes that scale with terrain
+   * subdivision past the vector `maxZoom`. Pass 0 to release on dispose. */
+  reportDrapeGpuBytes: (handle: bigint, bytes: number) => void;
   calcMetersPerTexel: (
     tileHandle: bigint,
     textureZoom: number,
@@ -133,6 +153,11 @@ export type FeatureHandler = {
     type: "point" | "polyline" | "polygon" | "model",
     bits: bigint,
   ) => void;
+  /** Reports a rendered feature's actual measured GPU byte size so the memory
+   * ledger replaces its payload-based estimate. Feature kinds the engine has
+   * no owner lookup for are a no-op (currently wired: 3D Tiles models, whose
+   * post-glTF/Draco-decode size undercounts otherwise). */
+  reportFeatureGpuBytes: (bits: bigint, bytes: number) => void;
   readAllBatchedProperties(
     bits: bigint,
     callback: (

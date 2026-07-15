@@ -107,6 +107,10 @@ type CachedMaterial = {
 export class TileTextureCompositor {
   readonly renderer: WebGLRenderer;
   readonly cache: TileTextureCache;
+  /** Atlas / drape RT side length in texels (device-dependent). TileMesh reads
+   * this to size its lazily-allocated drape render targets and to compute the
+   * per-tile GPU byte cost it reports to the memory ledger. */
+  readonly size: number;
   private readonly texturizedScenes: TexturizedSceneByTileCoordinates;
   // Single fixed [-1, 1] camera shared by every vector-scene bake. Ancestor
   // fallback is resolved in Rust, so no per-tile camera transform is needed.
@@ -127,8 +131,9 @@ export class TileTextureCompositor {
   constructor(opts: TileTextureCompositorOptions) {
     this.renderer = opts.renderer;
     this.texturizedScenes = opts.texturizedSceneByTileCoordinates;
+    this.size = opts.size ?? 512;
     this.cache = new TileTextureCache({
-      size: opts.size ?? 512,
+      size: this.size,
       atlasFactory: opts.atlasFactory ?? defaultAtlasFactory(opts.renderer),
     });
 

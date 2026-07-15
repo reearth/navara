@@ -2,7 +2,7 @@
 title: PolylineMaterial
 description: Polyline material for navara_three
 sidebar:
-  order: 35
+  order: 550
 ---
 
 `PolylineMaterial`は、ポリラインジオメトリレンダリング用のマテリアルを表します。

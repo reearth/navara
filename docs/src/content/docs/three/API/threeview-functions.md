@@ -2,7 +2,7 @@
 title: ThreeView Functions
 description: API Reference for ThreeView Class Functions
 sidebar:
-  order: 13
+  order: 930
 ---
 
 This page describes all functions (methods) available on a ThreeView instance.
@@ -21,7 +21,7 @@ addLayer(l: LayerDescription): Layer
 
 **Parameters:**
 
-For layer configuration options, see [About Layer](../../../three/layer/about/) and each layer type page.
+For layer configuration options, see [Layer Types](../../../three/layer/about/) and each layer type page.
 
 **Returns:**
 
@@ -1121,4 +1121,149 @@ removeFontFamily(family: string): this
 
 ```typescript
 view.removeFontFamily("MapFont");
+```
+
+### setSseMultiplierRange()
+
+Updates the memory-pressure SSE degrade range at runtime. `min` is the resting multiplier applied even without budget pressure (a value greater than 1 coarsens far tiles at rest); `max` is the ceiling the dynamic degrade can climb to under memory pressure. The next traversal re-selects tile LODs with the new range. Setting `min = max = 1` fully disables the pressure degrade.
+
+**Syntax:**
+
+```tsx
+setSseMultiplierRange(min: number, max: number): void
+```
+
+**Parameters:**
+
+- `min`: Resting (base) SSE multiplier applied without budget pressure
+- `max`: Ceiling the dynamic memory-pressure degrade can climb to
+
+**Example:**
+
+```tsx
+// Keep far tiles slightly coarse at rest, allow degrading up to 8x under pressure
+view.setSseMultiplierRange(1.5, 8.0);
+
+// Disable the memory-pressure degrade entirely
+view.setSseMultiplierRange(1, 1);
+```
+
+:::tip[Related Documentation]
+The device-dependent defaults can be set via the [`memoryBudget` option](./threeview-class#memorybudget) (`sseMultiplierMin` / `sseMultiplierMax`).
+:::
+
+### memoryStats()
+
+Returns a snapshot of engine memory usage (WASM buffer bytes, GPU estimates, retained tile counts). Returns `undefined` before `init()`.
+
+**Syntax:**
+
+```tsx
+memoryStats(): MemoryStats | undefined
+```
+
+**Returns:**
+
+A plain `MemoryStats` object, or `undefined` before `init()`:
+
+```tsx
+type MemoryStats = {
+  // Total bytes of tile payloads, geometry, and DEM buffers in WASM linear memory
+  bufferTotalBytes: number;
+  // Bytes held in the JS-side buffer store (fetched MVT pbf and worker-built
+  // geometry that never enter WASM linear memory). Not part of bufferTotalBytes.
+  externalBufferBytes: number;
+  // Number of buffers tracked by the buffer store
+  bufferCount: number;
+  // Estimated GPU bytes (textures, geometry, render targets)
+  gpuBytesEst: number;
+  // CPU bytes outside the buffer store (chiefly feature-attribute tables)
+  externalCpuBytes: number;
+  // Reserved bytes for in-flight fetches (released when they land)
+  reservedBytes: number;
+  // Configured tile-cache budget; undefined when budgeting is disabled
+  budgetBytes: number | undefined;
+  // Cumulative count of evicted tiles
+  evictedCount: number;
+  // Current memory-pressure SSE multiplier (1 = no pressure)
+  sseMultiplier: number;
+  // Retained (deactivated but cached) tile counts per pipeline
+  retainedVector: number;
+  retainedTerrain: number;
+  retainedRaster: number;
+  retainedTiles3d: number;
+};
+```
+
+**Example:**
+
+```tsx
+const stats = view.memoryStats();
+if (stats) {
+  const MB = 1024 * 1024;
+  console.log(`WASM buffers: ${(stats.bufferTotalBytes / MB).toFixed(1)} MB`);
+  console.log(`GPU estimate: ${(stats.gpuBytesEst / MB).toFixed(1)} MB`);
+  console.log(`evicted: ${stats.evictedCount}, sse x${stats.sseMultiplier}`);
+}
+```
+
+### workerMemoryStats()
+
+Returns a snapshot of worker-side memory: per-tile-worker WASM heaps (point-in-time samples from the pool's post-task probes — this call also requests fresh probes, whose results show up on the *next* call) and the font worker's heap/cache breakdown. Returns `undefined` before `init()`.
+
+**Syntax:**
+
+```tsx
+async workerMemoryStats(): Promise<WorkerMemoryStats | undefined>
+```
+
+**Returns:**
+
+A `Promise` resolving to a `WorkerMemoryStats` object, or `undefined` before `init()`:
+
+```tsx
+type WorkerMemoryStats = {
+  // Tile-worker pool heaps (undefined per slot until first probed)
+  tileWorkers:
+    | {
+        // Last probed WASM heap per slot (undefined = not probed yet)
+        perSlot: (number | undefined)[];
+        // Sum of the probed heaps
+        totalBytes: number;
+        // The per-worker budget slots are recycled against
+        maxWorkerHeapBytes: number;
+      }
+    | undefined;
+  // Font worker heap/cache breakdown; undefined while no font is in use
+  fontWorker:
+    | {
+        // Total WASM linear memory of the font worker (never shrinks)
+        heapBytes: number;
+        fontCount: number;
+        atlasCount: number;
+        glyphCount: number;
+        // Raw font file bytes held by the cache
+        fontBytes: number;
+        // Monochrome (SDF/MSDF) atlas pixel bytes
+        atlasBytes: number;
+        // COLRv1 color atlas pixel bytes
+        colorAtlasBytes: number;
+        // Configured cache budget; undefined when unlimited
+        budgetBytes?: number;
+      }
+    | undefined;
+};
+```
+
+**Example:**
+
+```tsx
+const stats = await view.workerMemoryStats();
+if (stats?.tileWorkers) {
+  const MB = 1024 * 1024;
+  console.log(`tile workers: ${(stats.tileWorkers.totalBytes / MB).toFixed(1)} MB`);
+}
+if (stats?.fontWorker) {
+  console.log(`font atlas bytes: ${stats.fontWorker.atlasBytes}`);
+}
 ```

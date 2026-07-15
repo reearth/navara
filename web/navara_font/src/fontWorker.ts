@@ -10,10 +10,13 @@ import init, {
 } from "@navara/engine-font-worker";
 
 let fontCache: FontCache;
+/** WASM linear memory, kept from init() for heap-size reporting. */
+let wasmMemory: WebAssembly.Memory | undefined;
 
 async function ensureWasm(): Promise<void> {
   if (!fontCache) {
-    await init();
+    const output = await init();
+    wasmMemory = output.memory;
     fontCache = new FontCache();
   }
 }
@@ -87,7 +90,8 @@ type FontWorkerMessageType =
   | "unloadFont"
   | "prepareTextBatch"
   | "retainGlyphs"
-  | "releaseGlyphs";
+  | "releaseGlyphs"
+  | "getMemoryStats";
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
 
@@ -101,8 +105,30 @@ ctx.onmessage = async (e: MessageEvent) => {
 
     switch (msgType) {
       case "init": {
-        // No-op beyond ensureWasm() above; used to await worker readiness.
+        // Used to await worker readiness; optionally delivers the memory
+        // budget (font data + atlas pixels; caps further atlas growth).
+        const fontBudgetBytes = (
+          msg.payload as { fontBudgetBytes?: number } | undefined
+        )?.fontBudgetBytes;
+        fontCache.setBudget(fontBudgetBytes);
         ctx.postMessage({ id, type: "result", payload: null });
+        break;
+      }
+
+      case "getMemoryStats": {
+        const stats = fontCache.memoryStats();
+        const payload = {
+          heapBytes: wasmMemory?.buffer.byteLength ?? 0,
+          fontCount: stats.fontCount,
+          atlasCount: stats.atlasCount,
+          glyphCount: stats.glyphCount,
+          fontBytes: stats.fontBytes,
+          atlasBytes: stats.atlasBytes,
+          colorAtlasBytes: stats.colorAtlasBytes,
+          budgetBytes: stats.budgetBytes === 0 ? undefined : stats.budgetBytes,
+        };
+        stats.free();
+        ctx.postMessage({ id, type: "result", payload });
         break;
       }
 

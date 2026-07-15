@@ -35,6 +35,9 @@ export function upsampleQuantizedMeshTerrainMesh(
         ...(upsamplableGeometryLike.normals
           ? [upsamplableGeometryLike.normals.buffer]
           : []),
+        ...(upsamplableGeometryLike.watermask
+          ? [upsamplableGeometryLike.watermask.buffer]
+          : []),
       ],
     },
   );

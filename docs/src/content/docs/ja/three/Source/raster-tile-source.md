@@ -2,7 +2,7 @@
 title: Raster Tile Source
 description: raster-tile（画像）の Source
 sidebar:
-  order: 13
+  order: 330
 ---
 
 `raster-tile` Source は、ラスター画像タイル（XYZ または TMS）を記述します。[`raster`](../../../three/layer/raster-layer/) レイヤーで描画します。

@@ -2,7 +2,7 @@
 title: PolygonMaterial
 description: Polygon material for navara_three
 sidebar:
-  order: 34
+  order: 540
 ---
 
 `PolygonMaterial`は、ポリゴンジオメトリレンダリング用のマテリアルを表します。

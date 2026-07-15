@@ -2,7 +2,7 @@
 title: Interior Explore
 description: PersonViewPlugin を使って 3D 建物内を探索する方法
 sidebar:
-  order: 8
+  order: 230
 ---
 
 ![実行結果](@assets/tutorial/model-animation.png)

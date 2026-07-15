@@ -2,7 +2,7 @@
 title: Quantized Mesh Source
 description: Cesium quantized-mesh 地形の Source
 sidebar:
-  order: 15
+  order: 350
 ---
 
 `quantized-mesh` Source は、Cesium quantized-mesh 地形を記述します。[`terrain`](../../../three/layer/terrain-layer/) レイヤーで描画します。デフォルトでは、Cesium の慣例に合わせて、地理座標系（EPSG:4326）かつ TMS（南原点）の Y 軸として扱われます。

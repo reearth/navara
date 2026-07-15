@@ -18,7 +18,6 @@ navara_three (core: ThreeView, Plugin, addPlugin)
   └── three_plugins (use-case specific plugins)
         ├── PersonViewPlugin (keyboard-driven first/third-person view controller)
         ├── OverlayPlugin (world-to-screen HTML overlay projection)
-        ├── AttributionPlugin (non-modal, zoom-aware data attribution UI)
         ├── CesiumIonPlugin (Cesium Ion quantized-mesh terrain)
         └── TileJsonPlugin (TileJSON 3.0.0 tile source registration)
 ```
@@ -32,7 +31,6 @@ import {
   PersonViewPlugin,
   OverlayPlugin,
   moveOverlayElement,
-  AttributionPlugin,
   CesiumIonPlugin,
   TileJsonPlugin,
 } from "@navara/three_plugins";
@@ -47,10 +45,6 @@ A keyboard-driven first-/third-person view controller. Drives a virtual position
 ### OverlayPlugin
 
 Projects geographic positions (lat/lng/alt) to screen coordinates on every render frame, enabling HTML overlays that track world positions. See [OverlayPlugin](../overlayplugin/) for details.
-
-### AttributionPlugin
-
-A non-modal data attribution (credit) UI. Lists active data sources in a bottom-right popover with zoom-banded credits, per-layer dynamic credits, and an always-visible logo frame for mandated marks. See [AttributionPlugin](../attributionplugin/) for details.
 
 ### CesiumIonPlugin
 

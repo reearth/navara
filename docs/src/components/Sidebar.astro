@@ -31,9 +31,17 @@ const translatedSidebar = translateSidebarEntries(filteredSidebar);
 // Extract content title from URL, handling locale prefix
 const segments = Astro.url.pathname.split("/").filter(Boolean);
 const contentTitle = locale ? segments[1] : segments[0];
+
+// Human-friendly display labels for package-named top-level sections.
+const sectionLabels: Record<string, string> = {
+    three_default_descs: "Default Descriptors",
+    three_default_plugin: "Default Plugin",
+    three_plugins: "Plugins",
+};
+const displayTitle = sectionLabels[contentTitle] ?? contentTitle;
 ---
 <span class="sidebar-title">
-    {contentTitle}
+    {displayTitle}
 </span>
 <SidebarPersister>
     <SidebarSublist sublist={translatedSidebar} />

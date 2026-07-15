@@ -270,6 +270,7 @@ impl Atlas {
         font_index: u32,
         glyph_ids: &[u32],
         evicted: &mut bool,
+        max_atlas_bytes: Option<usize>,
     ) -> bool {
         // Parse Face once per batch — per-glyph parsing dominated MSDF cost.
         let msdf_face = match self.mode {
@@ -315,7 +316,7 @@ impl Atlas {
                     self.allocator.allocate(alloc_size)
                 })
                 .or_else(|| {
-                    if self.grow() {
+                    if self.grow(max_atlas_bytes) {
                         // Atlas dims changed — TS must re-upload even if the
                         // post-grow allocation still fails.
                         new_glyphs = true;
@@ -402,13 +403,31 @@ impl Atlas {
         }
     }
 
+    /// Pixel-buffer bytes currently held by this atlas.
+    pub fn pixel_bytes(&self) -> usize {
+        self.pixel_data.len()
+    }
+
+    /// Number of glyphs currently packed.
+    pub fn glyph_count(&self) -> usize {
+        self.glyph_map.len()
+    }
+
     /// Double the atlas (square) up to [`MAX_ATLAS_SIZE`]. Existing glyph
     /// metrics stay valid: guillotiere preserves allocations and the pixel
-    /// buffer is recopied at the same `(x, y)`. Returns `false` if capped.
-    pub fn grow(&mut self) -> bool {
+    /// buffer is recopied at the same `(x, y)`. Returns `false` if capped,
+    /// or if the grown pixel buffer would exceed `max_total_bytes` (the
+    /// memory-budget cap; glyphs then degrade to "missing" instead of the
+    /// atlas growing past the budget).
+    pub fn grow(&mut self, max_total_bytes: Option<usize>) -> bool {
         let new_w = (self.width as i32).saturating_mul(2).min(MAX_ATLAS_SIZE);
         let new_h = (self.height as i32).saturating_mul(2).min(MAX_ATLAS_SIZE);
         if new_w == self.width as i32 && new_h == self.height as i32 {
+            return false;
+        }
+        if let Some(max) = max_total_bytes
+            && (new_w as usize) * (new_h as usize) * (self.channels as usize) > max
+        {
             return false;
         }
 
@@ -545,5 +564,31 @@ mod tests {
         atlas.pending.remove(&5);
         assert!(atlas.evict_unreferenced(&no_protect()));
         assert!(!atlas.contains(5));
+    }
+
+    #[test]
+    fn grow_is_denied_when_it_would_exceed_the_byte_cap() {
+        let mut atlas = Atlas::new(256, AtlasMode::Sdf);
+        let ch = atlas.channels as usize;
+
+        // 512x512 would need 512*512*ch bytes; a cap below that denies growth
+        // and the atlas keeps its dimensions.
+        assert!(!atlas.grow(Some(512 * 512 * ch - 1)));
+        assert_eq!(atlas.width, 256);
+
+        // Exactly enough for the doubled buffer is allowed.
+        assert!(atlas.grow(Some(512 * 512 * ch)));
+        assert_eq!(atlas.width, 512);
+        assert_eq!(atlas.pixel_bytes(), 512 * 512 * ch);
+
+        // No cap behaves like before.
+        assert!(atlas.grow(None));
+        assert_eq!(atlas.width, 1024);
+    }
+
+    #[test]
+    fn grow_still_stops_at_max_atlas_size() {
+        let mut atlas = Atlas::new(MAX_ATLAS_SIZE, AtlasMode::Sdf);
+        assert!(!atlas.grow(None));
     }
 }

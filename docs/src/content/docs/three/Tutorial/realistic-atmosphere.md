@@ -2,7 +2,7 @@
 title: Realistic Atmosphere
 description: Realistic visual rendering using atmospheric effects
 sidebar:
-  order: 6
+  order: 210
 ---
 
 ![Result](@assets/tutorial/realistic-atmosphere-result.png)

@@ -2,10 +2,10 @@
 title: Custom Descriptor
 description: カスタム Descriptor の実装について
 sidebar:
-  order: 21
+  order: 800
 ---
 
-navara_three では、メッシュ・エフェクト・ライトの各 Descriptor を独自に実装できます。概念については [About Layer](../../../three/introduction/about-layer/) を参照してください。
+navara_three では、メッシュ・エフェクト・ライトの各 Descriptor を独自に実装できます。概念については [レイヤーと Descriptor](../../../three/introduction/about-layer/) を参照してください。
 
 ## Descriptor の基底クラス
 
@@ -761,7 +761,7 @@ if (uPicking > 0.0) {
 
 ## 関連リソース
 
-- [About Layer](../../../three/introduction/about-layer/) - レイヤーとオブジェクトの概念と種類
+- [レイヤーと Descriptor](../../../three/introduction/about-layer/) - レイヤーとオブジェクトの概念と種類
 - [About Plugin](../../../three/introduction/about-plugin/) - プラグインシステムの概念
 - [Plugin API](../../../three/core/plugin/) - プラグインの実装方法
 - [three_default_descs](../../../three_default_descs/about/) - デフォルト Descriptor の実装例

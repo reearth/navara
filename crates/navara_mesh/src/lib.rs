@@ -110,7 +110,7 @@ fn commit_events(
     }
 }
 
-fn remove_removed_mesh(
+pub fn remove_removed_mesh(
     mut commands: Commands,
     removed: Query<Entity, (With<Mesh>, With<Deleted>)>,
 ) {

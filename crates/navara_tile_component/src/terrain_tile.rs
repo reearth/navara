@@ -368,7 +368,7 @@ impl TerrainTile {
             max_height: upsampled_mesh.max_height,
             min_height: upsampled_mesh.min_height,
             rtc_translation: Some(tile_center),
-            watermask: None,
+            watermask: upsampled_mesh.watermask.take(),
         })
     }
 
@@ -379,6 +379,12 @@ impl TerrainTile {
             buf.remove(&cached_mesh.indices);
             buf.remove(&cached_mesh.uvs);
             if let Some(h) = &cached_mesh.heights {
+                buf.remove(h);
+            }
+            if let Some(h) = &cached_mesh.normals {
+                buf.remove(h);
+            }
+            if let Some(h) = &cached_mesh.watermask {
                 buf.remove(h);
             }
             self.cached_mesh_handle = None;
@@ -1054,6 +1060,7 @@ mod test {
             uvs: 0,
             heights: None,
             normals: None,
+            watermask: None,
         });
         tile.terrain_data = Some(Box::new(RasterDEMData::default()));
     }
@@ -1599,6 +1606,7 @@ mod terrain_tile_tests {
                     uvs: 0,
                     heights: Some(0),
                     normals: None,
+                    watermask: None,
                 });
             }
 

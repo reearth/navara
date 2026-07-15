@@ -2,7 +2,7 @@
 title: Globe Class
 description: API Reference for Globe Class - 地球表示の設定を管理するクラス
 sidebar:
-  order: 21
+  order: 1000
 ---
 
 Globe クラスは、地球表示に関するプロパティへのアクセスと変更を行うためのインターフェースを提供します。VectorTile、RasterTile、RasterTerrain など、異なるマテリアルタイプ間で共有される地球表示の設定を管理します。
@@ -128,13 +128,13 @@ view.globe.hideUnderground = true;
 
 ---
 
-### shouldComputeNormalFromVertex
+### useNormal
 
 **Type:** `boolean`
 
-**Description:** 頂点位置から法線を計算するかどうか。ライティング計算に影響します。
+**Description:** 法線を使用するかどうか。ライティング計算に影響します。
 
-**Default:** `true`
+**Default:** `false`
 
 :::warning
 このプロパティは初期化時のみ有効です。ThreeView のコンストラクタで設定してください。
@@ -145,7 +145,7 @@ view.globe.hideUnderground = true;
 ```typescript
 // コンストラクタで設定
 const view = new ThreeView({
-  shouldComputeNormalFromVertex: true,
+  useNormal: true,
 });
 ```
 
@@ -336,7 +336,7 @@ const view = new ThreeView({
   // 初期化時のみ設定可能なプロパティ
   maxSse: 2,
   segments: 64,
-  shouldComputeNormalFromVertex: true,
+  useNormal: true,
   // 実行時に変更可能なプロパティ
   color: new Color().setHex(0x1a1a2e),
   hideUnderground: true,

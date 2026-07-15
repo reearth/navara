@@ -2,7 +2,7 @@
 title: navara_three_api
 description: navara_three API reference for Three.js integration utilities
 sidebar:
-  order: 10
+  order: 900
 ---
 
 navara_three_api is an API that provides utility functions for integrating Three.js with the Navara engine. It offers features necessary for 3D geospatial application development, including geospatial calculations, coordinate transformations, intersection tests, and RTE (Relative to Eye) rendering, all integrated with the Three.js type system.

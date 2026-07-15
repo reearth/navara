@@ -16,6 +16,7 @@ import {
   MeshStandardMaterial,
   Object3D,
   RGBADepthPacking,
+  SkinnedMesh,
   Texture,
   type NormalBufferAttributes,
   PointsMaterial,
@@ -40,6 +41,7 @@ import {
 } from "./batchTexture";
 import type { FeatureMesh } from "./featureMesh";
 import type { PickableMesh } from "./pickableMesh";
+import { releaseGeometryArraysAfterUpload } from "./releaseGeometryArrays";
 
 export type ModelMaterial = MeshStandardMaterial | MeshPhysicalMaterial;
 
@@ -152,12 +154,36 @@ export class ModelMesh
           dataSize,
           modelInitialProps,
         );
+        this._releaseGeometryArrays(object);
       } else if (object instanceof Points) {
         this._setupPointsNode(object, pntsInitialProps);
+        this._releaseGeometryArrays(object);
       }
     });
 
     this.visible = meshMaterial.show ?? true;
+  }
+
+  /**
+   * Drop the CPU-side typed arrays of a loaded glTF/point-cloud node after its
+   * first GPU upload. The GLTFLoader has already computed bounding volumes at
+   * parse time (and the point-cloud path assigns them from the WASM AABB), and
+   * `_setupMeshNode` has already read `_batchid.array` before this runs, so no
+   * CPU read survives the first upload.
+   *
+   * Skipped for skinned meshes and geometries with morph targets: those keep
+   * their CPU arrays for per-frame skinning/morphing on the CPU.
+   */
+  private _releaseGeometryArrays(node: Mesh | Points) {
+    if (node instanceof SkinnedMesh) return;
+    const geometry = node.geometry;
+    if (!(geometry instanceof BufferGeometry)) return;
+    if (
+      geometry.morphAttributes &&
+      Object.keys(geometry.morphAttributes).length
+    )
+      return;
+    releaseGeometryArraysAfterUpload(geometry);
   }
 
   _initBatchedMaterial(

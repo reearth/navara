@@ -2,7 +2,7 @@
 title: ElevationHeatmapMaterial
 description: Elevation heatmap material for navara_three
 sidebar:
-  order: 40
+  order: 590
 ---
 
 `ElevationHeatmapMaterial` holds the render options for visualizing elevation as a color-coded heatmap on a [`raster`](../../../three/layer/raster-layer/) layer. It decodes DEM tiles and applies a colormap based on elevation values. Set it via the `elevationHeatmap` key.

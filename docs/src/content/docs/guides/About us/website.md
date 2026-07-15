@@ -1,6 +1,6 @@
 ---
 title: Website
-description: A guide in my new Starlight docs site.
+description: Official Re:Earth and Eukarya websites.
 sidebar:
   order: 5
 ---

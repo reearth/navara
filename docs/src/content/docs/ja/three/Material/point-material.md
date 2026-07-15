@@ -2,7 +2,7 @@
 title: PointMaterial
 description: Point material for navara_three
 sidebar:
-  order: 33
+  order: 530
 ---
 
 `PointMaterial`は、ポイントジオメトリレンダリング用のマテリアルを表します。

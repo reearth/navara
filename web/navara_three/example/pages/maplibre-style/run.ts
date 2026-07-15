@@ -4,7 +4,6 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
 import { TILE_DATASETS, TERRAIN_DATASETS } from "../../helpers/constants";
@@ -152,8 +151,7 @@ export async function run() {
   const maplibrePlugin = new MapLibreStylePlugin(style);
   view.addPlugin(maplibrePlugin);
 
-  const attribution = new AttributionPlugin();
-  view.addPlugin(attribution);
+  const attribution = view.attribution;
 
   // Initialize the view
   await view.init();
@@ -205,5 +203,5 @@ export async function run() {
   const pane = new Pane();
   addCameraControl(view, pane);
 
-  attribution.show([TILE_DATASETS.openstreetmap, TERRAIN_DATASETS.gsi]);
+  attribution?.add([TILE_DATASETS.openstreetmap, TERRAIN_DATASETS.gsi]);
 }

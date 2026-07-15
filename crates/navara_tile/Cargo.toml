@@ -25,6 +25,7 @@ navara_buffer_store.workspace = true
 navara_occluder.workspace = true
 navara_mesh.workspace = true
 navara_material.workspace = true
+navara_memory.workspace = true
 navara_component.workspace = true
 navara_tile_component.workspace = true
 navara_quadtree.workspace = true

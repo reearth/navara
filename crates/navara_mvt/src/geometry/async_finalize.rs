@@ -124,7 +124,7 @@ pub struct MvtParseFinalizeContext {
 }
 
 /// Consume completed parse results and spawn their feature entities.
-#[allow(clippy::type_complexity)]
+#[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub(crate) fn finalize_parsed_mvt(
     mut commands: Commands,
     mut batch_table: ResMut<BatchTable>,
@@ -135,6 +135,8 @@ pub(crate) fn finalize_parsed_mvt(
     >,
     mut tile_caches: Query<&mut TileCacheManager>,
     mut rendered_tiles: Query<&mut RenderedTile>,
+    layers: Query<(Entity, &navara_vector_tile::LayerResources)>,
+    mut estimates: ResMut<navara_memory::ReserveEstimates>,
 ) {
     for (delegator, mut result, ctx) in &mut completed {
         // Only finalize if this parse's RenderedTile is *still* the canonical
@@ -160,6 +162,15 @@ pub(crate) fn finalize_parsed_mvt(
         if is_current {
             let rtc_center = ctx.tile_extent.map(worker_rtc_center).unwrap_or(Vec3::ZERO);
             let tile_info = ctx.tile_extent.map(|ext| (ctx.tile_handle, ext));
+
+            // Measure the geometry bytes this finalize writes into the store.
+            // The packed worker streams were already taken out above, so from
+            // here the only store growth is the built geometry buffers (which
+            // Three.js later uploads and drops from the CPU store, so they
+            // persist only on the GPU). The store delta is therefore the pure
+            // geometry size — the same quantity the synchronous path charges in
+            // `transfer_mesh` — so both paths agree on a tile's cost.
+            let buf_before = buf.total_bytes() as u64;
 
             let mut cursor =
                 PackedMvtStreamsCursor::new(f64_stream, f32_stream, u32_stream, u8_stream);
@@ -217,6 +228,53 @@ pub(crate) fn finalize_parsed_mvt(
 
                 if let Ok(mut rt) = rendered_tiles.get_mut(ctx.rendered_tile) {
                     rt.feature_ids.get_or_insert_with(Vec::new).extend(entities);
+                }
+            }
+
+            // Charge the freshly built geometry to the memory ledger on the
+            // *rendered tile* entity — the same entity `clear_caches` reads the
+            // `TileCost` from when it retains the tile, and `enforce_memory_budget`
+            // credits back on eviction. Without this, worker-delegated MVT tiles
+            // (the default build) carried zero GPU cost, so the budget never saw
+            // vector geometry and eviction/SSE pressure never triggered.
+            let geometry_bytes = buf.total_bytes().saturating_sub(buf_before as usize) as u64;
+            if rendered_tiles.get(ctx.rendered_tile).is_ok() {
+                let cost = navara_vector_tile::estimate_vector_tile_cost(geometry_bytes);
+                commands.entity(ctx.rendered_tile).insert(cost);
+
+                // FIX 3: warm the per-layer reservation EMA with this landed
+                // cost. In the default delegated_worker build the only other
+                // record site (`transfer_mesh`) is dead code (construct_geometry
+                // returns None), so without this the `ReserveKey::VectorLayer` EMA
+                // never warms and vector reservations stay at the 512KB seed
+                // forever. The key must match the RESERVATION site's derivation
+                // (`data_requester/system.rs`): the first `LayerResources` entity
+                // whose `tile_cache_manager` holds this tile. Both sites reduce
+                // to the same first-matching layer for a shared manager.
+                let layer_entity = layers.iter().find_map(|(layer_entity, layer)| {
+                    let tc = tile_caches.get(layer.tile_cache_manager).ok()?;
+                    (tc.rendered_tile_caches.get(&ctx.tile_handle) == Some(&ctx.rendered_tile))
+                        .then_some(layer_entity)
+                });
+                if let Some(layer_entity) = layer_entity {
+                    estimates.record(
+                        navara_memory::ReserveKey::VectorLayer(layer_entity),
+                        geometry_bytes,
+                    );
+                }
+
+                // FIX 4: if the tile is already in the retention pool (it was
+                // retained during the multi-frame worker parse, when `clear_caches`
+                // pooled it with a zero `TileCost` because the cost lands only
+                // now), refresh the pooled entry's cost so the evictable-pool
+                // total and eviction credit converge to the real cost.
+                for mut tc in tile_caches.iter_mut() {
+                    if tc.rendered_tile_caches.get(&ctx.tile_handle) == Some(&ctx.rendered_tile) {
+                        if let Some(entry) = tc.retained.get_mut(&ctx.tile_handle) {
+                            entry.cost = cost;
+                        }
+                        break;
+                    }
                 }
             }
         }
@@ -393,5 +451,113 @@ mod test {
         assert!(world.entity(delegator).contains::<Deleted>());
         assert!(world.entity(delegatee).contains::<Deleted>());
         assert!(world.resource::<BufferStore>().is_empty());
+    }
+
+    /// FIX 1 (worker path): finalizing a worker-parsed MVT tile must charge the
+    /// built geometry to the ledger by inserting a `TileCost` on the *rendered
+    /// tile* entity — the same entity `clear_caches`/`enforce_memory_budget`
+    /// read the cost from. In the default `delegated_worker` build,
+    /// `construct_geometry` only spawns the parse task (returns `None`), so
+    /// `transfer_mesh` inserts nothing; without this, worker MVT tiles carried
+    /// zero GPU cost and the budget never saw vector geometry.
+    #[test]
+    fn it_should_charge_a_tile_cost_when_finalizing_worker_geometry() {
+        use std::sync::Arc;
+
+        use bevy_ecs::system::RunSystemOnce;
+        use geozero::mvt::tile;
+        use navara_material::{Appearance, PointMaterial};
+        use navara_math::Vec3;
+        use navara_memory::MemoryLedger;
+        use navara_parser::mvt::{
+            LayerParseKind, ParsedGeometry, ParsedLayerGroup, pack_parsed_mvt_groups,
+        };
+        use navara_vector_tile::{RenderedTile, TileCacheManager};
+        use navara_worker::{WorkerTaskCompleted, parse_mvt_tile::ParseMvtTileResult};
+
+        let mut world = World::new();
+        world.init_resource::<BatchTable>();
+        world.init_resource::<MemoryLedger>();
+        world.init_resource::<navara_memory::ReserveEstimates>();
+
+        // A single point group, packed exactly as the worker would hand it back.
+        let group = ParsedLayerGroup {
+            layer_id: "poi".to_string(),
+            kind: LayerParseKind::Point,
+            feature_count: 2,
+            feature_tags_flat: vec![],
+            feature_tag_sizes: vec![0, 0],
+            keys: Arc::new(vec![]),
+            values: Arc::new(vec![] as Vec<tile::Value>),
+            geometry: ParsedGeometry::Points {
+                coords: vec![Vec3::new(1.0, 2.0, 0.0), Vec3::new(3.0, 4.0, 0.0)],
+                batch_indices: vec![0, 1],
+                encoded_coords: vec![0.1, 0.2, 0.3, 0.4, 0.5, 0.6],
+            },
+        };
+        let packed = pack_parsed_mvt_groups(vec![group]);
+
+        let mut buf = BufferStore::new();
+        let result = ParseMvtTileResult {
+            f64_handle: buf.new_f64(packed.f64_stream),
+            f32_handle: buf.new_f32(packed.f32_stream),
+            u32_handle: buf.new_u32(packed.u32_stream),
+            u8_handle: buf.new_u8(packed.u8_stream),
+            meta: packed.meta,
+        };
+        // Stand-in pbf (freed by finalize's safety-net remove).
+        let pbf_handle = buf.new_u8(vec![0u8; 8]);
+        world.insert_resource(buf);
+
+        let handle: TileHandle = 0;
+        let rendered_tile = world
+            .spawn(RenderedTile {
+                tile_handle: handle,
+                feature_ids: None,
+            })
+            .id();
+
+        // The tile must be the canonical rendered tile for its handle so the
+        // finalize path treats the result as current and builds geometry.
+        let mut tc = TileCacheManager::default();
+        tc.rendered_tile_caches.insert(handle, rendered_tile);
+        world.spawn(tc);
+
+        world.spawn((
+            result,
+            WorkerTaskCompleted,
+            MvtParseFinalizeContext {
+                rendered_tile,
+                tile_handle: handle,
+                tile_extent: None,
+                order: OrderByDistance {
+                    sse: 0.,
+                    distance: 0.,
+                },
+                appearances: vec![(
+                    "poi".to_string(),
+                    Arc::new(vec![Appearance::Point(PointMaterial::default())]),
+                )],
+                pbf_handle,
+            },
+        ));
+
+        world.run_system_once(finalize_parsed_mvt).unwrap();
+
+        // A real, non-zero cost was charged on the rendered tile...
+        let cost = world
+            .entity(rendered_tile)
+            .get::<navara_memory::TileCost>()
+            .expect("a TileCost must be inserted on the rendered tile");
+        assert!(
+            cost.gpu_est > 0,
+            "worker-built geometry must carry a non-zero GPU estimate, got {cost:?}"
+        );
+        // ...and the component hook mirrored it into the ledger.
+        assert_eq!(
+            world.resource::<MemoryLedger>().gpu_bytes_est,
+            cost.gpu_est,
+            "the TileCost hook must have added the geometry to the ledger"
+        );
     }
 }

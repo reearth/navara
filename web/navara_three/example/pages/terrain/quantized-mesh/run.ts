@@ -3,7 +3,7 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import { AttributionPlugin, CesiumIonPlugin } from "@navara/three_plugins";
+import { CesiumIonPlugin } from "@navara/three_plugins";
 import { ButtonApi, Pane } from "tweakpane";
 
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
@@ -52,8 +52,7 @@ export const run = async (
   });
   view.addPlugin(cesiumIon);
 
-  const attribution = new AttributionPlugin();
-  view.addPlugin(attribution);
+  const attribution = view.attribution;
 
   await view.init();
 
@@ -68,6 +67,11 @@ export const run = async (
   let currentTerrainType = initialTerrainType;
   let terrainSource: Source | undefined;
   let terrainLayer: Layer | undefined;
+
+  const terrainDataset = (type: TerrainType) =>
+    type === "cesiumIon"
+      ? TERRAIN_DATASETS.cesiumIon
+      : TERRAIN_DATASETS.reearthQuantizedMesh;
 
   const addTerrain = (type: TerrainType) => {
     if (type === "cesiumIon") {
@@ -93,11 +97,7 @@ export const run = async (
         terrain: { castShadow: true, receiveShadow: true },
       });
     }
-    const dataset =
-      type === "cesiumIon"
-        ? TERRAIN_DATASETS.cesiumIon
-        : TERRAIN_DATASETS.reearthQuantizedMesh;
-    attribution.show([dataset, TILE_DATASETS.eox]);
+    attribution?.add([terrainDataset(type), TILE_DATASETS.eox]);
   };
 
   // Delete the current terrain layer and its explicit source (if any) on the
@@ -107,6 +107,8 @@ export const run = async (
     terrainSource?.delete();
     terrainLayer = undefined;
     terrainSource = undefined;
+    // Drop the current terrain's credit (eox stays — permanent base).
+    attribution?.remove([terrainDataset(currentTerrainType)]);
   };
 
   // Switch terrain on the live view: delete the current terrain, then add the

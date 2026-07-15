@@ -1,4 +1,4 @@
-import type { AttributionItem } from "@navara/three_plugins";
+import type { AttributionItem } from "@navara/three";
 
 /**
  * Data-source attribution table for the attribution example.

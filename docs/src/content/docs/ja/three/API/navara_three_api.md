@@ -2,7 +2,7 @@
 title: navara_three_api
 description: navara_three API reference for Three.js integration utilities
 sidebar:
-  order: 10
+  order: 900
 ---
 
 navara_three_api は、Three.js と Navara エンジンを統合するためのユーティリティ関数を提供する API です。地理空間計算、座標変換、交差判定、RTE（Relative to Eye）レンダリングなど、3D 地理空間アプリケーション開発に必要な機能を Three.js の型システムと統合して提供します。

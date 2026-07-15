@@ -8,7 +8,6 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
 import { SPLAT_DATASETS, TILE_DATASETS } from "../../helpers/constants";
@@ -126,8 +125,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
 
-  const attribution = new AttributionPlugin();
-  view.addPlugin(attribution);
+  const attribution = view.attribution;
 
   await view.init();
 
@@ -139,7 +137,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     rasterTile: { maxZoom: 23 },
   });
 
-  attribution.show([
+  attribution?.add([
     TILE_DATASETS.openstreetmap,
     SPLAT_DATASETS.quechua,
     SPLAT_DATASETS.pencilSharpener,

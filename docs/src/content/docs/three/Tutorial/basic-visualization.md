@@ -2,7 +2,7 @@
 title: Basic Visualization
 description: Basic implementation of map display, terrain display, and GIS data display
 sidebar:
-  order: 4
+  order: 200
 ---
 
 This tutorial explains the basic methods for displaying maps using navara_three.

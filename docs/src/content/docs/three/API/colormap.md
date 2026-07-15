@@ -2,7 +2,7 @@
 title: ColorMap Class
 description: API Reference for ColorMap Class - a class for defining color gradients
 sidebar:
-  order: 19
+  order: 980
 ---
 
 The `ColorMap` class defines color gradients (color interpolation) used for elevation heatmaps and similar visualizations. It converts values in the range 0.0-1.0 to colors based on a lookup table (LUT).

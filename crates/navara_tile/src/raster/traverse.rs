@@ -3,10 +3,11 @@ use bevy_ecs::system::Commands;
 use navara_camera::CameraFrustum;
 use navara_component::{Order, Priority};
 use navara_core::Ellipsoid;
-use navara_fog::Fog;
+use navara_fog::{DynamicSseTerm, Fog};
 use navara_frame::FrameManager;
 use navara_layer::TilesLayer;
 use navara_math::{FloatType, Transform};
+use navara_memory::SseDegrade;
 use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 use navara_source::SourceStore;
 use navara_tile_component::{
@@ -49,7 +50,9 @@ pub fn traverse_raster(
     occluder: &EllipsoidalOccluder,
     texture_fragment: &TileTextureFragmentQuery,
     fog: &Fog,
+    dynamic_sse: DynamicSseTerm,
     max_sse: f64,
+    degrade: SseDegrade,
     terrain_present: bool,
 ) {
     let extent = match qt.qt.get(handle) {
@@ -87,6 +90,7 @@ pub fn traverse_raster(
         if terrain_present { 65. } else { 64. },
         distance_from_camera,
         fog,
+        dynamic_sse,
     );
     let tile = qt.qt.get_mut(handle).unwrap();
     tile.sse = sse;
@@ -102,7 +106,8 @@ pub fn traverse_raster(
     // Request this level's textures along the selected path (idempotent: the
     // request helper skips layers that already have an in-flight/loaded
     // fragment). This gives the terrain pull a coarse fallback while finer
-    // children load.
+    // children load. Frustum-culled tiles still request (parent backfill) but
+    // demoted, so in-view tiles win the pending-request slots.
     if is_over_min_z {
         let tile = qt.qt.get_mut(handle).unwrap();
         request_raster_texture_fragment(
@@ -112,11 +117,16 @@ pub fn traverse_raster(
             source_store,
             handle,
             texture_fragment,
-            Priority::Medium,
+            if is_culled_by_frustum {
+                Priority::Medium.demote()
+            } else {
+                Priority::Medium
+            },
         );
     }
 
-    let meets_sse = sse <= max_sse && is_over_min_z;
+    let meets_sse =
+        sse <= degrade.effective_max_sse(max_sse, distance_from_camera) && is_over_min_z;
 
     // Once the screen-space error is satisfied, stop: no need for finer tiles.
     // Beyond max zoom, the layer overscales (parent texture stretched), so we
@@ -153,7 +163,9 @@ pub fn traverse_raster(
                 occluder,
                 texture_fragment,
                 fog,
+                dynamic_sse,
                 max_sse,
+                degrade,
                 terrain_present,
             );
         }
@@ -186,6 +198,7 @@ mod tests {
                 uvs: 0,
                 heights: None,
                 normals: None,
+                watermask: None,
             });
             t
         });
@@ -251,7 +264,9 @@ mod tests {
             &occluder,
             &texture_fragment,
             &fog,
+            DynamicSseTerm::NONE,
             config.max_sse,
+            SseDegrade::NONE,
             config.terrain_present,
         );
     }

@@ -4,10 +4,11 @@ use navara_core::Ellipsoid;
 
 use navara_buffer_store::BufferStore;
 use navara_feature_component::{id::FeatureId, render::RenderableFeature};
-use navara_fog::Fog;
+use navara_fog::{DynamicSseTerm, Fog};
 use navara_frame::FrameManager;
 use navara_globe::Globe;
 use navara_math::{FloatType, Transform};
+use navara_memory::SseDegrade;
 
 use navara_layer::TerrainLayer;
 use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
@@ -53,6 +54,8 @@ pub fn traverse_tile(
     features: &Query<&FeatureId, With<VectorTileFeatureMarker>>,
     renderable_features: &mut Query<&mut RenderableFeature>,
     fog: &Fog,
+    dynamic_sse: DynamicSseTerm,
+    degrade: SseDegrade,
     is_ancestor_rendered: bool,
     // This is used to keep rendering current children when parent tile isn't ready after you zoomed out.
     meets_sse_ancestors: bool,
@@ -137,6 +140,7 @@ pub fn traverse_tile(
         if terrain_layer.is_some() { 65. } else { 64. },
         distance_from_camera,
         fog,
+        dynamic_sse,
     );
 
     tile.sse = sse;
@@ -168,7 +172,7 @@ pub fn traverse_tile(
     } else {
         traversal_config.max_sse()
     } as f64;
-    let meets_sse = sse <= max_sse;
+    let meets_sse = sse <= degrade.effective_max_sse(max_sse, distance_from_camera);
 
     let is_renderable = is_rendered_last_frame || is_tile_ready;
 
@@ -189,6 +193,8 @@ pub fn traverse_tile(
 
         if !meets_sse_ancestors {
             let tile = qt.qt.get_mut(handle).unwrap();
+            // Frustum-culled tiles still request (parent backfill) but
+            // demoted, so in-view tiles win the pending-request slots.
             source.prepare_tile(
                 command,
                 tile,
@@ -196,7 +202,11 @@ pub fn traverse_tile(
                 tc,
                 buf,
                 data_requesters,
-                Priority::Low,
+                if is_culled_by_frustum {
+                    Priority::Low.demote()
+                } else {
+                    Priority::Low
+                },
             );
         }
 
@@ -243,6 +253,8 @@ pub fn traverse_tile(
                 features,
                 renderable_features,
                 fog,
+                dynamic_sse,
+                degrade,
                 if meets_sse_ancestors {
                     is_ancestor_rendered
                 } else {
@@ -445,7 +457,11 @@ pub fn traverse_tile(
             tc,
             buf,
             data_requesters,
-            Priority::Medium,
+            if is_culled_by_frustum {
+                Priority::Medium.demote()
+            } else {
+                Priority::Medium
+            },
         );
 
         return TraversalResult::NotFound;

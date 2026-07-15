@@ -2,7 +2,7 @@
 title: Font Family from CSS
 description: API Reference for building font families from CSS @font-face rules
 sidebar:
-  order: 23
+  order: 1020
 ---
 
 These utilities build a `FontFamily` (see [`addFontFamily()`](../../../three/api/threeview-functions/#addfontfamily)) from CSS `@font-face` rules, so faces and their unicode ranges don't have to be written by hand. Each `@font-face` block becomes one face, taking its `src` URL and its `unicode-range`. Font files stay lazily downloaded: only the stylesheet is fetched up front, and each face file is downloaded the first time a label needs one of its codepoints.

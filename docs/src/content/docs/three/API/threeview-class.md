@@ -2,7 +2,7 @@
 title: ThreeView Class
 description: API Reference for ThreeView Class Overview and Constructor
 sidebar:
-  order: 11
+  order: 910
 ---
 
 ThreeView is the main class for creating and managing 3D map visualizations using Three.js and WebGL. It provides a comprehensive API for layer management, camera control, rendering, and event handling.
@@ -363,6 +363,120 @@ const view = new ThreeView({
   mobileOptimization: true,
 });
 ```
+
+### cacheBytes
+
+**Type:** `number | undefined`
+
+**Description:** Memory budget in bytes for tile caches (WASM buffers + estimated GPU cost). Tiles leaving the view are retained until the budget is exceeded, then evicted least-recently-visited first — panning back is refetch-free while total usage stays capped.
+
+**Default:** Device-dependent — desktop: a quarter of the reported device memory capped at 2 GB; mobile: 512 MB (256 MB when the device reports less than 4 GB). See `getDefaultCacheBytes()`.
+
+**Example:**
+
+```typescript
+const view = new ThreeView({
+  cacheBytes: 512 * 1024 * 1024, // 512 MB
+});
+```
+
+:::tip[Related Documentation]
+Can also be changed at runtime via the [`cacheBytes` property](./threeview-properties#cachebytes).
+:::
+
+### lodFog
+
+**Type:** `Partial<LodFogSettings> | undefined`
+
+**Description:** LOD fog: a distance-based screen-space-error relaxation used by tile LOD selection — far tiles tolerate a larger error and stay coarser while near tiles keep full resolution. Purely an LOD control; it never affects visual fog rendering. Partial values are merged over the device default.
+
+```typescript
+type LodFogSettings = {
+  enabled: boolean;
+  // Distance scale of the relaxation ramp (2.0e-4 ≈ 63% strength at 5km)
+  density: number;
+  // Maximum SSE relaxation (in pixels) at far distance
+  sseFactor: number;
+};
+```
+
+**Default:** Device-memory-dependent — desktop: `{ density: 2.0e-4, sseFactor: 2.0 }`; low-memory devices ship a stronger curve so the tile working set stays small. See `getDefaultLodFog()`.
+
+**Example:**
+
+```typescript
+const view = new ThreeView({
+  lodFog: { density: 2.5e-4, sseFactor: 3.0 },
+});
+```
+
+### dynamicSse
+
+**Type:** `Partial<DynamicSseSettings> | undefined`
+
+**Description:** Dynamic screen-space error (CesiumJS `dynamicScreenSpaceError` equivalent): tilted, street-level horizon views tolerate a larger error for far tiles, cutting the tile working set in exactly the views that over-refine. Zero effect looking straight down; fades out as the camera climbs past `maxHeight` meters. Partial values are merged over the default.
+
+```typescript
+type DynamicSseSettings = {
+  enabled: boolean;
+  // Distance scale of the relaxation ramp before tilt/height scaling
+  density: number;
+  // Maximum SSE relaxation (in pixels) at full tilt and saturation
+  sseFactor: number;
+  // Fraction of the height band below which the effect is at full strength
+  heightFalloff: number;
+  // Camera height band (meters above the ellipsoid) the effect fades across
+  minHeight: number;
+  maxHeight: number;
+};
+```
+
+**Default:** `{ enabled: true, density: 2.0e-4, sseFactor: 24.0, heightFalloff: 0.25, minHeight: 0, maxHeight: 8000 }`. See `getDefaultDynamicSse()`.
+
+**Example:**
+
+```typescript
+const view = new ThreeView({
+  dynamicSse: { sseFactor: 16.0, maxHeight: 4000 },
+});
+```
+
+### memoryBudget
+
+**Type:** `object | undefined`
+
+**Description:** Overrides for the worker-side memory budgets and the memory-pressure LOD degrade. Defaults derive from the device memory together with `cacheBytes` — see `getDefaultMemoryBudgets()`.
+
+```typescript
+type MemoryBudgetOptions = {
+  // WASM heap budget per tile worker; the pool recycles a worker above it
+  maxWorkerHeapBytes?: number;
+  // Font-worker cache budget (font data + atlas pixels; caps further growth)
+  fontBudgetBytes?: number;
+  // In-flight data fetch cap per tile pipeline
+  maxPendingRequests?: number;
+  // Resting (base) memory-pressure SSE multiplier; > 1 keeps far tiles coarser even without pressure
+  sseMultiplierMin?: number;
+  // Ceiling the dynamic memory-pressure SSE degrade can climb to
+  sseMultiplierMax?: number;
+};
+```
+
+**Example:**
+
+```typescript
+const view = new ThreeView({
+  memoryBudget: {
+    maxWorkerHeapBytes: 128 * 1024 * 1024,
+    sseMultiplierMin: 1.0,
+    sseMultiplierMax: 8.0,
+  },
+});
+```
+
+:::tip[Related Documentation]
+The SSE multiplier range can also be changed at runtime via [`setSseMultiplierRange()`](./threeview-functions#setssemultiplierrange).
+:::
 
 ### waterTexture
 

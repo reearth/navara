@@ -3,7 +3,6 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import { AttributionPlugin } from "@navara/three_plugins";
 
 import {
   TERRAIN_DATASETS,
@@ -21,8 +20,7 @@ const run = async () => {
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
 
-  const attribution = new AttributionPlugin();
-  view.addPlugin(attribution);
+  const attribution = view.attribution;
 
   await view.init();
 
@@ -97,7 +95,7 @@ const run = async () => {
     rasterTile: { maxZoom: 23 },
   });
 
-  attribution.show([
+  attribution?.add([
     TILE_DATASETS.openstreetmap,
     TERRAIN_DATASETS.gsi,
     TILES_3D_DATASETS.plateauChiyoda,
