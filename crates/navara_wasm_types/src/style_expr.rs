@@ -1,4 +1,4 @@
-use maplibre_expr::{EvaluationContext, Expr, Feature, Value, evaluate, parse, typecheck};
+use maplibre_expr::{EvaluationContext, Expr, Feature, Type, Value, evaluate, parse, typecheck};
 use serde_json::Value as JsonValue;
 use std::collections::BTreeMap;
 use wasm_bindgen::prelude::*;
@@ -95,7 +95,8 @@ impl CompiledFilter {
 
         let expr = parse(&json).map_err(|e| JsValue::from_str(&format!("Parse error: {:?}", e)))?;
 
-        let expr = typecheck(&expr, None, false)
+        // Filters must type-check to boolean
+        let expr = typecheck(&expr, Some(&Type::Boolean), false)
             .map_err(|e| JsValue::from_str(&format!("Type error: {:?}", e)))?;
 
         Ok(CompiledFilter { expr })
