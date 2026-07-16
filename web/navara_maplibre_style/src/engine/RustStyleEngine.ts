@@ -72,12 +72,13 @@ export class RustStyleEngine implements StyleEngine {
     spec: PropertySpec,
     geometryType = "Point",
   ): (ctx: EvaluationContext) => T {
-    // Handle constant values directly (optimization)
-    if (
-      typeof expr === "string" ||
-      typeof expr === "number" ||
-      typeof expr === "boolean"
-    ) {
+    // Handle constant values directly (optimization).
+    // For color strings, still compile via WASM so maplibre-expr can validate/coerce (and preserve alpha).
+    if (typeof expr === "number" || typeof expr === "boolean") {
+      const constantValue = expr as T;
+      return () => constantValue;
+    }
+    if (typeof expr === "string" && spec.type !== "color") {
       const constantValue = expr as T;
       return () => constantValue;
     }
