@@ -18,7 +18,7 @@ import {
   toEvaluatedValue,
 } from "./adapters/toEvaluatedValue";
 import { toLayerDescription } from "./adapters/toLayerDescription";
-import { JsStyleEngine } from "./engine/JsStyleEngine";
+import { RustStyleEngine } from "./engine/RustStyleEngine";
 import type { StyleEngine } from "./engine/StyleEngine";
 import type { ParsedStyle, StyleLayer } from "./engine/types";
 
@@ -30,18 +30,25 @@ export class MapLibreStylePlugin extends Plugin<ThreeView, ViewContext> {
    * Create a new MapLibre Style plugin.
    *
    * @param style - MapLibre Style JSON specification
-   * @param engine - Style engine implementation (defaults to JsStyleEngine for PoC)
+   * @param engine - Style engine implementation (defaults to RustStyleEngine)
    */
   constructor(
     private readonly style: unknown,
-    private readonly engine: StyleEngine = new JsStyleEngine(),
+    private readonly engine: StyleEngine = new RustStyleEngine(),
   ) {
     super();
   }
 
   async init(view: ThreeView, _ctx: ViewContext): Promise<void> {
-    // Parse and validate the style
-    this.parsedStyle = await this.engine.parseStyle(this.style);
+    try {
+      // Parse and validate the style
+      this.parsedStyle = await this.engine.parseStyle(this.style);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      const wrapped = new Error(`Failed to parse MapLibre style: ${message}`);
+      (wrapped as Error & { cause?: unknown }).cause = err;
+      throw wrapped;
+    }
 
     // Process each layer in the style
     for (const styleLayer of this.parsedStyle.layers) {

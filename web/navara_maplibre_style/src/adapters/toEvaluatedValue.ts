@@ -5,48 +5,35 @@
 import { Color } from "@navara/three";
 
 import type { StyleEngine } from "../engine/StyleEngine";
-import type { EvaluationContext, StyleLayer } from "../engine/types";
+import {
+  isMapLibreColor,
+  type EvaluationContext,
+  type StyleLayer,
+} from "../engine/types";
 
 /**
- * MapLibre Color object returned from expression evaluation.
+ * Convert MapLibre color value to Navara Color and extract alpha.
+ *
+ * Returns object { color, alpha } where:
+ * - For MapLibreColor objects: alpha is extracted from the `a` field (or defaults to 1.0)
+ * - For CSS color strings: alpha is always 1.0 (alpha from rgba/hsla/#RRGGBBAA is NOT parsed)
  */
-type MapLibreColor = {
-  r: number;
-  g: number;
-  b: number;
-  a: number;
-};
-
-/**
- * Type guard to check if a value is a MapLibre Color object.
- */
-function isMapLibreColor(value: unknown): value is MapLibreColor {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "r" in value &&
-    "g" in value &&
-    "b" in value &&
-    typeof (value as MapLibreColor).r === "number" &&
-    typeof (value as MapLibreColor).g === "number" &&
-    typeof (value as MapLibreColor).b === "number"
-  );
-}
-
-/**
- * Convert MapLibre color value to Navara Color.
- * MapLibre's expression evaluator returns Color objects for evaluated expressions,
- * but fallback defaults from spec.default are often CSS strings like "#000000".
- */
-function toNavaraColor(value: unknown): Color | undefined {
+function toNavaraColor(
+  value: unknown,
+): { color: Color; alpha: number } | undefined {
   try {
     if (typeof value === "string") {
       // CSS color string from spec.default fallback (e.g., "#000000", "rgb(255, 0, 0)")
-      return new Color().setStyle(value);
+      const color = new Color().setStyle(value);
+      // Alpha from rgba/hsla/#RRGGBBAA is not extracted (Three.js Color doesn't store alpha)
+      // TODO: Parse alpha from CSS strings like rgba(r,g,b,a) or #RRGGBBAA
+      return { color, alpha: 1.0 };
     }
     if (isMapLibreColor(value)) {
-      // MapLibre Color object with r, g, b values (0-1 range)
-      return new Color().setRGB(value.r, value.g, value.b);
+      // MapLibre Color object with r, g, b, a values (0-1 range)
+      const color = new Color().setRGB(value.r, value.g, value.b);
+      const alpha = value.a ?? 1.0;
+      return { color, alpha };
     }
   } catch {
     // Ignore invalid color values.
@@ -85,7 +72,7 @@ export function createPaintEvaluators(
     const expr = value ?? spec.default;
 
     try {
-      evaluators[key] = engine.createValueFn(expr, spec as any, geometryType);
+      evaluators[key] = engine.createValueFn(expr, spec, geometryType);
     } catch (err) {
       console.error(`Failed to create evaluator for ${key}:`, err);
       // Fallback to constant default value
@@ -109,25 +96,59 @@ export function toEvaluatedValue(
 ) {
   const result: {
     color?: Color;
+    opacity?: number;
     show?: boolean;
-    // Future: extrudedHeight, height, text
+    // TODO: extrudedHeight, height, size, width, etc. can be added here as needed
   } = {};
 
   // Map paint properties to Navara properties based on layer type
   if (styleLayer.type === "fill") {
-    const color = toNavaraColor(paintValues["fill-color"]);
-    if (color) {
-      result.color = color;
+    const colorResult = toNavaraColor(paintValues["fill-color"]);
+    if (colorResult) {
+      result.color = colorResult.color;
+    }
+    // Handle opacity independently of color (MapLibre treats them separately)
+    const paintOpacity = paintValues["fill-opacity"];
+    const colorAlpha = colorResult?.alpha ?? 1.0;
+    const opacity =
+      typeof paintOpacity === "number" && Number.isFinite(paintOpacity)
+        ? paintOpacity
+        : undefined;
+    if (opacity !== undefined || colorResult) {
+      result.opacity =
+        opacity !== undefined ? colorAlpha * opacity : colorAlpha;
     }
   } else if (styleLayer.type === "line") {
-    const color = toNavaraColor(paintValues["line-color"]);
-    if (color) {
-      result.color = color;
+    const colorResult = toNavaraColor(paintValues["line-color"]);
+    if (colorResult) {
+      result.color = colorResult.color;
+    }
+    // Handle opacity independently of color
+    const paintOpacity = paintValues["line-opacity"];
+    const colorAlpha = colorResult?.alpha ?? 1.0;
+    const opacity =
+      typeof paintOpacity === "number" && Number.isFinite(paintOpacity)
+        ? paintOpacity
+        : undefined;
+    if (opacity !== undefined || colorResult) {
+      result.opacity =
+        opacity !== undefined ? colorAlpha * opacity : colorAlpha;
     }
   } else if (styleLayer.type === "circle") {
-    const color = toNavaraColor(paintValues["circle-color"]);
-    if (color) {
-      result.color = color;
+    const colorResult = toNavaraColor(paintValues["circle-color"]);
+    if (colorResult) {
+      result.color = colorResult.color;
+    }
+    // Handle opacity independently of color
+    const paintOpacity = paintValues["circle-opacity"];
+    const colorAlpha = colorResult?.alpha ?? 1.0;
+    const opacity =
+      typeof paintOpacity === "number" && Number.isFinite(paintOpacity)
+        ? paintOpacity
+        : undefined;
+    if (opacity !== undefined || colorResult) {
+      result.opacity =
+        opacity !== undefined ? colorAlpha * opacity : colorAlpha;
     }
   }
 

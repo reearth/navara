@@ -21,6 +21,7 @@ import {
   updateBatchAttribute,
   type BatchedAttributeName,
   type BatchTextureConfig,
+  type BatchTextureRowKey,
   type DefaultBatchAttributeValues,
 } from "./batchTexture";
 import type { FeatureMesh } from "./featureMesh";
@@ -32,10 +33,24 @@ export type BatchedFeatureAttributes<
   _batchid?: BufferAttribute;
 } & Attr;
 
-export const FEATURE_BATCH_TEXTURE_CONFIG: BatchTextureConfig = {
-  rows: ["COLOR_SHOW", "HEIGHT", "EXTRUDED_HEIGHT", "LINE_WIDTH"],
-  batchLength: 0,
-};
+/**
+ * Batch texture rows per mesh type. A mesh's rows must only contain attributes
+ * its shaders declare receiver variables for: `updateBatchAttribute` turns a
+ * `USE_BATCH_*` define on whenever the row exists, and the shared
+ * `batch_texture_vertex` chunk then assigns to the receiver — an undeclared one
+ * (e.g. `addExtrudedHeight` in the polyline shaders) breaks shader compilation.
+ */
+export const POLYGON_BATCH_TEXTURE_ROWS: BatchTextureRowKey[] = [
+  "COLOR_SHOW",
+  "HEIGHT",
+  "EXTRUDED_HEIGHT",
+];
+
+export const POLYLINE_BATCH_TEXTURE_ROWS: BatchTextureRowKey[] = [
+  "COLOR_SHOW",
+  "HEIGHT",
+  "LINE_WIDTH",
+];
 
 export class BatchedFeatureMesh<
   Buf extends BufferGeometry<BatchedFeatureAttributes> =
@@ -65,15 +80,26 @@ export class BatchedFeatureMesh<
     );
   }
 
+  /**
+   * Batch texture rows supported by this mesh type's shaders. Attributes
+   * without a row are silently ignored by `updateBatchAttribute`.
+   */
+  _getBatchTextureRows(): BatchTextureRowKey[] {
+    throw new Unimplemented();
+  }
+
   _initBatchedMaterial() {
-    initBatchedMaterial(this.material, FEATURE_BATCH_TEXTURE_CONFIG);
+    initBatchedMaterial(this.material, {
+      rows: this._getBatchTextureRows(),
+      batchLength: 0,
+    });
   }
 
   _initBatchDataTexture(): void {
     invariant(this.batchLength != null);
 
     const config: BatchTextureConfig = {
-      ...FEATURE_BATCH_TEXTURE_CONFIG,
+      rows: this._getBatchTextureRows(),
       batchLength: this.batchLength,
     };
 

@@ -193,4 +193,104 @@ describe("toEvaluatedValue", () => {
     expect(result.color).toBeUndefined();
     expect(result.show).toBe(true);
   });
+
+  it("should map fill-opacity to result opacity", () => {
+    const layer: StyleLayer = {
+      id: "test",
+      type: "fill",
+      source: "test",
+    };
+
+    const paintValues = {
+      "fill-color": { r: 1, g: 0, b: 0, a: 1 },
+      "fill-opacity": 0.5,
+    };
+
+    const result = toEvaluatedValue(layer, paintValues);
+
+    expect(result.opacity).toBeCloseTo(0.5, 2);
+  });
+
+  it("should use color alpha when no paint opacity specified", () => {
+    const layer: StyleLayer = {
+      id: "test",
+      type: "fill",
+      source: "test",
+    };
+
+    const paintValues = {
+      "fill-color": { r: 1, g: 0, b: 0, a: 0.7 },
+    };
+
+    const result = toEvaluatedValue(layer, paintValues);
+
+    expect(result.opacity).toBeCloseTo(0.7, 2);
+  });
+
+  it("should multiply color alpha with paint opacity", () => {
+    const layer: StyleLayer = {
+      id: "test",
+      type: "fill",
+      source: "test",
+    };
+
+    const paintValues = {
+      "fill-color": { r: 1, g: 0, b: 0, a: 0.8 },
+      "fill-opacity": 0.5,
+    };
+
+    const result = toEvaluatedValue(layer, paintValues);
+
+    expect(result.opacity).toBeCloseTo(0.4, 2); // 0.8 * 0.5
+  });
+
+  it("should handle line-opacity for line layers", () => {
+    const layer: StyleLayer = {
+      id: "test",
+      type: "line",
+      source: "test",
+    };
+
+    const paintValues = {
+      "line-color": { r: 0, g: 0, b: 1, a: 0.6 },
+      "line-opacity": 0.5,
+    };
+
+    const result = toEvaluatedValue(layer, paintValues);
+
+    expect(result.opacity).toBeCloseTo(0.3, 2); // 0.6 * 0.5
+  });
+
+  it("should handle circle-opacity for circle layers", () => {
+    const layer: StyleLayer = {
+      id: "test",
+      type: "circle",
+      source: "test",
+    };
+
+    const paintValues = {
+      "circle-color": { r: 0, g: 1, b: 0, a: 1 },
+      "circle-opacity": 0.75,
+    };
+
+    const result = toEvaluatedValue(layer, paintValues);
+
+    expect(result.opacity).toBeCloseTo(0.75, 2);
+  });
+
+  it("should default to alpha 1.0 for CSS color strings", () => {
+    const layer: StyleLayer = {
+      id: "test",
+      type: "fill",
+      source: "test",
+    };
+
+    const paintValues = {
+      "fill-color": "#ff0000",
+    };
+
+    const result = toEvaluatedValue(layer, paintValues);
+
+    expect(result.opacity).toBeCloseTo(1.0, 2);
+  });
 });
