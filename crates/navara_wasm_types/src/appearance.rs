@@ -30,6 +30,14 @@ pub struct PointMaterial {
     pub offset_depth: Option<bool>,
     pub transparent: Option<bool>,
     pub opacity: Option<f32>,
+    /// Participate in screen-space decluttering: when labels/sprites overlap
+    /// on screen, lower-priority ones are hidden. Defaults to `false`.
+    pub declutter: Option<bool>,
+    /// Placement priority for decluttering; higher wins. Only meaningful when
+    /// `declutter` is enabled. Defaults to `0.0`.
+    #[wasm_bindgen(js_name = declutterPriority)]
+    #[serde(rename = "declutterPriority")]
+    pub declutter_priority: Option<f32>,
     // SelectiveEffect
     /// IDs of selective effects to apply (e.g., "bloom", "outline")
     #[wasm_bindgen(getter_with_clone, js_name = effectIds)]
@@ -60,6 +68,8 @@ impl From<PointMaterial> for navara_material::PointMaterial {
             offset_depth: val.offset_depth.unwrap_or(default.offset_depth),
             transparent: val.transparent.unwrap_or(default.transparent),
             opacity: val.opacity.unwrap_or(default.opacity),
+            declutter: val.declutter.unwrap_or(default.declutter),
+            declutter_priority: val.declutter_priority.unwrap_or(default.declutter_priority),
             effect_ids: val.effect_ids.or(default.effect_ids),
             emissive_intensity: val.emissive_intensity.or(default.emissive_intensity),
             emissive_color: val.emissive_color.or(default.emissive_color),
@@ -80,6 +90,8 @@ impl<'a> From<&'a navara_material::PointMaterial> for PointMaterial {
             offset_depth: Some(value.offset_depth),
             transparent: Some(value.transparent),
             opacity: Some(value.opacity),
+            declutter: Some(value.declutter),
+            declutter_priority: Some(value.declutter_priority),
             effect_ids: value.effect_ids.clone(),
             emissive_intensity: value.emissive_intensity,
             emissive_color: value.emissive_color,
@@ -101,6 +113,8 @@ impl PointMaterial {
             offset_depth: self.offset_depth.unwrap_or(other.offset_depth),
             transparent: self.transparent.unwrap_or(other.transparent),
             opacity: self.opacity.unwrap_or(other.opacity),
+            declutter: self.declutter.unwrap_or(other.declutter),
+            declutter_priority: self.declutter_priority.unwrap_or(other.declutter_priority),
             effect_ids: self.effect_ids.clone().or_else(|| other.effect_ids.clone()),
             emissive_intensity: self.emissive_intensity.or(other.emissive_intensity),
             emissive_color: self.emissive_color.or(other.emissive_color),
@@ -147,6 +161,14 @@ pub struct BillboardMaterial {
     #[wasm_bindgen(js_name = alphaTest)]
     #[serde(rename = "alphaTest")]
     pub alpha_test: Option<f32>,
+    /// Participate in screen-space decluttering: when labels/sprites overlap
+    /// on screen, lower-priority ones are hidden. Defaults to `false`.
+    pub declutter: Option<bool>,
+    /// Placement priority for decluttering; higher wins. Only meaningful when
+    /// `declutter` is enabled. Defaults to `0.0`.
+    #[wasm_bindgen(js_name = declutterPriority)]
+    #[serde(rename = "declutterPriority")]
+    pub declutter_priority: Option<f32>,
     // SelectiveEffect
     /// IDs of selective effects to apply (e.g., "bloom", "outline")
     #[wasm_bindgen(getter_with_clone, js_name = effectIds)]
@@ -179,6 +201,8 @@ impl From<BillboardMaterial> for navara_material::BillboardMaterial {
             transparent: val.transparent.unwrap_or(default.transparent),
             opacity: val.opacity.unwrap_or(default.opacity),
             alpha_test: val.alpha_test.unwrap_or(default.alpha_test),
+            declutter: val.declutter.unwrap_or(default.declutter),
+            declutter_priority: val.declutter_priority.unwrap_or(default.declutter_priority),
             effect_ids: val.effect_ids.or(default.effect_ids),
             emissive_intensity: val.emissive_intensity.or(default.emissive_intensity),
             emissive_color: val.emissive_color.or(default.emissive_color),
@@ -201,6 +225,8 @@ impl<'a> From<&'a navara_material::BillboardMaterial> for BillboardMaterial {
             transparent: Some(value.transparent),
             opacity: Some(value.opacity),
             alpha_test: Some(value.alpha_test),
+            declutter: Some(value.declutter),
+            declutter_priority: Some(value.declutter_priority),
             effect_ids: value.effect_ids.clone(),
             emissive_intensity: value.emissive_intensity,
             emissive_color: value.emissive_color,
@@ -227,6 +253,8 @@ impl BillboardMaterial {
             transparent: self.transparent.unwrap_or(other.transparent),
             opacity: self.opacity.unwrap_or(other.opacity),
             alpha_test: self.alpha_test.unwrap_or(other.alpha_test),
+            declutter: self.declutter.unwrap_or(other.declutter),
+            declutter_priority: self.declutter_priority.unwrap_or(other.declutter_priority),
             effect_ids: self.effect_ids.clone().or_else(|| other.effect_ids.clone()),
             emissive_intensity: self.emissive_intensity.or(other.emissive_intensity),
             emissive_color: self.emissive_color.or(other.emissive_color),
@@ -342,6 +370,15 @@ pub struct TextMaterial {
     #[wasm_bindgen(getter_with_clone, js_name = textAlign)]
     #[serde(rename = "textAlign")]
     pub text_align: Option<String>,
+
+    /// Participate in screen-space decluttering: when labels/sprites overlap
+    /// on screen, lower-priority ones are hidden. Defaults to `false`.
+    pub declutter: Option<bool>,
+    /// Placement priority for decluttering; higher wins. Only meaningful when
+    /// `declutter` is enabled. Defaults to `0.0`.
+    #[wasm_bindgen(js_name = declutterPriority)]
+    #[serde(rename = "declutterPriority")]
+    pub declutter_priority: Option<f32>,
 }
 
 impl From<TextMaterial> for navara_material::TextMaterial {
@@ -381,6 +418,9 @@ impl From<TextMaterial> for navara_material::TextMaterial {
             max_width: val.max_width.unwrap_or(default.max_width),
             line_height: val.line_height.unwrap_or(default.line_height),
             text_align: val.text_align.unwrap_or(default.text_align),
+
+            declutter: val.declutter.unwrap_or(default.declutter),
+            declutter_priority: val.declutter_priority.unwrap_or(default.declutter_priority),
         }
     }
 }
@@ -417,6 +457,9 @@ impl<'a> From<&'a navara_material::TextMaterial> for TextMaterial {
             max_width: Some(value.max_width),
             line_height: Some(value.line_height),
             text_align: Some(value.text_align.clone()),
+
+            declutter: Some(value.declutter),
+            declutter_priority: Some(value.declutter_priority),
         }
     }
 }
@@ -457,6 +500,9 @@ impl TextMaterial {
             max_width: self.max_width.unwrap_or(other.max_width),
             line_height: self.line_height.unwrap_or(other.line_height),
             text_align: self.text_align.clone().unwrap_or(other.text_align.clone()),
+
+            declutter: self.declutter.unwrap_or(other.declutter),
+            declutter_priority: self.declutter_priority.unwrap_or(other.declutter_priority),
         }
     }
 }

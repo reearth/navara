@@ -44,6 +44,7 @@ export const createBaseMutates = (
     uTextWidth: { value: 0.0 },
     uTextHeight: { value: 0.0 },
     uBgYBounds: { value: new Vector2(0.0, 1.0) },
+    uDeclutterHide: { value: 0.0 },
     uRTCCenter: {
       value: new Vector3(
         rtcCenter?.[0] ?? 0,
@@ -113,6 +114,7 @@ export const createBaseMutates = (
       uniforms.uTextWidth = refs.uTextWidth;
       uniforms.uTextHeight = refs.uTextHeight;
       uniforms.uBgYBounds = refs.uBgYBounds;
+      uniforms.uDeclutterHide = refs.uDeclutterHide;
       uniforms.uRTCCenter = refs.uRTCCenter;
       uniforms.uRTCCenterView = refs.uRTCCenterView;
       uniforms.uEyeRTELow = refs.uEyeRTELow;
@@ -227,6 +229,10 @@ export const createBaseMutates = (
 
     setBatchId: (id: number) => {
       refs.nvr_uBatchId.value = id;
+    },
+
+    setDeclutterHidden: (hidden: boolean) => {
+      refs.uDeclutterHide.value = hidden ? 1.0 : 0.0;
     },
   };
 };

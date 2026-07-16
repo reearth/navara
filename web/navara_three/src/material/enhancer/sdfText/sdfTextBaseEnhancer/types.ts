@@ -103,6 +103,9 @@ export type SdfTextBaseRefs = {
   uTextWidth: UniformValue<number>;
   uTextHeight: UniformValue<number>;
   uBgYBounds: UniformValue<Vector2>;
+  /** Screen-space declutter hide flag: 1.0 hides the label. Driven by the
+   *  declutter pass, not by material style updates. */
+  uDeclutterHide: UniformValue<number>;
   uRTCCenter: UniformValue<Vector3>;
   uRTCCenterView: UniformValue<Vector3>;
   uEyeRTELow: UniformValue<Vector3>;
@@ -180,5 +183,11 @@ export type SdfTextBaseMutates = Mutates<
      * Set the batch ID uniform (immutable after mount, but needed for batch creation).
      */
     setBatchId: (batchId: number) => void;
+    /**
+     * Hide/show the label from the screen-space declutter pass. Kept separate
+     * from `show`/`opacity` so user-driven visibility and declutter results
+     * compose instead of clobbering each other.
+     */
+    setDeclutterHidden: (hidden: boolean) => void;
   }
 >;

@@ -310,6 +310,12 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       "instanceColor",
       new InstancedBufferAttribute(colorBuffer, 3),
     );
+    // Declutter hide flags (>0.5 hides). Zero-initialized: everything visible
+    // until a declutter pass says otherwise.
+    instancedGeometry.setAttribute(
+      "instanceDeclutterHide",
+      new InstancedBufferAttribute(new Float32Array(instanceCount), 1),
+    );
     instancedGeometry.setAttribute(
       "instanceBatchID",
       new InstancedBufferAttribute(
@@ -622,6 +628,24 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     const sanitizedHeight = Number.isFinite(height) ? height : 0.0;
     paramsAttr.setX(instanceId, sanitizedHeight);
     paramsAttr.needsUpdate = true;
+  }
+
+  /**
+   * Hide/show one instance from the screen-space declutter pass. Deliberately
+   * separate from the `show` component of `instanceParams` so user-driven
+   * visibility and declutter results compose instead of clobbering each other.
+   * Skips the buffer re-upload when the value is unchanged.
+   */
+  setDeclutterHiddenByInstance(instanceIndex: number, hidden: boolean) {
+    const attr = this.geometry.getAttribute(
+      "instanceDeclutterHide",
+    ) as InstancedBufferAttribute;
+    if (!attr || instanceIndex < 0 || instanceIndex >= attr.count) return;
+
+    const v = hidden ? 1.0 : 0.0;
+    if (attr.getX(instanceIndex) === v) return;
+    attr.setX(instanceIndex, v);
+    attr.needsUpdate = true;
   }
 
   setFeatureSizeByBatchId(batchId: number, size: number) {

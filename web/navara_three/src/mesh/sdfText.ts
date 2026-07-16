@@ -546,6 +546,16 @@ export class SDFTextMesh
     this._enhancer.update({ base: { opacity: clampedOpacity } });
   }
 
+  /**
+   * Hide/show this label from the screen-space declutter pass. A cheap uniform
+   * flip, deliberately separate from `visible`/`show`: it neither churns
+   * scene-graph membership nor releases glyph atlas retains, so the declutter
+   * pass can toggle it every placement run at no cost.
+   */
+  setDeclutterHidden(hidden: boolean): void {
+    this._enhancer.mutates().setDeclutterHidden(hidden);
+  }
+
   _setFeatureWidth(_width: number): void {
     // Width is not applicable to text meshes.
     // This method is intentionally a no-op to satisfy the FeatureMesh guard.

@@ -18,6 +18,11 @@
 attribute vec4 instanceParams; // x=height, y=size, z=show, w=opacity
 attribute vec3 instanceColor;
 attribute float instanceBatchID;
+// Set by the screen-space declutter pass: >0.5 hides this instance. Kept
+// separate from instanceParams.z (show) so user visibility and declutter
+// results compose. A float so a later fade pass can reuse it as an opacity
+// factor.
+attribute float instanceDeclutterHide;
 
 uniform vec3 uRTCCenter;
 // RTC center already transformed into view (eye) space on the CPU in float64.
@@ -59,7 +64,7 @@ void main() {
     vBatchID = instanceBatchID;
     vColor = instanceColor;
 
-    if (instanceShow <= 0.5) {
+    if (instanceShow <= 0.5 || instanceDeclutterHide > 0.5) {
         gl_Position = vec4(2.0, 2.0, 2.0, 1.0); // Cull the vertex by moving it outside of the clip space
         return;
     }
