@@ -7,7 +7,7 @@ sidebar:
 
 ## クイックスタート
 
-このページでは、Navara で 3D 地図を表示するために必要な最小限のコードを説明します。最後には、ラスタータイルとカメラ位置が設定された動作するマップが完成します。
+このページでは、Navara で 3D 地図を表示するために必要な最小限のコードを説明します。最後には、衛星画像とフォトリアルな空・大気を備えた動作する地球儀が完成します。
 
 ## 前提条件
 
@@ -28,55 +28,62 @@ npm run dev
 
 ## 最小限の例
 
-3D 地図を作成し、ラスタータイルレイヤーを追加し、カメラを設定するコアコードは以下の通りです。
+3D 地球儀を作成し、衛星画像を表示し、フォトリアルな空と大気を有効にするコアコードは以下の通りです（[What is Navara?](../what-is-navara/) に掲載しているものと同じ例です）。
+
+![Hero](@assets/hero.png)
 
 ```typescript
 import ThreeView from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
-// ビューを作成
-const view = new ThreeView({
-  animation: true,
-  shadow: true,
-});
+const view = new ThreeView({ useNormal: true });
 
-// ビルトインDescriptorを持つデフォルトプラグインを登録
-const plugin = new DefaultPlugin();
-view.addPlugin(plugin);
+const defaultPlugin = new DefaultPlugin();
+view.addPlugin(defaultPlugin);
 
-// エンジンを初期化
+// Initialization
+
 await view.init();
 
-// ラスタータイル Source（OpenStreetMap）を登録し、レイヤーで描画
-const basemap = view.addSource({
-  type: "raster-tile",
-  url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-  maxZoom: 18,
-});
-view.addLayer({ type: "raster", source: basemap });
+// Setup scene
+defaultPlugin.addDefaultPhotorealScene();
+view.atmosphere.date = new Date("2026-07-16T01:00:00Z");
+view.toneMappingExposure = 10;
 
-// カメラを東京上空に配置
-view.setCamera({
-  lng: 139.77,
-  lat: 35.68,
-  height: 10000,
-  heading: 0,
-  pitch: -30,
-  roll: 0,
+// Layer declaration
+
+const raster = view.addSource({
+  type: "raster-tile",
+  url: "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_NextGeneration/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg",
+  maxZoom: 8,
 });
+
+view.addLayer({
+  type: "raster",
+  source: raster,
+  raster: {},
+});
+
+// Attribution
+
+view.attribution?.add([{ attributionHtml: `Imagery courtesy of <a href="https://earthdata.nasa.gov/gibs">NASA EOSDIS GIBS</a> · Blue Marble: Next Generation (public domain)` }]);
 ```
 
 ## このコードの動作
 
-`ThreeView` クラスは Navara のメインエントリーポイントです。インスタンスを作成すると、Three.js のレンダラー、シーングラフ、レンダリングパイプラインがセットアップされます。`animation: true` オプションは連続レンダリングを有効にし、`shadow: true` はシャドウマッピングを有効にします。
+`ThreeView` クラスは Navara のメインエントリーポイントです。インスタンスを作成すると、Three.js のレンダラー、シーングラフ、レンダリングパイプラインがセットアップされます。`useNormal: true` オプションはグローブ表面の法線を有効にし、後で追加する太陽光のライティング計算に使われます。地形や Hillshade などのレイヤーは自前で法線を持つため、この例のようにそれらがない場合に必要です。
 
 `init()` を呼び出す前に、プラグインを登録します。`DefaultPlugin` は 30 以上のDescriptor — 空、大気、ライティング、地形、ポストプロセッシングエフェクト — を登録するので、初期化後にすぐ使用できます。カスタムDescriptor用の独自プラグインを作成・登録することもできます。
 
 `init()` 呼び出しは WASM GIS エンジンを初期化し、バックグラウンド処理用の Web Worker をセットアップし、レンダリングパイプラインを準備します。これはレイヤーを追加する前に完了する必要がある非同期操作です。
 
-初期化後、`addLayer()` でグローブ上に新しいレイヤーを作成します。この例では、OpenStreetMap タイルを読み込むラスタータイルレイヤーを追加しています。Navara の GIS エンジンがタイル管理、LOD、空間インデキシングを自動的に処理します。
+初期化後、`addDefaultPhotorealScene()` を 1 回呼ぶだけで、空、星、太陽光、大気エフェクトが追加されます。`view.atmosphere.date` は太陽の位置を決めます — どのマシンでも同じ見た目になるよう、UTC 文字列（`"...Z"`）を使ってください。`toneMappingExposure` はトーンマッピング後の全体的な明るさを調整します。
 
-最後に、`setCamera()` でカメラを地理座標と高度、方位、ピッチで配置します。カメラは即座にこの位置に移動します。アニメーション付きの遷移には、代わりに `flyTo()` を使用できます。
+`addSource()` はデータの取得元と取得方法を登録し、`addLayer()` がそれをグローブ上に描画します。この例では、ラスタータイル Source で NASA の Blue Marble 衛星画像を読み込んでいます。Navara の GIS エンジンがタイル管理、LOD、空間インデキシングを自動的に処理します。
+
+最後の `view.attribution` はビルトインの Attribution UI です。`add()` で使用しているデータソースのクレジットを表示できます。
+
+この例ではデフォルトのカメラのまま、地球全体が見える状態です。特定の場所に移動するには、即座に移動する `setCamera()` か、アニメーション付きで遷移する `flyTo()` を使用します。
 
 ## 次のステップ
 

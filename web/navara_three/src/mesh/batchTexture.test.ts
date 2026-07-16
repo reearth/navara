@@ -562,6 +562,51 @@ describe("updateBatchAttribute with 2D layout", () => {
     expect(data[expectedIndex + 2]).toBeCloseTo(1.0);
   });
 
+  test("ignores extrudedHeight and leaves define unset when EXTRUDED_HEIGHT row is absent (polyline rows)", () => {
+    // Polyline-style rows: no EXTRUDED_HEIGHT. Setting the attribute must be a
+    // no-op — enabling USE_BATCH_EXTRUDED_HEIGHT would reference the
+    // undeclared `addExtrudedHeight` in the polyline shaders and fail to compile.
+    const config: BatchTextureConfig = {
+      rows: ["COLOR_SHOW", "HEIGHT", "LINE_WIDTH"],
+      batchLength: 10,
+    };
+    const material = new MeshBasicMaterial();
+    initBatchedMaterial(material, config);
+    initBatchDataTexture(material, config);
+    const defaultValues = { color: new Color(1, 1, 1) };
+
+    const texture = getBatchDataTexture(material);
+    invariant(texture);
+    const before = Float32Array.from(texture.image.data as Float32Array);
+
+    updateBatchAttribute(material, 5, "extrudedHeight", 120, defaultValues);
+
+    expect(material.userData.defines.USE_BATCH_EXTRUDED_HEIGHT).toBeUndefined();
+    expect(texture.image.data as Float32Array).toEqual(before);
+  });
+
+  test("ignores lineWidth and leaves define unset when LINE_WIDTH row is absent (polygon rows)", () => {
+    // Polygon-style rows: no LINE_WIDTH. Same reasoning as above with the
+    // undeclared `batchLineWidth` in the polygon shaders.
+    const config: BatchTextureConfig = {
+      rows: ["COLOR_SHOW", "HEIGHT", "EXTRUDED_HEIGHT"],
+      batchLength: 10,
+    };
+    const material = new MeshBasicMaterial();
+    initBatchedMaterial(material, config);
+    initBatchDataTexture(material, config);
+    const defaultValues = { color: new Color(1, 1, 1) };
+
+    const texture = getBatchDataTexture(material);
+    invariant(texture);
+    const before = Float32Array.from(texture.image.data as Float32Array);
+
+    updateBatchAttribute(material, 5, "lineWidth", 10, defaultValues);
+
+    expect(material.userData.defines.USE_BATCH_LINE_WIDTH).toBeUndefined();
+    expect(texture.image.data as Float32Array).toEqual(before);
+  });
+
   test("multiple batchIds across different batch-row groups do not collide", () => {
     const batchLength = 10000;
     const { material } = setupBatchMaterial(batchLength);

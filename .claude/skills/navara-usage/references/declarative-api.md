@@ -47,7 +47,7 @@ Quantized-mesh terrain uses `type: "quantized-mesh"` sources (or `CesiumIonPlugi
 
 ## Update / delete semantics (easy to get wrong)
 
-- `layer.update(config)` — **replaces the whole layer config**. Pass the complete config, not a delta.
+- `layer.update(config)` — **partial merge**: pass only what changes (e.g. `layer.update({ point: { color } })`); omitted materials and omitted fields within a material are preserved.
 - `source.update(config)` — **partial merge**: omitted fields are preserved. Updating a source **resets and reloads every layer** referencing it (terrain re-meshes).
 - `source.delete()` — reference-counted: returns `false` and removes nothing while any layer references the source. Delete referencing layers first, or `update()` the source to swap data in place.
 - Handles expose `id`; `view.deleteLayerById(id)` / `updateLayerById` variants exist for id-based management.

@@ -5,6 +5,24 @@ sidebar:
   order: 2
 ---
 
+## Headless Architecture
+
+Navara is a headless 3D globe map engine. Its GIS core is written in Rust and compiled to WebAssembly, deliberately separated from any specific rendering technology. Currently, Navara provides a Three.js-based rendering backend (`@navara/three`), but the engine is designed so that other rendering engines — and even native platforms — can be supported in the future.
+
+```mermaid
+graph TD
+  subgraph GIS["Headless GIS Core (Rust)"]
+    B["Data Processing / Spatial Index / Ellipsoid Geometry etc"]
+  end
+
+  GIS --> C["Rendering-ready Output"]
+  C --> D["@navara/three (Three.js)"]
+  C --> E["Future Backend (Other Engines)"]
+  C --> F["Future Backend (Native)"]
+```
+
+The Rust/WASM GIS engine handles all geospatial computation independently of the renderer, and CPU-intensive tasks are distributed across Web Workers for responsive performance even with large datasets.
+
 ## Plugin-Based Architecture
 
 Navara uses a plugin system to register descriptor types. Before calling `init()`, you add plugins to a `ThreeView` instance. Each plugin registers the mesh, light, and effect descriptor types it provides. After initialization, you can add descriptors of those registered types.
