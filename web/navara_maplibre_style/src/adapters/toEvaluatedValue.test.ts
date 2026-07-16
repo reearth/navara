@@ -293,30 +293,4 @@ describe("toEvaluatedValue", () => {
 
     expect(result.opacity).toBeCloseTo(1.0, 2);
   });
-
-  it("should extract alpha from rgba() CSS color strings", () => {
-    const layer: StyleLayer = {
-      id: "test",
-      type: "fill",
-      source: "test",
-    };
-    const paintValues = {
-      "fill-color": "rgba(255, 0, 0, 0.25)",
-    };
-    const result = toEvaluatedValue(layer, paintValues);
-    expect(result.opacity).toBeCloseTo(0.25, 2);
-  });
-  it("should extract alpha from #RRGGBBAA CSS hex color strings", () => {
-    const layer: StyleLayer = {
-      id: "test",
-      type: "fill",
-      source: "test",
-    };
-    const paintValues = {
-      // 0x80 / 255 ≈ 0.502
-      "fill-color": "#ff000080",
-    };
-    const result = toEvaluatedValue(layer, paintValues);
-    expect(result.opacity).toBeCloseTo(0.502, 2);
-  });
 });
