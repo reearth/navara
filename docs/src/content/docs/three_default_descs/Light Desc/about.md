@@ -7,6 +7,16 @@ sidebar:
 
 LightDesc is a group of classes that manage lighting in a 3D scene. It provides various lighting techniques including ambient light, sunlight, and Image-Based Lighting.
 
+## When is a light needed?
+
+Lighting only affects surfaces that have **normals**. A surface without normals is shaded uniformly (fully lit) and needs no light at all. Once a surface has normals, however, **it renders completely black unless at least one light is present**. Add a light whenever the scene contains:
+
+- Meshes or GLTF models that ship vertex normals
+- `quantized-mesh` terrain loaded with `requestVertexNormals: true`
+- `raster-dem` terrain rendered with a `hillshade` material
+
+If nothing in your scene has normals, you can skip lights entirely and everything is drawn evenly lit.
+
 ## LightDescriptor Types
 
 navara_three provides multiple light descriptor types to address various lighting requirements:

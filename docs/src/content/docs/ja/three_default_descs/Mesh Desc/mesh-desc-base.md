@@ -201,9 +201,20 @@ const sphereDesc = view.addMesh<SphereMeshDesc>({
 });
 ```
 
-### ENU（東-北-上）座標系の使用
+### ローカル接線フレームの使用（ENU ほか）
 
-ローカル座標系（ENU: East-North-Up）を使用してメッシュを配置するには、`eastNorthUpToFixedFrame()` を使用します。
+`position` プロパティはデフォルトで直交座標系（ECEF）です。そのため、単に `position` を指定しただけでは、指定した経度・緯度でメッシュが正しく上向きに立ちません。地理的に配置するには、原点でのローカル接線フレームを計算して `matrixWorld` に渡します。すると `position`/`rotation`/`scale` はそのフレーム内のオフセットとして解釈されます。
+
+メッシュが想定する軸の向きに合わせてフレーム関数を選びます。いずれも ECEF 原点（`Vector3`）を受け取り `Matrix4` を返し、すべて `@navara/three` からエクスポートされています:
+
+| 関数 | ローカル軸 (x, y, z) |
+| ------ | ------ |
+| `eastNorthUpToFixedFrame()` | 東、北、上 |
+| `northEastDownToFixedFrame()` | 北、東、下 |
+| `northUpEastToFixedFrame()` | 北、上、東 |
+| `northWestUpToFixedFrame()` | 北、西、上 |
+
+最も一般的な選択は ENU（`eastNorthUpToFixedFrame()`）です:
 
 ```typescript
 import {
@@ -240,6 +251,9 @@ const modelDesc = view.addMesh<GLTFModelDesc>({
 | `degreeToRadian()`          | 度をラジアンに変換                                      |
 | `radianToDegree()`          | ラジアンを度に変換                                      |
 | `geodeticSurfaceNormal()`   | 指定位置での地球表面の法線ベクトルを取得                |
-| `eastNorthUpToFixedFrame()` | ENU座標系への変換行列を取得                             |
+| `eastNorthUpToFixedFrame()` | 原点での ENU（東-北-上）接線フレーム行列を取得         |
+| `northEastDownToFixedFrame()` | 原点での NED（北-東-下）接線フレーム行列を取得       |
+| `northUpEastToFixedFrame()` | 原点での NUE（北-上-東）接線フレーム行列を取得         |
+| `northWestUpToFixedFrame()` | 原点での NWU（北-西-上）接線フレーム行列を取得         |
 
 詳細は [navara_three_api](../../../three/api/navara_three_api) を参照してください。
