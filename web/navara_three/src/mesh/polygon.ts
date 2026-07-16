@@ -24,10 +24,12 @@ import { createPolygonMaterialEnhancer } from "../material/enhancer/polygon/poly
 
 import {
   BatchedFeatureMesh,
+  POLYGON_BATCH_TEXTURE_ROWS,
   type BatchedFeatureAttributes,
 } from "./batchedFeature";
 import type {
   BatchedAttributeName,
+  BatchTextureRowKey,
   DefaultBatchAttributeValues,
 } from "./batchTexture";
 import { releaseGeometryArraysAfterUpload } from "./releaseGeometryArrays";
@@ -603,6 +605,12 @@ export class PolygonMesh extends BatchedFeatureMesh<
     if (attribute === "height" || attribute === "extrudedHeight") {
       this._recalculateBoundingSphere();
     }
+  }
+
+  _getBatchTextureRows(): BatchTextureRowKey[] {
+    // No LINE_WIDTH: the polygon shaders declare no receiver for it,
+    // so accepting the attribute would break shader compilation.
+    return POLYGON_BATCH_TEXTURE_ROWS;
   }
 
   _initBatchDataTexture(): void {

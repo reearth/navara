@@ -16,10 +16,12 @@ import { createPolylineMaterialEnhancer } from "../material/enhancer";
 
 import {
   BatchedFeatureMesh,
+  POLYLINE_BATCH_TEXTURE_ROWS,
   type BatchedFeatureAttributes,
 } from "./batchedFeature";
 import type {
   BatchedAttributeName,
+  BatchTextureRowKey,
   DefaultBatchAttributeValues,
 } from "./batchTexture";
 import { releaseGeometryArraysAfterUpload } from "./releaseGeometryArrays";
@@ -227,12 +229,14 @@ export class PolylineMesh extends BatchedFeatureMesh<
     geometry.setIndex(new BufferAttribute(indices, 1));
     // geometry.computeVertexNormals();
 
-    // Non-RTE polylines keep frustum culling (RTE disables it below), which
-    // lazily calls computeBoundingSphere() and reads position.array. Compute it
-    // eagerly here so that read happens before we drop the CPU arrays.
-    if (!useRTE) {
-      geometry.computeBoundingSphere();
-    }
+    // The renderer lazily calls computeBoundingSphere(), which reads
+    // position.array, for every polyline: non-RTE ones through frustum culling
+    // (RTE disables it below), and ALL of them through depth sorting —
+    // renderer.sortObjects reads geometry.boundingSphere even when
+    // frustumCulled is false. Compute it eagerly so that read happens before
+    // we drop the CPU arrays. In RTE mode `position` still holds the f32
+    // world-space coordinates, so the resulting sphere is valid.
+    geometry.computeBoundingSphere();
 
     // With the bounding sphere resolved and batch-id data consumed on the GPU,
     // no CPU read survives the first upload. Drop the JS-heap copies to keep a
@@ -329,6 +333,12 @@ export class PolylineMesh extends BatchedFeatureMesh<
     this._initBatchedMaterial();
 
     this._update(meshMaterial, mesh.active);
+  }
+
+  _getBatchTextureRows(): BatchTextureRowKey[] {
+    // No EXTRUDED_HEIGHT: the polyline shaders declare no receiver for it,
+    // so accepting the attribute would break shader compilation.
+    return POLYLINE_BATCH_TEXTURE_ROWS;
   }
 
   _initBatchDataTexture(): void {

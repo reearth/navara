@@ -20,7 +20,7 @@ import type { EventContext } from "../event/context";
 import { setupMaterialForMRT } from "../material";
 import { createReplacer } from "../utils/replacer";
 
-import { FEATURE_BATCH_TEXTURE_CONFIG } from "./batchedFeature";
+import { POLYGON_BATCH_TEXTURE_ROWS } from "./batchedFeature";
 import { initBatchedMaterial } from "./batchTexture";
 import type { FeatureMesh } from "./featureMesh";
 
@@ -185,8 +185,12 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
       value: 0.0,
     };
 
-    // Set up batch texture material defines (row indices, row count)
-    initBatchedMaterial(material, FEATURE_BATCH_TEXTURE_CONFIG);
+    // Set up batch texture material defines (row indices, row count).
+    // The rows must match PolygonMesh's — the batch data texture is shared.
+    initBatchedMaterial(material, {
+      rows: POLYGON_BATCH_TEXTURE_ROWS,
+      batchLength: 0,
+    });
 
     material.onBeforeCompile = (shader) => {
       // Merge user-defined defines (batch texture, color/show, height, etc.)
