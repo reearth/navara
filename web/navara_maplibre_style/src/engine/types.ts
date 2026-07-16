@@ -4,10 +4,9 @@
  * allowing easy swap between JS and future Rust/WASM implementations.
  */
 
-import {
-  v8,
-  type GeoJSONSourceSpecification,
-  type VectorSourceSpecification,
+import type {
+  GeoJSONSourceSpecification,
+  VectorSourceSpecification,
 } from "@maplibre/maplibre-gl-style-spec";
 
 /**
@@ -174,14 +173,4 @@ export type PropertySpec = {
     interpolated: boolean;
     parameters: string[];
   };
-};
-
-/**
- * MapLibre's official paint property specifications by layer type.
- * Using the official specs ensures compatibility with the MapLibre Style spec.
- */
-export const PAINT_SPECS_BY_TYPE = {
-  fill: v8.paint_fill,
-  line: v8.paint_line,
-  circle: v8.paint_circle,
 };

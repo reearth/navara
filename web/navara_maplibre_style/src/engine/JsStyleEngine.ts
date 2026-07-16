@@ -13,17 +13,17 @@ import type {
   StylePropertySpecification,
 } from "@maplibre/maplibre-gl-style-spec";
 
+import { PAINT_SPECS_BY_TYPE } from "./paintSpecs";
 import type { StyleEngine } from "./StyleEngine";
-import {
-  PAINT_SPECS_BY_TYPE,
-  type EvaluationContext,
-  type FeatureContext,
-  type FilterExpression,
-  type LayerType,
-  type ParsedStyle,
-  type PropertySpec,
-  type StyleValue,
-  type ValueExpression,
+import type {
+  EvaluationContext,
+  FeatureContext,
+  FilterExpression,
+  LayerType,
+  ParsedStyle,
+  PropertySpec,
+  StyleValue,
+  ValueExpression,
 } from "./types";
 
 export class JsStyleEngine implements StyleEngine {

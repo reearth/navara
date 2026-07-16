@@ -110,11 +110,13 @@ export function toEvaluatedValue(
     // Handle opacity independently of color (MapLibre treats them separately)
     const paintOpacity = paintValues["fill-opacity"];
     const colorAlpha = colorResult?.alpha ?? 1.0;
-    if (typeof paintOpacity === "number" || colorResult) {
+    const opacity =
+      typeof paintOpacity === "number" && Number.isFinite(paintOpacity)
+        ? paintOpacity
+        : undefined;
+    if (opacity !== undefined || colorResult) {
       result.opacity =
-        typeof paintOpacity === "number"
-          ? colorAlpha * paintOpacity
-          : colorAlpha;
+        opacity !== undefined ? colorAlpha * opacity : colorAlpha;
     }
   } else if (styleLayer.type === "line") {
     const colorResult = toNavaraColor(paintValues["line-color"]);
@@ -124,11 +126,13 @@ export function toEvaluatedValue(
     // Handle opacity independently of color
     const paintOpacity = paintValues["line-opacity"];
     const colorAlpha = colorResult?.alpha ?? 1.0;
-    if (typeof paintOpacity === "number" || colorResult) {
+    const opacity =
+      typeof paintOpacity === "number" && Number.isFinite(paintOpacity)
+        ? paintOpacity
+        : undefined;
+    if (opacity !== undefined || colorResult) {
       result.opacity =
-        typeof paintOpacity === "number"
-          ? colorAlpha * paintOpacity
-          : colorAlpha;
+        opacity !== undefined ? colorAlpha * opacity : colorAlpha;
     }
   } else if (styleLayer.type === "circle") {
     const colorResult = toNavaraColor(paintValues["circle-color"]);
@@ -138,11 +142,13 @@ export function toEvaluatedValue(
     // Handle opacity independently of color
     const paintOpacity = paintValues["circle-opacity"];
     const colorAlpha = colorResult?.alpha ?? 1.0;
-    if (typeof paintOpacity === "number" || colorResult) {
+    const opacity =
+      typeof paintOpacity === "number" && Number.isFinite(paintOpacity)
+        ? paintOpacity
+        : undefined;
+    if (opacity !== undefined || colorResult) {
       result.opacity =
-        typeof paintOpacity === "number"
-          ? colorAlpha * paintOpacity
-          : colorAlpha;
+        opacity !== undefined ? colorAlpha * opacity : colorAlpha;
     }
   }
 

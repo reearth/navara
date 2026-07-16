@@ -10,10 +10,19 @@ pub struct CompiledExpression {
 
 #[wasm_bindgen]
 impl CompiledExpression {
-    /// Compile a MapLibre expression from JSON
-    /// expr_json: Expression array (e.g., ["get", "name"])
+    /// Compile a MapLibre expression from JSON with optional expected type
+    ///
+    /// # Arguments
+    /// * `expr_json` - Expression array (e.g., ["get", "name"])
+    /// * `expected_type` - Optional expected type string: "color", "number", "boolean", "string", "array"
+    ///
+    /// Type checking ensures expressions return the correct type for their property,
+    /// matching JsStyleEngine's behavior with createExpression(expr, spec).
     #[wasm_bindgen(constructor)]
-    pub fn new(expr_json: JsValue) -> Result<CompiledExpression, JsValue> {
+    pub fn new(
+        expr_json: JsValue,
+        expected_type: Option<String>,
+    ) -> Result<CompiledExpression, JsValue> {
         // 1. Deserialize JSON to serde_json::Value
         let json: JsonValue = serde_wasm_bindgen::from_value(expr_json)
             .map_err(|e| JsValue::from_str(&format!("Invalid JSON: {}", e)))?;
@@ -21,8 +30,20 @@ impl CompiledExpression {
         // 2. Parse expression using maplibre-expr
         let expr = parse(&json).map_err(|e| JsValue::from_str(&format!("Parse error: {:?}", e)))?;
 
-        // 3. Type-check expression (no expected type, no top-level coercion)
-        let expr = typecheck(&expr, None, false)
+        // 3. Map expected type string to maplibre-expr Type
+        let expected = expected_type.as_ref().and_then(|t| match t.as_str() {
+            "color" => Some(Type::Color),
+            "number" => Some(Type::Number),
+            "boolean" => Some(Type::Boolean),
+            "string" => Some(Type::String),
+            // "array" => Type::Array requires element type parameter, but MapLibre style specs
+            // only specify "array" without element type info. Skip type checking for generic arrays.
+            "array" => None,
+            _ => None,
+        });
+
+        // 4. Type-check expression with expected type
+        let expr = typecheck(&expr, expected.as_ref(), false)
             .map_err(|e| JsValue::from_str(&format!("Type error: {:?}", e)))?;
 
         Ok(CompiledExpression { expr })
@@ -332,11 +353,63 @@ fn collect_properties(expr: &Expr, properties: &mut HashSet<String>) {
             }
         }
 
+        Expr::Format(args) => {
+            for a in args {
+                collect_properties(&a.content, properties);
+                if let Some(e) = &a.scale {
+                    collect_properties(e, properties);
+                }
+                if let Some(e) = &a.font {
+                    collect_properties(e, properties);
+                }
+                if let Some(e) = &a.text_color {
+                    collect_properties(e, properties);
+                }
+                if let Some(e) = &a.vertical_align {
+                    collect_properties(e, properties);
+                }
+            }
+        }
+        Expr::NumberFormat {
+            value,
+            locale,
+            currency,
+            min_fraction_digits,
+            max_fraction_digits,
+            unit,
+        } => {
+            collect_properties(value, properties);
+            for e in [
+                locale.as_deref(),
+                currency.as_deref(),
+                min_fraction_digits.as_deref(),
+                max_fraction_digits.as_deref(),
+                unit.as_deref(),
+            ]
+            .into_iter()
+            .flatten()
+            {
+                collect_properties(e, properties);
+            }
+        }
+        Expr::Collator {
+            case_sensitive,
+            diacritic_sensitive,
+            locale,
+        } => {
+            for e in [
+                case_sensitive.as_deref(),
+                diacritic_sensitive.as_deref(),
+                locale.as_deref(),
+            ]
+            .into_iter()
+            .flatten()
+            {
+                collect_properties(e, properties);
+            }
+        }
         // Terminal nodes with no sub-expressions
-        Expr::Literal(_) | Expr::Var(_) | Expr::Collator { .. } => {}
-
-        // Catch-all for any remaining expression types (Format, NumberFormat, Within, Distance, etc.)
-        _ => {}
+        Expr::Literal(_) | Expr::Var(_) | Expr::Within(_) | Expr::Distance(_) => {}
     }
 }
 

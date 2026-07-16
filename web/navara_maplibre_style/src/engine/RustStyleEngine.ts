@@ -9,17 +9,17 @@ import { validateStyleMin } from "@maplibre/maplibre-gl-style-spec";
 import type { StyleSpecification } from "@maplibre/maplibre-gl-style-spec";
 import { CompiledExpression, CompiledFilter } from "@navara/engine";
 
+import { PAINT_SPECS_BY_TYPE } from "./paintSpecs";
 import type { StyleEngine } from "./StyleEngine";
-import {
-  PAINT_SPECS_BY_TYPE,
-  type EvaluationContext,
-  type FeatureContext,
-  type FilterExpression,
-  type LayerType,
-  type ParsedStyle,
-  type PropertySpec,
-  type StyleValue,
-  type ValueExpression,
+import type {
+  EvaluationContext,
+  FeatureContext,
+  FilterExpression,
+  LayerType,
+  ParsedStyle,
+  PropertySpec,
+  StyleValue,
+  ValueExpression,
 } from "./types";
 
 export class RustStyleEngine implements StyleEngine {
@@ -93,11 +93,12 @@ export class RustStyleEngine implements StyleEngine {
       return () => constantValue;
     }
 
-    // Compile expression in WASM
+    // Compile expression in WASM with type checking
     let compiled: CompiledExpression;
     let requiredProps: string[] | null = null;
     try {
-      compiled = new CompiledExpression(expr);
+      // Pass expected type for validation (matches JsStyleEngine behavior)
+      compiled = new CompiledExpression(expr, spec.type);
 
       // Extract required properties for optimization
       const propsArray = compiled.getRequiredProperties();
@@ -120,7 +121,7 @@ export class RustStyleEngine implements StyleEngine {
           propsToPass = {};
           if (ctx.properties) {
             for (const prop of requiredProps) {
-              if (prop in ctx.properties) {
+              if (Object.prototype.hasOwnProperty.call(ctx.properties, prop)) {
                 propsToPass[prop] = ctx.properties[prop];
               }
             }
