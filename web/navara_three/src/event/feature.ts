@@ -5,7 +5,7 @@ import {
   type RenderableFeature,
   RenderableFeatureChangedEvent,
 } from "@navara/engine";
-import { Mesh, Sprite, Object3D } from "three";
+import { Mesh, Sprite, Object3D, Scene } from "three";
 
 import {
   BatchedSdfTextMesh,
@@ -15,6 +15,7 @@ import {
   PolylineMesh,
 } from "../mesh";
 import { FEATURE_RENDER_ORDER } from "../renderOrder";
+import type { Scenes } from "../scene";
 
 import type { EventContext } from "./context";
 import {
@@ -35,6 +36,28 @@ import { renderPolyline, processPolylineChanged } from "./features/polyline";
 import { renderText, processTextChanged } from "./features/text";
 
 import { setTransform } from ".";
+
+/**
+ * Choose the render scene for a non-draped feature based on its material.
+ *
+ * Sprites (billboards/points) and SDF text configured with `depthTest: false`
+ * are meant to render always-on-top. Left in the MRT scene they draw before the
+ * depth-based post-processing effects (aerial perspective, clouds, ssao,
+ * atmosphere), which sample the depth buffer — where these features wrote
+ * nothing — and composite over them, painting them out. Route them into the
+ * transparent scene, which TransparentPassEffectDesc renders (clear=false)
+ * after those effects. Every other non-draped feature stays in the MRT scene.
+ *
+ * The material comes straight from the engine event (the source of truth): text
+ * applies its Three material asynchronously (behind font preparation), so the
+ * live mesh material can lag behind the intended `depthTest`.
+ */
+function overlayScene(
+  material: { depthTest?: boolean } | undefined,
+  scenes: Scenes,
+): Scene {
+  return material?.depthTest === false ? scenes.transparent : scenes.mrt;
+}
 
 export function renderFeature(
   ctx: EventContext,
@@ -119,6 +142,15 @@ export async function processRenderableFeatureAdded(
       if (model && r) {
         featureHandler.reportFeatureGpuBytes(ev.bits, sumModelGpuBytes(r));
       }
+      // The billboard image atlas (CPU pixel buffer + GPU texture) is
+      // allocated and grown lazily on the JS side as images load, so the
+      // mesh reports its measured footprint whenever it changes; the ledger
+      // folds it into the owning vector tile's cost.
+      if (billboard && r instanceof InstancedSpriteMesh) {
+        r.setAtlasBytesReporter((bytes) =>
+          featureHandler.reportFeatureGpuBytes(ev.bits, bytes),
+        );
+      }
       return r;
     })
     .finally(() => {
@@ -143,7 +175,8 @@ export async function processRenderableFeatureAdded(
     (obj instanceof PolygonMesh && obj.clampToGround) ||
     (obj instanceof PolylineMesh && obj.draped);
   if (!isDraped) {
-    scenes.mrt.add(obj);
+    const material = point?.material ?? billboard?.material ?? text?.material;
+    overlayScene(material, scenes).add(obj);
   }
 
   meshes.set(id, obj);
@@ -213,6 +246,7 @@ export async function processRenderableFeatureChanged(
   ev: RenderableFeatureChangedEvent,
 ) {
   const {
+    scenes,
     meshes,
     texturizedSceneByTileCoordinates,
     viewEvents,
@@ -243,8 +277,23 @@ export async function processRenderableFeatureChanged(
   if (obj instanceof InstancedSpriteMesh && billboard) {
     await processBillboardChanged(obj, billboard, active);
   }
+
   if (obj instanceof BatchedSdfTextMesh && text) {
     await processTextChanged(obj, text, active);
+  }
+
+  // `depthTest` may have flipped at runtime, changing which scene a sprite or
+  // text feature belongs to (transparent for always-on-top overlays, MRT
+  // otherwise). Re-route based on the incoming material; Three's `add()`
+  // reparents safely, and the guard keeps draped/model/polygon/polyline
+  // features untouched.
+  if (obj instanceof InstancedSpriteMesh || obj instanceof BatchedSdfTextMesh) {
+    const material = point?.material ?? billboard?.material ?? text?.material;
+    const target = overlayScene(material, scenes);
+    if (obj.parent !== target) {
+      target.add(obj);
+      ctx.renderFlag.forceUpdate = true;
+    }
   }
   if (obj instanceof ModelMesh && model) {
     processModelChanged(obj, model, active);

@@ -102,7 +102,8 @@ side (which owns the actual Three.js allocations) reports corrections:
 | Terrain mesh | mesh buffer byte lengths + one composite-atlas cost (`CostHints::atlas_tile_bytes` — every `TileMesh` acquires an atlas eagerly), attached by `attach_terrain_mesh_cost` | `reportTerrainDrapeGpuBytes` replaces the drape term with the measured render-target footprint (clamp-to-ground vector drapes allocate one target per layer per tile) |
 | Raster texture | `CostHints::raster_tile_bytes` (w×h×4 + ~33% mipmaps) per fragment, attached eagerly by `attach_texture_fragment_cost` | — (dimensions are known) |
 | Vector (MVT) geometry | geometry buffer bytes at mesh transfer | — |
-| 3D Tiles content | compressed payload bytes | `reportModelGpuBytes` replaces the estimate with the decoded size summed over the Three.js object tree — Draco content decodes to many times its payload, so the seed can badly undercount |
+| Billboard image atlas | — (allocated lazily on the JS side as billboard images load) | `reportFeatureGpuBytes` folds the measured atlas footprint (CPU pixel buffer + equal-sized GPU texture — the CPU copy stays resident for growth re-blits) into the owning vector tile's `VectorTileGpuCost` next to the geometry term, re-reporting on every atlas growth and clearing with `0` when the mesh is disposed; non-tiled (e.g. GeoJSON-layer) billboards have no owning tile and are not charged |
+| 3D Tiles content | compressed payload bytes | `reportFeatureGpuBytes` replaces the estimate with the decoded size summed over the Three.js object tree — Draco content decodes to many times its payload, so the seed can badly undercount |
 
 One subtlety makes `gpu_est ≈ 1×` the buffer length a valid model
 (`GPU_GEOMETRY_RESIDENCY_FACTOR = 1`): the web side installs an `onUpload`

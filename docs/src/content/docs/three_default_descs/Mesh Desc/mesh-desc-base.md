@@ -201,9 +201,20 @@ const sphereDesc = view.addMesh<SphereMeshDesc>({
 });
 ```
 
-### Using ENU (East-North-Up) Coordinate System
+### Using a Local Tangent Frame (ENU and others)
 
-To place meshes using a local coordinate system (ENU: East-North-Up), use `eastNorthUpToFixedFrame()`.
+The `position` property is Cartesian ECEF by default, so a bare `position` will not stand a mesh upright at a given longitude/latitude. For geographic placement, compute a local tangent frame at the origin and pass it as `matrixWorld`; `position`/`rotation`/`scale` are then interpreted as offsets within that frame.
+
+Choose the frame function that matches the axis orientation your mesh expects. All take an ECEF origin (`Vector3`) and return a `Matrix4`, and all are exported from `@navara/three`:
+
+| Function | Local axes (x, y, z) |
+|------|------|
+| `eastNorthUpToFixedFrame()` | East, North, Up |
+| `northEastDownToFixedFrame()` | North, East, Down |
+| `northUpEastToFixedFrame()` | North, Up, East |
+| `northWestUpToFixedFrame()` | North, West, Up |
+
+The most common choice is ENU (`eastNorthUpToFixedFrame()`):
 
 ```typescript
 import {
@@ -241,6 +252,9 @@ const modelDesc = view.addMesh<GLTFModelDesc>({
 | `degreeToRadian()` | Converts degrees to radians |
 | `radianToDegree()` | Converts radians to degrees |
 | `geodeticSurfaceNormal()` | Gets the Earth's surface normal vector at the specified position |
-| `eastNorthUpToFixedFrame()` | Gets the transformation matrix to the ENU coordinate system |
+| `eastNorthUpToFixedFrame()` | Gets the ENU (East-North-Up) tangent-frame matrix at the origin |
+| `northEastDownToFixedFrame()` | Gets the NED (North-East-Down) tangent-frame matrix at the origin |
+| `northUpEastToFixedFrame()` | Gets the NUE (North-Up-East) tangent-frame matrix at the origin |
+| `northWestUpToFixedFrame()` | Gets the NWU (North-West-Up) tangent-frame matrix at the origin |
 
 For details, see [navara_three_api](../../../three/api/navara_three_api).

@@ -18,7 +18,8 @@ navara_three（コア: ThreeView, Plugin, addPlugin）
   └── three_plugins（ユースケース特化型プラグイン）
         ├── PersonViewPlugin（キーボード操作による一人称 / 三人称ビューコントローラー）
         ├── OverlayPlugin（ワールド座標からスクリーン座標への HTML オーバーレイ投影）
-        └── CesiumIonPlugin（Cesium Ion quantized-mesh 地形）
+        ├── CesiumIonPlugin（Cesium Ion quantized-mesh 地形）
+        └── TileJsonPlugin（TileJSON 3.0.0 タイルソースの登録）
 ```
 
 `three_plugins` は `Plugin` 基底クラスとコア API のために `navara_three` に依存し、`DefaultDescriptions` 型のために `three_default_plugin` に依存しています。各プラグインは独立しており、片方だけを使うこともできます。
@@ -30,6 +31,7 @@ import {
   PersonViewPlugin,
   OverlayPlugin,
   CesiumIonPlugin,
+  TileJsonPlugin,
   moveOverlayElement,
 } from "@navara/three_plugins";
 ```
@@ -47,6 +49,10 @@ import {
 ### CesiumIonPlugin
 
 `init()` 時に Cesium Ion のアセットエンドポイントを解決し、`addTerrain()` を通じて quantized-mesh 地形レイヤーとして登録するプラグインです。詳細は [CesiumIonPlugin](../cesiumionplugin/) を参照してください。
+
+### TileJsonPlugin
+
+TileJSON 3.0.0 ドキュメントを取得し、`addSource()` を通じて単一のラスターまたはベクトルタイルソースとして登録するプラグインです。タイル URL、ズーム範囲、スキーム、アトリビューションをドキュメントから導出します。詳細は [TileJsonPlugin](../tilejsonplugin/) を参照してください。
 
 ## 使い方
 

@@ -53,7 +53,9 @@ import {
   convertWorldToScreen, EllipsoidGeodesic,
 } from "@navara/three";
 
-// Place objects in a local East-North-Up frame at a geographic origin:
+// position is Cartesian ECEF by default — a bare position won't stand upright at a
+// lng/lat. Build a tangent frame at the origin and pass it as matrixWorld; then
+// position/rotation/scale are offsets WITHIN that frame, in meters:
 const origin = geodeticToVector3({
   lat: degreeToRadian(35.681236),
   lng: degreeToRadian(139.767125),
@@ -71,6 +73,15 @@ const geodesic = new EllipsoidGeodesic(startLLE, endLLE);
 geodesic.distance; geodesic.interpolatePoints(64);
 ```
 
-Mesh transform modes: standard `position`/`rotation`/`scale` (ECEF), `matrix` (local frame), `matrixWorld` (world frame — the usual choice for geographic placement, as above).
+Pick the tangent-frame function by the axis orientation your mesh expects — all take an ECEF origin `Vector3` and return a `Matrix4`, all exported from `@navara/three`:
+
+| Function | Local axes (x, y, z) |
+|---|---|
+| `eastNorthUpToFixedFrame` | East, North, Up |
+| `northEastDownToFixedFrame` | North, East, Down |
+| `northUpEastToFixedFrame` | North, Up, East |
+| `northWestUpToFixedFrame` | North, West, Up |
+
+Mesh transform modes: standard `position`/`rotation`/`scale` (Cartesian ECEF — the default), `matrix` (local frame), `matrixWorld` (world frame — the usual choice for geographic placement, as above).
 
 Full math API reference: https://navara-docs.netlify.app/three/api/navara_three_api — the most complete runnable reference for picking + geometry math is `example/pages/debug/mesh-picking/main.ts` in the Navara repo.

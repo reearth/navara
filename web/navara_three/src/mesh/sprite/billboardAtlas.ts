@@ -87,6 +87,15 @@ export class BillboardAtlas {
   }
 
   /**
+   * Memory footprint of the atlas in bytes: the CPU pixel buffer (kept
+   * resident for growth re-blits and `needsUpdate` re-uploads) plus the
+   * equal-sized GPU copy held by the `DataTexture` (RGBA8, no mipmaps).
+   */
+  get byteLength(): number {
+    return this._data.byteLength * 2;
+  }
+
+  /**
    * Load `url` (once) and pack it into the atlas.
    * Resolves to the entry's pixel rect, or `undefined` when the image fails
    * to load or the atlas is full even at `maxSize`.

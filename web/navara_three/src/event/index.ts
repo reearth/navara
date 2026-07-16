@@ -56,7 +56,6 @@ export { HillshadeContext } from "./HillshadeContext";
 export function processEvent(ctx: EventContext, event: Events | undefined) {
   const {
     eventManager,
-    scenes,
     meshes,
     meshHandler,
     viewEvents,
@@ -124,7 +123,7 @@ export function processEvent(ctx: EventContext, event: Events | undefined) {
           meshHandler.setTileMeshPrepared(event.tile_handle);
           break;
         case "remove":
-          processObjectRemoved(ctx, scenes.globe, event);
+          processObjectRemoved(ctx, event);
           break;
         case "change":
           processMeshChanged(ctx, event);
@@ -213,7 +212,7 @@ export function processEvent(ctx: EventContext, event: Events | undefined) {
               layer._unregisterFeatureEvaluator(removed.bits);
               layer.emit("featureRemoved", { featureSetId: removed.bits });
             }
-            processObjectRemoved(ctx, scenes.mrt, event);
+            processObjectRemoved(ctx, event);
           }
           break;
         case "change":
@@ -335,11 +334,7 @@ function processObjectTransformUpdated(
   }
 }
 
-function processObjectRemoved(
-  ctx: EventContext,
-  parent: Object3D,
-  obj: EntityEvent,
-) {
+function processObjectRemoved(ctx: EventContext, obj: EntityEvent) {
   const { meshes } = ctx;
   const id = generate_id_from_entity(obj);
   const m = meshes.get(id);
@@ -363,7 +358,9 @@ function processObjectRemoved(
   // clear should after dispose, otherwise model's children will not be disposed
   m.clear();
 
-  parent.remove(m);
+  // Detach from whatever scene it was added to (mrt for opaque features,
+  // transparent for always-on-top overlay sprites, globe for globe meshes).
+  m.removeFromParent();
 }
 
 function disposeObject3D(model: Object3D): void {

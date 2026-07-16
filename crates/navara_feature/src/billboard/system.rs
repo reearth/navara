@@ -197,7 +197,6 @@ pub fn update_height_by_terrain_for_batched(
                         &te.extent,
                         &batched_point_geom.coords,
                         &batched_point_geom.crs,
-                        material.height,
                         material.clamp_to_ground,
                         &mut heights,
                         &mut qt,

@@ -69,7 +69,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
 };
 ```
 
-Tiny examples (hello-world scale) may inline everything in `main.ts` with a `run()` at the bottom.
+Tiny examples (hello-world scale) may inline everything in `main.ts` and use **top-level `await`** directly (`await view.init()`) — no `run()` wrapper or async IIFE. The example bundler supports top-level await.
 
 ## Shared helpers — use these, don't reinvent
 

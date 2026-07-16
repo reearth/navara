@@ -48,6 +48,17 @@ const moonDirection = view.atmosphere.getMoonDirection();
 view.atmosphere.date = new Date("2024-06-21T12:00:00");
 ```
 
+:::caution
+`atmosphere.date` は素の JavaScript `Date` であり、標準の `Date` のパース規則に従います。`new Date("2024-06-21T12:00:00")` のようにタイムゾーンを含まない文字列は**デバイスのローカルタイムゾーン**として解釈されるため、タイムゾーンが異なるマシンでは太陽の位置がずれてしまいます。世界基準で固定したい場合は、末尾に `Z` を付けて UTC で指定してください:
+
+```typescript
+// デバイスのタイムゾーンに関わらず、どこでも同じ瞬間になる
+view.atmosphere.date = new Date("2024-06-21T12:00:00Z");
+```
+
+カメラを他の国に移動する場合は、日時を手動で計算し直すのではなく、[`setDateFromCameraAt()`](#setdatefromcameraat) や [`setElevationFromCameraAt()`](#setelevationfromcameraat) を使ってローカル太陽時や太陽高度を保ってください。
+:::
+
 ### sunDirection
 
 **Type:** `Vector3`（読み取り専用）

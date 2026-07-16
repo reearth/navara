@@ -24,3 +24,12 @@ export {
   type CesiumIonConfig,
   type CesiumIonTerrainOptions,
 } from "./CesiumIonPlugin";
+
+export {
+  TileJsonPlugin,
+  type TileJson,
+  type TileJsonSourceType,
+  type TileJsonSourceDescription,
+  type TileJsonLoadedEvent,
+  type TileJsonPluginEventMap,
+} from "./TileJsonPlugin";

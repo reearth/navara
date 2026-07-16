@@ -62,6 +62,10 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   /** Latest override URL requested per instance. An async pack only applies
    * if it still matches, so a newer override or a clear wins over slow loads. */
   private _requestedImageUrls = new Map<number, string>();
+  /** Forwards the atlas byte footprint to the engine's memory ledger; wired
+   * by the feature-added handler once the owning entity bits are known. */
+  private _atlasBytesReporter?: (bytes: number) => void;
+  private _reportedAtlasBytes = 0;
   private _active = true;
   readonly ctx: EventContext;
   /** Material enhancer for encapsulated state management */
@@ -462,6 +466,28 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   }
 
   /**
+   * Wire the callback that reports this mesh's atlas footprint to the
+   * engine's memory ledger, and immediately report the current footprint —
+   * the default image may have been packed during `_init`, before the
+   * feature-added handler could wire the reporter.
+   */
+  setAtlasBytesReporter(reporter: (bytes: number) => void): void {
+    this._atlasBytesReporter = reporter;
+    this._reportAtlasBytes();
+  }
+
+  /** Report the atlas footprint if it changed since the last report. Must run
+   * after every `pack()` — the atlas may have grown even when the pack failed
+   * (growth up to `maxSize` happens before "no space" is decided). */
+  private _reportAtlasBytes(): void {
+    if (!this._atlasBytesReporter) return;
+    const bytes = this._atlas?.byteLength ?? 0;
+    if (bytes === this._reportedAtlasBytes) return;
+    this._reportedAtlasBytes = bytes;
+    this._atlasBytesReporter(bytes);
+  }
+
+  /**
    * Push the atlas texture and size to the material. The texture object is
    * replaced whenever the atlas grows, so this must run after every pack().
    */
@@ -485,6 +511,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     this._defaultUrl = url;
 
     const rect = await this._ensureAtlas().pack(url);
+    this._reportAtlasBytes();
     if (!rect) return;
     // A newer default image won the race while this one was loading.
     if (this._defaultUrl !== url) return;
@@ -630,6 +657,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
 
     this._requestedImageUrls.set(instanceId, url);
     const rect = await this._ensureAtlas().pack(url);
+    this._reportAtlasBytes();
     if (!rect) return;
     // A newer override or a clear superseded this load while it was in flight.
     if (this._requestedImageUrls.get(instanceId) !== url) return;
@@ -646,6 +674,15 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     // The material's uTexture points at the atlas texture; the atlas owns it.
     this._atlas?.dispose();
     this._atlas = undefined;
+
+    // Clear this mesh's atlas term from the memory ledger. When disposal was
+    // caused by the owning tile's eviction the entity is already gone and the
+    // report is a no-op; when only this feature was removed the tile survives
+    // and the term must not linger.
+    if (this._reportedAtlasBytes !== 0) {
+      this._reportedAtlasBytes = 0;
+      this._atlasBytesReporter?.(0);
+    }
 
     (this.material as ShaderMaterial).dispose();
 

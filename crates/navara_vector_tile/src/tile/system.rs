@@ -30,7 +30,7 @@ use crate::{
     source::TileSource,
 };
 
-use super::render::RenderedTile;
+use super::render::{OwningVectorTile, RenderedTile, VectorTileGpuCost};
 use super::traverse::{
     TraversalResult, activate_all_renderable_features, are_all_renderable_features_active,
     spawn_tile_entity, traverse_tile,
@@ -341,14 +341,23 @@ pub fn transfer_mesh(
                 if rendered_tile.feature_ids.is_some() {
                     panic!("It should be cleaned before new feature is added");
                 }
+                // Point each feature back at its owning tile so JS-side
+                // per-feature memory reports (billboard atlases) can land on
+                // this tile's cost (see `App::report_feature_gpu_bytes`).
+                for feature_entity in &feature_ids {
+                    commands
+                        .entity(*feature_entity)
+                        .insert(OwningVectorTile(rendered_tile_id));
+                }
                 rendered_tile.feature_ids = Some(feature_ids);
 
                 // geometry = (total_after + pbf_removed) − total_before.
                 let geometry_bytes =
                     (buf.total_bytes() as u64 + pbf_bytes_before).saturating_sub(buf_before);
-                commands
-                    .entity(rendered_tile_id)
-                    .insert(estimate_vector_tile_cost(geometry_bytes));
+                commands.entity(rendered_tile_id).insert((
+                    estimate_vector_tile_cost(geometry_bytes),
+                    VectorTileGpuCost::new(geometry_bytes),
+                ));
                 // Feed the per-layer reservation estimator with the landed
                 // actual cost — this is the finalize point the dispatch-time
                 // `ReservedCost` was protecting until. Failed fetches never
@@ -376,6 +385,11 @@ pub fn transfer_mesh(
 /// accounting cannot see. The atlas is charged on the terrain tile in
 /// `attach_terrain_mesh_cost`; the drape render targets are reported from JS
 /// against `TerrainTileGpuCost.drape` (see `report_terrain_drape_gpu_bytes`).
+///
+/// Billboard image atlases are also not charged here — they are allocated
+/// lazily on the JS side (images load after the tile finalizes) and are folded
+/// into this tile's cost later via [`VectorTileGpuCost`] when JS reports the
+/// measured footprint (see `App::report_feature_gpu_bytes`).
 pub fn estimate_vector_tile_cost(geometry_bytes: u64) -> TileCost {
     TileCost {
         cpu: 0,

@@ -217,6 +217,14 @@ function injectGBufferToSpriteMaterial(shader: ShaderLibShader) {
   return shader;
 }
 
+/**
+ * @internal
+ * Patches all built-in Three.js `ShaderLib` materials (basic, lambert, phong,
+ * standard, physical, sprite, points) so they write to the MRT G-buffer.
+ * Called automatically when `@navara/three` is imported — application code
+ * never needs to call this. Custom `ShaderMaterial`/`LineMaterial` do not go
+ * through `ShaderLib`, so they must opt in via {@link setupMaterialForMRT}.
+ */
 export function overrideMaterialsForMRT(): void {
   injectGBuffer(ShaderLib.lambert);
   injectGBuffer(ShaderLib.phong);
@@ -312,17 +320,17 @@ function injectGBufferToShaderMaterial(
   return shader;
 }
 
-// Override ShaderMaterial for MRT G-Buffer output.
-// Injects normalBuffer, effectIdBuffer, emissiveBuffer outputs and logdepthbuf modules.
-// When USE_SELECTIVE_EFFECT is defined, outputs effectIdsMask and emissive
-// using additive blend: (gl_FragColor.rgb + uEmissiveColor) × uEmissiveIntensity.
-// Requires a `normal` variable in the shader.
-export function overrideShaderMaterialForMRT(
-  material: ShaderMaterial,
-  normalVariableName?: string,
-) {
-  injectGBufferToShaderMaterial(material, normalVariableName);
-}
+export type SetupMaterialForMRTOptions = {
+  /**
+   * Name of the GLSL variable holding the **view-space** normal in the
+   * fragment shader (it is packed with `packNormalToVec2`, which assumes
+   * view space). Defaults to `"normal"`. Shaders that expose their normal as
+   * a `varying vec3 vNormal` should pass `{ normal: "vNormal" }`.
+   *
+   * Ignored for `LineMaterial`, which derives a screen-space normal itself.
+   */
+  normal?: string;
+};
 
 // LineMaterial MRT Support. Injects normalBuffer, effectIdBuffer, emissiveBuffer outputs.
 // When USE_SELECTIVE_EFFECT is defined, outputs effectIdsMask (emissive not supported for LineMaterial).
@@ -394,7 +402,38 @@ function injectGBufferToLineMaterial(lineMaterial: LineMaterial) {
   return lineMaterial;
 }
 
-// Enhanced overrideShaderMaterialForMRT that detects and handles LineMaterial
-export function overrideLineMaterialForMRT(material: LineMaterial): void {
-  injectGBufferToLineMaterial(material);
+/**
+ * Wire a custom material into Navara's MRT G-buffer so depth/normal-based
+ * effects (SSAO, SSR, outline, aerial perspective, clouds) and SelectiveEffect
+ * (Bloom/Outline) work on the mesh that uses it.
+ *
+ * Built-in Three.js materials (`MeshStandardMaterial`, `MeshBasicMaterial`,
+ * `Sprite`, `Points`, …) are patched automatically on import and do **not**
+ * need this. Only custom `ShaderMaterial` and three-stdlib `LineMaterial`
+ * bypass `ShaderLib`, so they must opt in here.
+ *
+ * `LineMaterial` is detected and routed automatically; the `normal` option is
+ * only used for plain `ShaderMaterial`.
+ *
+ * Injects `normalBuffer` (location 1), `effectIdBuffer` (location 2), and
+ * `emissiveBuffer` (location 3). For `ShaderMaterial` it also injects the
+ * `logdepthbuf` modules; `LineMaterial` already has its own vertex setup, so
+ * those are not added. When `USE_SELECTIVE_EFFECT` is defined,
+ * `effectIdBuffer`/`emissiveBuffer` are populated (emissive is unsupported for
+ * `LineMaterial`). Idempotent — calling it more than once on the same material
+ * is a no-op.
+ *
+ * Requirements for `ShaderMaterial`: the fragment shader must expose a
+ * view-space normal (named by `options.normal`, default `"normal"`), and the
+ * last `}` in each shader is assumed to close `main()`.
+ */
+export function setupMaterialForMRT(
+  material: ShaderMaterial,
+  options?: SetupMaterialForMRTOptions,
+): void {
+  if (material instanceof LineMaterial) {
+    injectGBufferToLineMaterial(material);
+    return;
+  }
+  injectGBufferToShaderMaterial(material, options?.normal);
 }

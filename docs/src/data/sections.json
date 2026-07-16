@@ -1,0 +1,12 @@
+{
+  "families": [
+    { "id": "three", "label": "Three.js", "labelJa": "Three.js" }
+  ],
+  "sections": [
+    { "slug": "guides", "label": "Guides", "labelJa": "ガイド", "href": "/guides/introduction/what-is-navara/" },
+    { "slug": "three", "label": "Three", "labelJa": "Three", "href": "/three/introduction/what-is-navara-three/", "family": "three" },
+    { "slug": "three_default_descs", "label": "Default Descriptors", "labelJa": "デフォルト Descriptor", "href": "/three_default_descs/about/", "family": "three" },
+    { "slug": "three_default_plugin", "label": "Default Plugin", "labelJa": "デフォルトプラグイン", "href": "/three_default_plugin/about/", "family": "three" },
+    { "slug": "three_plugins", "label": "Plugins", "labelJa": "プラグイン", "href": "/three_plugins/about/", "family": "three" }
+  ]
+}

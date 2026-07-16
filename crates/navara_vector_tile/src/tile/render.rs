@@ -10,10 +10,56 @@ use navara_component::Deleted;
 use navara_feature_component::{batch::BatchedFeature, id::FeatureId};
 use navara_layer::LayerId;
 use navara_tile_component::TileHandle;
+use rustc_hash::FxHashMap;
 
 /// Removed features grouped by layer ID.
 /// Used to properly update LayerStore for each layer when tiles are destroyed.
 pub type RemovedFeaturesByLayer = HashMap<String, Vec<Entity>>;
+
+/// Points a batched feature entity back at the [`RenderedTile`] that owns it.
+/// Inserted when the tile's geometry finalizes, so JS-side per-feature memory
+/// reports (billboard atlases) can land on the owning tile's cost. Dies with
+/// the feature entity, so no destroy-path bookkeeping is needed.
+#[derive(Component, Clone, Copy)]
+pub struct OwningVectorTile(pub Entity);
+
+/// GPU cost terms of a rendered vector tile, mirroring `TerrainTileGpuCost`:
+/// `geometry` is the buffer-byte measurement taken at finalize
+/// (`estimate_vector_tile_cost`), `billboard_atlases` the JS-measured texture
+/// atlas footprint per billboard feature — billboards pack their images into a
+/// per-mesh atlas that is allocated and grown lazily on the JS side, so only a
+/// JS report (`reportFeatureGpuBytes`) can size it. The owning
+/// `TileCost.gpu_est` is kept equal to [`VectorTileGpuCost::total`].
+#[derive(Component, Default, Debug)]
+pub struct VectorTileGpuCost {
+    pub geometry: u64,
+    billboard_atlases: FxHashMap<Entity, u64>,
+}
+
+impl VectorTileGpuCost {
+    pub fn new(geometry: u64) -> Self {
+        Self {
+            geometry,
+            billboard_atlases: FxHashMap::default(),
+        }
+    }
+
+    /// Replaces (not accumulates) the atlas footprint reported for one
+    /// billboard feature; `0` clears the entry (the JS mesh was disposed).
+    pub fn set_billboard_atlas(&mut self, feature: Entity, bytes: u64) {
+        if bytes == 0 {
+            self.billboard_atlases.remove(&feature);
+        } else {
+            self.billboard_atlases.insert(feature, bytes);
+        }
+    }
+
+    pub fn total(&self) -> u64 {
+        self.billboard_atlases
+            .values()
+            .fold(self.geometry, |acc, b| acc.saturating_add(*b))
+    }
+}
 
 #[derive(Component, Default)]
 pub struct RenderedTile {

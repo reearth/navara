@@ -148,6 +148,20 @@ describe("BillboardAtlas", () => {
     warn.mockRestore();
   });
 
+  it("reports its footprint as CPU buffer + GPU texture and tracks growth", async () => {
+    const atlas = new BillboardAtlas({
+      initialSize: 16,
+      maxSize: 64,
+      loadImage: stubLoader(),
+    });
+    // 16×16 RGBA, twice (CPU pixel buffer + GPU copy).
+    expect(atlas.byteLength).toBe(16 * 16 * 4 * 2);
+
+    // Forces growth to 32 (20+gutter doesn't fit in 16).
+    await mustPack(atlas, "20x20:0");
+    expect(atlas.byteLength).toBe(32 * 32 * 4 * 2);
+  });
+
   it("caches failed loads and resolves them as undefined", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const loadImage = vi.fn(async (): Promise<AtlasImage> => {
