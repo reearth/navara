@@ -6,6 +6,10 @@ import type { FontManager } from "@navara/font";
 import { type Color } from "three";
 import invariant from "tiny-invariant";
 
+import type {
+  DeclutterCandidate,
+  DeclutterParticipant,
+} from "../declutter/types";
 import type { EventContext } from "../event/context";
 
 import { InstancedMesh, type InstancedMeshOptions } from "./instanced";
@@ -36,7 +40,7 @@ type PositionsInfo = PositionsInfoBase &
 
 export class BatchedSdfTextMesh
   extends InstancedMesh<SDFTextMesh>
-  implements PickableMesh
+  implements PickableMesh, DeclutterParticipant
 {
   readonly ctx: EventContext;
   /** The font identifier from material — may be a family name or a URL. */
@@ -79,6 +83,33 @@ export class BatchedSdfTextMesh
       this._highQuality,
       () => this._revalidateStaleMeshes(),
     );
+    ctx.declutter?.register(this);
+  }
+
+  // --- DeclutterParticipant ---
+
+  collectDeclutterCandidates(out: DeclutterCandidate[]): void {
+    if (!this.visible) return;
+    const meshes = this.meshes();
+    for (let i = 0; i < meshes.length; i++) {
+      const candidate = meshes[i].getDeclutterCandidate(this, i);
+      if (candidate) out.push(candidate);
+    }
+  }
+
+  applyDeclutter(handle: number, hidden: boolean): void {
+    this.meshes()[handle]?.setDeclutterHidden(hidden);
+  }
+
+  /** Candidates changed (text, style, position, visibility): ask the shared
+   *  declutter pass to re-place on its next update. */
+  private _markDeclutterDirty(): void {
+    this.ctx.declutter?.markDirty();
+  }
+
+  override setActive(active: boolean) {
+    super.setActive(active);
+    this._markDeclutterDirty();
   }
 
   /**
@@ -111,6 +142,7 @@ export class BatchedSdfTextMesh
           // Force a rebuild even though the text string is unchanged: the baked
           // atlas rects and glyph retains must refresh against the new metrics.
           mesh.setText(text, true);
+          this._markDeclutterDirty();
           this._needRender?.();
         })
         .catch((err: unknown) => {
@@ -222,6 +254,8 @@ export class BatchedSdfTextMesh
           : position.subarray(posIdx, posIdx + positionSize);
         this.meshes()[i].setPosition(pos, RTE, transform);
       }
+      // Anchors moved (e.g. terrain height resolution) — re-place labels.
+      this._markDeclutterDirty();
     }
 
     const fontIdentifier = m.material.font ?? this._fontIdentifier;
@@ -292,6 +326,7 @@ export class BatchedSdfTextMesh
       mesh.update(material, forceUpdate);
       this.markVisibility(mesh);
     }
+    this._markDeclutterDirty();
 
     if (needRender) needRender();
   }
@@ -412,6 +447,7 @@ export class BatchedSdfTextMesh
             // Restore intended visibility now that text content is available
             mesh.visible = intendedVisible;
             this.markVisibility(mesh);
+            this._markDeclutterDirty();
             this._needRender?.();
           })
           .catch((err: unknown) => {
@@ -422,6 +458,7 @@ export class BatchedSdfTextMesh
       }
       mesh.setText(text);
       this.markVisibility(mesh);
+      this._markDeclutterDirty();
       this._needRender?.();
     }
   }
@@ -438,6 +475,7 @@ export class BatchedSdfTextMesh
     if (mesh) {
       mesh._setFeatureShow(rawVisible);
       this.markVisibility(mesh);
+      this._markDeclutterDirty();
     }
   }
 
@@ -445,6 +483,7 @@ export class BatchedSdfTextMesh
     const mesh = this.meshes()[batchIndex];
     if (mesh) {
       mesh.setHeight(height);
+      this._markDeclutterDirty();
     }
   }
 
@@ -452,6 +491,7 @@ export class BatchedSdfTextMesh
     const mesh = this.meshes()[batchIndex];
     if (mesh) {
       mesh.setSize(size);
+      this._markDeclutterDirty();
     }
   }
 
@@ -466,6 +506,7 @@ export class BatchedSdfTextMesh
   }
 
   dispose() {
+    this.ctx.declutter?.unregister(this);
     this._unsubscribeEvict?.();
     this._unsubscribeEvict = undefined;
     const q = this._highQuality;

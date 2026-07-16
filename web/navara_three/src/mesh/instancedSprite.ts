@@ -10,19 +10,26 @@ import {
   Object3D,
   ShaderMaterial,
   BufferAttribute,
+  type BufferGeometry,
   DataArrayTexture,
   UnsignedByteType,
   RGBAFormat,
   LinearFilter,
   Color,
+  type Material,
   PerspectiveCamera,
   Vector2,
 } from "three";
 import invariant from "tiny-invariant";
 
+import type {
+  DeclutterCandidate,
+  DeclutterParticipant,
+} from "../declutter/types";
 import type { EventContext } from "../event/context";
 import { TEXTURE_LOADER } from "../event/loaders";
 import { createInstancedSpriteMaterialEnhancer } from "../material/enhancer";
+import type { CustomObject3DEventMap } from "../object3DEvent";
 import { getImageDataFromImageBitmap } from "../tasks/getImageDataFromImageBitmap";
 
 import { PickableMesh } from "./pickableMesh";
@@ -50,7 +57,10 @@ type PositionsInfo = {
 const _tmpSize = new Vector2();
 
 // Coupled with crates/navara_feature/src/geometry/point.rs::pixel_to_world
-export class InstancedSpriteMesh extends Mesh implements PickableMesh {
+export class InstancedSpriteMesh
+  extends Mesh<BufferGeometry, Material | Material[], CustomObject3DEventMap>
+  implements PickableMesh, DeclutterParticipant
+{
   private _batchIdToInstance = new Map<number, number>();
   private _initialColor: Color = new Color(0xffffff);
   private _initialHeight = 0.0;
@@ -62,15 +72,115 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   private _enhancedMaterial?: ReturnType<
     typeof createInstancedSpriteMaterialEnhancer
   >;
+  /** Per-instance world anchors in ECEF meters (f64, 3 per instance), kept in
+   *  sync with the position attributes for the declutter pass. */
+  private _anchors: Float64Array | null = null;
+  /** Whether this mesh's instances participate in screen-space decluttering. */
+  private _declutter = false;
+  private _declutterPriority = 0;
+
   constructor(options: InstancedSpriteOptions) {
     super();
     this.renderOrder = options.renderOrder ?? this.renderOrder;
     this.ctx = options.ctx;
+    this.ctx.declutter?.register(this);
+    // `processObjectRemoved` dispatches this for every removed mesh; it is the
+    // reliable teardown signal (this class's dispose() is not called there).
+    this.addEventListener("removedFromWorld", () => {
+      this.ctx.declutter?.unregister(this);
+    });
   }
 
   setActive(active: boolean) {
     this._active = active;
     this.updateVisibility();
+    this.ctx.declutter?.markDirty();
+  }
+
+  // --- DeclutterParticipant ---
+
+  collectDeclutterCandidates(out: DeclutterCandidate[]): void {
+    if (!this.visible || !this._declutter || !this._anchors) return;
+    const enhancer = this._enhancedMaterial;
+    const params = this.geometry?.getAttribute("instanceParams") as
+      | InstancedBufferAttribute
+      | undefined;
+    if (!enhancer || !params) return;
+
+    const state = enhancer.states();
+    const cx = Math.min(Math.max(state.center[0], -0.5), 0.5);
+    const cy = Math.min(Math.max(state.center[1], -0.5), 0.5);
+    const aspect = state.aspect;
+    const anchors = this._anchors;
+    const count = Math.min(params.count, anchors.length / 3);
+
+    for (let i = 0; i < count; i++) {
+      if (params.getZ(i) <= 0.5) continue; // hidden by user `show`
+      const instanceSize = params.getY(i);
+      const size = instanceSize >= 0.0 ? instanceSize : state.scale;
+      if (size <= 0.0) continue;
+
+      // Mirror of instancedSprite.vert.glsl:95-97 — the quad spans
+      // (position.xy - center) * vec2(aspect, 1) * size around the anchor.
+      out.push({
+        anchorX: anchors[i * 3],
+        anchorY: anchors[i * 3 + 1],
+        anchorZ: anchors[i * 3 + 2],
+        addHeight: params.getX(i),
+        minX: (-0.5 - cx) * aspect * size,
+        maxX: (0.5 - cx) * aspect * size,
+        minY: (-0.5 - cy) * size,
+        maxY: (0.5 - cy) * size,
+        sizeInMeters: state.sizeInMeters,
+        priority: this._declutterPriority,
+        owner: this,
+        handle: i,
+      });
+    }
+  }
+
+  applyDeclutter(handle: number, hidden: boolean): void {
+    this.setDeclutterHiddenByInstance(handle, hidden);
+  }
+
+  private _cacheDeclutterState(m: NavaraPointMesh | NavaraBillboardMesh) {
+    this._declutter = m.material.declutter ?? false;
+    this._declutterPriority = m.material.declutterPriority ?? 0;
+  }
+
+  /** Reconstruct absolute ECEF anchors from the same arrays the position
+   *  attributes receive (RTE high+low split, or RTC-relative + center). */
+  private _cacheAnchors(
+    positionsInfo: PositionsInfo,
+    transform: { tx: number; ty: number; tz: number },
+  ): void {
+    const { nPositions, positionSize, RTE } = positionsInfo;
+    const anchors =
+      this._anchors && this._anchors.length === nPositions * 3
+        ? this._anchors
+        : new Float64Array(nPositions * 3);
+
+    if (RTE) {
+      const pos = positionsInfo.position as {
+        high: Float32Array<ArrayBufferLike>;
+        low: Float32Array<ArrayBufferLike>;
+      };
+      for (let i = 0; i < nPositions; i++) {
+        const s = i * positionSize;
+        anchors[i * 3] = pos.high[s] + pos.low[s];
+        anchors[i * 3 + 1] = pos.high[s + 1] + pos.low[s + 1];
+        anchors[i * 3 + 2] = (pos.high[s + 2] ?? 0.0) + (pos.low[s + 2] ?? 0.0);
+      }
+    } else {
+      const pos = positionsInfo.position as Float32Array<ArrayBufferLike>;
+      for (let i = 0; i < nPositions; i++) {
+        const s = i * positionSize;
+        anchors[i * 3] = pos[s] + transform.tx;
+        anchors[i * 3 + 1] = pos[s + 1] + transform.ty;
+        anchors[i * 3 + 2] = (pos[s + 2] ?? 0.0) + transform.tz;
+      }
+    }
+    this._anchors = anchors;
   }
 
   async _init(m: NavaraPointMesh | NavaraBillboardMesh) {
@@ -80,6 +190,9 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       return;
     }
 
+    this._cacheDeclutterState(m);
+    this._cacheAnchors(positionsInfo, m.transform);
+
     // Create Geometry
     this.geometry = this._initGeometry(positionsInfo, m);
 
@@ -87,11 +200,14 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     this.material = await this._initMaterial(positionsInfo, m);
 
     this.frustumCulled = false; // Disable since bounding box doesn't account for instance positions
+    this.ctx.declutter?.markDirty();
   }
 
   async _update(m: NavaraPointMesh | NavaraBillboardMesh) {
     const enhancer = this.getEnhancer();
     const material = this.material as ShaderMaterial;
+
+    this._cacheDeclutterState(m);
 
     if (material.visible !== m.material.show) {
       material.visible = m.material.show ?? true;
@@ -152,6 +268,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       const positionsInfo = this.extractPositions(m);
 
       if (positionsInfo) {
+        this._cacheAnchors(positionsInfo, m.transform);
         if (positionsInfo.RTE) {
           const pos = positionsInfo.position as {
             high: Float32Array<ArrayBufferLike>;
@@ -198,6 +315,8 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
         }
       }
     }
+
+    this.ctx.declutter?.markDirty();
   }
 
   private _initGeometry(
@@ -601,6 +720,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     ) as InstancedBufferAttribute;
     paramsAttr.setZ(instanceId, rawVisible ? 1.0 : 0.0);
     paramsAttr.needsUpdate = true;
+    this.ctx.declutter?.markDirty();
   }
 
   setFeatureOpacityByBatchId(batchId: number, opacity: number) {
@@ -628,6 +748,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     const sanitizedHeight = Number.isFinite(height) ? height : 0.0;
     paramsAttr.setX(instanceId, sanitizedHeight);
     paramsAttr.needsUpdate = true;
+    this.ctx.declutter?.markDirty();
   }
 
   /**
@@ -663,9 +784,11 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       : -1.0;
     paramsAttr.setY(instanceId, sanitizedSize);
     paramsAttr.needsUpdate = true;
+    this.ctx.declutter?.markDirty();
   }
 
   dispose(): void {
+    this.ctx.declutter?.unregister(this);
     this.geometry?.dispose();
 
     const shaderMaterial = this.material as ShaderMaterial;
@@ -685,5 +808,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     // Clear internal collections to release references
     this._batchIdToInstance.clear();
     this._loadedUrls.clear();
+    this._anchors = null;
   }
 }

@@ -70,6 +70,7 @@ import {
   type AnyMeshDesc,
 } from "./core/BaseHandle";
 import { Registries } from "./core/Registries";
+import { DeclutterManager } from "./declutter";
 import {
   getCompositeAtlasSize,
   getDefaultDynamicSse,
@@ -442,6 +443,10 @@ export default class ThreeView<
     forceUpdate: false,
     animation: false,
   };
+  /** Shared screen-space label declutterer for text/sprite features. */
+  private _declutter = new DeclutterManager();
+  /** Reusable Vector2 for the declutter pass's per-frame viewport query. */
+  private _declutterSize = new Vector2();
   private _isIdle = false;
   private _uniforms: CommonUniforms;
 
@@ -1431,6 +1436,7 @@ export default class ThreeView<
       textureFragmentIndex: this._textureFragmentIndex,
       tileMeshToFragmentIds: this._tileMeshToFragmentIds,
       hillshadeContext: this._hillshadeContext,
+      declutter: this._declutter,
     });
 
     // Register built-in descriptors
@@ -1736,6 +1742,24 @@ export default class ThreeView<
     this._uniforms.time.value = updatedAt;
 
     this._atmosphere._update();
+
+    // Screen-space label decluttering runs before the render passes so
+    // placement changes land in this frame. When the throttle skips a due
+    // pass, force a follow-up frame so placement still settles right after
+    // the camera stops moving.
+    {
+      const size = this._renderer.getDrawingBufferSize(this._declutterSize);
+      const pixelRatio = this._renderer.getPixelRatio();
+      const result = this._declutter.update(
+        this._camera.raw,
+        size.x / pixelRatio,
+        size.y / pixelRatio,
+        updatedAt,
+      );
+      if (result === "throttled") {
+        this._renderFlag.forceUpdate = true;
+      }
+    }
 
     this.emit("preRender", updatedAt);
 
