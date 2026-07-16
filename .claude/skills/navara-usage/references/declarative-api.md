@@ -75,7 +75,7 @@ const box = view.addMesh<BoxMeshDesc>({ box: { width: 100, height: 100 } });
 const fxaa = view.addEffect<FXAAEffectDesc>({ fxaa: {} });
 const sun = view.addLight<SunLightDesc>({ sun: { intensity: 1.0, castShadow: true } });
 
-box.update({ box: { width: 200 } });            // partial merge, unlike Layer.update()
+box.update({ box: { width: 200 } });            // partial merge, same as Layer.update()
 box.visible = false;
 box.delete();
 ```
