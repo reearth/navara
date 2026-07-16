@@ -73,6 +73,7 @@ Lighting only affects surfaces that carry **normals**. Anything without normals 
 - meshes / GLTF models that ship vertex normals
 - `quantized-mesh` terrain loaded with `requestVertexNormals: true`
 - `raster-dem` terrain rendered with a `hillshade` material
+- the bare globe when the view was constructed with `useNormal: true` (init-only) — needed for the sun to shade the globe when no terrain or hillshade layer supplies normals
 
 Built-in lights — register via `DefaultPlugin`, then `view.addLight<T>({ ... })`:
 

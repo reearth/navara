@@ -1,33 +1,80 @@
 ---
 title: What is Navara?
-description: Navara の概要 — Web 向け高性能 3D マップエンジン。
+description: Navara の概要 — 拡張性の高い汎用 3D 地図エンジン。
 sidebar:
   order: 1
 ---
 
 ## Navara とは？
 
-Navara はヘッドレス 3D マップエンジンです。GIS コアは Rust で書かれ WebAssembly にコンパイルされており、特定のレンダリング技術から意図的に分離されています。現在、Navara は Three.js ベースのレンダリングバックエンド（`@navara/three`）を提供していますが、将来的には他のレンダリングエンジンやネイティブプラットフォームもサポートできるよう設計されています。
+Navara は拡張性の高い汎用 3D 地図エンジンです。衛星画像、地形、3D 都市モデル、ベクターデータといった現実世界の地理空間データをインタラクティブな地球儀上にストリーミングし、アプリケーションの用途に合わせて表現できます。データ可視化のためのシンプルなベースマップ、属性に基づくフィーチャー単位のスタイリングから、大気・太陽光・影を備えたフォトリアルなシーンまで対応します。
 
-```mermaid
-graph TD
-  subgraph GIS["ヘッドレス GIS コア（Rust）"]
-    B["データ処理 / 空間インデックス / 楕円体幾何 など"]
-  end
+Navara は、Three.js などのレンダリングエンジンをラップしたライブラリ（`@navara/three` 等）を通して利用します。すべての地理空間計算は Web Worker に分散された Rust/WASM GIS エンジンが担うため、大規模データセットでもマップはレスポンシブに動作します。仕組みの詳細に興味があれば [How Navara Works](../how-navara-works/) を参照してください。
 
-  GIS --> C["レンダリング可能な出力"]
-  C --> D["@navara/three (Three.js)"]
-  C --> E["将来のバックエンド（他のエンジン）"]
-  C --> F["将来のバックエンド（ネイティブ）"]
+## 数行のコードで地球儀を
+
+衛星画像を地球儀に表示するにはこれだけのコードで済みます。この例では、オプションのフォトリアルな空・太陽・大気も有効にしています。
+
+![Hero](@assets/hero.png)
+
+```typescript
+import ThreeView from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
+
+const view = new ThreeView({ useNormal: true });
+
+const defaultPlugin = new DefaultPlugin();
+view.addPlugin(defaultPlugin);
+
+// Initialization
+
+await view.init();
+
+// Setup scene
+defaultPlugin.addDefaultPhotorealScene();
+view.atmosphere.date = new Date("2026-07-16T01:00:00Z");
+view.toneMappingExposure = 10;
+
+// Layer declaration
+
+const raster = view.addSource({
+  type: "raster-tile",
+  url: "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_NextGeneration/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg",
+  maxZoom: 8,
+});
+
+view.addLayer({
+  type: "raster",
+  source: raster,
+  raster: {},
+});
+
+// Attribution
+
+view.attribution?.add([{ attributionHtml: `Imagery courtesy of <a href="https://earthdata.nasa.gov/gibs">NASA EOSDIS GIBS</a> · Blue Marble: Next Generation (public domain)` }]);
 ```
 
-## 主な特徴
+実際に試してみたい場合は、[Getting Started](../getting-started/) でプロジェクトのセットアップ手順を追えます。また、[Examples](https://navara-preview.netlify.app/) ギャラリーでは Navara で何ができるかをブラウザ上のライブデモで確認できます。
 
-Navara は GeoJSON、Mapbox Vector Tiles（MVT）、Cesium 3D Tiles、ラスタータイル、地形データなど、幅広い地理空間データフォーマットをサポートしています。これらのデータソースを 3D 地図上のレイヤーとして表示・スタイリングでき、[`FeatureEvaluator`](../../../three/api/feature-evaluator/) によるフィーチャー単位のスタイリングも可能です。
+## Navara でできること
 
-Three.js レンダリングバックエンドは、大気散乱、シャドウマッピング、ボリュメトリッククラウド、ポストプロセッシングエフェクトなど、フォトリアルな描画機能を備えています。これらはすべてプラグインシステムを通じて合成可能なエフェクトとして利用できます。
+Navara の機能は 4 つの階層に整理されています。まずは宣言的 API から始め、必要になったときだけ下の階層に降りていくのが基本です。
 
-Rust/WASM GIS エンジンはレンダラーとは独立してすべての地理空間計算を処理し、CPU 負荷の高いタスクは Web Worker に分散されるため、大規模データセットでもレスポンシブなパフォーマンスを維持します。
+### 宣言的 API
+
+[Source](../../../three/source/about/) と[レイヤー](../../../three/layer/about/)をプレーンな設定オブジェクトで追加できます。ベースマップ、地形、ベクターデータ、Cesium 3D Tiles をカバーします。各 Source がフェッチ、キャッシュ、LOD（詳細度）制御を自動で処理し、1 つの Source を複数のレイヤーで共有できるため、再フェッチなしでスタイルを変更できます。メッシュ・エフェクト・ライトの Descriptor も同じ宣言的スタイルで扱えます。大気散乱、ボリュメトリッククラウド、ポストプロセッシングエフェクトはいずれも `addMesh` / `addEffect` / `addLight` に設定オブジェクトを渡すだけで追加できます。
+
+### プラグイン
+
+既製の[プラグイン](../../../three_plugins/about/)は、目的別の機能をまとめて提供します。フォトリアルシーン（[`addDefaultPhotorealScene()`](../../../three_default_plugin/about/)）、一人称視点ウォーク（`PersonViewPlugin`）、地理座標に固定する DOM オーバーレイ（`OverlayPlugin`）、Attribution UI などです。再利用可能な機能を[独自のプラグイン](../../../three/core/plugin/)としてパッケージ化することもできます。
+
+### 低レベル API
+
+設定オブジェクトや既製のプラグインでは足りないときは 1 つ下の階層へ。[`FeatureEvaluator`](../../../three/api/feature-evaluator/) で属性に基づいて個々のフィーチャーをスタイリングし（建物を高さで色分けする、属性値でフィルタリングするなど）、`pick` イベントや地形サンプリングでフィーチャーのピックや地形の照会を行い、測地系 / ECEF の数学ユーティリティで座標変換や測地線距離を計算できます。GIS 計算はマップエンジンなしで動作する[スタンドアロンパッケージ](../../../three/api/navara_three_api/)（`@navara/three_api`）としても利用できます。
+
+### カスタム Descriptor
+
+ビルトインで足りない場合は、独自のメッシュ・エフェクト・ライトの [Descriptor](../../../three/core/custom-desc/) を作成できます。Three.js シーングラフとレンダーパイプラインへのフルアクセス — 深度バッファや法線 / G バッファ（MRT）を含む — を持ちます。これは Navara のビルトイン Descriptor を支えるのと同じ基盤であり、制限された抜け道ではありません。
 
 ## 他のマップエンジンとの比較
 
@@ -39,8 +86,8 @@ Rust/WASM GIS エンジンはレンダラーとは独立してすべての地理
 
 **deck.gl** は MapLibre GL JS（または MapboxGL）に豊富な可視化レイヤーと明快な合成レイヤーモデルを追加します。この組み合わせは強力ですが、両方のライブラリとその統合パターンを学ぶ必要があります。
 
-**Navara** はこれらのアプローチの強みを、階層化された単一の API のもとに統合することを目指しています。一般ユーザー向けには、レイヤーの追加や [`FeatureEvaluator`](../../../three/api/feature-evaluator/) によるフィーチャーのスタイリングを行える高レベルな宣言的 API を提供しています。プラグインによりワークフローをさらに簡素化することもできます。例えば、JSON からレイヤー定義を読み込んだり、MapLibre Style Plugin（開発中）を使用して馴染みのある JSON 形式でフィーチャースタイルを定義したりできます。カスタム機能を構築したい上級ユーザー向けには、プラグインシステム、カスタムメッシュ、カスタムエフェクトを通じて低レベル API へのアクセスを提供しています。これらは Navara 自身のビルトインオブジェクトを支えるのと同じ基盤です。さらに、マップエンジン本体とは独立して使用できる、座標変換や測地線計算のためのスタンドアロン GIS API も提供しています。
+**Navara** はこれらのアプローチの強みを、階層化された単一の API のもとに統合することを目指しています。一般ユーザー向けには、レイヤーの追加や [`FeatureEvaluator`](../../../three/api/feature-evaluator/) によるフィーチャーのスタイリングを行える高レベルな宣言的 API を提供しています。プラグインによりワークフローをさらに簡素化することもできます。例えば、JSON からレイヤー定義を読み込んだり、MapLibre Style Plugin（開発中）を使用して馴染みのある JSON 形式でフィーチャースタイルを定義したりできます。カスタム機能を構築したい上級ユーザー向けには、プラグインシステム、カスタムメッシュ Descriptor、カスタムエフェクト Descriptor を通じて低レベル API へのアクセスを提供しています。これらは Navara 自身のビルトイン Descriptor を支えるのと同じ基盤です。さらに、マップエンジン本体とは独立して使用できる、座標変換や測地線計算のためのスタンドアロン GIS API も提供しています。
 
 ## 次のステップ
 
-Navara がどのような構造になっているか、なぜ複数のパッケージがあるのかを理解するには、[How Navara Works](../how-navara-works/) に進んでください。
+[Getting Started](../getting-started/) に進んで最初の地球儀を作るか、[How Navara Works](../how-navara-works/) で Navara のアーキテクチャとパッケージ構成を理解しましょう。
