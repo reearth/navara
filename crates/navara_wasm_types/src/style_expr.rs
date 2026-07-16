@@ -1,6 +1,6 @@
 use maplibre_expr::{EvaluationContext, Expr, Feature, Type, Value, evaluate, parse, typecheck};
 use serde_json::Value as JsonValue;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -75,6 +75,21 @@ impl CompiledExpression {
 
         // 5. Convert result to JsValue
         value_to_jsvalue(&result)
+    }
+
+    /// Extract all feature property names accessed by this expression.
+    /// Returns a JavaScript array of property name strings.
+    /// This allows filtering properties before evaluation to reduce serialization overhead.
+    #[wasm_bindgen(js_name = getRequiredProperties)]
+    pub fn get_required_properties(&self) -> js_sys::Array {
+        let mut properties = HashSet::new();
+        collect_properties(&self.expr, &mut properties);
+
+        let js_arr = js_sys::Array::new();
+        for prop in properties {
+            js_arr.push(&JsValue::from_str(&prop));
+        }
+        js_arr
     }
 }
 
@@ -227,6 +242,101 @@ fn value_to_jsvalue(value: &Value) -> Result<JsValue, JsValue> {
             );
             Ok(JsValue::NULL)
         }
+    }
+}
+
+/// Recursively traverse expression tree and collect property names.
+/// Extracts property names from ["get", "propertyName"] and ["has", "propertyName"] expressions.
+fn collect_properties(expr: &Expr, properties: &mut HashSet<String>) {
+    match expr {
+        // Handle "get" expression
+        Expr::Call { op, args } if op == "get" => {
+            if !args.is_empty() {
+                // Extract property name if first arg is a string literal
+                // Works for both ["get", "prop"] and ["get", "key", object]
+                if let Expr::Literal(Value::String(prop_name)) = &args[0] {
+                    properties.insert(prop_name.clone());
+                }
+
+                // Recurse into non-literal arguments to handle:
+                // - 2-arg form: ["get", key, object] - recurse into object (args[1])
+                // - Dynamic access: ["get", ["concat", ...]] - recurse into args[0]
+                for arg in args {
+                    if !matches!(arg, Expr::Literal(_)) {
+                        collect_properties(arg, properties);
+                    }
+                }
+            }
+        }
+
+        // Handle "has" expression (same logic as "get")
+        Expr::Call { op, args } if op == "has" => {
+            if !args.is_empty() {
+                // Extract property name if first arg is a string literal
+                if let Expr::Literal(Value::String(prop_name)) = &args[0] {
+                    properties.insert(prop_name.clone());
+                }
+
+                // Recurse into non-literal arguments (consistent with "get")
+                for arg in args {
+                    if !matches!(arg, Expr::Literal(_)) {
+                        collect_properties(arg, properties);
+                    }
+                }
+            }
+        }
+
+        // Other function calls: recurse into all arguments
+        Expr::Call { args, .. } => {
+            for arg in args {
+                collect_properties(arg, properties);
+            }
+        }
+
+        // Recursive cases for complex expressions
+        Expr::Assert(_, inner) | Expr::Coerce(_, inner) => {
+            collect_properties(inner, properties);
+        }
+        Expr::Let { bindings, body } => {
+            for (_, expr) in bindings {
+                collect_properties(expr, properties);
+            }
+            collect_properties(body, properties);
+        }
+        Expr::Match {
+            input,
+            arms,
+            default,
+        } => {
+            collect_properties(input, properties);
+            for (_, expr) in arms {
+                collect_properties(expr, properties);
+            }
+            collect_properties(default, properties);
+        }
+        Expr::Step {
+            input,
+            output0,
+            stops,
+        } => {
+            collect_properties(input, properties);
+            collect_properties(output0, properties);
+            for (_, expr) in stops {
+                collect_properties(expr, properties);
+            }
+        }
+        Expr::Interpolate { input, stops, .. } => {
+            collect_properties(input, properties);
+            for (_, expr) in stops {
+                collect_properties(expr, properties);
+            }
+        }
+
+        // Terminal nodes with no sub-expressions
+        Expr::Literal(_) | Expr::Var(_) | Expr::Collator { .. } => {}
+
+        // Catch-all for any remaining expression types (Format, NumberFormat, Within, Distance, etc.)
+        _ => {}
     }
 }
 
@@ -399,5 +509,129 @@ mod tests {
             }
             _ => panic!("Expected Color value, got {:?}", result.type_name()),
         }
+    }
+
+    #[test]
+    fn test_collect_properties_simple_get() {
+        // Test simple ["get", "propertyName"]
+        let expr_json = json!(["get", "name"]);
+        let expr = parse(&expr_json).expect("Failed to parse");
+
+        let mut properties = HashSet::new();
+        collect_properties(&expr, &mut properties);
+
+        assert_eq!(properties.len(), 1);
+        assert!(properties.contains("name"));
+    }
+
+    #[test]
+    fn test_collect_properties_multiple() {
+        // Test expression with multiple property accesses: ["+", ["get", "x"], ["get", "y"]]
+        let expr_json = json!(["+", ["get", "x"], ["get", "y"]]);
+        let expr = parse(&expr_json).expect("Failed to parse");
+
+        let mut properties = HashSet::new();
+        collect_properties(&expr, &mut properties);
+
+        assert_eq!(properties.len(), 2);
+        assert!(properties.contains("x"));
+        assert!(properties.contains("y"));
+    }
+
+    #[test]
+    fn test_collect_properties_has() {
+        // Test ["has", "propertyName"]
+        let expr_json = json!(["has", "type"]);
+        let expr = parse(&expr_json).expect("Failed to parse");
+
+        let mut properties = HashSet::new();
+        collect_properties(&expr, &mut properties);
+
+        assert_eq!(properties.len(), 1);
+        assert!(properties.contains("type"));
+    }
+
+    #[test]
+    fn test_collect_properties_nested() {
+        // Test nested expression: ["*", ["get", "width"], 2]
+        let expr_json = json!(["*", ["get", "width"], 2]);
+        let expr = parse(&expr_json).expect("Failed to parse");
+
+        let mut properties = HashSet::new();
+        collect_properties(&expr, &mut properties);
+
+        assert_eq!(properties.len(), 1);
+        assert!(properties.contains("width"));
+    }
+
+    #[test]
+    fn test_collect_properties_constant() {
+        // Test constant expression (no properties)
+        let expr_json = json!(42);
+        let expr = parse(&expr_json).expect("Failed to parse");
+
+        let mut properties = HashSet::new();
+        collect_properties(&expr, &mut properties);
+
+        assert_eq!(properties.len(), 0);
+    }
+
+    #[test]
+    fn test_collect_properties_case_expression() {
+        // Test case expression with multiple branches
+        let expr_json = json!([
+            "case",
+            ["==", ["get", "type"], "park"],
+            ["get", "park_color"],
+            ["==", ["get", "type"], "water"],
+            ["get", "water_color"],
+            "#cccccc"
+        ]);
+        let expr = parse(&expr_json).expect("Failed to parse");
+
+        let mut properties = HashSet::new();
+        collect_properties(&expr, &mut properties);
+
+        // Should collect: type, park_color, water_color
+        assert_eq!(properties.len(), 3);
+        assert!(properties.contains("type"));
+        assert!(properties.contains("park_color"));
+        assert!(properties.contains("water_color"));
+    }
+
+    #[test]
+    fn test_collect_properties_interpolate() {
+        // Test interpolate expression with zoom and property
+        let expr_json = json!([
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            10,
+            ["get", "min_height"],
+            15,
+            ["get", "max_height"]
+        ]);
+        let expr = parse(&expr_json).expect("Failed to parse");
+
+        let mut properties = HashSet::new();
+        collect_properties(&expr, &mut properties);
+
+        assert_eq!(properties.len(), 2);
+        assert!(properties.contains("min_height"));
+        assert!(properties.contains("max_height"));
+    }
+
+    #[test]
+    fn test_collect_properties_no_duplicates() {
+        // Test that duplicate property names are not counted twice
+        let expr_json = json!(["+", ["get", "value"], ["get", "value"]]);
+        let expr = parse(&expr_json).expect("Failed to parse");
+
+        let mut properties = HashSet::new();
+        collect_properties(&expr, &mut properties);
+
+        // Should only have one "value" entry
+        assert_eq!(properties.len(), 1);
+        assert!(properties.contains("value"));
     }
 }

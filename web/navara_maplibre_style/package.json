@@ -28,10 +28,10 @@
   "dependencies": {
     "@maplibre/maplibre-gl-style-spec": "^20.3.1",
     "@navara/core": "workspace:*",
-    "@navara/engine": "workspace:*"
+    "@navara/engine": "workspace:*",
+    "@types/geojson": "7946.0.16"
   },
   "devDependencies": {
-    "@navara/three": "workspace:*",
-    "@types/geojson": "7946.0.16"
+    "@navara/three": "workspace:*"
   }
 }

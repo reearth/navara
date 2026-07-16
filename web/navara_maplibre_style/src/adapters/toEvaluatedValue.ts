@@ -72,7 +72,7 @@ export function createPaintEvaluators(
     const expr = value ?? spec.default;
 
     try {
-      evaluators[key] = engine.createValueFn(expr, spec as any, geometryType);
+      evaluators[key] = engine.createValueFn(expr, spec, geometryType);
     } catch (err) {
       console.error(`Failed to create evaluator for ${key}:`, err);
       // Fallback to constant default value

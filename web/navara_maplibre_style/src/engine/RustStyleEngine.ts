@@ -95,18 +95,40 @@ export class RustStyleEngine implements StyleEngine {
 
     // Compile expression in WASM
     let compiled: CompiledExpression;
+    let requiredProps: string[] | null = null;
     try {
       compiled = new CompiledExpression(expr);
+
+      // Extract required properties for optimization
+      const propsArray = compiled.getRequiredProperties();
+      requiredProps = Array.from(propsArray) as string[];
     } catch (e) {
       // Let the caller add property/layer context (and decide the fallback).
       throw e instanceof Error ? e : new Error(String(e));
     }
 
-    // Return evaluation function
+    // Return evaluation function with optimized property passing
     return (ctx: EvaluationContext) => {
       try {
+        // Filter properties to only required ones to reduce serialization overhead
+        let propsToPass: Record<string, unknown>;
+        if (requiredProps === null) {
+          // Couldn't determine required properties (dynamic access), pass all
+          propsToPass = ctx.properties ?? {};
+        } else {
+          // Only pass required properties (empty array means no properties needed)
+          propsToPass = {};
+          if (ctx.properties) {
+            for (const prop of requiredProps) {
+              if (prop in ctx.properties) {
+                propsToPass[prop] = ctx.properties[prop];
+              }
+            }
+          }
+        }
+
         const result = compiled.evaluate(
-          ctx.properties ?? {},
+          propsToPass,
           0, // navara currently doesn't provide zoom info, so we pass 0 for now
           geometryType, // Pass geometry type for expressions that need it
         );
