@@ -549,9 +549,11 @@ impl Core {
     }
 
     /// Reports the actual GPU byte size a rendered feature was measured at on
-    /// the JS side so the memory ledger replaces its payload-based estimate.
-    /// Feature kinds without a wired-up owner lookup are a no-op (currently
-    /// wired: 3D Tiles models, whose glTF/Draco decode otherwise undercounts).
+    /// the JS side so the memory ledger corrects its payload-based estimate.
+    /// Feature kinds without a wired-up owner lookup are a no-op. Currently
+    /// wired: 3D Tiles models (replaces the tile's estimate — glTF/Draco
+    /// decode otherwise undercounts) and billboards (folds the JS texture
+    /// atlas footprint into the owning vector tile; `0` clears it on dispose).
     #[wasm_bindgen(js_name = reportFeatureGpuBytes)]
     pub fn report_feature_gpu_bytes(&mut self, feature_bits: u64, gpu_bytes: f64) {
         self.app

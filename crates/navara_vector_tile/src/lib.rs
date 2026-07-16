@@ -21,7 +21,7 @@ pub use source::{ReadyState, TileSource, VectorTileSource};
 pub use source_cache::{
     SourceId, TraversalConfig, VectorTileSourceCache, VectorTileSourceResources,
 };
-pub use tile::render::RenderedTile;
+pub use tile::render::{OwningVectorTile, RenderedTile, VectorTileGpuCost};
 pub use tile::system::estimate_vector_tile_cost;
 pub use tile::traverse::{
     TraversalResult, activate_all_renderable_features, are_all_renderable_features_active,

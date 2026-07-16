@@ -119,6 +119,15 @@ export async function processRenderableFeatureAdded(
       if (model && r) {
         featureHandler.reportFeatureGpuBytes(ev.bits, sumModelGpuBytes(r));
       }
+      // The billboard image atlas (CPU pixel buffer + GPU texture) is
+      // allocated and grown lazily on the JS side as images load, so the
+      // mesh reports its measured footprint whenever it changes; the ledger
+      // folds it into the owning vector tile's cost.
+      if (billboard && r instanceof InstancedSpriteMesh) {
+        r.setAtlasBytesReporter((bytes) =>
+          featureHandler.reportFeatureGpuBytes(ev.bits, bytes),
+        );
+      }
       return r;
     })
     .finally(() => {
