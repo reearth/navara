@@ -1,0 +1,211 @@
+---
+import { sections, families, sectionLabel, localizedHref } from '../utils/sections';
+
+const { locale } = Astro.locals.starlightRoute;
+
+// Determine the active top-level section from the URL (skip the locale prefix).
+const segments = Astro.url.pathname.split("/").filter(Boolean);
+const activeSection = locale ? segments[1] : segments[0];
+const currentLabel = sectionLabel(activeSection, locale);
+
+// The switcher title doubles as a package picker. Sections without a family are
+// listed first (ungrouped); the rest are grouped under their family, separated
+// by a divider.
+const ungrouped = sections.filter((s) => !s.family);
+const groups = families
+  .map((f) => ({ family: f, items: sections.filter((s) => s.family === f.id) }))
+  .filter((g) => g.items.length > 0);
+---
+<div class="section-switch">
+  <button
+    class="section-switch__trigger"
+    aria-expanded="false"
+  >
+    <span class="section-switch__label">{currentLabel}</span>
+    <span class="section-switch__caret" aria-hidden="true">
+      <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 6l4 4 4-4" />
+      </svg>
+    </span>
+  </button>
+  <div class="section-switch__menu" hidden>
+    {ungrouped.map((s) => (
+      <a
+        class:list={["section-switch__item", { active: s.slug === activeSection }]}
+        href={localizedHref(s.href, locale)}
+        aria-current={s.slug === activeSection ? "page" : undefined}
+      >
+        <span class="section-switch__item-label">{sectionLabel(s.slug, locale)}</span>
+        <span class="section-switch__check" aria-hidden="true">✓</span>
+      </a>
+    ))}
+    {groups.map((g) => (
+      <div class="section-switch__group">
+        {g.items.map((s) => (
+          <a
+            class:list={["section-switch__item", { active: s.slug === activeSection }]}
+            href={localizedHref(s.href, locale)}
+            aria-current={s.slug === activeSection ? "page" : undefined}
+          >
+            <span class="section-switch__item-label">{sectionLabel(s.slug, locale)}</span>
+            <span class="section-switch__check" aria-hidden="true">✓</span>
+          </a>
+        ))}
+      </div>
+    ))}
+  </div>
+</div>
+
+<script>
+  function initSectionSwitch() {
+    const root = document.querySelector<HTMLElement>(".section-switch");
+    if (!root) return;
+    const trigger = root.querySelector<HTMLButtonElement>(".section-switch__trigger");
+    const menu = root.querySelector<HTMLElement>(".section-switch__menu");
+    if (!trigger || !menu) return;
+
+    const setOpen = (open: boolean) => {
+      menu.hidden = !open;
+      trigger.setAttribute("aria-expanded", String(open));
+      root.classList.toggle("is-open", open);
+    };
+
+    trigger.addEventListener("click", (event) => {
+      event.stopPropagation();
+      setOpen(!!menu.hidden);
+    });
+    document.addEventListener("click", (event) => {
+      if (!root.contains(event.target as Node)) setOpen(false);
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && root.classList.contains("is-open")) {
+        setOpen(false);
+        trigger.focus();
+      }
+    });
+  }
+
+  initSectionSwitch();
+</script>
+
+<style>
+    .section-switch {
+        position: relative;
+        margin-bottom: 1rem;
+    }
+    .section-switch__trigger {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        width: 100%;
+        padding: 0.5rem 0.7rem;
+        border: 1px solid var(--sl-color-gray-5);
+        border-radius: 0.5rem;
+        background: var(--sl-color-bg);
+        color: var(--sl-color-white);
+        font-family: inherit;
+        font-size: var(--sl-text-lg);
+        font-weight: 600;
+        line-height: 1.2;
+        text-align: left;
+        cursor: pointer;
+        transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+    .section-switch__trigger:hover {
+        border-color: var(--sl-color-gray-4);
+        background: var(--sl-color-gray-6);
+    }
+    .section-switch__trigger:focus-visible {
+        outline: 2px solid var(--sl-color-text-accent);
+        outline-offset: 2px;
+    }
+    .section-switch.is-open .section-switch__trigger {
+        border-color: var(--sl-color-text-accent);
+    }
+    .section-switch .section-switch__label {
+        flex: 1;
+        min-width: 0;
+        font-size: var(--sl-text-lg);
+        font-weight: 600;
+        line-height: 1.2;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .section-switch__caret {
+        display: inline-flex;
+        flex: none;
+        color: var(--sl-color-gray-3);
+        transition: transform 0.15s ease, color 0.15s ease;
+    }
+    .section-switch.is-open .section-switch__caret {
+        transform: rotate(180deg);
+        color: var(--sl-color-text-accent);
+    }
+
+    .section-switch__menu {
+        position: absolute;
+        z-index: 40;
+        top: calc(100% + 4px);
+        left: 0;
+        right: 0;
+        max-height: 60vh;
+        overflow-y: auto;
+        padding: 0.35rem;
+        border: 1px solid var(--sl-color-hairline);
+        border-radius: 0.6rem;
+        background: var(--sl-color-bg);
+        box-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.4);
+    }
+
+    .section-switch__group {
+        margin-top: 0.4rem;
+        padding-top: 0.4rem;
+        border-top: 1px solid var(--sl-color-hairline-light);
+    }
+    .section-switch__group:first-child {
+        margin-top: 0;
+        padding-top: 0;
+        border-top: 0;
+    }
+
+    .section-switch__item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.4rem 0.55rem;
+        border-radius: 0.4rem;
+        color: var(--sl-color-gray-2);
+        font-size: 0.875rem;
+        line-height: 1.3;
+        text-decoration: none;
+    }
+    .section-switch__item:hover {
+        background: var(--sl-color-gray-6);
+        color: var(--sl-color-white);
+    }
+    .section-switch__item.active {
+        background: var(--sl-color-accent-low);
+        color: var(--sl-color-white);
+        font-weight: 600;
+    }
+    .section-switch__item-label {
+        flex: 1;
+        min-width: 0;
+    }
+    .section-switch__check {
+        flex: none;
+        color: var(--sl-color-text-accent);
+        opacity: 0;
+    }
+    .section-switch__item.active .section-switch__check {
+        opacity: 1;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .section-switch__trigger,
+        .section-switch__caret {
+            transition: none;
+        }
+    }
+</style>

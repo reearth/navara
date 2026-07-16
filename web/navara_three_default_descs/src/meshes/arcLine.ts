@@ -1,7 +1,7 @@
 import type { LatLng } from "@navara/three";
 import {
   Color,
-  overrideShaderMaterialForMRT,
+  setupMaterialForMRT,
   setupRTEBeforeRender,
   getWGS84SemiMajorAxis,
   getWGS84EccentricitySquared,
@@ -655,7 +655,7 @@ export class ArcLine extends Object3D {
     material.side = DoubleSide;
 
     // Apply MRT support for G-Buffer output
-    overrideShaderMaterialForMRT(material, "normal");
+    setupMaterialForMRT(material);
 
     // SelectiveEffect: always set define and link shared uniforms
     material.defines = material.defines ?? {};

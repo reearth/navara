@@ -2,7 +2,7 @@
 title: Custom Descriptor
 description: How to implement custom descriptors
 sidebar:
-  order: 800
+  order: 1070
 ---
 
 In navara_three, you can implement your own mesh, effect, and light descriptors. For an overview of the layer concept, see [Layers & Descriptors](../../../three/introduction/about-layer/).
@@ -97,6 +97,57 @@ See [ThreeView Properties](../../../three/api/threeview-properties/).
 | ------------------------------------ | ---------------------------------- |
 | `ctx.applyShadowMaterial(material)`  | Apply CSM shadows to a material    |
 | `ctx.removeShadowMaterial(material)` | Remove CSM shadows from a material |
+
+## G-Buffer (MRT) Output
+
+Navara renders into a multiple-render-target (MRT) G-buffer. Beyond color, every material also writes a view-space **normal**, an **effect ID** bitmask, and an **emissive** buffer. Depth/normal-based effects (SSAO, SSR, outlines, aerial perspective, clouds) and selective effects (Bloom / Outline) read these attachments, so a mesh participates in those effects only if its material writes the G-buffer.
+
+| Attachment | Location | Contents                                     |
+| ---------- | -------- | -------------------------------------------- |
+| Color      | 0        | `gl_FragColor`                               |
+| Normal     | 1        | View-space normal (plus material properties) |
+| Effect ID  | 2        | Selective-effect bitmask                     |
+| Emissive   | 3        | Selective-effect additive emissive           |
+
+### Built-in Materials Are Automatic
+
+Importing `@navara/three` patches every built-in Three.js material — `MeshStandardMaterial`, `MeshBasicMaterial`, `MeshLambertMaterial`, `MeshPhongMaterial`, `SpriteMaterial`, `PointsMaterial` — so they write the G-buffer. When your custom Descriptor uses one of these, there is nothing to do.
+
+### Custom Materials Must Opt In
+
+`ShaderMaterial` and three-stdlib `LineMaterial` do not go through Three.js `ShaderLib`, so Navara cannot patch them automatically. Opt them in with `setupMaterialForMRT()`.
+
+```typescript
+import { setupMaterialForMRT } from "@navara/three";
+
+const material = new ShaderMaterial({ uniforms, vertexShader, fragmentShader });
+
+// Name the view-space normal variable in your fragment shader (default "normal").
+setupMaterialForMRT(material, { normal: "vNormal" });
+
+// LineMaterial is detected and routed automatically; `normal` is ignored for it.
+setupMaterialForMRT(lineMaterial);
+```
+
+| Parameter        | Type             | Description                                                                                                                             |
+| ---------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `material`       | `ShaderMaterial` | The custom material to patch. `LineMaterial` (which extends `ShaderMaterial`) is detected and handled automatically                    |
+| `options.normal` | `string`         | Name of the **view-space** normal variable in the fragment shader. Defaults to `"normal"`. It is packed with `packNormalToVec2`, which assumes view space |
+
+If you skip this, the mesh writes nothing to the normal / effect-ID / emissive attachments, so depth/normal-based effects and selective effects break on that mesh (garbage normals, no bloom or outline).
+
+Requirements and behavior:
+
+- The fragment shader must expose a view-space normal named by `options.normal`.
+- The last `}` in the vertex and fragment shaders is assumed to close `main()`.
+- Requires WebGL2 / GLSL 3 (Navara's default).
+- Idempotent — calling it again on the same material is a no-op.
+
+The automatic built-in patching is performed by an internal `overrideMaterialsForMRT()` on import; application code never calls it.
+
+### Reading the G-Buffer
+
+To read these buffers from a custom effect, use the [Buffer / Texture Access](#buffer--texture-access) accessors on `ctx`, or reference the MRT pass from another effect via [`find<MRTPassEffectDesc>("mrt")`](#referencing-other-effect-descs).
 
 ## Custom Mesh Desc
 

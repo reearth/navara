@@ -2,7 +2,7 @@
 title: Effect Descriptor
 description: navara_three のコアエフェクトタイプ
 sidebar:
-  order: 700
+  order: 1050
 ---
 
 `@navara/three` が提供するコアエフェクトです。これらのオブジェクトは内部レンダリングパイプライン（GBuffer MRT、デプスパスなど）と密結合しているため、`@navara/three_default_descs` ではなく `@navara/three` コアに含まれています。

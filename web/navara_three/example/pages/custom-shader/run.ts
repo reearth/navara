@@ -1,6 +1,6 @@
 import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
-  overrideShaderMaterialForMRT,
+  setupMaterialForMRT,
   MeshDesc,
   type MeshConfig,
   type ViewContext,
@@ -296,7 +296,7 @@ function createShaderMaterial(
     vertexShader: vs,
     fragmentShader: fs,
   });
-  overrideShaderMaterialForMRT(material, "vNormal");
+  setupMaterialForMRT(material, { normal: "vNormal" });
 
   material.uniforms["uBaseColor"].value = color;
 

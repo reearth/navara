@@ -68,13 +68,21 @@ const q = (sel: string): Element | null => document.querySelector(sel);
 const isHidden = (sel: string): boolean =>
   q(sel)?.hasAttribute("hidden") ?? true;
 
-/** Top-level source names currently rendered in the list. */
-function topLevelCredits(): string[] {
+/** All top-level source names currently rendered in the list. */
+function allTopLevelCredits(): string[] {
   return Array.from(
     document.querySelectorAll(
       ".navara-attr-list > li.navara-attr-item > .navara-attr-name",
     ),
   ).map((el) => el.textContent?.trim() ?? "");
+}
+
+/**
+ * User-added top-level credits, i.e. everything except the built-in "Navara"
+ * credit that is always shown first.
+ */
+function topLevelCredits(): string[] {
+  return allTopLevelCredits().filter((name) => name !== "Navara");
 }
 
 /** Nested sub-credit texts (zoom-banded children + dynamic layer credits). */
@@ -101,7 +109,7 @@ describe("AttributionPlugin set management", () => {
     expect(topLevelCredits()).toEqual(["B"]);
   });
 
-  it("clear empties the set and hides the dock and logo frame", async () => {
+  it("clear drops user credits but keeps the dock + Navara; hides the logo frame", async () => {
     const { plugin } = await setup();
     plugin.add([{ attribution: "A", logo: "/a.png" }]);
     expect(isHidden(".navara-attr-dock")).toBe(false);
@@ -111,38 +119,37 @@ describe("AttributionPlugin set management", () => {
 
     plugin.clear();
     expect(topLevelCredits()).toEqual([]);
-    expect(isHidden(".navara-attr-dock")).toBe(true);
+    // Dock and the built-in Navara credit stay; the logo frame hides (no logos).
+    expect(isHidden(".navara-attr-dock")).toBe(false);
+    expect(allTopLevelCredits()).toEqual(["Navara"]);
+    expect(isHidden(".navara-attr-logoframe")).toBe(true);
+  });
+});
+
+describe("AttributionPlugin built-in Navara credit", () => {
+  it("shows the dock with the Navara credit even with no user credits", async () => {
+    await setup();
+    expect(q(".navara-attr-dock")).not.toBeNull();
+    expect(isHidden(".navara-attr-dock")).toBe(false);
+    expect(allTopLevelCredits()).toEqual(["Navara"]);
+    // No logos declared, so the logo frame stays hidden.
     expect(isHidden(".navara-attr-logoframe")).toBe(true);
   });
 
-  it("clear() on an already-empty set builds no DOM", async () => {
-    const { plugin } = await setup();
-    plugin.clear();
-    expect(q(".navara-attr-dock")).toBeNull();
-    expect(q(".navara-attr-logoframe")).toBeNull();
-  });
-
-  it("hides the dock while empty and reveals it once populated again", async () => {
+  it("keeps the dock + Navara visible after all user credits are removed", async () => {
     const { plugin } = await setup();
     plugin.add([{ attribution: "A" }]);
-    expect(isHidden(".navara-attr-dock")).toBe(false);
+    expect(allTopLevelCredits()).toEqual(["Navara", "A"]);
     plugin.remove([{ attribution: "A" }]);
-    expect(isHidden(".navara-attr-dock")).toBe(true);
-    plugin.add([{ attribution: "B" }]);
     expect(isHidden(".navara-attr-dock")).toBe(false);
+    expect(allTopLevelCredits()).toEqual(["Navara"]);
   });
 });
 
 describe("AttributionPlugin popover visibility", () => {
-  it("is open by default and hide()/show() toggle card + aria-expanded", async () => {
+  it("is collapsed by default and show()/hide() toggle card + aria-expanded", async () => {
     const { plugin } = await setup();
     plugin.add([{ attribution: "A" }]);
-    expect(isHidden(".navara-attr-card")).toBe(false);
-    expect(q(".navara-attr-toggle")?.getAttribute("aria-expanded")).toBe(
-      "true",
-    );
-
-    plugin.hide();
     expect(isHidden(".navara-attr-card")).toBe(true);
     expect(q(".navara-attr-toggle")?.getAttribute("aria-expanded")).toBe(
       "false",
@@ -153,17 +160,23 @@ describe("AttributionPlugin popover visibility", () => {
     expect(q(".navara-attr-toggle")?.getAttribute("aria-expanded")).toBe(
       "true",
     );
+
+    plugin.hide();
+    expect(isHidden(".navara-attr-card")).toBe(true);
+    expect(q(".navara-attr-toggle")?.getAttribute("aria-expanded")).toBe(
+      "false",
+    );
   });
 
   it("keeps an open/closed intent set before the DOM exists", async () => {
     const view = makeView();
     const plugin = new AttributionPlugin();
     created.push(plugin);
-    plugin.hide(); // recorded before init/DOM — must not be lost
+    plugin.show(); // recorded before init/DOM — must not be lost
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await plugin.init(view as any, {} as any);
     plugin.add([{ attribution: "A" }]);
-    expect(isHidden(".navara-attr-card")).toBe(true);
+    expect(isHidden(".navara-attr-card")).toBe(false);
   });
 });
 
@@ -184,6 +197,7 @@ describe("AttributionPlugin dynamic layer credits", () => {
     const layer = makeLayer("L");
     const { plugin } = await setup({ L: layer });
     plugin.add([{ attribution: "Base", creditLayerId: "L" }]);
+    plugin.show(); // sub-credits only render while the popover is open
 
     layer.emit("featureCreated", { featureSetId: 1n, credit: "DynCredit" });
     expect(subCredits()).toContain("DynCredit");

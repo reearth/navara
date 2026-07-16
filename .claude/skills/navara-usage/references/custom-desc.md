@@ -47,13 +47,16 @@ Ordering is declared statically via `key` / `insertAfter` / `insertBefore` relat
 
 Navara renders into a multi-render-target (MRT) G-buffer, so custom work can both **write to** and **read from** it:
 
-- **Write normals from a custom `ShaderMaterial`** — wire it into the MRT with one call:
+- **Built-in materials are automatic.** Importing `@navara/three` monkey-patches every Three.js `ShaderLib` material (`MeshStandard/Basic/Lambert/Phong`, `Sprite`, `Points`) to write the G-buffer — nothing to do for `MeshStandardMaterial` et al.
+- **Custom `ShaderMaterial`/`LineMaterial` must opt in** — they bypass `ShaderLib`, so wire them in with one call:
   ```typescript
-  import { overrideShaderMaterialForMRT } from "@navara/three";
+  import { setupMaterialForMRT } from "@navara/three";
   const material = new ShaderMaterial({ uniforms, vertexShader, fragmentShader });
-  overrideShaderMaterialForMRT(material, "vNormal");   // material now outputs to the normal buffer
+  setupMaterialForMRT(material, { normal: "vNormal" });   // name your VIEW-SPACE normal varying (default "normal")
+  // LineMaterial (three-stdlib) is detected and routed automatically; the `normal` option is ignored for it:
+  setupMaterialForMRT(lineMaterial);
   ```
-  This is what makes depth/normal-based effects (SSAO, SSR, outlines) work correctly on your custom mesh. Reference: `example/pages/custom-shader/` (MarchingCubes), `example/pages/mesh-layers/custom-pickable/` (Navara repo).
+  `normal` must name a **view-space** normal (it's packed with `packNormalToVec2`). Skipping this makes the mesh write nothing to the normal/id/emissive buffers, so depth/normal-based effects (SSAO, SSR, outlines) and SelectiveEffect (Bloom/Outline) break on it. Idempotent. Reference: `example/pages/custom-shader/` (MarchingCubes), `example/pages/mesh-layers/custom-pickable/` (Navara repo).
 - **Read depth/normal in a custom effect** — the canonical pattern (used by the built-in aerial-perspective and clouds effects): find the MRT pass from inside your `EffectDesc` via `this.find()` and wire its buffers into your pass. `MRTPassEffectDesc` is exported from `@navara/three` and auto-registered by `ThreeView` under the key `"mrt"`:
   ```typescript
   import { EffectDesc, type MRTPassEffectDesc } from "@navara/three";

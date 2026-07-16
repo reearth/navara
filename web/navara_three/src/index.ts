@@ -837,7 +837,7 @@ export default class ThreeView<
           ? options.defaultAttribution
           : undefined;
       this._attribution = new AttributionPlugin(cfg);
-      this.plugins.push(this._attribution);
+      this.addPlugin(this._attribution);
     }
 
     // Initialize terrain picker

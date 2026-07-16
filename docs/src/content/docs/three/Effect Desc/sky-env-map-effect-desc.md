@@ -2,7 +2,7 @@
 title: SkyEnvMapEffectDesc
 description: Sky environment map effect descriptor for navara_three
 sidebar:
-  order: 710
+  order: 1060
 ---
 
 The `SkyEnvMapEffectDesc` class is a pass that renders the sky environment map. It generates sky textures used for environment mapping and reflections.

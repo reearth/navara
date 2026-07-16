@@ -118,12 +118,15 @@ pub fn should_update_for_changed_terrain(
 /// Single-pass terrain height resolution for tiled (MVT) features.
 /// Finds the raster tile once, then for each point: converts to lng_lat,
 /// computes height from the tile's DEM, and pushes the position.
+///
+/// Only the terrain height is baked into the position (for clamp-to-ground).
+/// The material `height` offset is applied in the vertex shader, so it is
+/// intentionally not added here — baking it too would double the offset.
 #[allow(clippy::too_many_arguments)]
 pub fn resolve_tiled_heights_and_build_positions(
     tile_extent: &Extent<FloatType, Radians>,
     coords: &[Vec3],
     crs: &CRS,
-    material_height: f32,
     clamp_to_ground: bool,
     terrain_heights: &mut [f64],
     qt: &mut TerrainTileQuadtree,
@@ -151,7 +154,7 @@ pub fn resolve_tiled_heights_and_build_positions(
         } else {
             terrain_heights[i] = 0.0;
         }
-        positions.push_from_crs(*c, crs, material_height, terrain_heights[i]);
+        positions.push_from_crs(*c, crs, 0.0, terrain_heights[i]);
     }
 }
 
@@ -170,6 +173,10 @@ pub fn coords_overlap_changed_extents(
 /// Single-pass terrain height resolution for GeoJSON points.
 /// For each point: checks visibility, converts to lng_lat, finds containing terrain leaf,
 /// computes height, and pushes the position. Culled points use the previous terrain height.
+///
+/// `material_height` is used only for visibility culling (`is_point_visible`); it is not
+/// baked into the position. The material height offset is applied in the vertex shader, so
+/// baking it here as well would double the offset.
 #[allow(clippy::too_many_arguments)]
 pub fn resolve_absolute_heights_and_build_positions(
     coords: &[Vec3],
@@ -193,7 +200,7 @@ pub fn resolve_absolute_heights_and_build_positions(
     for (i, c) in coords.iter().enumerate() {
         if !clamp_to_ground {
             terrain_heights[i] = 0.0;
-            positions.push_from_crs(*c, crs, material_height, terrain_heights[i]);
+            positions.push_from_crs(*c, crs, 0.0, terrain_heights[i]);
             continue;
         }
 
@@ -210,7 +217,7 @@ pub fn resolve_absolute_heights_and_build_positions(
                 screen_height,
             )
         {
-            positions.push_from_crs(*c, crs, material_height, terrain_heights[i]);
+            positions.push_from_crs(*c, crs, 0.0, terrain_heights[i]);
             continue;
         }
 
@@ -230,7 +237,7 @@ pub fn resolve_absolute_heights_and_build_positions(
         {
             terrain_heights[i] = height;
         }
-        positions.push_from_crs(*c, crs, material_height, terrain_heights[i]);
+        positions.push_from_crs(*c, crs, 0.0, terrain_heights[i]);
     }
 }
 

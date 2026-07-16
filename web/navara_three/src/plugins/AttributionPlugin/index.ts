@@ -1,7 +1,7 @@
 /**
  * AttributionPlugin — Navara Plugin for map data attribution (credit) UI.
  *
- * Renders a non-modal popover (bottom-right ⓘ trigger) listing data-source
+ * Renders a non-modal popover (ⓘ button, bottom-right by default) listing data-source
  * attributions, with a separate always-visible logo frame in the bottom-left
  * corner. Each source can carry zoom-banded child credits that switch as the
  * camera zooms, and per-layer feature credits are tracked dynamically.
@@ -47,8 +47,8 @@
  * // Re-theme at runtime (e.g. light / dark switch).
  * view.attribution?.setStyle({ backgroundColor: "#14181c", textColor: "#e6e9ee" });
  *
- * // The popover is open by default so licensing is visible; hide() collapses
- * // it and show() re-opens it (the ⓘ trigger toggles the same state).
+ * // The popover is collapsed by default; show() opens it and hide() collapses
+ * // it (the ⓘ button toggles the same state).
  * view.attribution?.hide();
  * view.attribution?.show();
  * ```
@@ -101,7 +101,7 @@ export type AttributionPluginOptions = {
   /** Initial color overrides; tweak later with {@link AttributionPlugin.setStyle}. */
   style?: AttributionStyle;
   /**
-   * Bottom corner for the ⓘ trigger and its credit card. Defaults to
+   * Bottom corner for the ⓘ button and its popover card. Defaults to
    * `"bottom-right"`; use `"bottom-left"` when the bottom-right corner is
    * occupied (e.g. a page with its own HUD there). The logo frame lives in the
    * bottom-left area in both modes; in `"bottom-left"` the ⓘ takes the far-left
@@ -118,8 +118,18 @@ export type AttributionPluginOptions = {
 let styleRefCount = 0;
 
 /**
- * Renders map data attributions as a non-modal popover (bottom-right ⓘ
- * trigger). Top-level sources can carry nested, optionally zoom-banded child
+ * Built-in Navara credit, always shown as the first attribution. It is kept
+ * separate from the user-managed set, so `add` / `remove` / `clear` never touch
+ * it, and it keeps the UI visible even before any data-source credit is added.
+ */
+const NAVARA_CREDIT: AttributionItem = {
+  attribution: "Navara",
+  attributionUrl: "https://navara-docs.netlify.app/",
+};
+
+/**
+ * Renders map data attributions as a non-modal popover (ⓘ button, bottom-right
+ * by default). Top-level sources can carry nested, optionally zoom-banded child
  * credits.
  *
  * A `ThreeView` creates one by default (`view.attribution`); construct it
@@ -136,8 +146,8 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
   private listEl?: HTMLUListElement;
   private logosEl?: HTMLDivElement;
   private toggle?: HTMLButtonElement;
-  // Open by default so licensing is visible without a click.
-  private isOpen = true;
+  // Collapsed by default; users open it with the toggle.
+  private isOpen = false;
 
   /** Last computed integer zoom level. Used to skip no-op re-renders. */
   private lastZoomLevel?: number;
@@ -154,7 +164,7 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
   /** Color overrides, applied as CSS custom properties on the dock. */
   private style: AttributionStyle;
 
-  /** Bottom corner for the ⓘ trigger / credit card. */
+  /** Bottom corner for the ⓘ button / popover card. */
   private position: AttributionPosition;
 
   private boundKeydown: (event: KeyboardEvent) => void;
@@ -168,6 +178,14 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     this.boundPreRender = this.handlePreRender.bind(this);
   }
 
+  /**
+   * The full list to render: the built-in Navara credit first, then the
+   * user-managed set. Always non-empty, so the dock stays visible.
+   */
+  private displayedItems(): AttributionItem[] {
+    return [NAVARA_CREDIT, ...this.items];
+  }
+
   async init(view: View, _ctx: ViewContext): Promise<void> {
     this.view = view;
     // Recompute the zoom level on render. `fovy` is undefined until the first
@@ -175,8 +193,9 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     // static map; `preRender` reliably fires while the scene renders. The
     // level-change gate in `handlePreRender` keeps this from churning the DOM.
     view.on("preRender", this.boundPreRender);
-    // Apply any items added before init() now that the view exists.
-    if (this.items.length) this.apply();
+    // Build the UI now that the view exists. The built-in Navara credit is
+    // always present, so the dock shows even before any source is added.
+    this.apply();
   }
 
   /**
@@ -211,8 +230,9 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
   }
 
   /**
-   * Remove all displayed attributions, keeping the plugin usable — a later
-   * {@link add} brings the UI back. Use {@link dispose} to tear the DOM down.
+   * Remove all user-added attributions, keeping the plugin usable. The built-in
+   * Navara credit and the dock stay visible; the logo frame hides if no logo
+   * remains. Use {@link dispose} to tear the DOM down.
    */
   clear(): void {
     this.items = [];
@@ -251,11 +271,9 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
   }
 
   /**
-   * Open the attribution popover. It is open by default, so this is only needed
-   * to re-open it after {@link hide} (the ⓘ trigger toggles the same state).
-   * Affects the popover card only — the always-visible logo frame stays put. Has
-   * no visible effect while the set is empty: the dock is hidden until at least
-   * one attribution is added.
+   * Open the attribution popover. It is collapsed by default, so call this (or
+   * use the ⓘ button, which toggles the same state) to open it. Affects the
+   * popover card only — the always-visible logo frame stays put.
    */
   show(): void {
     this.setOpen(true);
@@ -304,15 +322,14 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
   }
 
   /**
-   * Build / refresh the popover DOM from `this.items`, filtering zoom-banded
-   * children by the current camera zoom.
+   * Build / refresh the popover DOM from {@link displayedItems}, filtering
+   * zoom-banded children by the current camera zoom.
    */
   private render(): void {
     if (!this.view) return;
-    // Don't build the dock for an empty set (keeps clear()/add([]) idempotent).
-    if (this.items.length === 0 && !this.dock) return;
     this.ensureDom();
-    this.hasZoomBands = this.items.some(
+    const items = this.displayedItems();
+    this.hasZoomBands = items.some(
       (item) =>
         !isAttributionHtml(item) &&
         (item.children?.some(
@@ -323,10 +340,13 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     this.lastZoomLevel = this.currentZoomLevel();
     this.populateList();
     this.populateLogos();
-    // Hide the dock + logo frame when there's nothing to attribute.
-    const empty = this.items.length === 0;
-    if (this.dock) this.dock.hidden = empty;
-    if (this.logosEl) this.logosEl.hidden = empty;
+    // The dock always shows: the built-in Navara credit is always present. The
+    // logo frame only shows when at least one source declares a logo.
+    if (this.dock) this.dock.hidden = false;
+    const hasLogos = items.some(
+      (item) => !isAttributionHtml(item) && !!item.logo,
+    );
+    if (this.logosEl) this.logosEl.hidden = !hasLogos;
   }
 
   /** Create the dock DOM and inject (or reuse) the shared styles. */
@@ -397,7 +417,7 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     // contractually-mandated marks stay visible independent of the popover.
     const logoFrame = document.createElement("div");
     logoFrame.className = "navara-attr-logoframe";
-    // In bottom-left mode the ⓘ trigger sits at the far left, so shift the logo
+    // In bottom-left mode the ⓘ button sits at the far left, so shift the logo
     // frame right of it to keep them in one row instead of overlapping.
     if (this.position === "bottom-left") {
       logoFrame.classList.add("navara-attr-logoframe--left");
@@ -438,7 +458,7 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     if (!this.listEl) return;
     this.listEl.replaceChildren();
 
-    for (const item of this.items) {
+    for (const item of this.displayedItems()) {
       const { li, text } = this.createItemShell();
 
       if (isAttributionHtml(item)) {
@@ -509,7 +529,7 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     if (!this.logosEl) return;
     this.logosEl.replaceChildren();
 
-    for (const item of this.items) {
+    for (const item of this.displayedItems()) {
       if (isAttributionHtml(item) || !item.logo) continue;
       const img = document.createElement("img");
       img.src = item.logo;

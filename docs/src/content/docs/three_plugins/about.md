@@ -18,7 +18,8 @@ navara_three (core: ThreeView, Plugin, addPlugin)
   └── three_plugins (use-case specific plugins)
         ├── PersonViewPlugin (keyboard-driven first/third-person view controller)
         ├── OverlayPlugin (world-to-screen HTML overlay projection)
-        └── CesiumIonPlugin (Cesium Ion quantized-mesh terrain)
+        ├── CesiumIonPlugin (Cesium Ion quantized-mesh terrain)
+        └── TileJsonPlugin (TileJSON 3.0.0 tile source registration)
 ```
 
 `three_plugins` depends on `navara_three` for the `Plugin` base class and core APIs, and on `three_default_plugin` for the `DefaultDescriptions` type. Each plugin is independent — you can use one without the other.
@@ -31,6 +32,7 @@ import {
   OverlayPlugin,
   moveOverlayElement,
   CesiumIonPlugin,
+  TileJsonPlugin,
 } from "@navara/three_plugins";
 ```
 
@@ -47,6 +49,10 @@ Projects geographic positions (lat/lng/alt) to screen coordinates on every rende
 ### CesiumIonPlugin
 
 Resolves a Cesium Ion asset endpoint at `init()` time and registers it as a quantized-mesh terrain layer via `addTerrain()`. See [CesiumIonPlugin](../cesiumionplugin/) for details.
+
+### TileJsonPlugin
+
+Fetches a TileJSON 3.0.0 document and registers it as a single raster or vector tile source via `addSource()`, deriving the tile URL, zoom range, scheme, and attribution from the document. See [TileJsonPlugin](../tilejsonplugin/) for details.
 
 ## Usage
 

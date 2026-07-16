@@ -56,7 +56,7 @@ export default defineConfig((env) => {
         ],
       },
       watch: undefined,
-      sourcemap: false, // TODO: Enable this when it's released.
+      sourcemap: true,
     },
   };
 });
