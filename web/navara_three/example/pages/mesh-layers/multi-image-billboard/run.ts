@@ -254,5 +254,33 @@ export const run = async (view: ThreeView<DefaultDescriptions>) => {
       restyle();
     });
 
+  // Engine memory readout (view.memoryStats(), fed by the WASM memory
+  // ledger). The billboard mesh reports its measured atlas footprint (CPU
+  // pixel buffer + GPU texture) per feature and the ledger folds it into the
+  // owning tile's GPU cost, so atlas growth shows up in "GPU est." — watch it
+  // react to poolSize changes and layer add/remove.
+  const memoryFolder = pane.addFolder({ title: "Memory" });
+  const memory = { cpuMB: 0, gpuMB: 0 };
+  setInterval(() => {
+    const memStats = view.memoryStats();
+    if (!memStats) return;
+    memory.cpuMB =
+      (memStats.bufferTotalBytes +
+        memStats.externalBufferBytes +
+        memStats.externalCpuBytes) /
+      (1024 * 1024);
+    memory.gpuMB = memStats.gpuBytesEst / (1024 * 1024);
+  }, 500);
+  memoryFolder.addBinding(memory, "cpuMB", {
+    readonly: true,
+    label: "CPU MB",
+    format: (v) => v.toFixed(2),
+  });
+  memoryFolder.addBinding(memory, "gpuMB", {
+    readonly: true,
+    label: "GPU est. MB",
+    format: (v) => v.toFixed(2),
+  });
+
   view.attribution?.add([TILE_DATASETS.openstreetmap]);
 };
