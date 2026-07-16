@@ -113,11 +113,13 @@ export class RustStyleEngine implements StyleEngine {
       try {
         // Filter properties to only required ones to reduce serialization overhead
         let propsToPass: Record<string, unknown>;
-        if (requiredProps === null) {
-          // Couldn't determine required properties (dynamic access), pass all
+        if (requiredProps === null || requiredProps.length === 0) {
+          // Empty array means dynamic property access (e.g., ["get", ["concat", ...]])
+          // since constants are already filtered out above.
+          // Conservative approach: pass all properties to avoid breaking evaluation.
           propsToPass = ctx.properties ?? {};
         } else {
-          // Only pass required properties (empty array means no properties needed)
+          // Only pass required properties
           propsToPass = {};
           if (ctx.properties) {
             for (const prop of requiredProps) {
