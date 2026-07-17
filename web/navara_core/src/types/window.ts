@@ -1,4 +1,4 @@
-import type { Window as EngineWindow } from "@navara/engine";
+import type { Window as EngineWindow } from "@navaramap/engine";
 
 import type { NormalizeWASMClass } from "./utils";
 

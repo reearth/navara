@@ -2,11 +2,11 @@ import ThreeView, {
   Color,
   JAPAN_GSI_ELEVATION_DECODER,
   MAPBOX_ELEVATION_DECODER,
-} from "@navara/three";
+} from "@navaramap/three";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
+} from "@navaramap/three_default_plugin";
 import { Vector3 } from "three";
 import { Pane } from "tweakpane";
 

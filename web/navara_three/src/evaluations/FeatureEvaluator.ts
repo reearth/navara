@@ -2,14 +2,14 @@ import {
   type ExtractProperties,
   type FeatureSetId,
   type LayerId,
-} from "@navara/core";
+} from "@navaramap/core";
 import type {
   ModelMaterial as NavaraModelMaterial,
   PointMaterial,
   PolygonMaterial,
   PolylineMaterial,
   TextMaterial,
-} from "@navara/engine";
+} from "@navaramap/engine";
 import { BufferGeometry, Mesh, Object3D } from "three";
 import type { NormalBufferAttributes } from "three";
 
@@ -58,6 +58,8 @@ export type EvaluatableMaterialProperty = {
   /** Per-feature declutter placement priority (for points/billboards/text);
    *  higher wins an overlap. Overrides the layer's `declutterPriority`. */
   declutterPriority: AvailableMaterialProperty["declutterPriority"];
+  /** Image URL for billboards; packed into a shared per-mesh texture atlas. */
+  image: string;
 };
 
 type EvaluatableMaterialPropertyKey = keyof EvaluatableMaterialProperty;
@@ -72,6 +74,7 @@ type EvaluatedMaterialProperty = {
   size: number;
   opacity: number;
   declutterPriority: number;
+  image: string | null;
 };
 
 /**
@@ -311,6 +314,10 @@ export class FeatureEvaluator {
    * - `opacity` - Feature opacity 0-1
    * - `declutterPriority` - Placement priority for decluttering; higher wins
    *   an overlap (for points/billboards/text with `declutter` enabled)
+   * - `image` - Image URL (for billboards); loaded once per distinct URL and
+   *   packed into the layer's texture atlas. Return `null` to clear a
+   *   previous per-feature image and revert to the material's default `url`;
+   *   omit the key to leave it unchanged.
    *
    * Note: Evaluated styles override the layer's default styles.
    *
@@ -391,6 +398,12 @@ export class FeatureEvaluator {
           batchId,
           evaluated.declutterPriority,
         );
+      }
+      if ("image" in evaluated) {
+        // Async by nature (the image may need fetching); the atlas dedupes
+        // loads by URL so evaluating many features costs one fetch per image.
+        // A nullish url clears the override back to the material default.
+        void obj.setFeatureImageByBatchId(batchId, evaluated.image);
       }
       return;
     }

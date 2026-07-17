@@ -26,7 +26,7 @@ sidebar:
 **Description:** Tint color applied to the raster imagery, as a `Color` instance.
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 { raster: { color: new Color().setHex(0xffffff) } }
 ```

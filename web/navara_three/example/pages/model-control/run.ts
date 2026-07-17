@@ -4,15 +4,15 @@ import ThreeView, {
   degreeToRadian,
   geodeticSurfaceNormal,
   Color,
-} from "@navara/three";
+} from "@navaramap/three";
 import {
   ToneMappingMode,
   type GLTFModelDesc,
-} from "@navara/three_default_descs";
+} from "@navaramap/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
+} from "@navaramap/three_default_plugin";
 import { Vector3, Quaternion, Euler } from "three";
 import { Pane } from "tweakpane";
 

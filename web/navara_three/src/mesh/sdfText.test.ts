@@ -1,4 +1,4 @@
-import { GlyphCharClass, type ShapedGlyph } from "@navara/font";
+import { GlyphCharClass, type ShapedGlyph } from "@navaramap/font";
 import { describe, expect, it } from "vitest";
 
 import { breakLines, isRtlText, lineWidthFu } from "./sdfText";

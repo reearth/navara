@@ -1,4 +1,4 @@
-import type { DataArrayTexture, Matrix4, Vector2, Vector3 } from "three";
+import type { Matrix4, Texture, Vector2, Vector3 } from "three";
 
 import type { UniformValue } from "../../../types";
 import type { Mutates } from "../../MaterialEnhancer";
@@ -30,8 +30,9 @@ export type InstancedSpriteBaseProps = {
 
   // External uniform refs / values (may change over time)
   rtcCenter?: [number, number, number];
-  texture?: UniformValue<DataArrayTexture | null>;
-  aspect?: number;
+  texture?: UniformValue<Texture | null>;
+  /** Billboard atlas dimensions in pixels; normalizes instanceUvRect in the shader. */
+  atlasSize?: [number, number];
   fovRad?: number;
   screenHeightPx?: number;
 };
@@ -61,7 +62,7 @@ export type InstancedSpriteBaseState = Readonly<{
   depthTest: boolean;
 
   // External ref state
-  aspect: number;
+  atlasSize: [number, number];
   fovRad: number;
   screenHeightPx: number;
 }>;
@@ -82,7 +83,7 @@ export type InstancedSpriteBaseRefs = {
   uOffsetDepth: UniformValue<boolean>;
   uAlphaTest: UniformValue<number>;
   uFarPlane: UniformValue<number>;
-  uAspect: UniformValue<number>;
+  uAtlasSize: UniformValue<Vector2>;
   nvr_uPickable: UniformValue<number>;
   uEffectIdsMask: UniformValue<number>;
   uEmissiveColor: UniformValue<Vector3>;
@@ -91,7 +92,7 @@ export type InstancedSpriteBaseRefs = {
   uScreenHeightPx: UniformValue<number>;
 
   // External ref - only present in billboard mode
-  uTexture?: UniformValue<DataArrayTexture | null>;
+  uTexture?: UniformValue<Texture | null>;
 };
 
 export type InstancedSpriteBaseUniforms = Partial<InstancedSpriteBaseRefs>;
@@ -140,6 +141,6 @@ export type InstancedSpriteBaseMutates = Mutates<
     /**
      * Set texture external ref.
      */
-    setTexture: (texture: UniformValue<DataArrayTexture | null>) => void;
+    setTexture: (texture: UniformValue<Texture | null>) => void;
   }
 >;

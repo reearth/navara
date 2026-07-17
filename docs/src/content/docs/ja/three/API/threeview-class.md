@@ -10,8 +10,8 @@ ThreeView は、Three.js と WebGL を使用して 3D マップビジュアラ�
 ## Example
 
 ```tsx
-import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navaramap/three";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
 import { Vector3 } from "three";
 
 // Create ThreeView instance
@@ -210,7 +210,7 @@ view.atmosphere.date = new Date("2024-12-21T18:00:00");
 **Example:**
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
+import ThreeView, { Color } from "@navaramap/three";
 
 const view = new ThreeView({
   backgroundColor: new Color().setHex(0x1a1a2e),
@@ -540,7 +540,7 @@ type GlobeOptions = {
 **Example:**
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
+import ThreeView, { Color } from "@navaramap/three";
 
 const view = new ThreeView({
   maxSse: 2,

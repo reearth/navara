@@ -22,17 +22,17 @@ import ThreeView, {
   getRayPlaneIntersection,
   EllipsoidGeodesic,
   Color,
-} from "@navara/three";
+} from "@navaramap/three";
 import type {
   SphereMeshDesc,
   TubeMeshDesc,
   CylinderMeshDesc,
   GLTFModelDesc,
-} from "@navara/three_default_descs";
+} from "@navaramap/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
+} from "@navaramap/three_default_plugin";
 import { Mesh, Vector2, Vector3, Object3D, Group, ArrowHelper } from "three";
 import { Pane, FolderApi } from "tweakpane";
 

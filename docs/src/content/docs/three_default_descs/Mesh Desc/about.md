@@ -43,8 +43,8 @@ The following MeshDescriptor types are available in navara_three:
 A mesh descriptor is added by registering the descriptor class and then calling the `view.addMesh()` method:
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
-import { BoxMeshDesc } from "@navara/three_default_descs";
+import ThreeView, { Color } from "@navaramap/three";
+import { BoxMeshDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 
@@ -92,8 +92,8 @@ import ThreeView, {
   Color,
   geodeticToVector3,
   degreeToRadian,
-} from "@navara/three";
-import { SphereMeshDesc } from "@navara/three_default_descs";
+} from "@navaramap/three";
+import { SphereMeshDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 view.registerMesh("sphere", SphereMeshDesc);
@@ -129,8 +129,8 @@ import {
   geodeticToVector3,
   geodeticSurfaceNormal,
   degreeToRadian,
-} from "@navara/three";
-import { GLTFModelDesc } from "@navara/three_default_descs";
+} from "@navaramap/three";
+import { GLTFModelDesc } from "@navaramap/three_default_descs";
 import { Vector3, Quaternion, Euler } from "three";
 
 // GLTFModelDesc must be registered
@@ -169,7 +169,7 @@ import {
   geodeticToVector3,
   eastNorthUpToFixedFrame,
   degreeToRadian,
-} from "@navara/three";
+} from "@navaramap/three";
 import { Vector3 } from "three";
 
 const position = geodeticToVector3({
@@ -197,7 +197,7 @@ To convert back from ECEF coordinates to latitude/longitude/altitude, use `vecto
 import {
   vector3ToGeodetic,
   radianToDegree,
-} from "@navara/three";
+} from "@navaramap/three";
 
 // Get the current position of the mesh
 const worldPosition = meshDesc.ref.getWorldPosition();

@@ -21,9 +21,9 @@ TileJSON にはラスター画像とベクトルタイルを確実に見分け�
 ## 使い方
 
 ```typescript
-import ThreeView from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
-import { TileJsonPlugin } from "@navara/three_plugins";
+import ThreeView from "@navaramap/three";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { TileJsonPlugin } from "@navaramap/three_plugins";
 
 const view = new ThreeView({ container });
 

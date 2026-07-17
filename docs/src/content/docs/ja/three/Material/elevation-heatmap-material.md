@@ -62,7 +62,7 @@ DEM タイルをデコードするため、[`raster-dem`](../../../three/source/
 ### 基本的な使い方
 
 ```typescript
-import ThreeView, { TERRARIUM_ELEVATION_DECODER } from "@navara/three";
+import ThreeView, { TERRARIUM_ELEVATION_DECODER } from "@navaramap/three";
 
 const view = new ThreeView({ container: document.getElementById("map") });
 await view.init();
@@ -96,7 +96,7 @@ view.addLayer({
 ヒートマップの色は `globe.elevationColormap` プロパティで制御します。
 
 ```typescript
-import ThreeView, { ColorMap, Color } from "@navara/three";
+import ThreeView, { ColorMap, Color } from "@navaramap/three";
 
 const view = new ThreeView();
 await view.init();

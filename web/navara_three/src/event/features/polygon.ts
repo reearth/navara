@@ -1,5 +1,5 @@
-import type { TileHandle } from "@navara/core";
-import type { PolygonMesh as NavaraPolygonMesh } from "@navara/engine";
+import type { TileHandle } from "@navaramap/core";
+import type { PolygonMesh as NavaraPolygonMesh } from "@navaramap/engine";
 
 import { PolygonMesh } from "../../mesh";
 import type { EventContext } from "../context";

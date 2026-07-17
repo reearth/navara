@@ -57,8 +57,9 @@ const {
       }
     },
     /**
-     * Pre-initializes WASM on every worker so that upcoming tasks don't pay
-     * the initialization latency. Resolves when all workers are warm.
+     * Pre-initializes WASM on the workers so that upcoming tasks don't pay
+     * the initialization latency. Warms a single worker and resolves once
+     * it is ready; the rest warm in the background.
      */
     warmUpWorkerPool: () => {
       invariant(worker, "initializeWorkerPool() must be invoked first.");

@@ -519,7 +519,7 @@ enum CameraDirection {
 **Example:**
 
 ```tsx
-import ThreeView, { CameraDirection } from "@navara/three";
+import ThreeView, { CameraDirection } from "@navaramap/three";
 
 view.moveCamera(CameraDirection.Forward, 100);
 view.moveCamera(CameraDirection.Up, 50);

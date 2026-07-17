@@ -17,7 +17,7 @@ export default defineConfig((env) => {
           "react",
           "react-dom",
           "three",
-          "@navara/three",
+          "@navaramap/three",
         ],
       },
     },

@@ -12,7 +12,7 @@ Globe クラスは、地球表示に関するプロパティへのアクセス�
 Globe インスタンスは、ThreeView の `globe` プロパティを通じてアクセスします。
 
 ```typescript
-import ThreeView from "@navara/three";
+import ThreeView from "@navaramap/three";
 
 const view = new ThreeView();
 
@@ -89,7 +89,7 @@ console.log(view.globe.segments);
 **Example:**
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
+import ThreeView, { Color } from "@navaramap/three";
 
 const view = new ThreeView();
 
@@ -223,7 +223,7 @@ view.globe.wireframe = false;
 **Example:**
 
 ```typescript
-import ThreeView, { ColorMap, Color } from "@navara/three";
+import ThreeView, { ColorMap, Color } from "@navaramap/three";
 
 const view = new ThreeView();
 
@@ -258,7 +258,7 @@ import ThreeView, {
   ColorMap,
   Color,
   TERRARIUM_ELEVATION_DECODER,
-} from "@navara/three";
+} from "@navaramap/three";
 
 const view = new ThreeView({
   animation: true,
@@ -330,7 +330,7 @@ view.setCamera({
 一部のプロパティは初期化時のみ設定可能です。これらは ThreeView のコンストラクタオプションで指定します。
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
+import ThreeView, { Color } from "@navaramap/three";
 
 const view = new ThreeView({
   // 初期化時のみ設定可能なプロパティ

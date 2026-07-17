@@ -62,7 +62,7 @@ Because it decodes DEM tiles, it requires a [`raster-dem`](../../../three/source
 ### Basic usage
 
 ```typescript
-import ThreeView, { TERRARIUM_ELEVATION_DECODER } from "@navara/three";
+import ThreeView, { TERRARIUM_ELEVATION_DECODER } from "@navaramap/three";
 
 const view = new ThreeView({ container: document.getElementById("map") });
 await view.init();
@@ -96,7 +96,7 @@ view.addLayer({
 The heatmap colors are controlled by the `globe.elevationColormap` property.
 
 ```typescript
-import ThreeView, { ColorMap, Color } from "@navara/three";
+import ThreeView, { ColorMap, Color } from "@navaramap/three";
 
 const view = new ThreeView();
 await view.init();

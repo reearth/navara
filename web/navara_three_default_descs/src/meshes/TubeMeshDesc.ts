@@ -1,4 +1,4 @@
-import type ThreeView from "@navara/three";
+import type ThreeView from "@navaramap/three";
 import {
   type XYZ,
   Color,
@@ -9,7 +9,7 @@ import {
   type ViewContext,
   type CustomObject3DEventMap,
   setupSelectiveEffectUniforms,
-} from "@navara/three";
+} from "@navaramap/three";
 import {
   CatmullRomCurve3,
   Mesh,

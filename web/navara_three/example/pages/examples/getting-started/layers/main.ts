@@ -1,9 +1,9 @@
-import ThreeView, { Color } from "@navara/three";
+import ThreeView, { Color } from "@navaramap/three";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
-import { TileJsonPlugin } from "@navara/three_plugins";
+} from "@navaramap/three_default_plugin";
+import { TileJsonPlugin } from "@navaramap/three_plugins";
 
 import { addButton } from "../../../../helpers/button";
 

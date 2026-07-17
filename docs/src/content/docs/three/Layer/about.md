@@ -14,7 +14,7 @@ Layers are added with [`addLayer`](../../../three/api/threeview-functions/) and 
 ## Creating a layer
 
 ```typescript
-import ThreeView from "@navara/three";
+import ThreeView from "@navaramap/three";
 
 const imagery = view.addSource({
   type: "raster-tile",

@@ -21,7 +21,7 @@ A `raster-tile` source describes raster imagery tiles (XYZ or TMS). Render it wi
 ## Example
 
 ```typescript
-import ThreeView from "@navara/three";
+import ThreeView from "@navaramap/three";
 
 const imagery = view.addSource({
   type: "raster-tile",

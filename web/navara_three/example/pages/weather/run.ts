@@ -6,18 +6,18 @@ import ThreeView, {
   degreeToRadian,
   geodeticToVector3,
   Color,
-} from "@navara/three";
+} from "@navaramap/three";
 import {
   RainMeshDesc,
   SnowMeshDesc,
   RainDropEffectDesc,
   SSREffectDesc,
   CloudsEffectDesc,
-} from "@navara/three_default_descs";
+} from "@navaramap/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
+} from "@navaramap/three_default_plugin";
 import { Vector2 } from "three";
 import { Pane } from "tweakpane";
 

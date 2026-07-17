@@ -3,7 +3,7 @@ import {
   Pass as PassWrapper,
   type EffectEvents,
   type EffectOptions,
-} from "@navara/three";
+} from "@navaramap/three";
 import { Camera, PerspectiveCamera, OrthographicCamera, Vector3 } from "three";
 
 import { FogLightDownsampledPass } from "./FogLightDownsampledPass";

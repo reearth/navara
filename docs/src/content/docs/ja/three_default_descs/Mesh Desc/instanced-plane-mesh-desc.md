@@ -203,8 +203,8 @@ const index = handle.ref.add({
 ### 基本的な使い方
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
-import { InstancedPlaneMeshDesc } from "@navara/three_default_descs";
+import ThreeView, { Color } from "@navaramap/three";
+import { InstancedPlaneMeshDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 view.registerMesh("planes", InstancedPlaneMeshDesc);

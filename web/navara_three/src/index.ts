@@ -1,4 +1,4 @@
-import { EventManager, EventHandler, Globe, Plugin } from "@navara/core";
+import { EventManager, EventHandler, Globe, Plugin } from "@navaramap/core";
 import type {
   CameraPosition,
   ColorMap,
@@ -8,7 +8,7 @@ import type {
   Color as CoreColor,
   LatLngHeight,
   LatLng,
-} from "@navara/core";
+} from "@navaramap/core";
 import initCore, {
   Core,
   CameraDirection,
@@ -16,14 +16,14 @@ import initCore, {
   LLE,
   type TerrainHeightUpdatedEvent,
   type TextureFragmentStatus,
-} from "@navara/engine";
+} from "@navaramap/engine";
 import {
   FontManager,
   type FontFamily,
   type FontWorkerMemoryStats,
-} from "@navara/font";
-import FontWorkerURL from "@navara/font/fontWorker?worker&url";
-import { initNavaraApi } from "@navara/three_api";
+} from "@navaramap/font";
+import FontWorkerURL from "@navaramap/font/fontWorker?worker&url";
+import { initNavaraApi } from "@navaramap/three_api";
 import {
   initializeWorkerPool,
   probeWorkerPoolHeap,
@@ -31,7 +31,7 @@ import {
   warmUpWorkerPool,
   workerPoolHeapStats,
   type WorkerPoolHeapStats,
-} from "@navara/worker";
+} from "@navaramap/worker";
 import {
   Scene,
   WebGLRenderer,
@@ -141,7 +141,7 @@ import WorkerURL from "./worker?url&worker";
 
 export type { CameraOptions, CameraEvent } from "./camera";
 
-export { ColorMap, EventHandler, Plugin } from "@navara/core";
+export { ColorMap, EventHandler, Plugin } from "@navaramap/core";
 export type {
   Nullable,
   XYZ,
@@ -154,10 +154,10 @@ export type {
   Globe,
   Observed,
   ObservedEvent,
-} from "@navara/core";
-export { CameraDirection } from "@navara/engine";
+} from "@navaramap/core";
+export { CameraDirection } from "@navaramap/engine";
 // CSM exports for advanced users
-export { CascadedShadowMaps, CSMHelper } from "@navara/three_csm";
+export { CascadedShadowMaps, CSMHelper } from "@navaramap/three_csm";
 
 export * from "./type";
 export * from "./constants";
@@ -175,7 +175,7 @@ export * from "./layers";
 export * from "./passes";
 export * from "./evaluations";
 export { SKY_RENDER_ORDER, STARS_RENDER_ORDER } from "./renderOrder";
-export * from "@navara/three_api";
+export * from "@navaramap/three_api";
 export * from "./Color";
 export { type BlendMode, blendFunction, createReplacer } from "./utils";
 export { Atmosphere, type AtmosphereOptions } from "./atmosphere";
@@ -186,17 +186,17 @@ export type {
   FontFace,
   UnicodeRange,
   FontWorkerMemoryStats,
-} from "@navara/font";
+} from "@navaramap/font";
 export {
   fetchFontFamilyFromCss,
   parseCssUnicodeRange,
   parseFontFamilyFromCss,
-} from "@navara/font";
+} from "@navaramap/font";
 export type {
   CssFontFaceFilter,
   FetchCssFontFamilyOptions,
   ParseCssFontFamilyOptions,
-} from "@navara/font";
+} from "@navaramap/font";
 export {
   getDefaultCacheBytes,
   getDefaultDynamicSse,
@@ -1088,10 +1088,7 @@ export default class ThreeView<
     return null;
   }
 
-  private async initializeRenderPass() {
-    // Initialize atmosphere
-    await this._atmosphere._init();
-
+  private initializeRenderPass() {
     this.skyEnvMap = this.addEffect<SkyEnvMapEffectDesc>({
       skyEnvMap: {},
     });
@@ -1335,9 +1332,15 @@ export default class ThreeView<
         budgets.maxWorkerHeapBytes,
     });
 
-    // Asynchronous initialization in parallel, pre-warming all workers with
-    // WASM initialization.
-    await Promise.all([warmUpWorkerPool(), initCore(), initNavaraApi()]);
+    // 1. Pre-fetch atmosphere resources. Non-blocking: consumers receive
+    // the textures through onTexturesReady() once they arrive.
+    this._atmosphere._init().then(
+      () => this.forceUpdate(),
+      (e) => console.error("Failed to load atmosphere textures:", e),
+    );
+
+    // 2. Fetch WASM resources.
+    await Promise.all([initCore(), initNavaraApi()]);
 
     this._core = new Core(newId());
     this._core.start();
@@ -1474,9 +1477,16 @@ export default class ThreeView<
       this._pickHelper.enablePick(this._options.picking ?? true);
     }
 
-    await this.initializeRenderPass();
+    this.initializeRenderPass();
 
     this.viewContext._setRenderPass(this.renderPass);
+
+    // 3. Warm up workers. Non-blocking: warms one worker, the rest follow
+    // in the background off the HTTP cache; tasks dispatched to a still-cold
+    // worker just await WASM inside the task.
+    warmUpWorkerPool().catch((e) =>
+      console.error("Failed to warm up the worker pool:", e),
+    );
 
     await Promise.all(this.plugins.map((p) => p.init(this, this.viewContext)));
 

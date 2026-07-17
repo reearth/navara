@@ -1,11 +1,11 @@
-import type ThreeView from "@navara/three";
-import { Color } from "@navara/three";
+import type ThreeView from "@navaramap/three";
+import { Color } from "@navaramap/three";
 import {
   LightDesc,
   type LightConfig,
   type ViewContext,
   type LightUpdate,
-} from "@navara/three";
+} from "@navaramap/three";
 import { Material } from "three";
 
 import { SunLight, type SunLightOptions } from "./sunLight";

@@ -16,9 +16,9 @@ The plugin broadcasts its position, heading, speed, and current view mode on eve
 ## Usage
 
 ```typescript
-import ThreeView from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
-import { PersonViewPlugin } from "@navara/three_plugins";
+import ThreeView from "@navaramap/three";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { PersonViewPlugin } from "@navaramap/three_plugins";
 
 const view = new ThreeView({ container, animation: true });
 const defaultPlugin = new DefaultPlugin();

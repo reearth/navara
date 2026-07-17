@@ -7,7 +7,7 @@ import init, {
   type ShapeTextResult as WasmShapeTextResult,
   type WasmShapedGlyph,
   type WasmGlyphMetrics,
-} from "@navara/engine-font-worker";
+} from "@navaramap/engine-font-worker";
 
 let fontCache: FontCache;
 /** WASM linear memory, kept from init() for heap-size reporting. */

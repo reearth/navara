@@ -1,11 +1,11 @@
-import type ThreeView from "@navara/three";
+import type ThreeView from "@navaramap/three";
 import {
   Plugin,
   type MeshHandle,
   type LightHandle,
   type EffectHandle,
   type ViewContext,
-} from "@navara/three";
+} from "@navaramap/three";
 import {
   RainMeshDesc,
   SnowMeshDesc,
@@ -87,7 +87,7 @@ import {
   type AmbientLightConfig,
   type SkyLightProbeConfig,
   type LightProbeConfig,
-} from "@navara/three_default_descs";
+} from "@navaramap/three_default_descs";
 
 export class DefaultPlugin extends Plugin<
   ThreeView<DefaultDescriptions>,

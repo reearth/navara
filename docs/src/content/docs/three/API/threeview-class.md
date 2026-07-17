@@ -10,8 +10,8 @@ ThreeView is the main class for creating and managing 3D map visualizations usin
 ## Example
 
 ```tsx
-import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navaramap/three";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
 import { Vector3 } from "three";
 
 // Create ThreeView instance
@@ -210,7 +210,7 @@ For details on the atmosphere system, see [Atmosphere Class](../../../three/api/
 **Example:**
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
+import ThreeView, { Color } from "@navaramap/three";
 
 const view = new ThreeView({
   backgroundColor: new Color().setHex(0x1a1a2e),
@@ -540,7 +540,7 @@ For details and usage examples of each property, see [Globe Class](../../../thre
 **Example:**
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
+import ThreeView, { Color } from "@navaramap/three";
 
 const view = new ThreeView({
   maxSse: 2,

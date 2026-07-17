@@ -82,7 +82,7 @@ Shared properties applied to all instances. These are specified in the `cylinder
 **Example:**
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 {
   cylinders: {
@@ -257,8 +257,8 @@ Gets the number of active instances.
 ### Basic Usage
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
-import { InstancedCylinderMeshDesc } from "@navara/three_default_descs";
+import ThreeView, { Color } from "@navaramap/three";
+import { InstancedCylinderMeshDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 view.registerMesh("cylinders", InstancedCylinderMeshDesc);

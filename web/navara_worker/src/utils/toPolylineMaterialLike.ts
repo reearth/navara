@@ -1,5 +1,5 @@
-import { PolylineMaterialLike } from "@navara/core";
-import { PolylineMaterial } from "@navara/engine-worker";
+import { PolylineMaterialLike } from "@navaramap/core";
+import { PolylineMaterial } from "@navaramap/engine-worker";
 
 export function toPolylineMaterialLike(like: PolylineMaterialLike) {
   return new PolylineMaterial(

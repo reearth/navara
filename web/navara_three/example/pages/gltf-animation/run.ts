@@ -4,11 +4,11 @@ import ThreeView, {
   geodeticToVector3,
   degreeToRadian,
   geodeticSurfaceNormal,
-} from "@navara/three";
+} from "@navaramap/three";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
+} from "@navaramap/three_default_plugin";
 import { Vector3, Quaternion, Euler, Matrix4 } from "three";
 import { Pane } from "tweakpane";
 

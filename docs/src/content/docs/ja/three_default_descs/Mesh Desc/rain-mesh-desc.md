@@ -20,7 +20,7 @@ sidebar:
 **Example:**
 
 ```typescript
-import { geodeticToVector3, degreeToRadian, LLE } from "@navara/three";
+import { geodeticToVector3, degreeToRadian, LLE } from "@navaramap/three";
 
 const position = geodeticToVector3(
   new LLE(
@@ -102,7 +102,7 @@ const position = geodeticToVector3(
 **Example:**
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 {
   rain: {
@@ -315,8 +315,8 @@ import { Color } from "@navara/three";
 ### 基本的な使い方
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
-import { RainMeshDesc } from "@navara/three_default_descs";
+import ThreeView, { Color } from "@navaramap/three";
+import { RainMeshDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 view.registerMesh("rain", RainMeshDesc);
@@ -339,8 +339,8 @@ const rainDesc = view.addMesh<RainMeshDesc>({
 ### 特定の位置に雨を配置
 
 ```typescript
-import ThreeView, { geodeticToVector3, degreeToRadian, LLE } from "@navara/three";
-import { RainMeshDesc } from "@navara/three_default_descs";
+import ThreeView, { geodeticToVector3, degreeToRadian, LLE } from "@navaramap/three";
+import { RainMeshDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView({ animation: true });
 view.registerMesh("rain", RainMeshDesc);

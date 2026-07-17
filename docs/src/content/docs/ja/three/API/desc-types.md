@@ -395,7 +395,7 @@ onDestroy(): void
 ### Example
 
 ```typescript
-import { BaseDesc, type BaseDescConfig } from "@navara/three";
+import { BaseDesc, type BaseDescConfig } from "@navaramap/three";
 import { BoxGeometry, Mesh, MeshBasicMaterial } from "three";
 
 // カスタム設定型を定義

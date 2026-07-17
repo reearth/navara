@@ -5,8 +5,8 @@ import type { StyleLayer } from "../engine/types";
 
 import { createPaintEvaluators, toEvaluatedValue } from "./toEvaluatedValue";
 
-// Mock @navara/three to avoid importing Three.js in tests
-vi.mock("@navara/three", () => ({
+// Mock @navaramap/three to avoid importing Three.js in tests
+vi.mock("@navaramap/three", () => ({
   Color: class Color {
     r = 0;
     g = 0;

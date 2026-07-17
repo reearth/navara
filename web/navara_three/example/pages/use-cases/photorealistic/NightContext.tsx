@@ -1,4 +1,4 @@
-import { useViewContext } from "@navara/three_react";
+import { useViewContext } from "@navaramap/three_react";
 import {
   createContext,
   useContext,

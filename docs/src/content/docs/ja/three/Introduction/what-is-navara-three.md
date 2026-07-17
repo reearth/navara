@@ -55,7 +55,7 @@ GIS データだけでなく、3D メッシュ、ポストプロセッシング�
 メッシュ・エフェクト・ライトは、使用前に Descriptor クラスの登録が必要です。
 
 ```typescript
-import { BoxMeshDesc, FXAAEffectDesc, SunLightDesc } from "@navara/three_default_descs";
+import { BoxMeshDesc, FXAAEffectDesc, SunLightDesc } from "@navaramap/three_default_descs";
 
 // Descriptor クラスを登録
 view.registerMesh("box", BoxMeshDesc);
@@ -77,7 +77,7 @@ view.addLight({ sun: { intensity: 1.0 } });
 レイヤーは宣言的な追加だけでなく、地物への動的なアクセスも可能です。イベントを通じて個々の地物にアクセスし、データに基づいたスタイル設定やインタラクションを実装できます。
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 layer.on("featureUpdated", (evaluator) => {
   // 地物のプロパティに基づいてスタイルを動的に変更

@@ -1,5 +1,5 @@
-import { ReturnedConstructedTerrainMeshLike } from "@navara/core";
-import type { ReturnedConstructedTerrainMesh } from "@navara/engine-worker";
+import { ReturnedConstructedTerrainMeshLike } from "@navaramap/core";
+import type { ReturnedConstructedTerrainMesh } from "@navaramap/engine-worker";
 
 export function transferReturnedConstructedTerrainMesh(
   r: ReturnedConstructedTerrainMesh,

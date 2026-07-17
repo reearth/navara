@@ -1,4 +1,4 @@
-import type { Transform as EngineTransform } from "@navara/engine-api";
+import type { Transform as EngineTransform } from "@navaramap/engine-api";
 
 import type { NormalizeWASMClass } from "./utils";
 

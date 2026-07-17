@@ -246,16 +246,51 @@ it("recycles used slots after the pool goes idle", async () => {
   expect(pools[2].terminate).not.toHaveBeenCalled();
 });
 
-it("warmUp() pre-initializes every slot", async () => {
+it("warmUp() warms a single worker first, then the rest in the background", async () => {
   const pool = new RecyclingWorkerPool("https://example.com", 2);
 
   const warmed = pool.warmUp();
 
+  // Only one worker fetches WASM up front, keeping startup bandwidth free.
   expect(pools[0].executions[0]?.method).toBe("warmUp");
-  expect(pools[1].executions[0]?.method).toBe("warmUp");
+  expect(pools[1].executions).toHaveLength(0);
+
   nextPending(pools[0], "warmUp")?.resolve();
+  await warmed;
+
+  // The remaining slot warms in the background once the first is ready.
+  expect(nextPending(pools[1], "warmUp")).toBeDefined();
+});
+
+it("warmUp() falls back to the remaining workers when the first fails", async () => {
+  const pool = new RecyclingWorkerPool("https://example.com", 2);
+
+  const warmed = pool.warmUp();
+
+  nextPending(pools[0], "warmUp")?.reject(new Error("boom"));
+  await vi.advanceTimersByTimeAsync(0);
   nextPending(pools[1], "warmUp")?.resolve();
   await warmed;
+});
+
+it("warmUp() rejects only when every worker fails to warm", async () => {
+  const pool = new RecyclingWorkerPool("https://example.com", 2);
+
+  const warmed = pool.warmUp();
+
+  nextPending(pools[0], "warmUp")?.reject(new Error("boom0"));
+  await vi.advanceTimersByTimeAsync(0);
+  nextPending(pools[1], "warmUp")?.reject(new Error("boom1"));
+  await expect(warmed).rejects.toBeInstanceOf(AggregateError);
+});
+
+it("warmUp() rejects with the original error for a single-worker pool", async () => {
+  const pool = new RecyclingWorkerPool("https://example.com", 1);
+
+  const warmed = pool.warmUp();
+
+  nextPending(pools[0], "warmUp")?.reject(new Error("boom"));
+  await expect(warmed).rejects.toThrow("boom");
 });
 
 it("reports no capacity while every slot is draining", async () => {

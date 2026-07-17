@@ -3,7 +3,7 @@ import {
   calcCameraPosition,
   calcModelMatrixRTE,
   encodePositionRTE,
-} from "@navara/three";
+} from "@navaramap/three";
 import RteParsVertex from "@shaders/glsl/chunks/rte_pars_vertex.glsl";
 import RteVertex from "@shaders/glsl/chunks/rte_vertex.glsl";
 import { packing } from "@takram/three-geospatial/shaders";

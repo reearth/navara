@@ -1,4 +1,4 @@
-import type { Nullable } from "@navara/core";
+import type { Nullable } from "@navaramap/core";
 import {
   WebGLRenderer,
   WebGLRenderTarget,

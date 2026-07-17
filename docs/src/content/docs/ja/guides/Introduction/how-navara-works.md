@@ -7,7 +7,7 @@ sidebar:
 
 ## ヘッドレスアーキテクチャ
 
-Navara はヘッドレス 3D マップエンジンです。GIS コアは Rust で書かれ WebAssembly にコンパイルされており、特定のレンダリング技術から意図的に分離されています。現在、Navara は Three.js ベースのレンダリングバックエンド（`@navara/three`）を提供していますが、将来的には他のレンダリングエンジンやネイティブプラットフォームもサポートできるよう設計されています。
+Navara はヘッドレス 3D マップエンジンです。GIS コアは Rust で書かれ WebAssembly にコンパイルされており、特定のレンダリング技術から意図的に分離されています。現在、Navara は Three.js ベースのレンダリングバックエンド（`@navaramap/three`）を提供していますが、将来的には他のレンダリングエンジンやネイティブプラットフォームもサポートできるよう設計されています。
 
 ```mermaid
 graph TD
@@ -16,7 +16,7 @@ graph TD
   end
 
   GIS --> C["レンダリング可能な出力"]
-  C --> D["@navara/three (Three.js)"]
+  C --> D["@navaramap/three (Three.js)"]
   C --> E["将来のバックエンド（他のエンジン）"]
   C --> F["将来のバックエンド（ネイティブ）"]
 ```
@@ -27,9 +27,9 @@ Rust/WASM GIS エンジンはレンダラーとは独立してすべての地理
 
 Navara はプラグインシステムを使用してDescriptorを登録します。`init()` を呼び出す前に、`ThreeView` インスタンスにプラグインを追加します。各プラグインは、提供するメッシュ、ライト、エフェクトのDescriptorを登録します。初期化後、登録されたDescriptorを使ってオブジェクトを追加できます。
 
-[`DefaultPlugin`](../../../three_default_plugin/about/)（`@navara/three_default_plugin` から提供）は、ビルトインのメッシュ、ライト、エフェクトのDescriptorを登録します。ほとんどのアプリケーションでは、`DefaultPlugin` を追加するだけで始められます。
+[`DefaultPlugin`](../../../three_default_plugin/about/)（`@navaramap/three_default_plugin` から提供）は、ビルトインのメッシュ、ライト、エフェクトのDescriptorを登録します。ほとんどのアプリケーションでは、`DefaultPlugin` を追加するだけで始められます。
 
-独自のメッシュ、エフェクト、ライトを Three.js シーングラフへのフルアクセスを持って作成することもできます。これは Navara のビルトインオブジェクトを支えるのと同じ仕組みです。詳細は [Custom Descriptor](../../../three/core/custom-desc/) ドキュメントを参照してください。
+独自のメッシュ、エフェクト、ライトをレンダリングエンジンのシーングラフへのフルアクセスを持って作成することもできます。これは Navara のビルトインオブジェクトを支えるのと同じ仕組みです。詳細は [Custom Descriptor](../../../three/core/custom-desc/) ドキュメントを参照してください。
 
 これらに加えて、Navara は GeoJSON、MVT、3D Tiles などの地理データを読み込み・表示するための[**レイヤー**](../../../three/layer/about/)を提供しています。レイヤーは地物とその属性の複雑さ — パース、空間インデックス、[`FeatureEvaluator`](../../../three/api/feature-evaluator/) による属性ベースのスタイリング — を扱います。一方、メッシュはジオメトリとレンダリングのみを扱うため、描画パフォーマンスに特化した最適化が可能で、大量のオブジェクトを効率的にレンダリングするのに適しています。この分離により、ユースケースに応じて適切なツールを選択できます。Descriptorタイプの詳細は [レイヤーの種類](../../../three/layer/about/) を参照してください。
 
@@ -91,22 +91,22 @@ graph TB
 
 Navara は複数の npm パッケージに分かれています。一見複雑に見えるかもしれませんが、この分離はヘッドレス設計に直接由来します。GIS エンジンはいかなるレンダラーからも独立しており、レンダリングバックエンドは別のレイヤーであり、Descriptor実装はコアから分離されているため、必要なものだけを選択できます。
 
-実際には、ほとんどのアプリケーションで必要なのは 2 つのパッケージだけです。コアエンジンの `@navara/three` と、ビルトインDescriptorの `@navara/three_default_plugin` です。
+実際には、ほとんどのアプリケーションで必要なのは 2 つのパッケージだけです。コアエンジンの `@navaramap/three` と、ビルトインDescriptorの `@navaramap/three_default_plugin` です。
 
 | Package                        | Role                                                            | When you need it                                     |
 | ------------------------------ | --------------------------------------------------------------- | ---------------------------------------------------- |
-| `@navara/three`                | メインパッケージ — `ThreeView` クラス、Source & レイヤー API、カメラ制御 | 常に必要                                             |
-| `@navara/three_default_plugin` | `DefaultPlugin` — ビルトインのメッシュ、ライト、エフェクト      | ほぼ常に必要                                         |
-| `@navara/three_default_descs` | 個別のDescriptorクラス実装                                      | `DefaultPlugin` を使わず手動でDescriptorを登録する場合 |
-| `@navara/three_api`            | スタンドアロン GIS ユーティリティ（座標変換、測地線計算）       | フルマップエンジンなしで GIS 計算が必要な場合        |
+| `@navaramap/three`                | メインパッケージ — `ThreeView` クラス、Source & レイヤー API、カメラ制御 | 常に必要                                             |
+| `@navaramap/three_default_plugin` | `DefaultPlugin` — ビルトインのメッシュ、ライト、エフェクト      | ほぼ常に必要                                         |
+| `@navaramap/three_default_descs` | 個別のDescriptorクラス実装                                      | `DefaultPlugin` を使わず手動でDescriptorを登録する場合 |
+| `@navaramap/three_api`            | スタンドアロン GIS ユーティリティ（座標変換、測地線計算）       | フルマップエンジンなしで GIS 計算が必要な場合        |
 
 ## ドキュメントの見方
 
 このドキュメントは、システムの異なる部分に対応する複数のセクションで構成されています。
 
-[**three** セクション](../../../three/introduction/what-is-navara-three/)は `@navara/three` に関するすべてをカバーします — `ThreeView` API、カメラ制御、レイヤーの概念、ステップバイステップのチュートリアル。Navara でアプリケーションを構築する場合、最も多くの時間を費やすセクションです。
+[**three** セクション](../../../three/introduction/what-is-navara-three/)は `@navaramap/three` に関するすべてをカバーします — `ThreeView` API、カメラ制御、レイヤーの概念、ステップバイステップのチュートリアル。Navara でアプリケーションを構築する場合、最も多くの時間を費やすセクションです。
 
-[**three_default_descs** セクション](../../../three_default_descs/about/)は、`@navara/three_default_descs` が提供するすべてのメッシュ、エフェクト、ライトのDescriptorリファレンスです。各Descriptorには、設定オプションと使用例を記載した専用ページがあります。
+[**three_default_descs** セクション](../../../three_default_descs/about/)は、`@navaramap/three_default_descs` が提供するすべてのメッシュ、エフェクト、ライトのDescriptorリファレンスです。各Descriptorには、設定オプションと使用例を記載した専用ページがあります。
 
 [**three_default_plugin** セクション](../../../three_default_plugin/about/)は、`DefaultPlugin` API のドキュメントで、一般的なセットアップのための便利なメソッドも含みます。
 

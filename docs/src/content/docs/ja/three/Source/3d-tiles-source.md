@@ -18,7 +18,7 @@ sidebar:
 ## 使用例
 
 ```typescript
-import ThreeView from "@navara/three";
+import ThreeView from "@navaramap/three";
 
 const tileset = view.addSource({
   type: "3d-tiles",

@@ -27,11 +27,11 @@ export default defineConfig({
     mainFields: ["module"],
     dedupe: ["three"],
     alias: [
-      // Redirect @navara/three to source so workspace packages that import it
-      // (e.g. @navara/three_default_plugin/dist/index.js → @navara/three) use
+      // Redirect @navaramap/three to source so workspace packages that import it
+      // (e.g. @navaramap/three_default_plugin/dist/index.js → @navaramap/three) use
       // the same module instance as the IIFE entry, avoiding double init.
       {
-        find: /^@navara\/three$/,
+        find: /^@navaramap\/three$/,
         replacement: normalizePath(path.resolve(__dirname, "src/index.ts")),
       },
       // Use the Three.js source file directly so that `three` resolves to a

@@ -1,6 +1,6 @@
 # Tile Texture Compositing
 
-How `@navara/three` composites many overlays — hillshade normals, elevation
+How `@navaramap/three` composites many overlays — hillshade normals, elevation
 heatmaps, multiple raster tiles, and texturized vector tiles — onto a single
 terrain mesh. For how those tiles are selected and resolved on the Rust side
 (the terrain/raster quadtree traversals that feed this stage) see

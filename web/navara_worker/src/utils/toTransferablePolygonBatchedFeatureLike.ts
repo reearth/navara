@@ -1,5 +1,5 @@
-import type { TransferablePolygonBatchedFeatureLike } from "@navara/core";
-import { TransferablePolygonBatchedFeature } from "@navara/engine-worker";
+import type { TransferablePolygonBatchedFeatureLike } from "@navaramap/core";
+import { TransferablePolygonBatchedFeature } from "@navaramap/engine-worker";
 
 export function toTransferablePolygonBatchedFeatureLike(
   like: TransferablePolygonBatchedFeatureLike,

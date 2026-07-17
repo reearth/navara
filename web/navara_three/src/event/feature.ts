@@ -1,10 +1,10 @@
-import type { TileHandle } from "@navara/core";
-import { generate_id_from_entity } from "@navara/core";
+import type { TileHandle } from "@navaramap/core";
+import { generate_id_from_entity } from "@navaramap/core";
 import {
   type RenderableFeatureAddedEvent,
   type RenderableFeature,
   RenderableFeatureChangedEvent,
-} from "@navara/engine";
+} from "@navaramap/engine";
 import { Mesh, Sprite, Object3D, Scene } from "three";
 
 import {
@@ -141,6 +141,19 @@ export async function processRenderableFeatureAdded(
       // undercounts Draco content). Draco decode inflates geometry markedly.
       if (model && r) {
         featureHandler.reportFeatureGpuBytes(ev.bits, sumModelGpuBytes(r));
+      }
+      // The billboard image atlas (CPU pixel buffer + GPU texture) is
+      // allocated and grown lazily on the JS side as images load, so the
+      // mesh reports its measured footprint whenever it changes; the ledger
+      // folds it into the owning vector tile's cost. Capture `bits` as a
+      // plain number now: the reporter fires long after this WASM event
+      // object is freed (async image packs), and a deferred `ev.bits` read
+      // would throw "null pointer passed to rust".
+      if (billboard && r instanceof InstancedSpriteMesh) {
+        const featureBits = ev.bits;
+        r.setAtlasBytesReporter((bytes) =>
+          featureHandler.reportFeatureGpuBytes(featureBits, bytes),
+        );
       }
       return r;
     })

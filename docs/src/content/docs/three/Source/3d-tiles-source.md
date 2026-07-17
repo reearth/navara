@@ -18,7 +18,7 @@ A `3d-tiles` source points at a 3D Tiles tileset (a `tileset.json` hierarchy). R
 ## Example
 
 ```typescript
-import ThreeView from "@navara/three";
+import ThreeView from "@navaramap/three";
 
 const tileset = view.addSource({
   type: "3d-tiles",

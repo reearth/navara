@@ -7,7 +7,7 @@ import { createBaseMutates } from "./mutates";
 import { DEFAULT_BASE_STATE } from "./state";
 import type { SdfTextBaseState } from "./types";
 
-vi.mock("@navara/engine-api", () => ({
+vi.mock("@navaramap/engine-api", () => ({
   encodePosition: (_x: number, _y: number, _z: number) => ({
     high: { x: 1000, y: 2000, z: 3000 },
     low: { x: 0.5, y: 0.25, z: 0.125 },

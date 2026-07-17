@@ -37,11 +37,11 @@ Format-specific crates handle parsing: `navara_mvt` for Mapbox Vector Tiles, `na
 
 The Rust crates are compiled into three separate WASM modules, each targeting a different use case.
 
-**`navara_wasm`** compiles to `web/wasm/navara_engine/` and includes the full 3D engine with all 40+ crates. It provides the complete engine API — camera, layers, features, tiles, and the ECS system integration. This is the module that `@navara/three` communicates with.
+**`navara_wasm`** compiles to `web/wasm/navara_engine/` and includes the full 3D engine with all 40+ crates. It provides the complete engine API — camera, layers, features, tiles, and the ECS system integration. This is the module that `@navaramap/three` communicates with.
 
 **`navara_wasm_worker`** compiles to `web/wasm/navara_engine_worker/` and includes processing-focused crates. It runs in Web Workers for CPU-intensive background tasks such as terrain mesh construction and polygon/polyline batch processing.
 
-**`navara_wasm_api`** compiles to `web/wasm/navara_engine_api/` and includes only 6 core crates (`navara_core`, `navara_math`, `navara_camera`, and a few others). It provides lightweight, stateless utility functions for coordinate transformations and mathematical operations. This is the module that `@navara/three_api` communicates with.
+**`navara_wasm_api`** compiles to `web/wasm/navara_engine_api/` and includes only 6 core crates (`navara_core`, `navara_math`, `navara_camera`, and a few others). It provides lightweight, stateless utility functions for coordinate transformations and mathematical operations. This is the module that `@navaramap/three_api` communicates with.
 
 The build pipeline, orchestrated by cargo-make, follows a strict sequence: first compiling the Rust crates to WASM, then generating TypeScript bindings via wasm-bindgen, installing web dependencies, building the TypeScript packages, and finally preparing examples and assets.
 
@@ -49,9 +49,9 @@ The build pipeline, orchestrated by cargo-make, follows a strict sequence: first
 
 Navara enforces a strict policy that WASM-generated classes are never exposed directly in public TypeScript APIs. Classes produced by `wasm-bindgen` have manual memory management requirements — if Rust frees memory, any JavaScript references become invalid, leading to use-after-free errors or memory leaks.
 
-Instead, public functions in `@navara/three` and `@navara/three_api` accept plain JavaScript objects or Three.js types as input, create WASM objects internally, perform the operation, convert results back to plain JavaScript/Three.js types, and free the WASM objects. This wrapper pattern ensures that consumers never need to manage WASM memory manually.
+Instead, public functions in `@navaramap/three` and `@navaramap/three_api` accept plain JavaScript objects or Three.js types as input, create WASM objects internally, perform the operation, convert results back to plain JavaScript/Three.js types, and free the WASM objects. This wrapper pattern ensures that consumers never need to manage WASM memory manually.
 
-The `NormalizeWASMClass<T>` utility type (from `@navara/core`) is used to derive TypeScript types from WASM class definitions by stripping `free()` methods and converting getter/setter pairs into plain properties.
+The `NormalizeWASMClass<T>` utility type (from `@navaramap/core`) is used to derive TypeScript types from WASM class definitions by stripping `free()` methods and converting getter/setter pairs into plain properties.
 
 ## Support Systems
 

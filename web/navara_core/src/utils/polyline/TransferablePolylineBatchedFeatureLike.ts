@@ -2,7 +2,7 @@ import type {
   CRS,
   ReturnedTransferablePolylineBatchedFeature,
   TransferablePolylineBatchedFeature,
-} from "@navara/engine";
+} from "@navaramap/engine";
 
 import type { RemoveFreeRecursively } from "../../types";
 

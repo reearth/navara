@@ -3,7 +3,7 @@ import ThreeView, {
   type Options,
   type Descriptions,
   type EmptyDescriptions,
-} from "@navara/three";
+} from "@navaramap/three";
 import {
   createContext,
   useContext,

@@ -3,8 +3,8 @@ import {
   ExtentRadianF32Like,
   PolygonMaterialLike,
   TransferablePolygonBatchedFeatureLike,
-} from "@navara/core";
-import type { Promise } from "@navara/worker";
+} from "@navaramap/core";
+import type { Promise } from "@navaramap/worker";
 
 import { queueTask } from "./queueTask";
 

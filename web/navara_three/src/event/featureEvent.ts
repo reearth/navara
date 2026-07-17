@@ -1,4 +1,4 @@
-import type { EventHandler, FeatureSetId } from "@navara/core";
+import type { EventHandler, FeatureSetId } from "@navaramap/core";
 import type { Object3D } from "three";
 
 import { ModelMesh, type ViewEvents } from "..";

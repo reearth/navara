@@ -1,11 +1,11 @@
-import type ThreeView from "@navara/three";
+import type ThreeView from "@navaramap/three";
 import {
   Color,
   MeshDesc,
   type MeshConfig,
   type ViewContext,
   type MeshUpdate,
-} from "@navara/three";
+} from "@navaramap/three";
 import SkyBoxFS from "@shaders/glsl/skyBox.frag.glsl";
 import SkyBoxVS from "@shaders/glsl/skyBox.vert.glsl";
 import {

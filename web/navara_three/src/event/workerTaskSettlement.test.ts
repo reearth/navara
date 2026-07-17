@@ -1,7 +1,7 @@
 import type {
   DelegatedWorkerTasksResult,
   ReconstructableEntity,
-} from "@navara/engine";
+} from "@navaramap/engine";
 import { expect, it, vi } from "vitest";
 
 import type { WorkerPoolPromise, WorkerPoolPromises } from "../type";

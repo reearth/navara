@@ -1,7 +1,7 @@
 import {
   PolylineMesh as NavaraPolylineMesh,
   PolylineMaterial,
-} from "@navara/engine";
+} from "@navaramap/engine";
 import {
   BufferAttribute,
   BufferGeometry,

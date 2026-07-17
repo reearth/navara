@@ -12,7 +12,7 @@
  * ## Usage
  *
  * ```ts
- * import ThreeView from "@navara/three";
+ * import ThreeView from "@navaramap/three";
  *
  * const view = new ThreeView({ container });
  * await view.init();
@@ -53,7 +53,7 @@
  * view.attribution?.show();
  * ```
  */
-import { Plugin } from "@navara/core";
+import { Plugin } from "@navaramap/core";
 
 import type { ViewContext } from "../../core";
 import type ThreeView from "../../index";

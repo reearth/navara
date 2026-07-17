@@ -11,8 +11,11 @@
 #endif
 
 #ifdef BILLBOARD
-    attribute float instanceLayer; // Which texture layer to use
-    varying float vLayer;
+    // Atlas sub-rect in pixels: x, y, width, height. Normalized by uAtlasSize
+    // here (not baked into the attribute) so rects stay valid when the atlas
+    // grows — growth only updates the uniform.
+    attribute vec4 instanceUvRect;
+    uniform vec2 uAtlasSize;
 #endif
 
 attribute vec4 instanceParams; // x=height, y=size, z=show, w=opacity
@@ -34,7 +37,6 @@ uniform vec3 uEyeRTELow;
 uniform float uScale;
 uniform bool uSizeInMeters;
 uniform vec2 uCenter;
-uniform float uAspect; // Aspect ratio of the billboard texture
 uniform float uFovRad;
 uniform float uScreenHeightPx;
 
@@ -58,9 +60,10 @@ void main() {
     #include "chunks/horizon_culling_vertex.glsl"
 
 #ifdef BILLBOARD
-    vLayer = instanceLayer;
-#endif
+    vUv = (instanceUvRect.xy + uv * instanceUvRect.zw) / uAtlasSize;
+#else
     vUv = uv;
+#endif
     vBatchID = instanceBatchID;
     vColor = instanceColor;
 
@@ -94,12 +97,18 @@ void main() {
     // Use per-instance size when set (>= 0.0). A negative value means "use uScale".
     float scale = instanceSize >= 0.0 ? instanceSize : uScale;
     float clampedScale = max(0.0, scale); // Prevent negative scaling
+#ifdef BILLBOARD
+    // Per-instance image aspect from the atlas rect (guard empty rects).
+    float aspect = instanceUvRect.w > 0.0 ? instanceUvRect.z / instanceUvRect.w : 1.0;
+#else
+    float aspect = 1.0;
+#endif
     // This makes it always face the camera
     if (!uSizeInMeters) {
         clampedScale = nvr_pxToWorld(clampedScale, uFovRad, uScreenHeightPx, vec3(0.0, 0.0, mvPosition.z), vec3(0.0, 0.0, 0.0));
-        mvPosition.xy += (((position.xy - center)) * vec2(uAspect, 1.0) * clampedScale);
+        mvPosition.xy += (((position.xy - center)) * vec2(aspect, 1.0) * clampedScale);
     } else {
-        mvPosition.xy += (((position.xy - center)) * vec2(uAspect, 1.0) * clampedScale);
+        mvPosition.xy += (((position.xy - center)) * vec2(aspect, 1.0) * clampedScale);
     }
 
     gl_Position = projectionMatrix * mvPosition;

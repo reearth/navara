@@ -1,4 +1,4 @@
-import type { BillboardMesh as NavaraBillboardMesh } from "@navara/engine";
+import type { BillboardMesh as NavaraBillboardMesh } from "@navaramap/engine";
 
 import { InstancedSpriteMesh } from "../../mesh";
 import { FEATURE_RENDER_ORDER } from "../../renderOrder";

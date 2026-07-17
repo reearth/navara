@@ -1,4 +1,4 @@
-import { Effect, type EffectOptions } from "@navara/three";
+import { Effect, type EffectOptions } from "@navaramap/three";
 import { ToneMappingMode, ToneMappingEffect } from "postprocessing";
 import type { Camera } from "three";
 

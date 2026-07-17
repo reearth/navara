@@ -2,7 +2,7 @@ import {
   EffectDesc,
   type EffectConfig,
   type EffectUpdate,
-} from "@navara/three";
+} from "@navaramap/three";
 
 import { FXAA } from "./aa";
 

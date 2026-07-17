@@ -2,12 +2,12 @@ import type {
   TransferableTileLike,
   TileXYZLike,
   CachedMeshHandleLike,
-} from "@navara/core";
+} from "@navaramap/core";
 import {
   CachedMeshHandle,
   TileXYZ,
   TransferableTile,
-} from "@navara/engine-worker";
+} from "@navaramap/engine-worker";
 
 export function toTransferableTile(like: TransferableTileLike) {
   return new TransferableTile(

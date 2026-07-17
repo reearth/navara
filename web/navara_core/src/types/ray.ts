@@ -1,4 +1,4 @@
-import type { Ray as EngineRay } from "@navara/engine-api";
+import type { Ray as EngineRay } from "@navaramap/engine-api";
 
 import type { NormalizeWASMClass } from "./utils";
 

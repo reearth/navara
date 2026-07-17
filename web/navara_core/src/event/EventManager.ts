@@ -1,4 +1,4 @@
-import { type Events } from "@navara/engine";
+import { type Events } from "@navaramap/engine";
 
 import { generate_id_from_entity, isEntityEvent } from "../id";
 

@@ -1,4 +1,4 @@
-import { CascadedDirectionalLights } from "@navara/three_csm";
+import { CascadedDirectionalLights } from "@navaramap/three_csm";
 import type { WebGLRenderer } from "three";
 import { ShadowMapViewer } from "three-stdlib";
 

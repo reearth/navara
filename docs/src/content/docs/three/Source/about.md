@@ -22,7 +22,7 @@ See [Layer Types](../../../three/layer/about/) for the layer types and [Material
 Register a source with [`addSource`](../../../three/api/threeview-functions/). It returns a `Source` handle:
 
 ```typescript
-import ThreeView from "@navara/three";
+import ThreeView from "@navaramap/three";
 
 const imagery = view.addSource({
   type: "raster-tile",

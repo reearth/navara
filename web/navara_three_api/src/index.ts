@@ -1,4 +1,4 @@
-import type { LatLngHeight, Window as WindowObject } from "@navara/core";
+import type { LatLngHeight, Window as WindowObject } from "@navaramap/core";
 import initApi, {
   Window,
   LLE,
@@ -22,10 +22,10 @@ import initApi, {
   getWGS84EccentricitySquared as nvGetWGS84EccentricitySquared,
   getWGS84Flattening as nvGetWGS84Flattening,
   getWGS84Eccentricity as nvGetWGS84Eccentricity,
-} from "@navara/engine-api";
+} from "@navaramap/engine-api";
 import { Vector3, Vector2, Matrix4, PerspectiveCamera } from "three";
 
-export type { LatLngHeight, LatLng } from "@navara/core";
+export type { LatLngHeight, LatLng } from "@navaramap/core";
 export type {
   Window,
   Transform,
@@ -34,7 +34,7 @@ export type {
   Ray,
   Vec2,
   Vec3,
-} from "@navara/core";
+} from "@navaramap/core";
 
 export * from "./intersection";
 export * from "./rte";

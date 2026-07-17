@@ -3,7 +3,7 @@ import type {
   Events,
   RenderableFeatureAddedEvent,
   RenderableFeatureChangedEvent,
-} from "@navara/engine";
+} from "@navaramap/engine";
 import { noop } from "lodash-es";
 
 import type { JsEvents, JsEventsKey } from "./EventManager";

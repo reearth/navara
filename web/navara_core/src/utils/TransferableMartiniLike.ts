@@ -1,4 +1,4 @@
-import type { TransferableMartini } from "@navara/engine";
+import type { TransferableMartini } from "@navaramap/engine";
 
 import type { RemoveFreeRecursively } from "../types";
 

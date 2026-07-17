@@ -26,8 +26,8 @@ navara_three (core)
 To use Descriptors from `three_default_descs`, you need to register the Descriptor classes with `view.registerMesh()` / `view.registerEffect()` / `view.registerLight()` before calling `view.addMesh()` / `view.addEffect()` / `view.addLight()`.
 
 ```typescript
-import ThreeView from "@navara/three";
-import { BoxMeshDesc, FXAAEffectDesc, SunLightDesc } from "@navara/three_default_descs";
+import ThreeView from "@navaramap/three";
+import { BoxMeshDesc, FXAAEffectDesc, SunLightDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 
@@ -55,7 +55,7 @@ If you want to register all default descriptors at once, it is convenient to use
 Descriptors that add 3D mesh objects to the scene. They support basic shapes such as boxes, spheres, and cylinders, as well as loading glTF models.
 
 ```typescript
-import { BoxMeshDesc, GLTFModelDesc } from "@navara/three_default_descs";
+import { BoxMeshDesc, GLTFModelDesc } from "@navaramap/three_default_descs";
 
 view.registerMesh("box", BoxMeshDesc);
 view.registerMesh("gltfModel", GLTFModelDesc);
@@ -72,7 +72,7 @@ See the [Mesh Desc Reference](../../../three_default_descs/mesh-desc/about/) for
 Descriptors that apply post-processing effects. They provide a rich set of effects including anti-aliasing, SSAO, SSR, and more.
 
 ```typescript
-import { FXAAEffectDesc, SSAOEffectDesc } from "@navara/three_default_descs";
+import { FXAAEffectDesc, SSAOEffectDesc } from "@navaramap/three_default_descs";
 
 view.registerEffect("fxaa", FXAAEffectDesc);
 view.registerEffect("ssao", SSAOEffectDesc);
@@ -89,7 +89,7 @@ See the [Effect Desc Reference](../../../three_default_descs/effect-desc/about/)
 Descriptors that manage scene lighting. They provide sunlight, ambient light, light probes, and more.
 
 ```typescript
-import { SunLightDesc, AmbientLightDesc } from "@navara/three_default_descs";
+import { SunLightDesc, AmbientLightDesc } from "@navaramap/three_default_descs";
 
 view.registerLight("sun", SunLightDesc);
 view.registerLight("ambient", AmbientLightDesc);

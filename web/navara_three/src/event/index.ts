@@ -2,7 +2,7 @@ import {
   generate_id_from_entity,
   IMAGE_EXTENSIONS,
   isEntityEvent,
-} from "@navara/core";
+} from "@navaramap/core";
 import {
   type Transform,
   type EntityEvent,
@@ -14,9 +14,9 @@ import {
   DataRequesterRemovedEvent,
   RenderableFeatureRemovedEvent,
   Events,
-} from "@navara/engine";
-import { radianToDegree } from "@navara/three_api";
-import { canWorkerProcessImmediately } from "@navara/worker";
+} from "@navaramap/engine";
+import { radianToDegree } from "@navaramap/three_api";
+import { canWorkerProcessImmediately } from "@navaramap/worker";
 import { Mesh, Object3D, Sprite } from "three";
 
 import { BatchedSdfTextMesh, Layer } from "..";

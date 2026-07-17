@@ -1,5 +1,5 @@
-import { EventHandler, type FeatureSetId } from "@navara/core";
-import type { Core } from "@navara/engine";
+import { EventHandler, type FeatureSetId } from "@navaramap/core";
+import type { Core } from "@navaramap/engine";
 
 import { FeatureEvaluator } from "./evaluations";
 import { Source } from "./source";

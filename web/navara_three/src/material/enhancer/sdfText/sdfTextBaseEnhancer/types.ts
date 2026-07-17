@@ -1,4 +1,4 @@
-import { atlasRangePx } from "@navara/font";
+import { atlasRangePx } from "@navaramap/font";
 import type { Color, DataTexture, Matrix4, Vector2, Vector3 } from "three";
 
 import type { UniformValue } from "../../../types";
@@ -7,7 +7,7 @@ import type { Mutates } from "../../MaterialEnhancer";
 /** Pixel range covered by a quality's atlas distance field; defines how
  *  outline-width pixels translate to a distance-value delta. SDF (`useMsdf=false`)
  *  uses the classic 35 px radius from `sdf_glyph_renderer`; MSDF uses
- *  `MSDF_RANGE_PX` (8 px). See [`atlasRangePx`] in `@navara/font`. */
+ *  `MSDF_RANGE_PX` (8 px). See [`atlasRangePx`] in `@navaramap/font`. */
 export const sdfRadiusFor = (useMsdf: boolean): number => atlasRangePx(useMsdf);
 
 /**

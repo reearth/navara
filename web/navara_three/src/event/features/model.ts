@@ -1,5 +1,5 @@
-import { ModelMesh as NavaraModelMesh } from "@navara/engine";
-import { degreeToRadian } from "@navara/three_api";
+import { ModelMesh as NavaraModelMesh } from "@navaramap/engine";
+import { degreeToRadian } from "@navaramap/three_api";
 import {
   BufferGeometry,
   Points,

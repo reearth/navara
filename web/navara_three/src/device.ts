@@ -1,8 +1,8 @@
 /**
  * Device detection and adaptive quality utilities for mobile optimization.
  */
-import type { NormalizeWASMClass } from "@navara/core";
-import type { DynamicSse as EngineDynamicSse } from "@navara/engine";
+import type { NormalizeWASMClass } from "@navaramap/core";
+import type { DynamicSse as EngineDynamicSse } from "@navaramap/engine";
 
 /** Cached result of mobile device detection */
 let cachedIsMobile: boolean | undefined;

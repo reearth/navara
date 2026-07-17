@@ -16,8 +16,8 @@
  * ## Usage
  *
  * ```ts
- * import ThreeView from "@navara/three";
- * import { TileJsonPlugin } from "@navara/three_plugins";
+ * import ThreeView from "@navaramap/three";
+ * import { TileJsonPlugin } from "@navaramap/three_plugins";
  *
  * const view = new ThreeView({ container });
  * const tilejson = new TileJsonPlugin();
@@ -57,8 +57,8 @@ import ThreeView, {
   EventHandler,
   type Source,
   type ViewContext,
-} from "@navara/three";
-import type { DefaultDescriptions } from "@navara/three_default_plugin";
+} from "@navaramap/three";
+import type { DefaultDescriptions } from "@navaramap/three_default_plugin";
 
 type View = ThreeView<DefaultDescriptions>;
 

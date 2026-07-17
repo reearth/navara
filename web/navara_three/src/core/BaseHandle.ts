@@ -1,4 +1,4 @@
-import { EventHandler } from "@navara/core";
+import { EventHandler } from "@navaramap/core";
 
 import { BaseDesc, type BaseDescConfigUpdate } from "./BaseDesc";
 import type { EffectDesc } from "./EffectDesc";

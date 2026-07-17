@@ -74,7 +74,7 @@ sidebar:
 **Example:**
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 {
   billboard: {
@@ -130,7 +130,7 @@ import { Color } from "@navara/three";
 **Example:**
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 {
   billboard: {
@@ -288,7 +288,7 @@ import { Color } from "@navara/three";
 
 **Type:** `string`
 
-**Description:** Specifies the URL of the object. Supports image files.
+**Description:** Specifies the URL of the object. Supports image files. This is the default image for every feature in the layer; individual features can override it by returning `image` from [`FeatureEvaluator.evaluate()`](../../api/feature-evaluator/#evaluate), and returning `image: null` reverts an overridden feature to this default.
 
 **Default:** Required
 

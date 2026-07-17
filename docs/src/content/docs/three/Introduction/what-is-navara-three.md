@@ -55,7 +55,7 @@ Not only GIS data, but also 3D meshes, post-processing effects, and lighting can
 Mesh, effect, and light descriptors require descriptor class registration before use.
 
 ```typescript
-import { BoxMeshDesc, FXAAEffectDesc, SunLightDesc } from "@navara/three_default_descs";
+import { BoxMeshDesc, FXAAEffectDesc, SunLightDesc } from "@navaramap/three_default_descs";
 
 // Register descriptor classes
 view.registerMesh("box", BoxMeshDesc);
@@ -77,7 +77,7 @@ view.addLight({ sun: { intensity: 1.0 } });
 Layers support not only declarative addition but also dynamic access to features. You can access individual features through events to implement data-driven styling and interaction.
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 layer.on("featureUpdated", (evaluator) => {
   // Dynamically change styles based on feature properties

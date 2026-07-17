@@ -1,5 +1,5 @@
-import { generate_id_from_entity } from "@navara/core";
-import type { EntityEvent, HillshadeBackfilledEvent } from "@navara/engine";
+import { generate_id_from_entity } from "@navaramap/core";
+import type { EntityEvent, HillshadeBackfilledEvent } from "@navaramap/engine";
 
 import type { TileMesh } from "../mesh/tile";
 import { getTextureFragmentSlots } from "../utils/textureFragmentIndex";

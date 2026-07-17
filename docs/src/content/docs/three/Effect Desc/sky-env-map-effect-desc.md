@@ -40,8 +40,8 @@ The `SkyEnvMapEffectDesc` class is a pass that renders the sky environment map. 
 ### Adding a basic sky environment map
 
 ```typescript
-import ThreeView, { SkyEnvMapEffectDesc } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView, { SkyEnvMapEffectDesc } from "@navaramap/three";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
 
 const view = new ThreeView();
 const plugin = new DefaultPlugin();
@@ -62,8 +62,8 @@ view.addEffect<SkyEnvMapEffectDesc>({
 ### High-resolution environment map
 
 ```typescript
-import ThreeView, { SkyEnvMapEffectDesc } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView, { SkyEnvMapEffectDesc } from "@navaramap/three";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
 
 const view = new ThreeView();
 const plugin = new DefaultPlugin();
@@ -83,8 +83,8 @@ view.addEffect<SkyEnvMapEffectDesc>({
 ### Usage combined with reflective materials
 
 ```typescript
-import ThreeView, { SkyEnvMapEffectDesc, Color } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView, { SkyEnvMapEffectDesc, Color } from "@navaramap/three";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
 
 const view = new ThreeView();
 const plugin = new DefaultPlugin();

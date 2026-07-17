@@ -221,7 +221,7 @@ function injectGBufferToSpriteMaterial(shader: ShaderLibShader) {
  * @internal
  * Patches all built-in Three.js `ShaderLib` materials (basic, lambert, phong,
  * standard, physical, sprite, points) so they write to the MRT G-buffer.
- * Called automatically when `@navara/three` is imported — application code
+ * Called automatically when `@navaramap/three` is imported — application code
  * never needs to call this. Custom `ShaderMaterial`/`LineMaterial` do not go
  * through `ShaderLib`, so they must opt in via {@link setupMaterialForMRT}.
  */

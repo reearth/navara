@@ -1,4 +1,4 @@
-import type { FloatAttribute } from "@navara/engine";
+import type { FloatAttribute } from "@navaramap/engine";
 
 import type { RemoveFreeRecursively } from "../types";
 

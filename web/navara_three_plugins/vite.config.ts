@@ -19,7 +19,11 @@ export default defineConfig((env) => {
       ...common.build,
       rollupOptions: {
         ...common.build.rollupOptions,
-        external: ["@navara/three", "@navara/three_default_plugin", "three"],
+        external: [
+          "@navaramap/three",
+          "@navaramap/three_default_plugin",
+          "three",
+        ],
       },
     },
   };

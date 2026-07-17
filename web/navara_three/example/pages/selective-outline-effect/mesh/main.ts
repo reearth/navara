@@ -3,18 +3,18 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   degreeToRadian,
   geodeticToVector3,
-} from "@navara/three";
+} from "@navaramap/three";
 import type {
   BoxMeshDesc,
   SphereMeshDesc,
   CylinderMeshDesc,
   PlaneMeshDesc,
   TubeMeshDesc,
-} from "@navara/three_default_descs";
+} from "@navaramap/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
+} from "@navaramap/three_default_plugin";
 import { Vector3 } from "three";
 
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";

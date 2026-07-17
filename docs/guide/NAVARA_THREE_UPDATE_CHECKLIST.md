@@ -117,14 +117,14 @@ Run after any update:
 
 ```typescript
 // Main package
-import ThreeView from "@navara/three";
-import ThreeView, { LayerType } from "@navara/three";
+import ThreeView from "@navaramap/three";
+import ThreeView, { LayerType } from "@navaramap/three";
 
 // API utilities
-import { initNavaraApi, functionName } from "@navara/three_api";
+import { initNavaraApi, functionName } from "@navaramap/three_api";
 
 // Plugin
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
 ```
 
 ### Initialization

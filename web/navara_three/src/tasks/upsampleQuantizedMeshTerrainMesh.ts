@@ -2,8 +2,8 @@ import {
   ReturnedConstructedTerrainMeshLike,
   TransferableTileLike,
   UpsamplableTerrainGeometryLike,
-} from "@navara/core";
-import type { Promise } from "@navara/worker";
+} from "@navaramap/core";
+import type { Promise } from "@navaramap/worker";
 
 import { queueTask } from "./queueTask";
 

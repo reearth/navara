@@ -1,4 +1,4 @@
-import type { Plane as EnginePlane } from "@navara/engine-api";
+import type { Plane as EnginePlane } from "@navaramap/engine-api";
 
 import type { NormalizeWASMClass } from "./utils";
 

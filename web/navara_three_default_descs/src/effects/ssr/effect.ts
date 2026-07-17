@@ -1,4 +1,4 @@
-import { type BlendMode, Effect, type EffectOptions } from "@navara/three";
+import { type BlendMode, Effect, type EffectOptions } from "@navaramap/three";
 import type { Camera, Texture } from "three";
 
 import {

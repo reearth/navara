@@ -12,7 +12,7 @@ sidebar:
 ## Basic Usage
 
 ```typescript
-import ThreeView, { fetchFontFamilyFromCss } from "@navara/three";
+import ThreeView, { fetchFontFamilyFromCss } from "@navaramap/three";
 
 const view = new ThreeView({ container: element });
 await view.init();
@@ -74,7 +74,7 @@ fetchFontFamilyFromCss(
 **Example:**
 
 ```typescript
-import { fetchFontFamilyFromCss } from "@navara/three";
+import { fetchFontFamilyFromCss } from "@navaramap/three";
 
 // セルフホストのスタイルシートとフォントパッケージ付属のスタイルシートを結合。
 const family = await fetchFontFamilyFromCss("CityWithEmoji", [
@@ -111,7 +111,7 @@ parseFontFamilyFromCss(
 **Example:**
 
 ```typescript
-import { parseFontFamilyFromCss } from "@navara/three";
+import { parseFontFamilyFromCss } from "@navaramap/three";
 
 const family = parseFontFamilyFromCss(
   "MapFont",
@@ -145,7 +145,7 @@ parseCssUnicodeRange(value: string): UnicodeRange[]
 **Example:**
 
 ```typescript
-import { parseCssUnicodeRange } from "@navara/three";
+import { parseCssUnicodeRange } from "@navaramap/three";
 
 parseCssUnicodeRange("U+0102-0103, U+20AB");
 // [{ from: 0x0102, to: 0x0103 }, { from: 0x20ab, to: 0x20ab }]

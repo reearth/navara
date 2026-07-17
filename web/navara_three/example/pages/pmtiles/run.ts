@@ -1,9 +1,9 @@
-import ThreeView, { Color } from "@navara/three";
-import { ToneMappingMode } from "@navara/three_default_descs";
+import ThreeView, { Color } from "@navaramap/three";
+import { ToneMappingMode } from "@navaramap/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
+} from "@navaramap/three_default_plugin";
 import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 

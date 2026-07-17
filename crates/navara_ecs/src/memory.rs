@@ -10,6 +10,7 @@ use navara_feature_component::render::RenderableFeature;
 use navara_fog::{DynamicSse, DynamicSseConfig, Fog, LodFogConfig};
 use navara_memory::{MemoryLedger, TileCost};
 use navara_tile_component::{TerrainTileGpuCost, TileHandle, TileMeshMarker};
+use navara_vector_tile::{OwningVectorTile, VectorTileGpuCost};
 
 use crate::App;
 
@@ -52,42 +53,76 @@ impl App {
     /// already evicted before the report arrived.
     ///
     /// Resolution is per feature kind; a kind without a wired-up owner lookup
-    /// is a no-op. Currently wired: 3D Tiles models (glTF/Draco), whose
-    /// `TileCost` lives on the owning `RenderedCesium3dTileContent` — two O(1)
-    /// hops, no scans (JS reports once per feature, so a scan made tileset
-    /// load O(N²)):
+    /// is a no-op. Currently wired (two O(1) hops each, no scans — JS reports
+    /// per feature, so a scan made tileset load O(N²)):
+    ///
+    /// **3D Tiles models (glTF/Draco)** — the report *replaces* `gpu_est` on
+    /// the owning `RenderedCesium3dTileContent` (decode happens JS-side, so
+    /// the payload estimate can badly undercount):
     /// 1. RenderableFeature → ModelGeometry: `transfer_mesh` embeds the
     ///    `ModelGeometry` entity in the `RenderableFeature::Model.feature_id`
     ///    field, so we read it straight off the reported entity.
     /// 2. ModelGeometry → content: `construct_system` records the link in
     ///    [`ModelContentIndex`] (removed on the content's destroy path).
+    ///
+    /// **Billboards** — the report is the measured texture-atlas footprint of
+    /// the feature's JS mesh (CPU pixel buffer + GPU texture, allocated and
+    /// grown lazily as images load); it is *folded into* the owning vector
+    /// tile's cost next to the geometry term, replacing this feature's
+    /// previous atlas report (`0` clears it — the mesh was disposed):
+    /// 1. RenderableFeature → batched feature: `transfer_batched_mesh` embeds
+    ///    the batched feature entity in `RenderableFeature::Billboard.feature_id`.
+    /// 2. Batched feature → tile: the [`OwningVectorTile`] component inserted
+    ///    at tile finalize points back at the `RenderedTile` entity, whose
+    ///    [`VectorTileGpuCost`] carries the per-feature atlas terms.
     pub fn report_feature_gpu_bytes(&mut self, feature_bits: u64, gpu_bytes: u64) {
         let renderable_feature = Entity::from_bits(feature_bits);
         let world = self.app.world_mut();
 
-        // Hop 1: the reported entity is the `RenderableFeature`; its `Model`
-        // variant carries the owning `ModelGeometry` entity.
-        let Some(RenderableFeature::Model { feature_id, .. }) =
-            world.get::<RenderableFeature>(renderable_feature)
-        else {
-            return;
-        };
-        let model_geometry = *feature_id;
+        match world.get::<RenderableFeature>(renderable_feature) {
+            // Hop 1: the `Model` variant carries the owning `ModelGeometry` entity.
+            Some(RenderableFeature::Model { feature_id, .. }) => {
+                let model_geometry = *feature_id;
 
-        // Hop 2: invert ModelGeometry → content via the reverse index.
-        let Some(rendered) = world
-            .get_resource::<ModelContentIndex>()
-            .and_then(|idx| idx.content_by_model.get(&model_geometry).copied())
-        else {
-            return;
-        };
-        // Preserve cpu; re-inserting TileCost fires on_replace (subtract old)
-        // then on_insert (add new), so the ledger auto-corrects.
-        let cpu = world.get::<TileCost>(rendered).map(|t| t.cpu).unwrap_or(0);
-        world.entity_mut(rendered).insert(TileCost {
-            cpu,
-            gpu_est: gpu_bytes,
-        });
+                // Hop 2: invert ModelGeometry → content via the reverse index.
+                let Some(rendered) = world
+                    .get_resource::<ModelContentIndex>()
+                    .and_then(|idx| idx.content_by_model.get(&model_geometry).copied())
+                else {
+                    return;
+                };
+                // Preserve cpu; re-inserting TileCost fires on_replace (subtract old)
+                // then on_insert (add new), so the ledger auto-corrects.
+                let cpu = world.get::<TileCost>(rendered).map(|t| t.cpu).unwrap_or(0);
+                world.entity_mut(rendered).insert(TileCost {
+                    cpu,
+                    gpu_est: gpu_bytes,
+                });
+            }
+            // Hop 1: the `Billboard` variant carries the batched feature entity.
+            Some(RenderableFeature::Billboard { feature_id, .. }) => {
+                let batched_feature = *feature_id;
+
+                // Hop 2: batched feature → owning rendered tile. Non-tiled
+                // billboards (no `OwningVectorTile`) are a no-op — they are
+                // user-managed layers outside the tile budget's reach.
+                let Some(tile) = world
+                    .get::<OwningVectorTile>(batched_feature)
+                    .map(|owner| owner.0)
+                else {
+                    return;
+                };
+                let Some(mut gpu_cost) = world.get_mut::<VectorTileGpuCost>(tile) else {
+                    return;
+                };
+                gpu_cost.set_billboard_atlas(batched_feature, gpu_bytes);
+                let gpu_est = gpu_cost.total();
+                // Preserve cpu; re-inserting TileCost auto-corrects the ledger.
+                let cpu = world.get::<TileCost>(tile).map(|t| t.cpu).unwrap_or(0);
+                world.entity_mut(tile).insert(TileCost { cpu, gpu_est });
+            }
+            _ => {}
+        }
     }
 
     /// Updates a terrain tile's drape render-target GPU footprint, measured on
@@ -445,6 +480,120 @@ mod report_feature_gpu_bytes_tests {
         let model_geometry = app.app.world_mut().spawn_empty().id();
         let renderable_feature = spawn_model_renderable(app.app.world_mut(), model_geometry);
         app.report_feature_gpu_bytes(renderable_feature.to_bits(), 5000);
+    }
+}
+
+#[cfg(test)]
+mod report_billboard_atlas_bytes_tests {
+    use super::*;
+    use bevy_ecs::entity::Entity;
+
+    /// Spawns a `RenderableFeature::Billboard` whose `feature_id` points at
+    /// `batched_feature` — the same embed `transfer_batched_mesh` builds — so
+    /// `report_feature_gpu_bytes` can read the batched entity off it (hop 1).
+    fn spawn_billboard_renderable(
+        world: &mut bevy_ecs::world::World,
+        batched_feature: Entity,
+    ) -> Entity {
+        world
+            .spawn(RenderableFeature::Billboard {
+                coordinates: navara_math::Vec3::ZERO,
+                crs: navara_core::CRS::Geocentric,
+                active: true,
+                material: navara_material::BillboardMaterial::default(),
+                transform: navara_math::Transform::default(),
+                feature_id: batched_feature,
+                render_info: Default::default(),
+                geometry: Default::default(),
+                feature_batch_id: 0,
+                batch_length: 0,
+            })
+            .id()
+    }
+
+    /// Spawns a rendered-tile entity with a geometry-only cost and one owned
+    /// batched feature, reproducing the topology the finalize point in
+    /// `navara_vector_tile` builds (`OwningVectorTile` + `VectorTileGpuCost`).
+    fn spawn_tile_with_feature(app: &mut App, geometry: u64) -> (Entity, Entity, Entity) {
+        let world = app.app.world_mut();
+        let tile = world
+            .spawn((
+                VectorTileGpuCost::new(geometry),
+                TileCost {
+                    cpu: 0,
+                    gpu_est: geometry,
+                },
+            ))
+            .id();
+        let batched_feature = world.spawn(OwningVectorTile(tile)).id();
+        let renderable = spawn_billboard_renderable(world, batched_feature);
+        (tile, batched_feature, renderable)
+    }
+
+    #[test]
+    fn folds_atlas_into_owning_tile_and_corrects_ledger() {
+        let mut app = App::new();
+        app.update(0.);
+        let (tile, _, renderable) = spawn_tile_with_feature(&mut app, 1000);
+        assert_eq!(
+            app.app.world().resource::<MemoryLedger>().gpu_bytes_est,
+            1000
+        );
+
+        // JS reports the measured atlas footprint using the RenderableFeature
+        // id, exactly as the `renderable_feature_added` event delivers it.
+        app.report_feature_gpu_bytes(renderable.to_bits(), 500);
+
+        let cost = app.app.world().get::<TileCost>(tile).copied().unwrap();
+        assert_eq!(cost.gpu_est, 1500);
+        assert_eq!(
+            app.app.world().resource::<MemoryLedger>().gpu_bytes_est,
+            1500
+        );
+
+        // A later report replaces (not accumulates) this feature's atlas term.
+        app.report_feature_gpu_bytes(renderable.to_bits(), 200);
+        assert_eq!(
+            app.app.world().resource::<MemoryLedger>().gpu_bytes_est,
+            1200
+        );
+
+        // A zero report clears the term (the JS mesh was disposed).
+        app.report_feature_gpu_bytes(renderable.to_bits(), 0);
+        assert_eq!(
+            app.app.world().resource::<MemoryLedger>().gpu_bytes_est,
+            1000
+        );
+    }
+
+    #[test]
+    fn sums_atlases_across_features_of_one_tile() {
+        // One tile can own several billboard meshes (one per layer sharing the
+        // source); each reports independently and the terms must sum.
+        let mut app = App::new();
+        app.update(0.);
+        let (tile, _, renderable_a) = spawn_tile_with_feature(&mut app, 1000);
+        let world = app.app.world_mut();
+        let batched_b = world.spawn(OwningVectorTile(tile)).id();
+        let renderable_b = spawn_billboard_renderable(world, batched_b);
+
+        app.report_feature_gpu_bytes(renderable_a.to_bits(), 500);
+        app.report_feature_gpu_bytes(renderable_b.to_bits(), 300);
+
+        let cost = app.app.world().get::<TileCost>(tile).copied().unwrap();
+        assert_eq!(cost.gpu_est, 1800);
+    }
+
+    #[test]
+    fn feature_without_owning_tile_is_a_noop() {
+        // GeoJSON-style billboards have no `OwningVectorTile`; the report must
+        // not panic and must leave the ledger untouched.
+        let mut app = App::new();
+        app.update(0.);
+        let batched_feature = app.app.world_mut().spawn_empty().id();
+        let renderable = spawn_billboard_renderable(app.app.world_mut(), batched_feature);
+        app.report_feature_gpu_bytes(renderable.to_bits(), 500);
+        assert_eq!(app.app.world().resource::<MemoryLedger>().gpu_bytes_est, 0);
     }
 }
 

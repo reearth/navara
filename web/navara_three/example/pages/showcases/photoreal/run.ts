@@ -3,7 +3,7 @@ import ThreeView, {
   degreeToRadian,
   geodeticToVector3,
   type AttributionPlugin,
-} from "@navara/three";
+} from "@navaramap/three";
 import {
   CloudsEffectDesc,
   RainDropEffectDesc,
@@ -13,11 +13,11 @@ import {
   type RainDropConfig,
   type RainMeshConfig,
   type SnowMeshConfig,
-} from "@navara/three_default_descs";
+} from "@navaramap/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
+} from "@navaramap/three_default_plugin";
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";

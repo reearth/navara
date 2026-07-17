@@ -60,8 +60,8 @@ In addition to the properties below, the common properties from the base class (
 ## Usage Example
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
-import { ArrowHelperDesc } from "@navara/three_default_descs";
+import ThreeView, { Color } from "@navaramap/three";
+import { ArrowHelperDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 view.registerMesh("arrowHelper", ArrowHelperDesc);

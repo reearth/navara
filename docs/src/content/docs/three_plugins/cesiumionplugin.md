@@ -14,9 +14,9 @@ The plugin handles the Cesium Ion authentication flow — fetching the asset end
 ## Usage
 
 ```typescript
-import ThreeView from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
-import { CesiumIonPlugin } from "@navara/three_plugins";
+import ThreeView from "@navaramap/three";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { CesiumIonPlugin } from "@navaramap/three_plugins";
 
 const view = new ThreeView({ container, animation: true });
 const cesiumIon = new CesiumIonPlugin({

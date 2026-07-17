@@ -1,4 +1,7 @@
-import type { PolygonInternalMaterial, PolygonMaterial } from "@navara/engine";
+import type {
+  PolygonInternalMaterial,
+  PolygonMaterial,
+} from "@navaramap/engine";
 
 export class PolygonMaterialLike {
   clampToGround?: boolean;

@@ -1,33 +1,33 @@
 ---
 name: navara-usage
 description: >
-  Best practices for building 3D map applications with Navara (@navara/three).
+  Best practices for building 3D map applications with Navara (@navaramap/three).
   Use whenever writing or reviewing code that uses ThreeView, sources/layers/materials,
   plugins, mesh/effect/light descriptors, feature evaluation, picking, or geodetic math —
   in application code, examples, or documentation code snippets.
 ---
 
-# Using Navara (@navara/three)
+# Using Navara (@navaramap/three)
 
-Navara is a 3D globe map engine: a Rust/WASM GIS core driven from TypeScript, rendered with Three.js. The public API is `ThreeView` plus a declarative Source/Layer/Descriptor model.
+Navara is a 3D globe map engine: reusable GIS logic lives in a Rust/WASM core, and drawing is delegated to a swappable CG-rendering library. `@navaramap/three` is the Three.js-based binding (currently the only one; more rendering engines are planned — avoid wording that fixes Navara to Three.js in prose). Its public API is `ThreeView` plus a declarative Source/Layer/Descriptor model.
 
 ## Packages
 
 | Package | What it provides | When you need it |
 |---|---|---|
-| `@navara/three` | `ThreeView` (default export), `Color`, geodetic math utils, `MeshDesc`/`EffectDesc`/`LightDesc` base classes, handle types | Always |
-| `@navara/three_default_plugin` | `DefaultPlugin`, `DefaultDescriptions` (registers ~40 built-in descriptors) | Almost always |
-| `@navara/three_default_descs` | Individual descriptor classes/types (`BoxMeshDesc`, `SSREffectDesc`, `SunLightDesc`, …) | Typed `addMesh<T>`/`addEffect<T>` calls, or manual registration without DefaultPlugin |
-| `@navara/three_plugins` | `AttributionPlugin`, `PersonViewPlugin`, `OverlayPlugin`, `CesiumIonPlugin` | Per feature |
-| `@navara/three_api` | Standalone GIS math (no view) | Pure geometry computation |
+| `@navaramap/three` | `ThreeView` (default export), `Color`, geodetic math utils, `MeshDesc`/`EffectDesc`/`LightDesc` base classes, handle types | Always |
+| `@navaramap/three_default_plugin` | `DefaultPlugin`, `DefaultDescriptions` (registers ~40 built-in descriptors) | Almost always |
+| `@navaramap/three_default_descs` | Individual descriptor classes/types (`BoxMeshDesc`, `SSREffectDesc`, `SunLightDesc`, …) | Typed `addMesh<T>`/`addEffect<T>` calls, or manual registration without DefaultPlugin |
+| `@navaramap/three_plugins` | `AttributionPlugin`, `PersonViewPlugin`, `OverlayPlugin`, `CesiumIonPlugin` | Per feature |
+| `@navaramap/three_api` | Standalone GIS math (no view) | Pure geometry computation |
 
 Most apps need only the first two.
 
 ## The canonical setup order (invariant)
 
 ```typescript
-import ThreeView from "@navara/three";
-import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
+import ThreeView from "@navaramap/three";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
 
 const view = new ThreeView<DefaultDescriptions>({ shadow: true }); // 1. construct
 const defaultPlugin = new DefaultPlugin();
@@ -60,7 +60,7 @@ For "make it look good" goals, use the proven compositions in [references/recipe
 - **Layer render order = add order** (e.g. add terrain before the raster basemap draped on it).
 - **Never write to `view.camera.raw` frustum fields** (`fov` etc.) — the engine overwrites them and Rust-side culling desyncs. Use the `view.camera.fov/near/far` setters.
 - **Units:** mesh `position` is ECEF meters; `sampleTerrainHeight`/`observeTerrainHeightAt` take **radians** (use `degreeToRadian`); batch IDs are 24-bit.
-- **Mesh placement is Cartesian (ECEF) by default:** raw `position`/`rotation`/`scale` are earth-centered ECEF meters, so a bare `position` won't sit upright at a lng/lat. For geographic placement set `matrixWorld` to a tangent-frame matrix — then `position`/`rotation`/`scale` become offsets *within* that frame. Pick the frame function whose axis orientation you want (all exported from `@navara/three`): `eastNorthUpToFixedFrame` (ENU), `northEastDownToFixedFrame` (NED), `northUpEastToFixedFrame` (NUE), `northWestUpToFixedFrame` (NWU). See [references/low-level-api.md](references/low-level-api.md).
+- **Mesh placement is Cartesian (ECEF) by default:** raw `position`/`rotation`/`scale` are earth-centered ECEF meters, so a bare `position` won't sit upright at a lng/lat. For geographic placement set `matrixWorld` to a tangent-frame matrix — then `position`/`rotation`/`scale` become offsets *within* that frame. Pick the frame function whose axis orientation you want (all exported from `@navaramap/three`): `eastNorthUpToFixedFrame` (ENU), `northEastDownToFixedFrame` (NED), `northUpEastToFixedFrame` (NUE), `northWestUpToFixedFrame` (NWU). See [references/low-level-api.md](references/low-level-api.md).
 - **Init-only options** cannot change after `init()`: `shadow`, `maxSse`, `segments`, `useNormal`.
 - **Effect compatibility:** `hideUnderground: false` and `logarithmicDepthBuffer` break some effect descriptors — test, and prefer defaults.
 - `picking: true` (constructor, default on) is required for the `pick` event and pickable meshes.
@@ -92,5 +92,5 @@ Built-in lights — register via `DefaultPlugin`, then `view.addLight<T>({ ... }
 
 **Primary reference: the docs site — https://navara-docs.netlify.app/** (Japanese under `/ja/`). Sections: `/three/` (core API: sources, layers, materials, camera, events), `/three_default_descs/` (every built-in mesh/effect/light Descriptor and its options), `/three_default_plugin/`, `/three_plugins/`.
 
-- **Do not guess material or config property names** — this skill shows patterns, not exhaustive option lists. Verify exact fields against the docs site, or the TypeScript definitions in `node_modules/@navara/*` (`.d.ts`).
+- **Do not guess material or config property names** — this skill shows patterns, not exhaustive option lists. Verify exact fields against the docs site, or the TypeScript definitions in `node_modules/@navaramap/*` (`.d.ts`).
 - Working inside the Navara repository? The docs source is `docs/src/content/docs/` and runnable examples are `web/navara_three/example/pages/` — reference paths in this skill starting with `example/pages/` refer to that examples directory.

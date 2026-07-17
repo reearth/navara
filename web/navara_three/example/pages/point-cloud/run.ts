@@ -1,5 +1,5 @@
-import ThreeView from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView from "@navaramap/three";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import { TILE_DATASETS, TILES_3D_DATASETS } from "../../helpers/constants";

@@ -2,7 +2,7 @@
  * Converts MapLibre Style paint properties to Navara EvaluatedValue.
  */
 
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 import type { StyleEngine } from "../engine/StyleEngine";
 import {

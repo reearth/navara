@@ -9,7 +9,7 @@ import {
   TransferablePolylineBatchedFeatureLike,
   ExtentRadianF32Like,
   type ReturnedConstructedTerrainMeshLike,
-} from "@navara/core";
+} from "@navaramap/core";
 import {
   ConstructPolygonBatchedFeatureParameters,
   ConstructPolygonBatchedFeatureResult,
@@ -33,7 +33,7 @@ import {
   UpsampleTerrainMeshResult,
   Vec3,
   type WorkerTaskDelegatedEvent,
-} from "@navara/engine";
+} from "@navaramap/engine";
 
 import { constructPolygonBatchedFeature } from "../tasks/constructPolygonBatchedFeature";
 import { constructPolylineBatchedFeature } from "../tasks/constructPolylineBatchedFeature";

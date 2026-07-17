@@ -1,4 +1,4 @@
-import type { CameraOrientation as EngineCameraOrientation } from "@navara/engine";
+import type { CameraOrientation as EngineCameraOrientation } from "@navaramap/engine";
 
 import type { LatLngHeight } from "./unit";
 import type { NormalizeWASMClass } from "./utils";

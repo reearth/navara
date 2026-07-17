@@ -1,4 +1,4 @@
-import { encodePosition } from "@navara/engine-api";
+import { encodePosition } from "@navaramap/engine-api";
 import { Color, DataTexture, type Matrix4, Vector2, Vector3 } from "three";
 
 import type { UniformValue } from "../../../types";

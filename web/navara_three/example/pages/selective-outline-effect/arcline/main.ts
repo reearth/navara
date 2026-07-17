@@ -1,9 +1,12 @@
-import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import type { ArclineMeshDesc } from "@navara/three_default_descs";
+import ThreeView, {
+  Color,
+  JAPAN_GSI_ELEVATION_DECODER,
+} from "@navaramap/three";
+import type { ArclineMeshDesc } from "@navaramap/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
+} from "@navaramap/three_default_plugin";
 
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 import { atZoneTime } from "../../../helpers/control";

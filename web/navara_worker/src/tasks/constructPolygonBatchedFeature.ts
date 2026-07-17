@@ -3,8 +3,8 @@ import {
   TransferablePolygonBatchedFeatureLike,
   ConstructedPolygonGeometryLike,
   ExtentRadianF32Like,
-} from "@navara/core";
-import { constructPolygonBatchedFeature as constructPolygonBatchedFeatureImpl } from "@navara/engine-worker";
+} from "@navaramap/core";
+import { constructPolygonBatchedFeature as constructPolygonBatchedFeatureImpl } from "@navaramap/engine-worker";
 
 import { transfer } from "..";
 import { transferConstructedPolygonGeometry } from "../helpers/transferConstructedPolygonGeometry";

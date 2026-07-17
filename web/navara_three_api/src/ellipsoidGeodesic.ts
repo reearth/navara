@@ -1,8 +1,8 @@
-import type { LatLngHeight } from "@navara/core";
+import type { LatLngHeight } from "@navaramap/core";
 import {
   EllipsoidGeodesic as EllipsoidGeodesicImpl,
   LLE,
-} from "@navara/engine-api";
+} from "@navaramap/engine-api";
 
 /**
  * Wrapper class for geodesic calculations on an ellipsoid surface.

@@ -7,12 +7,12 @@ import ThreeView, {
   degreeToRadian,
   eastNorthUpToFixedFrame,
   geodeticToVector3,
-} from "@navara/three";
-import type { CloudsEffectDesc } from "@navara/three_default_descs";
+} from "@navaramap/three";
+import type { CloudsEffectDesc } from "@navaramap/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
+} from "@navaramap/three_default_plugin";
 import {
   Color,
   ShaderLib,

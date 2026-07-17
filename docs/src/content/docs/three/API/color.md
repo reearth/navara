@@ -12,7 +12,7 @@ The `Color` class is a class for representing colors. It manages colors based on
 The `Color` class uses method chaining to set colors. The constructor takes no arguments, and colors are set using one of the `setRGB()`, `setHex()`, or `setStyle()` methods.
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 // Set by RGB values (each component is 0.0-1.0)
 const red = new Color().setRGB(1.0, 0.0, 0.0);
@@ -319,7 +319,7 @@ This property is an internal implementation detail and is not needed for typical
 ### Usage with Materials
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
+import ThreeView, { Color } from "@navaramap/three";
 
 const view = new ThreeView();
 await view.init();
@@ -331,8 +331,8 @@ view.globe.color = new Color().setStyle("#1a1a2e");
 ### Usage with Lights
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
-import { SunLightDesc } from "@navara/three_default_descs";
+import ThreeView, { Color } from "@navaramap/three";
+import { SunLightDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -349,7 +349,7 @@ view.addLight<SunLightDesc>({
 ### Usage with ColorMap
 
 ```typescript
-import { ColorMap, Color } from "@navara/three";
+import { ColorMap, Color } from "@navaramap/three";
 
 // ref: https://colorbrewer2.org/#type=sequential&scheme=YlGnBu&n=9
 const ylGnBu = new ColorMap("sequential", "YlGnBu", [

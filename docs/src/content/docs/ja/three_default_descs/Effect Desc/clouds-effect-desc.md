@@ -650,9 +650,9 @@ import { Vector2 } from "three";
 ### 基本的な雲エフェクトの追加
 
 ```typescript
-import ThreeView from "@navara/three";
-import { CloudsEffectDesc } from "@navara/three_default_descs";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView from "@navaramap/three";
+import { CloudsEffectDesc } from "@navaramap/three_default_descs";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
 
 const view = new ThreeView();
 const plugin = new DefaultPlugin();
@@ -674,9 +674,9 @@ const cloudsDesc = view.addEffect<CloudsEffectDesc>({
 ### 雲の影を有効にしたシーン
 
 ```typescript
-import ThreeView from "@navara/three";
-import { CloudsEffectDesc } from "@navara/three_default_descs";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView from "@navaramap/three";
+import { CloudsEffectDesc } from "@navaramap/three_default_descs";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
 
 const view = new ThreeView({ shadow: true });
 const plugin = new DefaultPlugin();
@@ -711,9 +711,9 @@ const cloudsDesc = view.addEffect<CloudsEffectDesc>({
 ### 霧（フォグ）エフェクトとして使用
 
 ```typescript
-import ThreeView, { EffectHandle } from "@navara/three";
-import { CloudsEffectDesc } from "@navara/three_default_descs";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView, { EffectHandle } from "@navaramap/three";
+import { CloudsEffectDesc } from "@navaramap/three_default_descs";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
 
 const view = new ThreeView();
 const plugin = new DefaultPlugin();
@@ -745,9 +745,9 @@ if (clouds) {
 ### アニメーション付きの雲
 
 ```typescript
-import ThreeView from "@navara/three";
-import { CloudsEffectDesc } from "@navara/three_default_descs";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView from "@navaramap/three";
+import { CloudsEffectDesc } from "@navaramap/three_default_descs";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
 import { Vector2 } from "three";
 
 const view = new ThreeView();
@@ -773,9 +773,9 @@ const cloudsDesc = view.addEffect<CloudsEffectDesc>({
 ### 天気シーンの完全な例
 
 ```typescript
-import ThreeView from "@navara/three";
-import { CloudsEffectDesc } from "@navara/three_default_descs";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView from "@navaramap/three";
+import { CloudsEffectDesc } from "@navaramap/three_default_descs";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
 import { Vector2 } from "three";
 
 const view = new ThreeView({ animation: true, shadow: true });

@@ -8,18 +8,18 @@ import ThreeView, {
   type Layer,
   type MeshHandle,
   type Source,
-} from "@navara/three";
+} from "@navaramap/three";
 import {
   CloudsEffectDesc,
   RainDropEffectDesc,
   RainMeshDesc,
   SnowMeshDesc,
-} from "@navara/three_default_descs";
+} from "@navaramap/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
-import { PersonViewPlugin, type ViewMode } from "@navara/three_plugins";
+} from "@navaramap/three_default_plugin";
+import { PersonViewPlugin, type ViewMode } from "@navaramap/three_plugins";
 import { Vector2 } from "three";
 import { Pane } from "tweakpane";
 
@@ -125,7 +125,7 @@ type CityPreset = {
 };
 
 // Targets point at the landmark; `distance` is how far back along the forward
-// ray the camera is placed (see CameraPosition.distance in @navara/core).
+// ray the camera is placed (see CameraPosition.distance in @navaramap/core).
 const CITIES: CityPreset[] = [
   {
     name: "Tokyo (Tokyo Tower)",

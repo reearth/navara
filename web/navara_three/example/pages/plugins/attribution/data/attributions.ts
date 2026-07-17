@@ -1,4 +1,4 @@
-import type { AttributionItem } from "@navara/three";
+import type { AttributionItem } from "@navaramap/three";
 
 /**
  * Data-source attribution table for the attribution example.

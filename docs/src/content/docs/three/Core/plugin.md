@@ -12,7 +12,7 @@ This section describes the API for implementing plugins. For an overview of the 
 All plugins are implemented by inheriting from the `Plugin` abstract class.
 
 ```typescript
-import { Plugin } from "@navara/three";
+import { Plugin } from "@navaramap/three";
 
 abstract class Plugin<TView = unknown, TCtx = unknown> {
   abstract init(view: TView, ctx: TCtx): Promise<void>;
@@ -59,14 +59,14 @@ await view.init()
 Here is an example of a basic plugin that encapsulates Descriptor registration.
 
 ```typescript
-import ThreeView, { Plugin, type ViewContext } from "@navara/three";
+import ThreeView, { Plugin, type ViewContext } from "@navaramap/three";
 import {
   BoxMeshDesc,
   SphereMeshDesc,
   SunLightDesc,
   AmbientLightDesc,
   FXAAEffectDesc,
-} from "@navara/three_default_descs";
+} from "@navaramap/three_default_descs";
 
 class MyScenePlugin extends Plugin<ThreeView, ViewContext> {
   async init(view: ThreeView, _ctx: ViewContext) {
@@ -101,14 +101,14 @@ view.addLight({ sun: { intensity: 1.0 } });
 In addition to registering descriptors within `init()`, you can also provide methods to be called after initialization.
 
 ```typescript
-import ThreeView, { Plugin, type ViewContext, type MeshHandle, type LightHandle } from "@navara/three";
+import ThreeView, { Plugin, type ViewContext, type MeshHandle, type LightHandle } from "@navaramap/three";
 import {
   SkyMeshDesc,
   SunLightDesc,
   AmbientLightDesc,
   ToneMappingEffectDesc,
   FXAAEffectDesc,
-} from "@navara/three_default_descs";
+} from "@navaramap/three_default_descs";
 
 class MyScenePlugin extends Plugin<ThreeView, ViewContext> {
   private view?: ThreeView;
@@ -158,7 +158,7 @@ const { sky, sun } = plugin.setupScene();
 You can also create plugins that register custom descriptors you have implemented (see [Custom Descriptor](../../../three/core/custom-desc/)).
 
 ```typescript
-import ThreeView, { Plugin, type ViewContext } from "@navara/three";
+import ThreeView, { Plugin, type ViewContext } from "@navaramap/three";
 import { MyCustomMeshDesc } from "./layers/MyCustomMeshDesc";
 import { MyCustomEffectDesc } from "./layers/MyCustomEffectDesc";
 

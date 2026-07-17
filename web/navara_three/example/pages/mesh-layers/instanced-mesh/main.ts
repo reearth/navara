@@ -4,7 +4,7 @@ import ThreeView, {
   northUpEastToFixedFrame,
   geodeticToVector3,
   JAPAN_GSI_ELEVATION_DECODER,
-} from "@navara/three";
+} from "@navaramap/three";
 import {
   type InstancedBoxMeshDesc,
   type InstancedSphereMeshDesc,
@@ -16,11 +16,11 @@ import {
   type PlaneChildConfig,
   type CylinderChildConfig,
   type ModelChildConfig,
-} from "@navara/three_default_descs";
+} from "@navaramap/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
+} from "@navaramap/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import {

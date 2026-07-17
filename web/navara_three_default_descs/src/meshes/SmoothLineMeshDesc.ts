@@ -1,11 +1,11 @@
-import type ThreeView from "@navara/three";
+import type ThreeView from "@navaramap/three";
 import {
   MeshDesc,
   PickableMeshWrapper,
   type MeshConfig,
   type ViewContext,
   type MeshUpdate,
-} from "@navara/three";
+} from "@navaramap/three";
 
 import {
   DefaultSmoothLineConfig,

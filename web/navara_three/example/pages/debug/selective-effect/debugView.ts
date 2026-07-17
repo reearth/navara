@@ -1,4 +1,4 @@
-import { BufferView } from "@navara/three";
+import { BufferView } from "@navaramap/three";
 import type { WebGLRenderer, WebGLRenderTarget } from "three";
 
 /** Convert float pixels to Uint8Array with bitmask color visualization */

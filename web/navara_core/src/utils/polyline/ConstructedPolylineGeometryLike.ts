@@ -1,4 +1,4 @@
-import type { ConstructedPolylineGeometry } from "@navara/engine";
+import type { ConstructedPolylineGeometry } from "@navaramap/engine";
 
 import { ExtentRadianF32Like } from "../ExtentRadianF32Like";
 

@@ -1,5 +1,5 @@
-import type { UpsamplableTerrainGeometryLike } from "@navara/core";
-import { UpsamplableTerrainGeometry } from "@navara/engine-worker";
+import type { UpsamplableTerrainGeometryLike } from "@navaramap/core";
+import { UpsamplableTerrainGeometry } from "@navaramap/engine-worker";
 
 export function toUpsamplableTerrainGeometry(
   like: UpsamplableTerrainGeometryLike,

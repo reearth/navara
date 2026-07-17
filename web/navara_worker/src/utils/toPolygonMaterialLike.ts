@@ -1,5 +1,5 @@
-import { type PolygonMaterialLike } from "@navara/core";
-import { PolygonMaterial } from "@navara/engine-worker";
+import { type PolygonMaterialLike } from "@navaramap/core";
+import { PolygonMaterial } from "@navaramap/engine-worker";
 
 export function toPolygonMaterialLike(like: PolygonMaterialLike) {
   const mat = new PolygonMaterial(

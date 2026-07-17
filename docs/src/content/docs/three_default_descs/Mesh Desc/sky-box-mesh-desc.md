@@ -28,7 +28,7 @@ In addition to the properties below, the common properties from the base class (
 **Example:**
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 {
   skyBox: {
@@ -48,7 +48,7 @@ import { Color } from "@navara/three";
 **Example:**
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 {
   skyBox: {
@@ -68,7 +68,7 @@ import { Color } from "@navara/three";
 **Example:**
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 {
   skyBox: {
@@ -82,8 +82,8 @@ import { Color } from "@navara/three";
 ### Basic Usage
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
-import { SkyBoxMeshDesc } from "@navara/three_default_descs";
+import ThreeView, { Color } from "@navaramap/three";
+import { SkyBoxMeshDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 view.registerMesh("skyBox", SkyBoxMeshDesc);
@@ -98,8 +98,8 @@ const skyBox = view.addMesh<SkyBoxMeshDesc>({
 ### Custom Color Settings
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
-import { SkyBoxMeshDesc } from "@navara/three_default_descs";
+import ThreeView, { Color } from "@navaramap/three";
+import { SkyBoxMeshDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 view.registerMesh("skyBox", SkyBoxMeshDesc);

@@ -22,7 +22,7 @@ new ColorMap(type: ColorMapType, name: string, lut: LUT)
 **Example:**
 
 ```typescript
-import { ColorMap, Color } from "@navara/three";
+import { ColorMap, Color } from "@navaramap/three";
 
 // ref: https://colorbrewer2.org/#type=sequential&scheme=YlGnBu&n=9
 const ylGnBu = new ColorMap("sequential", "YlGnBu", [
@@ -208,7 +208,7 @@ import ThreeView, {
   ColorMap,
   Color,
   TERRARIUM_ELEVATION_DECODER,
-} from "@navara/three";
+} from "@navaramap/three";
 
 const view = new ThreeView({
   animation: true,
@@ -254,7 +254,7 @@ view.addLayer({
 ### Dynamic Color Map Switching
 
 ```typescript
-import ThreeView, { ColorMap, Color } from "@navara/three";
+import ThreeView, { ColorMap, Color } from "@navaramap/three";
 
 const view = new ThreeView();
 await view.init();

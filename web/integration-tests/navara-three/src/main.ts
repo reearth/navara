@@ -3,15 +3,15 @@ import ThreeView, {
   geodeticToVector3,
   degreeToRadian,
   JAPAN_GSI_ELEVATION_DECODER,
-} from "@navara/three";
+} from "@navaramap/three";
 import {
   ToneMappingMode,
   type SphereMeshDesc,
-} from "@navara/three_default_descs";
+} from "@navaramap/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
+} from "@navaramap/three_default_plugin";
 
 type CustomDescriptions = DefaultDescriptions;
 

@@ -93,7 +93,7 @@ export class BillboardMaterial {
 
 ### How WASM types are consumed in TypeScript
 
-WASM classes are **never exposed directly** in public APIs. Instead, the codebase uses `NormalizeWASMClass<T>` (from `@navara/core`) to strip WASM-isms (`free()`, `Symbol.dispose`, getter/setter methods) and produce plain TypeScript types:
+WASM classes are **never exposed directly** in public APIs. Instead, the codebase uses `NormalizeWASMClass<T>` (from `@navaramap/core`) to strip WASM-isms (`free()`, `Symbol.dispose`, getter/setter methods) and produce plain TypeScript types:
 
 ```typescript
 type NormalizeWASMClass<C> = ExtractProperties<RemoveFreeRecursively<C>>;

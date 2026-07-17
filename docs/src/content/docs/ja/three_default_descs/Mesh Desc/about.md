@@ -43,8 +43,8 @@ navara_threeでは、以下のMeshDescタイプが利用可能です:
 MeshDescは、Descriptorクラスを登録した後、`view.addMesh()`メソッドで追加します:
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
-import { BoxMeshDesc } from "@navara/three_default_descs";
+import ThreeView, { Color } from "@navaramap/three";
+import { BoxMeshDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 

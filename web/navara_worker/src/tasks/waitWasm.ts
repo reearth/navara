@@ -1,4 +1,4 @@
-import init, { type InitOutput } from "@navara/engine-worker";
+import init, { type InitOutput } from "@navaramap/engine-worker";
 
 let WASM: Promise<InitOutput> | undefined;
 

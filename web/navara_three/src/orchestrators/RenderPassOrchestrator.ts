@@ -1,4 +1,4 @@
-import { NamedIndexMap } from "@navara/core";
+import { NamedIndexMap } from "@navaramap/core";
 import { EffectComposer, Pass as PostProcessingPass } from "postprocessing";
 import { HalfFloatType, Scene, WebGLRenderer, Group } from "three";
 

@@ -404,8 +404,8 @@ modelDesc.ref.on("animationReady", () => {
 ### 基本的な使い方
 
 ```typescript
-import ThreeView from "@navara/three";
-import { GLTFModelDesc } from "@navara/three_default_descs";
+import ThreeView from "@navaramap/three";
+import { GLTFModelDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 view.registerMesh("gltfModel", GLTFModelDesc);

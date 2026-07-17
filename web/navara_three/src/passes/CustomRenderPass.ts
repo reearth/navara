@@ -1,4 +1,4 @@
-import { Globe } from "@navara/core";
+import { Globe } from "@navaramap/core";
 import { DepthCopyPass } from "postprocessing";
 import {
   Color,

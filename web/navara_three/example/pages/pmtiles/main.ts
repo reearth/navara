@@ -1,4 +1,4 @@
-import ThreeView from "@navara/three";
+import ThreeView from "@navaramap/three";
 
 import { run, type CustomDescriptions } from "./run";
 

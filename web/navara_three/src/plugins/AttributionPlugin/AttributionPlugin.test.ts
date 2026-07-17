@@ -2,11 +2,11 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 
 import { AttributionPlugin } from "./index";
 
-// Importing the real @navara/core touches WASM/os at module load, which fails
+// Importing the real @navaramap/core touches WASM/os at module load, which fails
 // in the test environment. AttributionPlugin only needs `Plugin` as a runtime
 // base class (everything else it imports is type-only), so stub the module.
 /* eslint-disable @typescript-eslint/no-extraneous-class */
-vi.mock("@navara/core", () => ({
+vi.mock("@navaramap/core", () => ({
   Plugin: class Plugin {},
 }));
 /* eslint-enable @typescript-eslint/no-extraneous-class */

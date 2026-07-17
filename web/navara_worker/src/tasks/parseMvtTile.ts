@@ -1,5 +1,5 @@
-import { ExtentRadianF32Like } from "@navara/core";
-import { parseMvtTile as parseMvtTileImpl } from "@navara/engine-worker";
+import { ExtentRadianF32Like } from "@navaramap/core";
+import { parseMvtTile as parseMvtTileImpl } from "@navaramap/engine-worker";
 
 import { transfer } from "..";
 import { toExtentRadianF32Like } from "../utils";

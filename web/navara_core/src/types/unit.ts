@@ -1,4 +1,4 @@
-import type { LLE } from "@navara/engine";
+import type { LLE } from "@navaramap/engine";
 
 import type { NormalizeWASMClass } from "./utils";
 

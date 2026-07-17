@@ -1,8 +1,8 @@
 import type {
   TextMesh as NavaraTextMesh,
   TextMaterial as NavaraTextMaterial,
-} from "@navara/engine";
-import type { FontManager } from "@navara/font";
+} from "@navaramap/engine";
+import type { FontManager } from "@navaramap/font";
 import { type Color } from "three";
 import invariant from "tiny-invariant";
 

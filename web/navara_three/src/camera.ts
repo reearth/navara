@@ -4,13 +4,13 @@ import {
   type LatLngHeight,
   type NormalizeWASMClass,
   type XYZ,
-} from "@navara/core";
+} from "@navaramap/core";
 import {
   Core,
   CameraStatus,
   CameraStatusType,
   CameraControlUpdateEvent,
-} from "@navara/engine";
+} from "@navaramap/engine";
 import { PerspectiveCamera } from "three";
 import invariant from "tiny-invariant";
 

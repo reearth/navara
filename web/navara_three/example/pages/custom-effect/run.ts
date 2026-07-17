@@ -4,11 +4,11 @@ import ThreeView, {
   type EffectConfig,
   type EffectUpdate,
   type ViewContext,
-} from "@navara/three";
+} from "@navaramap/three";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
+} from "@navaramap/three_default_plugin";
 import { VignetteEffect, VignetteTechnique } from "postprocessing";
 import type { Camera } from "three";
 import { Pane } from "tweakpane";

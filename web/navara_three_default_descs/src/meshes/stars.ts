@@ -2,7 +2,7 @@ import {
   EventHandler,
   STARS_ASSETS_URL,
   STARS_RENDER_ORDER,
-} from "@navara/three";
+} from "@navaramap/three";
 import {
   StarsGeometry,
   StarsMaterial,
