@@ -55,6 +55,7 @@ function label(
     maxY: 10,
     sizeInMeters: false,
     priority: 0,
+    isShown: false,
     handle: 0,
     ...partial,
   };
@@ -101,6 +102,22 @@ describe("DeclutterManager", () => {
     expect(forward.pb.hidden.get(1)).toBe(true);
     expect(reversed.pb.hidden.get(0)).toBe(false);
     expect(reversed.pa.hidden.get(1)).toBe(true);
+  });
+
+  it("incumbents win equal-priority ties over anchor-favored challengers", () => {
+    // Overlapping boxes, equal priority. The anchor tiebreak alone would pick
+    // `challenger` (smaller anchorY) — but `incumbent` is currently shown, so
+    // hysteresis must keep it shown and hide the challenger.
+    const challenger = label({ handle: 0, anchorY: 0, isShown: false });
+    const incumbent = label({ handle: 1, anchorY: 5e4, isShown: true });
+
+    const manager = new DeclutterManager();
+    const p = new FakeParticipant([challenger, incumbent]);
+    manager.register(p);
+    manager.update(makeCamera(), 800, 600, 0);
+
+    expect(p.hidden.get(1)).toBe(false);
+    expect(p.hidden.get(0)).toBe(true);
   });
 
   it("never hides horizon-culled or behind-camera labels, and they claim no space", () => {

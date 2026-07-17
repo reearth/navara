@@ -30,6 +30,7 @@ function makeCandidate(
     maxY: 5,
     sizeInMeters: false,
     priority: 0,
+    isShown: false,
     owner: NOOP_OWNER,
     handle: 0,
     ...partial,

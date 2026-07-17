@@ -26,7 +26,7 @@ layer.on("featureUpdated", ({ evaluator }) => {
 
 - Prefer `filters` (or `readFilteredFeatureProperties`) over reading all properties on large datasets.
 - `readFeatureProperties(cb)` reads attributes without styling (e.g. build a legend).
-- **Label decluttering:** set `declutter: true` on a `text`/`point`/`billboard` material to hide screen-overlapping labels (with a fade). Placement priority: layer-level `declutterPriority` on the material, overridable per feature by returning `declutterPriority` from `evaluate()` — higher wins; ties resolve deterministically by anchor position. Reference: `example/pages/styling/mvt-text`.
+- **Label decluttering:** set `declutter: true` on a `text`/`point`/`billboard` material to hide screen-overlapping labels (with a fade). Placement priority: layer-level `declutterPriority` on the material, overridable per feature by returning `declutterPriority` from `evaluate()` — higher wins; among equal priorities currently-shown labels are sticky (hysteresis), then ties resolve deterministically by anchor position. Reference: `example/pages/styling/mvt-text`.
 - To restyle interactively (click-to-highlight), change your evaluation state and call `layer.forceUpdate()`.
 - Full API: https://navara-docs.netlify.app/three/api/feature-evaluator/ — runnable references in the Navara repo: `example/pages/styling/*` (one per geometry × source type).
 

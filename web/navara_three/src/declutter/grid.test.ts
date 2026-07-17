@@ -55,6 +55,38 @@ describe("ScreenCollisionGrid", () => {
     expect(grid.insertIfFree(-480, 10, -420, 30)).toBe(true);
   });
 
+  it("testShrink tolerates marginal overlaps but still claims the full box", () => {
+    const grid = new ScreenCollisionGrid();
+    grid.reset(800, 600);
+
+    expect(grid.insertIfFree(10, 10, 50, 30)).toBe(true);
+
+    // Overlaps the claimed box by 4px; a 6px test shrink clears it (the
+    // hysteresis case for an already-shown label)...
+    expect(grid.insertIfFree(46, 10, 86, 30, 6)).toBe(true);
+    // ...but its FULL box was claimed: a later box overlapping only the
+    // shrunken-away strip still collides.
+    expect(grid.insertIfFree(80, 10, 120, 30)).toBe(false);
+  });
+
+  it("without testShrink the same marginal overlap collides", () => {
+    const grid = new ScreenCollisionGrid();
+    grid.reset(800, 600);
+
+    expect(grid.insertIfFree(10, 10, 50, 30)).toBe(true);
+    expect(grid.insertIfFree(46, 10, 86, 30)).toBe(false);
+  });
+
+  it("a box fully consumed by the test shrink is free", () => {
+    const grid = new ScreenCollisionGrid();
+    grid.reset(800, 600);
+
+    expect(grid.insertIfFree(10, 10, 50, 30)).toBe(true);
+    // 8px-wide box entirely inside the claimed area, but a 6px-per-side
+    // shrink leaves no test area — reported free.
+    expect(grid.insertIfFree(20, 15, 28, 25, 6)).toBe(true);
+  });
+
   it("reset clears previously claimed boxes", () => {
     const grid = new ScreenCollisionGrid();
     grid.reset(800, 600);

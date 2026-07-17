@@ -58,12 +58,19 @@ export class ScreenCollisionGrid {
    * overlap any previously claimed box. A box entirely outside the tracked
    * area (viewport + margin) is reported free without claiming cells: nothing
    * it could occlude is visible.
+   *
+   * `testShrinkPx` shrinks the box used for the *collision test* by that many
+   * pixels per side while the full box is still claimed on success — the
+   * placement-hysteresis primitive: an already-shown label tolerates marginal
+   * overlaps (its shrunk test box clears) yet keeps competitors away from its
+   * real footprint.
    */
   insertIfFree(
     minX: number,
     minY: number,
     maxX: number,
     maxY: number,
+    testShrinkPx = 0,
   ): boolean {
     const m = this._margin;
     if (
@@ -75,24 +82,31 @@ export class ScreenCollisionGrid {
       return true;
     }
 
-    const c0 = this._colOf(minX);
-    const c1 = this._colOf(maxX);
-    const r0 = this._rowOf(minY);
-    const r1 = this._rowOf(maxY);
+    const tMinX = minX + testShrinkPx;
+    const tMaxX = maxX - testShrinkPx;
+    const tMinY = minY + testShrinkPx;
+    const tMaxY = maxY - testShrinkPx;
 
     const boxes = this._boxes;
-    for (let r = r0; r <= r1; r++) {
-      for (let c = c0; c <= c1; c++) {
-        const cell = this._cells[r * this._cols + c];
-        for (const b of cell) {
-          // Strict inequalities: exactly touching boxes do not collide.
-          if (
-            minX < boxes[b + 2] &&
-            maxX > boxes[b] &&
-            minY < boxes[b + 3] &&
-            maxY > boxes[b + 1]
-          ) {
-            return false;
+    // A box smaller than the shrink has no test area left — always free.
+    if (tMinX < tMaxX && tMinY < tMaxY) {
+      const c0 = this._colOf(tMinX);
+      const c1 = this._colOf(tMaxX);
+      const r0 = this._rowOf(tMinY);
+      const r1 = this._rowOf(tMaxY);
+      for (let r = r0; r <= r1; r++) {
+        for (let c = c0; c <= c1; c++) {
+          const cell = this._cells[r * this._cols + c];
+          for (const b of cell) {
+            // Strict inequalities: exactly touching boxes do not collide.
+            if (
+              tMinX < boxes[b + 2] &&
+              tMaxX > boxes[b] &&
+              tMinY < boxes[b + 3] &&
+              tMaxY > boxes[b + 1]
+            ) {
+              return false;
+            }
           }
         }
       }
@@ -100,6 +114,10 @@ export class ScreenCollisionGrid {
 
     const idx = boxes.length;
     boxes.push(minX, minY, maxX, maxY);
+    const c0 = this._colOf(minX);
+    const c1 = this._colOf(maxX);
+    const r0 = this._rowOf(minY);
+    const r1 = this._rowOf(maxY);
     for (let r = r0; r <= r1; r++) {
       for (let c = c0; c <= c1; c++) {
         this._cells[r * this._cols + c].push(idx);

@@ -698,6 +698,7 @@ export class SDFTextMesh
       maxY: (this._labelMaxYEm - cy * h) * size,
       sizeInMeters: state.sizeInMeters,
       priority: this._declutterPriorityOverride ?? this._declutterPriority,
+      isShown: this._declutterTarget === 0,
       owner,
       handle,
     };

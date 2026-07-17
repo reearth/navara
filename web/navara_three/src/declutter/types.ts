@@ -24,6 +24,11 @@ export type DeclutterCandidate = {
   sizeInMeters: boolean;
   /** Placement priority: higher wins an overlap. */
   priority: number;
+  /** Whether the label is currently shown (its fade target is "visible").
+   *  Feeds placement hysteresis: shown labels win equal-priority ties and
+   *  tolerate marginal overlaps, so slow camera drift doesn't make near-tied
+   *  labels flicker in and out. */
+  isShown: boolean;
   /** Participant that owns this candidate; receives the placement result. */
   owner: DeclutterParticipant;
   /** Participant-defined id (mesh index for text batches, instance index for

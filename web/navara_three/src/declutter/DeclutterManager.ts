@@ -30,6 +30,10 @@ export type DeclutterUpdateResult =
  * uniform / `instanceDeclutterHide` attribute), which are separate from
  * user-driven `show` state and free to toggle every pass.
  *
+ * Placement is hysteretic: currently-shown labels win equal-priority ties
+ * and tolerate {@link DeclutterManager.HYSTERESIS_PX} of marginal overlap
+ * before eviction, so near-ties don't flicker while the camera drifts.
+ *
  * The pass is view-dependent, so it runs from the render loop — but throttled:
  * placement only re-runs when the camera or the label set actually changed,
  * and at most once per {@link DeclutterManager.MIN_INTERVAL_MS}. Callers run
@@ -44,6 +48,11 @@ export class DeclutterManager {
   /** Largest single fade step (ms), so a frame after an idle gap doesn't
    *  swallow most of a fade in one jump. */
   static readonly MAX_FADE_STEP_MS = 50;
+  /** Placement hysteresis (px): a currently-shown label's collision test box
+   *  shrinks by this per side, so it survives marginal overlaps that camera
+   *  drift toggles frame to frame instead of flickering. Its full box is
+   *  still claimed against competitors. */
+  static readonly HYSTERESIS_PX = 6;
 
   private _participants = new Set<DeclutterParticipant>();
   /** Set when the label set changed (register/update/text change) so the next
@@ -176,9 +185,12 @@ export class DeclutterManager {
       this._placeable[i] = visible ? 1 : 0;
     }
 
-    // Priority order, with a camera-independent tiebreak (anchor position,
-    // then handle) so near-ties resolve the same way every pass — array order
-    // would reshuffle as tiles load and make labels flicker.
+    // Priority order with hysteresis: among equal priorities, currently-shown
+    // labels place first (incumbents win ties — otherwise a competitor
+    // entering the viewport margin could displace a stable label mid-pan).
+    // The final camera-independent tiebreak (anchor position, then handle)
+    // keeps fresh ties deterministic — array order would reshuffle as tiles
+    // load and make labels flicker.
     const order = this._order;
     order.length = n;
     for (let i = 0; i < n; i++) order[i] = i;
@@ -186,6 +198,7 @@ export class DeclutterManager {
       const ca = candidates[a];
       const cb = candidates[b];
       if (ca.priority !== cb.priority) return cb.priority - ca.priority;
+      if (ca.isShown !== cb.isShown) return ca.isShown ? -1 : 1;
       if (ca.anchorX !== cb.anchorX) return ca.anchorX - cb.anchorX;
       if (ca.anchorY !== cb.anchorY) return ca.anchorY - cb.anchorY;
       if (ca.anchorZ !== cb.anchorZ) return ca.anchorZ - cb.anchorZ;
@@ -205,11 +218,16 @@ export class DeclutterManager {
         continue;
       }
       const o = i * 4;
+      // Shown labels get a shrunk collision test (sticky: marginal overlaps
+      // don't evict them); hidden labels need their full padded box free
+      // before they may appear. The asymmetry is what damps threshold
+      // oscillation during slow camera drift.
       const free = grid.insertIfFree(
         this._boxes[o] - pad,
         this._boxes[o + 1] - pad,
         this._boxes[o + 2] + pad,
         this._boxes[o + 3] + pad,
+        c.isShown ? DeclutterManager.HYSTERESIS_PX : 0,
       );
       c.owner.applyDeclutter(c.handle, !free);
     }

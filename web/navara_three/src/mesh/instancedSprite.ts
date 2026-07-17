@@ -123,6 +123,7 @@ export class InstancedSpriteMesh
     const aspect = state.aspect;
     const anchors = this._anchors;
     const overrides = this._declutterPriorityOverrides;
+    const targets = this._declutterTargets;
     const count = Math.min(params.count, anchors.length / 3);
 
     for (let i = 0; i < count; i++) {
@@ -147,6 +148,7 @@ export class InstancedSpriteMesh
         sizeInMeters: state.sizeInMeters,
         // NaN-safe: an unset override falls back to the layer priority.
         priority: Number.isNaN(override) ? this._declutterPriority : override,
+        isShown: targets ? targets[i] === 0 : true,
         owner: this,
         handle: i,
       });
