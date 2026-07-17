@@ -28,6 +28,44 @@ function watchPackages(packageNames: string[]): PluginOption {
   };
 }
 
+// Vite force-inlines every referenced asset as a base64 data URL in lib mode,
+// including the wasm-bindgen `new URL('*.wasm', import.meta.url)` references
+// bundled into worker chunks. That grows the .wasm by ~33% and prevents
+// streaming compilation. Appending Vite's `?no-inline` query opts the .wasm
+// out of inlining so it is emitted as a fetchable asset instead.
+function noInlineWasm(): PluginOption {
+  return {
+    name: "vite-plugin-no-inline-wasm",
+    apply: "build",
+    transform(code) {
+      if (!code.includes(".wasm'")) return;
+      const replaced = code.replace(
+        /new URL\('([^']+\.wasm)', import\.meta\.url\)/g,
+        "new URL('$1?no-inline', import.meta.url)",
+      );
+      return replaced === code ? undefined : { code: replaced, map: null };
+    },
+    // Modules that reference a .wasm can be loaded during the build but
+    // tree-shaken from the output (e.g. type-only usage of an external
+    // package); their emitted .wasm would remain as an orphan file. Drop any
+    // .wasm asset no chunk or textual asset actually refers to.
+    generateBundle(_options, bundle) {
+      const texts: string[] = [];
+      for (const item of Object.values(bundle)) {
+        if (item.type === "chunk") texts.push(item.code);
+        else if (typeof item.source === "string") texts.push(item.source);
+      }
+      for (const fileName of Object.keys(bundle)) {
+        if (!fileName.endsWith(".wasm")) continue;
+        const base = fileName.split("/").pop() ?? fileName;
+        if (!texts.some((text) => text.includes(base))) {
+          delete bundle[fileName];
+        }
+      }
+    },
+  };
+}
+
 function getPluginName(plugin: PluginOption): string | undefined {
   if (plugin && typeof plugin === "object" && "name" in plugin) {
     return plugin.name;
@@ -41,6 +79,7 @@ export function composePlugins(
 ): PluginOption[] {
   const basePlugins: PluginOption[] = [
     watchPackages(["@navara/engine", "@navara/engine-worker", "@navara/engine-font-worker", "@navara/engine-api"]),
+    noInlineWasm(),
     tsconfig(),
     dts({ bundleTypes: true, tsconfigPath: "./tsconfig.build.json" }),
     ...(env.mode !== "production" ? [wasm(), topLevelAwait()] : []),

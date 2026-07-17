@@ -7,6 +7,9 @@ license.workspace = true
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+debug = ["navara_wasm_utils/console_error_panic_hook"]
+
 [dependencies]
 wasm-bindgen.workspace = true
 js-sys.workspace = true

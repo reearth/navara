@@ -8,7 +8,9 @@ license.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["console_error_panic_hook"]
+# Readable panic messages cost binary size; enable via each wasm crate's
+# `debug` feature instead of shipping the hook in release builds.
+default = []
 
 [dependencies]
 wasm-bindgen.workspace = true

@@ -27,7 +27,7 @@ script = ['''
 
 wasm-bindgen target/wasm32-unknown-unknown/release/navara_wasm.wasm --out-dir web/wasm/navara_engine --target web
 if command -v wasm-opt &> /dev/null; then
-    wasm-opt -O4 web/wasm/navara_engine/navara_wasm_bg.wasm -o web/wasm/navara_engine/navara_wasm_bg.wasm
+    wasm-opt -Oz --strip-debug --strip-producers web/wasm/navara_engine/navara_wasm_bg.wasm -o web/wasm/navara_engine/navara_wasm_bg.wasm
   else 
     echo "wasm-opt not found, skipping optimization"
 fi
@@ -39,7 +39,7 @@ cp crates/navara_wasm/_package.json web/wasm/navara_engine/package.json
 [tasks.bindgen-rust.windows]
 script = ['''
 wasm-bindgen target/wasm32-unknown-unknown/release/navara_wasm.wasm --out-dir web/wasm/navara_engine --target web
-where wasm-opt >nul 2>&1 && wasm-opt -O4 web/wasm/navara_engine/navara_wasm_bg.wasm -o web/wasm/navara_engine/navara_wasm_bg.wasm || echo "wasm-opt not found, skipping optimization"
+where wasm-opt >nul 2>&1 && wasm-opt -Oz --strip-debug --strip-producers web/wasm/navara_engine/navara_wasm_bg.wasm -o web/wasm/navara_engine/navara_wasm_bg.wasm || echo "wasm-opt not found, skipping optimization"
 
 REM Generate package.json for pnpm workspace
 copy /Y "crates\navara_wasm\_package.json" "web\wasm\navara_engine\package.json"
@@ -62,6 +62,36 @@ wasm-bindgen target/wasm32-unknown-unknown/debug/navara_wasm.wasm --out-dir web/
 REM Generate package.json for pnpm workspace
 copy /Y "crates\navara_wasm\_package.json" "web\wasm\navara_engine\package.json"
 ''']
+# ============================================================================
+#                               SIZE REPORT
+# ============================================================================
+# Print raw and compressed sizes of the built WASM modules in web/wasm/.
+# Run after a release build (e.g. `cargo make build-all`) to track size changes.
+[tasks.size-report]
+script = ['''
+#!/usr/bin/env bash
+
+printf "%-55s %12s %12s %12s\n" "module" "raw" "gzip-9" "brotli-11"
+for f in \
+    web/wasm/navara_engine/navara_wasm_bg.wasm \
+    web/wasm/navara_engine_worker/navara_wasm_worker_bg.wasm \
+    web/wasm/navara_font_worker/navara_wasm_font_worker_bg.wasm \
+    web/wasm/navara_engine_api/navara_wasm_api_bg.wasm; do
+    if [ ! -f "$f" ]; then
+        printf "%-55s %12s\n" "$f" "missing"
+        continue
+    fi
+    raw=$(wc -c < "$f" | tr -d ' ')
+    gz=$(gzip -9 -c "$f" | wc -c | tr -d ' ')
+    if command -v brotli &> /dev/null; then
+        br=$(brotli -q 11 -c "$f" | wc -c | tr -d ' ')
+    else
+        br="n/a"
+    fi
+    printf "%-55s %12s %12s %12s\n" "$f" "$raw" "$gz" "$br"
+done
+''']
+
 # ============================================================================
 #                               CODE QUALITY TASKS
 # ============================================================================

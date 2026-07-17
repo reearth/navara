@@ -8,7 +8,7 @@ script = ['''
 
 wasm-bindgen target/wasm32-unknown-unknown/release/navara_wasm_font_worker.wasm --out-dir web/wasm/navara_font_worker --target web
 if command -v wasm-opt &> /dev/null; then
-    wasm-opt -O4 web/wasm/navara_font_worker/navara_wasm_font_worker_bg.wasm -o web/wasm/navara_font_worker/navara_wasm_font_worker_bg.wasm
+    wasm-opt -Oz --strip-debug --strip-producers web/wasm/navara_font_worker/navara_wasm_font_worker_bg.wasm -o web/wasm/navara_font_worker/navara_wasm_font_worker_bg.wasm
   else
     echo "wasm-opt not found, skipping optimization"
 fi
@@ -20,7 +20,7 @@ cp crates/navara_wasm_font_worker/_package.json web/wasm/navara_font_worker/pack
 [tasks.bindgen-rust-font-worker.windows]
 script = ['''
 wasm-bindgen target/wasm32-unknown-unknown/release/navara_wasm_font_worker.wasm --out-dir web/wasm/navara_font_worker --target web
-where wasm-opt >nul 2>&1 && wasm-opt -O4 web/wasm/navara_font_worker/navara_wasm_font_worker_bg.wasm -o web/wasm/navara_font_worker/navara_wasm_font_worker_bg.wasm || echo "wasm-opt not found, skipping optimization"
+where wasm-opt >nul 2>&1 && wasm-opt -Oz --strip-debug --strip-producers web/wasm/navara_font_worker/navara_wasm_font_worker_bg.wasm -o web/wasm/navara_font_worker/navara_wasm_font_worker_bg.wasm || echo "wasm-opt not found, skipping optimization"
 
 REM Generate package.json for pnpm workspace
 copy /Y "crates\navara_wasm_font_worker\_package.json" "web\wasm\navara_font_worker\package.json"
