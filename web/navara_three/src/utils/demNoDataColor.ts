@@ -8,11 +8,13 @@
  * RGBA ones).
  *
  * Solved by greedy positional decomposition (largest scaler first), which is
- * exact for the positional presets (GSI, Mapbox, Terrarium). Returns null when
- * the decoder has no byte-representable boundary color (an exotic custom
- * decoder) — callers then skip the no-data underlay and uncovered regions
- * decode as whatever black decodes to, matching the pre-bake behavior for
- * such decoders.
+ * exact for the positional presets (GSI, Mapbox, Terrarium); a non-exact
+ * decomposition is still accepted when it lands inside the shader's no-data
+ * tolerance band (`decodeDEMHeight` flags |x − boundary| <= 1). Returns null
+ * only when no byte color decodes within that band (an exotic custom decoder
+ * whose encoding cannot express no-data at all) — callers then skip the
+ * no-data underlay and a baked target's uncovered regions decode as whatever
+ * black decodes to, which the shader may colormap as a valid height.
  */
 export function demNoDataColorBytes(
   scaler: { x: number; y: number; z: number },
@@ -35,7 +37,10 @@ export function demNoDataColorBytes(
     rest -= v * s;
   }
 
-  // The shader flags |x - boundary| <= 1 as no-data; require an exact-enough
-  // decomposition so the painted color cannot leak into the valid range.
-  return Math.abs(rest) <= 0.5 ? rgb : null;
+  // The shader flags |x - boundary| <= 1 as no-data: accept any decomposition
+  // that decodes strictly inside that band (the margin absorbs the GPU's
+  // float32 decode error), so a boundary that is merely not byte-exact — e.g.
+  // a fractional boundary with unit scalers — still gets an underlay instead
+  // of leaving uncovered regions to decode black as a valid height.
+  return Math.abs(rest) < 1 - 1e-3 ? rgb : null;
 }

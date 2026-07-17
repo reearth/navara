@@ -992,8 +992,21 @@ pub fn delete_layer(
 
     // Compact the same slot out of every live raster tile's texture array.
     // `active_handles` covers the visited tiles (including the ancestors that
-    // `resolve_raster_texture` can fall back to).
-    for handle in raster_tc.active_handles.iter() {
+    // `resolve_raster_texture` can fall back to); the retention pool must be
+    // compacted too — retained tiles keep their quadtree node and fragments
+    // alive for a cheap revisit, so a stale slot layout would resolve the
+    // deleted layer's texture for every layer after it once the camera
+    // returns (wrong layer order on revisited tiles). A revisited handle
+    // transiently sits in BOTH sets (until `enforce_memory_budget` purges its
+    // retained entry) and must be compacted exactly once, or the shift
+    // arithmetic removes a second, wrong slot.
+    let active_handles = &raster_tc.active_handles;
+    for handle in active_handles.iter().chain(
+        raster_tc
+            .retained
+            .keys()
+            .filter(|h| !active_handles.contains(h)),
+    ) {
         let Some(raster_tile) = raster_qt.qt.get_mut(*handle) else {
             continue;
         };
@@ -1411,16 +1424,15 @@ pub fn update_mesh_material(
                     .map(|s| s.max_zoom())
                     .unwrap_or(20);
                 let target_z = navara_core::wm_zoom_for_lng_span(lng_span, max_zoom);
-                // The raster pull only returns fragments that have loaded.
-                let resolved = crate::raster::resolve_raster_textures(
+                // The raster pull only returns a fragment that has loaded.
+                let resolved = crate::raster::resolve_raster_texture(
                     &raster_qt,
                     &terrain_extent,
                     target_z,
-                    1,
                     i,
                     &texture_fragment,
                 );
-                for r in resolved {
+                if let Some(r) = resolved {
                     shows.push(a.show);
                     opacities.push(a.opacity.clamp(0., 1.));
                     colors.push(a.color);
@@ -1530,9 +1542,13 @@ pub fn handle_tile_worker_task_completed(
     tc.is_updated_in_this_frame = true;
 }
 
+/// Assigns a fresh topmost `Order` to newly added tiles layers. A layer spawned
+/// WITH an `Order` already — the reset re-add restoring its pre-teardown
+/// z-position (see `AddLayerEvent::restore_order`) — is left untouched, so a
+/// source update does not move the layer to the top like a user add would.
 pub fn add_order_to_tiles_layer(
     mut commands: Commands,
-    tiles_layers: Query<Entity, Added<TilesLayer>>,
+    tiles_layers: Query<Entity, (Added<TilesLayer>, Without<Order>)>,
     existing_orders: Query<&Order, With<TilesLayer>>,
 ) {
     // Find the maximum existing order value
@@ -2538,6 +2554,117 @@ mod delete_layer_tests {
 
         // B's slot is gone; A and C keep their relative order, now at indices 0,1.
         assert_eq!(tex, &vec![Some(ea), Some(ec)]);
+    }
+
+    /// A layer spawned with a pre-set `Order` (the reset re-add restoring its
+    /// pre-teardown z-position) must keep it; only order-less layers get the
+    /// fresh topmost value — which must also count the restored order in `max`.
+    #[test]
+    fn add_order_skips_layers_with_restored_order() {
+        let mut app = App::new();
+        // A reset re-add restoring Order(5) plus a plain user add, same frame.
+        let restored = app
+            .world_mut()
+            .spawn((raster_layer("reset"), Order(5)))
+            .id();
+        let added = app.world_mut().spawn(raster_layer("user-add")).id();
+
+        app.add_systems(Update, add_order_to_tiles_layer);
+        app.update();
+
+        assert_eq!(
+            app.world().get::<Order>(restored),
+            Some(&Order(5)),
+            "restored z-order must survive the assign system"
+        );
+        assert_eq!(
+            app.world().get::<Order>(added),
+            Some(&Order(6)),
+            "fresh order goes on top of the restored one"
+        );
+    }
+
+    /// Deleting a middle layer must also compact raster tiles in the retention
+    /// pool: they keep their quadtree node and fragments alive for a revisit, so
+    /// a stale slot layout would resolve the deleted layer's texture for every
+    /// layer after it once the camera returns. A revisited handle transiently
+    /// sits in BOTH `active_handles` and `retained` (until
+    /// `enforce_memory_budget` purges the retained entry) and must be compacted
+    /// exactly once.
+    #[test]
+    fn delete_layer_compacts_retained_raster_tiles_exactly_once() {
+        let mut app = App::new();
+        app.insert_resource(TerrainTileQuadtree::new_with_linear_qt());
+
+        // Root = retained-only tile; child (0,0,1) = revisited tile living in
+        // both sets. Each carries one texture entity per layer [A, B, C].
+        let init = |(x, y, z): (usize, usize, usize)| RasterTile::new(TileXYZ { x, y, z }, 0., 0.);
+        let mut raster_qt = RasterTileQuadtree::new_with_linear_qt();
+        raster_qt.qt.initialize_zero(&init);
+        raster_qt.qt.initialize_children((0, 0, 0), &init);
+        let retained_handle = raster_qt.qt.zero().unwrap().handle();
+        let revisited_handle = raster_qt.qt.leaf((0, 0, 1)).unwrap().handle();
+
+        let mut spawn_slots = |app: &mut App| -> Vec<Option<Entity>> {
+            (0..3)
+                .map(|_| Some(app.world_mut().spawn_empty().id()))
+                .collect()
+        };
+        let retained_slots = spawn_slots(&mut app);
+        let revisited_slots = spawn_slots(&mut app);
+        raster_qt
+            .qt
+            .get_mut(retained_handle)
+            .unwrap()
+            .texture_fragment_entity_ids = Some(retained_slots.clone());
+        raster_qt
+            .qt
+            .get_mut(revisited_handle)
+            .unwrap()
+            .texture_fragment_entity_ids = Some(revisited_slots.clone());
+        app.insert_resource(raster_qt);
+
+        let mut raster_tc = RasterTileCacheManager::default();
+        raster_tc.active_handles.insert(revisited_handle);
+        for handle in [retained_handle, revisited_handle] {
+            raster_tc.retained.insert(
+                handle,
+                RetainedEntry {
+                    retained_at: 0,
+                    cost: TileCost::default(),
+                },
+            );
+        }
+        app.insert_resource(raster_tc);
+
+        // Layers A(0), B(1), C(2); delete the middle one (B).
+        app.world_mut().spawn((raster_layer("A"), Order(0)));
+        app.world_mut().spawn((raster_layer("B"), Order(1)));
+        app.world_mut().spawn((raster_layer("C"), Order(2)));
+        app.world_mut()
+            .spawn(DeleteRasterTileLayerMarker("B".to_string()));
+
+        app.add_systems(Update, delete_layer);
+        app.update();
+
+        let raster_qt = app.world().resource::<RasterTileQuadtree>();
+        for (name, handle, slots) in [
+            ("retained", retained_handle, &retained_slots),
+            ("revisited", revisited_handle, &revisited_slots),
+        ] {
+            let tex = raster_qt
+                .qt
+                .get(handle)
+                .unwrap()
+                .texture_fragment_entity_ids
+                .as_ref()
+                .unwrap();
+            assert_eq!(
+                tex,
+                &vec![slots[0], slots[2]],
+                "{name} tile: middle slot removed exactly once"
+            );
+        }
     }
 
     /// Two delete markers for the *same* layer in one frame must compact exactly

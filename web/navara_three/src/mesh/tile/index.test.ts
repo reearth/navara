@@ -36,6 +36,7 @@ function state(layerId: string, tileHandle: bigint) {
     uv_offset: new Float32Array([0, 0]),
     uv_scale: new Float32Array([1, 1]),
     reproject_terrain_lat: new Float32Array([]),
+    free: vi.fn(),
   };
 }
 

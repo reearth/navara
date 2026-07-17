@@ -142,9 +142,10 @@ export class TileTextureCompositor {
    * per-tile GPU byte cost it reports to the memory ledger. */
   readonly size: number;
   private readonly texturizedScenes: TexturizedSceneByTileCoordinates;
-  // Single fixed [-1, 1] camera shared by every vector-scene bake. Ancestor
-  // fallback is resolved in Rust, so no per-tile camera transform is needed.
-  private readonly vectorCamera = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  // Single camera shared by every drape bake (vector and raster), re-framed
+  // per source by `frameBakeCamera`. Ancestor fallback is resolved in Rust,
+  // so no per-tile camera transform is needed.
+  private readonly bakeCamera = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
   // Composite-pass machinery (lazily created on first use so tests that
   // don't render don't pay the allocation).
@@ -152,12 +153,11 @@ export class TileTextureCompositor {
   private readonly quadCamera = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
   private readonly quadMesh: Mesh;
   private readonly materialCache = new Map<string, CachedMaterial>();
-  // Vector render targets this compositor has ever rendered to. three.js
+  // Drape render targets this compositor has ever rendered to. three.js
   // allocates a render target's GL framebuffer on first setRenderTarget, so
   // an empty slot whose target was never touched must be skipped entirely —
   // clearing it would allocate size² × 4 bytes of GPU memory for nothing.
-  private readonly touchedVectorTargets = new WeakSet<WebGLRenderTarget>();
-  private readonly touchedRasterTargets = new WeakSet<WebGLRenderTarget>();
+  private readonly touchedTargets = new WeakSet<WebGLRenderTarget>();
 
   // Raster-bake machinery (lazily used): a textured quad drawn once per source
   // through the same windowing camera as the vector bake. `toneMapped: false` +
@@ -199,7 +199,7 @@ export class TileTextureCompositor {
     this.quadMesh = new Mesh(new PlaneGeometry(2, 2));
     this.quadScene.add(this.quadMesh);
     this.quadCamera.position.z = 1;
-    this.vectorCamera.position.z = 1;
+    this.bakeCamera.position.z = 1;
 
     // Raster-bake quad: spans the source tile's NDC frame like a vector scene,
     // so the same windowing camera math frames it. Shares the fullscreen quad
@@ -270,58 +270,19 @@ export class TileTextureCompositor {
     }[],
     renderTargets: WebGLRenderTarget[],
   ): void {
-    const camera = this.vectorCamera;
-    const prevTarget = this.renderer.getRenderTarget();
-    const prevClear = this.renderer.getClearColor(PREV_CLEAR_COLOR);
-    const prevClearAlpha = this.renderer.getClearAlpha();
-    const prevAutoClear = this.renderer.autoClear;
-    // Accumulate multiple sources into one RT: clear once, never per render.
-    this.renderer.autoClear = false;
-
-    for (let i = 0; i < renderTargets.length; i++) {
-      const renderTarget = renderTargets[i];
-      if (!renderTarget) continue;
-
-      const slot = slots[i];
-      // An empty slot only needs a clear when the target holds stale content
-      // from a previous bake; a never-touched target has no GL storage yet
-      // and must not be render-targeted (that would allocate it).
-      if (!slot && !this.touchedVectorTargets.has(renderTarget)) continue;
-      this.touchedVectorTargets.add(renderTarget);
-
-      this.renderer.setRenderTarget(renderTarget);
-      this.renderer.setClearColor(0x000, 0);
-      this.renderer.clear();
-
-      if (slot) {
-        for (const source of slot.sources) {
-          const scene = this.texturizedScenes.findSceneByLayerId(
-            source.tileHandle,
-            slot.layerId,
-          );
-          if (!scene || scene.removed || !scene.children.length) continue;
-          // Frame the terrain tile's sub-rect of this source tile from the
-          // mercator uvOffset/uvScale: meshUv ∈ [0,1] → vectorUv = uvOffset +
-          // meshUv·uvScale, source scene NDC = 2·vectorUv − 1. A source finer than
-          // the terrain tile yields a camera wider than [-1, 1], so it draws into
-          // only its sub-rect and leaves the rest of the RT transparent.
-          const [ox, oy] = source.uvOffset;
-          const [sx, sy] = source.uvScale;
-          camera.left = 2 * ox - 1;
-          camera.right = 2 * (ox + sx) - 1;
-          camera.bottom = 2 * oy - 1;
-          camera.top = 2 * (oy + sy) - 1;
-          camera.updateProjectionMatrix();
-          this.renderer.render(scene, camera);
-        }
+    this.bakeSlotTargets(slots, renderTargets, (slot) => {
+      for (const source of slot.sources) {
+        const scene = this.texturizedScenes.findSceneByLayerId(
+          source.tileHandle,
+          slot.layerId,
+        );
+        if (!scene || scene.removed || !scene.children.length) continue;
+        this.renderer.render(
+          scene,
+          this.frameBakeCamera(source.uvOffset, source.uvScale),
+        );
       }
-
-      renderTarget.texture.needsUpdate = true;
-    }
-
-    this.renderer.autoClear = prevAutoClear;
-    this.renderer.setRenderTarget(prevTarget);
-    this.renderer.setClearColor(prevClear, prevClearAlpha);
+    });
   }
 
   /**
@@ -349,8 +310,48 @@ export class TileTextureCompositor {
     slots: (RasterBakeSlot | undefined)[],
     renderTargets: (WebGLRenderTarget | undefined)[],
   ): void {
-    const camera = this.vectorCamera;
-    const material = this.rasterBakeMaterial;
+    this.bakeSlotTargets(slots, renderTargets, (slot) => {
+      // Heatmap targets: paint the decoder's no-data color across the whole
+      // target first, so regions no source covers decode as "no elevation"
+      // (the composite renders them transparent) instead of decoding the
+      // cleared black as a height.
+      if (slot.isElevationHeatmap && slot.noDataColor) {
+        this.drawRasterBakeQuad(
+          this.demNoDataUnderlay(slot.noDataColor),
+          true,
+          [0, 0],
+          [1, 1],
+        );
+      }
+
+      // Coarse-first painter's order: a shared ancestor spans every finer
+      // source's rect, so it must not be drawn over them.
+      const sources = [...slot.sources].sort(
+        (a, b) => a.uvScale[0] - b.uvScale[0],
+      );
+      for (const source of sources) {
+        this.drawRasterBakeQuad(
+          source.texture,
+          slot.isElevationHeatmap,
+          source.uvOffset,
+          source.uvScale,
+        );
+      }
+    });
+  }
+
+  /**
+   * Shared bake loop over per-layer drape render targets (slot `i` →
+   * `renderTargets[i]`): saves/restores the renderer state, clears each live
+   * target once and lets `drawSlot` accumulate that slot's sources into it —
+   * autoClear stays off so the sources mosaic instead of overwriting one
+   * another.
+   */
+  private bakeSlotTargets<S>(
+    slots: readonly (S | undefined)[],
+    renderTargets: readonly (WebGLRenderTarget | undefined)[],
+    drawSlot: (slot: S) => void,
+  ): void {
     const prevTarget = this.renderer.getRenderTarget();
     const prevClear = this.renderer.getClearColor(PREV_CLEAR_COLOR);
     const prevClearAlpha = this.renderer.getClearAlpha();
@@ -366,54 +367,14 @@ export class TileTextureCompositor {
       // An empty slot only needs a clear when the target holds stale content
       // from a previous bake; a never-touched target has no GL storage yet
       // and must not be render-targeted (that would allocate it).
-      if (!slot && !this.touchedRasterTargets.has(renderTarget)) continue;
-      this.touchedRasterTargets.add(renderTarget);
+      if (!slot && !this.touchedTargets.has(renderTarget)) continue;
+      this.touchedTargets.add(renderTarget);
 
       this.renderer.setRenderTarget(renderTarget);
       this.renderer.setClearColor(0x000, 0);
       this.renderer.clear();
 
-      if (slot) {
-        // Heatmap targets: paint the decoder's no-data color across the whole
-        // target first, so regions no source covers decode as "no elevation"
-        // (the composite renders them transparent) instead of decoding the
-        // cleared black as a height.
-        if (slot.isElevationHeatmap && slot.noDataColor) {
-          const underlay = this.demNoDataUnderlay(slot.noDataColor);
-          this.configureRasterBakeSource(underlay, true);
-          if (material.map === null) material.needsUpdate = true;
-          material.map = underlay;
-          camera.left = -1;
-          camera.right = 1;
-          camera.bottom = -1;
-          camera.top = 1;
-          camera.updateProjectionMatrix();
-          this.renderer.render(this.rasterBakeScene, camera);
-        }
-
-        // Coarse-first painter's order: a shared ancestor spans every finer
-        // source's rect, so it must not be drawn over them.
-        const sources = [...slot.sources].sort(
-          (a, b) => a.uvScale[0] - b.uvScale[0],
-        );
-        for (const source of sources) {
-          this.configureRasterBakeSource(
-            source.texture,
-            slot.isElevationHeatmap,
-          );
-          // First map assignment flips USE_MAP; later swaps are uniform-only.
-          if (material.map === null) material.needsUpdate = true;
-          material.map = source.texture;
-          const [ox, oy] = source.uvOffset;
-          const [sx, sy] = source.uvScale;
-          camera.left = 2 * ox - 1;
-          camera.right = 2 * (ox + sx) - 1;
-          camera.bottom = 2 * oy - 1;
-          camera.top = 2 * (oy + sy) - 1;
-          camera.updateProjectionMatrix();
-          this.renderer.render(this.rasterBakeScene, camera);
-        }
-      }
+      if (slot) drawSlot(slot);
 
       renderTarget.texture.needsUpdate = true;
     }
@@ -421,6 +382,48 @@ export class TileTextureCompositor {
     this.renderer.autoClear = prevAutoClear;
     this.renderer.setRenderTarget(prevTarget);
     this.renderer.setClearColor(prevClear, prevClearAlpha);
+  }
+
+  /**
+   * Frame the shared bake camera on the terrain tile's sub-rect of a source
+   * from the mercator affine: meshUv ∈ [0,1] → sourceUv = uvOffset +
+   * meshUv·uvScale, source NDC = 2·sourceUv − 1. A source finer than the
+   * terrain tile yields a camera wider than [-1, 1], so it draws into only
+   * its sub-rect and leaves the rest of the render target transparent.
+   */
+  private frameBakeCamera(
+    uvOffset: [number, number],
+    uvScale: [number, number],
+  ): OrthographicCamera {
+    const [ox, oy] = uvOffset;
+    const [sx, sy] = uvScale;
+    const camera = this.bakeCamera;
+    camera.left = 2 * ox - 1;
+    camera.right = 2 * (ox + sx) - 1;
+    camera.bottom = 2 * oy - 1;
+    camera.top = 2 * (oy + sy) - 1;
+    camera.updateProjectionMatrix();
+    return camera;
+  }
+
+  /** Draw one textured quad into the current render target through the bake
+   * camera window — the value-preserving copy described on
+   * {@link renderRasterTiles}. */
+  private drawRasterBakeQuad(
+    texture: Texture,
+    isElevationHeatmap: boolean,
+    uvOffset: [number, number],
+    uvScale: [number, number],
+  ): void {
+    const material = this.rasterBakeMaterial;
+    this.configureRasterBakeSource(texture, isElevationHeatmap);
+    // First map assignment flips USE_MAP; later swaps are uniform-only.
+    if (material.map === null) material.needsUpdate = true;
+    material.map = texture;
+    this.renderer.render(
+      this.rasterBakeScene,
+      this.frameBakeCamera(uvOffset, uvScale),
+    );
   }
 
   /** The cached 1×1 no-data texture, (re)created when the color changes. */

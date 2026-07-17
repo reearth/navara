@@ -1,6 +1,6 @@
 //! Draping WebMercator texturized-vector tiles onto a terrain tile (N:M when the
 //! terrain is Geographic). Mirrors the raster imagery resolve
-//! (`navara_tile::raster::resolve_raster_textures`) using the shared WebMercator tile
+//! (`navara_tile::raster::resolve_raster_tile_states`) using the shared WebMercator tile
 //! helpers in `navara_core`. Bakeable tiles are found from each tile's
 //! `ready_parent_tile_handle` — the self-inclusive nearest active tile the traverse records
 //! from the live ECS activation state. Like raster (which keeps a loaded texture at every

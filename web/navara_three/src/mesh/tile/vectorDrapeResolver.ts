@@ -215,10 +215,14 @@ export class VectorDrapeResolver implements DrapeResolver {
             state.tile_handle,
             layerId,
           ) != null;
-        if (!hasScene) continue;
+        if (!hasScene) {
+          state.free();
+          continue;
+        }
         // Cap the layer fan-out to the GPU slot budget; extra layers are dropped.
         if (byLayer.size >= this.host.numTexturizedVector) {
           droppedLayers.add(layerId);
+          state.free();
           continue;
         }
         const reproject = state.reproject_terrain_lat;
@@ -230,11 +234,18 @@ export class VectorDrapeResolver implements DrapeResolver {
         };
         byLayer.set(layerId, slot);
       }
+      // Read each wasm getter once — every access crosses the boundary and the
+      // uv getters allocate a fresh Float32Array.
+      const uvOffset = state.uv_offset;
+      const uvScale = state.uv_scale;
       slot.sources.push({
         tileHandle: state.tile_handle,
-        uvOffset: [state.uv_offset[0] ?? 0, state.uv_offset[1] ?? 0],
-        uvScale: [state.uv_scale[0] ?? 1, state.uv_scale[1] ?? 1],
+        uvOffset: [uvOffset[0] ?? 0, uvOffset[1] ?? 0],
+        uvScale: [uvScale[0] ?? 1, uvScale[1] ?? 1],
       });
+      // wasm-bindgen objects hold Rust-heap memory; release it deterministically
+      // instead of waiting for the GC's finalizer (see guide/WASM_API_POLICY.md).
+      state.free();
     }
 
     if (droppedLayers.size > 0) {

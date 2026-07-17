@@ -154,6 +154,16 @@ pub fn update_raster_tiles(
     let has_raster_layers = tiles.iter().any(|(t, _)| t.hillshade_config.is_none());
     if !has_raster_layers {
         tc.prev_layers_len = tiles_len;
+        // The fingerprint must not outlive the last raster layer: a later
+        // re-add with an identical bake config would match the stale entry,
+        // never re-trigger the traversal or bump the revision, and render
+        // nothing until the camera happens to move. Bump so draped tiles also
+        // drop the removed layer's slots.
+        if !tc.bake_config_fingerprint.is_empty() {
+            tc.bake_config_fingerprint.clear();
+            tc.pending_layers_changed = false;
+            revision_params.revision.bump();
+        }
         return;
     }
 
@@ -165,10 +175,10 @@ pub fn update_raster_tiles(
     // fires on appearance-only mutations (opacity/show/color), which cannot affect
     // the resolve — the fingerprint comparison filters those out, or a per-frame
     // opacity animation would re-resolve every visible tile's drape every frame
-    // (the FPS killer the revision gate exists to avoid). Committed below with
-    // `prev_layers_len`, after the early returns, so a swallowed change stays
-    // detectable on the next trigger.
-    let is_layers_changed = (is_layers_len_changed || !revision_params.changed_layers.is_empty())
+    // (the FPS killer the revision gate exists to avoid).
+    let is_layers_changed = (is_layers_len_changed
+        || tc.pending_layers_changed
+        || !revision_params.changed_layers.is_empty())
         && (tiles_len != tc.bake_config_fingerprint.len()
             || !tiles
                 .iter()
@@ -177,6 +187,10 @@ pub fn update_raster_tiles(
                 .all(|((l, _), (hillshade, heatmap, source_id))| {
                     bake_config_entry(l) == (*hillshade, *heatmap, source_id.as_deref())
                 }));
+    // `Changed` fires only once, but the returns below (no occluder/camera yet)
+    // can cut this run short before the change is committed — carry it so the
+    // fingerprint mismatch is re-examined until the commit block runs.
+    tc.pending_layers_changed = is_layers_changed;
 
     let occluder = match occluder.iter().next() {
         Some(o) => o,
@@ -216,6 +230,7 @@ pub fn update_raster_tiles(
     tc.last_rendered_frame = frame.rendered_frame();
     tc.prev_layers_len = tiles_len;
     tc.is_updated_in_this_frame = true;
+    tc.pending_layers_changed = false;
     if is_layers_changed {
         tc.bake_config_fingerprint = tiles
             .iter()

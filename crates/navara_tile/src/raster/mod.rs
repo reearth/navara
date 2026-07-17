@@ -8,7 +8,7 @@ use bevy_ecs::prelude::Resource;
 
 pub use resolve::{
     RASTER_DRAPE_OVERLAP_BUDGET, RasterBakeLayer, ResolvedRasterTexture, ResolvedRasterTileState,
-    resolve_raster_textures, resolve_raster_tile_states,
+    resolve_raster_texture, resolve_raster_tile_states,
 };
 pub use tile_cache_manager::RasterTileCacheManager;
 pub use traverse::traverse_raster;

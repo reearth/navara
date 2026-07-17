@@ -28,10 +28,16 @@ describe("demNoDataColorBytes", () => {
     ]);
   });
 
-  it("returns null when the boundary is not byte-representable", () => {
-    // Fractional boundary cannot be hit by integer bytes with unit scalers.
-    expect(demNoDataColorBytes({ x: 1, y: 1, z: 1 }, 0.75)).toBeNull();
-    // Boundary beyond the encodable range.
+  it("accepts a non-exact color inside the shader's no-data band", () => {
+    // 0.75 has no exact byte decomposition with unit scalers, but black
+    // decodes to 0 and |0 - 0.75| <= 1, so the shader still flags it no-data.
+    expect(demNoDataColorBytes({ x: 1, y: 1, z: 1 }, 0.75)).toEqual([0, 0, 0]);
+  });
+
+  it("returns null when no byte color decodes inside the no-data band", () => {
+    // Boundary beyond the encodable range (max dot product is 765).
     expect(demNoDataColorBytes({ x: 1, y: 1, z: 1 }, 100000)).toBeNull();
+    // Coarse scalers leave the nearest representable value a full step away.
+    expect(demNoDataColorBytes({ x: 4, y: 0, z: 0 }, 6)).toBeNull();
   });
 });

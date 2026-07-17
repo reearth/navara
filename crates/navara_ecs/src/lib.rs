@@ -351,7 +351,10 @@ impl App {
 
         self.app
             .world_mut()
-            .write_message(navara_layer_event::AddLayerEvent(desc));
+            .write_message(navara_layer_event::AddLayerEvent {
+                desc,
+                restore_order: None,
+            });
     }
 
     pub fn get_layer_index(&self, layer_id: &str) -> Option<usize> {
@@ -596,6 +599,19 @@ impl App {
             .get_resource::<LayerDescStore>()
             .and_then(|store| store.get_order(layer_id).copied());
 
+        // Also capture the layer entity's ECS `Order` (the render z-order) so the
+        // re-spawned entity keeps its position: a reset must be transparent, not
+        // move the layer to the top like a user re-add. Only `TilesLayer` carries
+        // an ECS `Order`; other layer types yield `None` here.
+        let ecs_order = {
+            let world = self.app.world_mut();
+            let mut query = world.query::<(&navara_layer::TilesLayer, &navara_component::Order)>();
+            query
+                .iter(world)
+                .find(|(l, _)| l.layer_id == layer_id)
+                .map(|(_, o)| o.0)
+        };
+
         self.app
             .world_mut()
             .write_message(navara_layer_event::DeleteLayerEvent {
@@ -625,6 +641,7 @@ impl App {
                     desc,
                     seen_alive: false,
                     order,
+                    ecs_order,
                 });
             }
         }

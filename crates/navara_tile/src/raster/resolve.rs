@@ -27,45 +27,30 @@ pub struct ResolvedRasterTexture {
     pub raster_extent: Extent<FloatType, Radians>,
 }
 
-/// Resolve the WebMercator raster tiles covering `terrain_extent` for one layer,
-/// at the finest zoom `<= target_z` whose overlap fits `max_tiles` (see
-/// [`overlapping_tiles_within_budget`]). Each overlapping WM tile contributes one
-/// texture; a tile whose own fragment isn't loaded falls back to its nearest loaded
-/// ancestor (several gaps may share one ancestor, which is emitted once), so the
-/// result is at most `max_tiles` textures. For WebMercator terrain — the only
-/// remaining caller, since Geographic drapes resolve through the baked path
-/// ([`resolve_raster_tile_states`]) — the overlap is a single identity tile.
-pub fn resolve_raster_textures(
+/// Resolve the single WebMercator raster tile draping `terrain_extent` for one
+/// layer. Only used for WebMercator terrain — Geographic drapes resolve through
+/// the baked path ([`resolve_raster_tile_states`]) — so the drape is same-scheme:
+/// the terrain tile's own identity WM tile at `target_z`, or, when its fragment
+/// isn't loaded, its nearest loaded ancestor. `None` while nothing has loaded yet.
+pub fn resolve_raster_texture(
     qt: &RasterTileQuadtree,
     terrain_extent: &Extent<FloatType, Radians>,
     target_z: usize,
-    max_tiles: usize,
     layer_index: usize,
     texture_fragment: &TileTextureFragmentQuery,
-) -> Vec<ResolvedRasterTexture> {
+) -> Option<ResolvedRasterTexture> {
     let is_loaded = fragment_loaded(texture_fragment);
-    let mut out = Vec::new();
-    let mut resolved_coords: FxHashSet<TileXYZ> = FxHashSet::default();
+    let coords = overlapping_tiles_within_budget(*terrain_extent, target_z, 1)
+        .into_iter()
+        .next()?;
+    let (entity, resolved) = resolve_loaded_tile(qt, coords, layer_index, &is_loaded)?;
 
-    for coords in overlapping_tiles_within_budget(*terrain_extent, target_z, max_tiles) {
-        let Some((entity, resolved)) = resolve_loaded_tile(qt, coords, layer_index, &is_loaded)
-        else {
-            continue;
-        };
-        // A coarser ancestor can back several of the requested tiles; drape it once.
-        if !resolved_coords.insert(resolved) {
-            continue;
-        }
-
-        let raster_extent = TilingScheme::WebMercator { tms: false }.tile_extent(resolved);
-        out.push(ResolvedRasterTexture {
-            entity,
-            uv_transform: uv_rect_from_extents(*terrain_extent, raster_extent),
-            raster_extent,
-        });
-    }
-
-    out
+    let raster_extent = TilingScheme::WebMercator { tms: false }.tile_extent(resolved);
+    Some(ResolvedRasterTexture {
+        entity,
+        uv_transform: uv_rect_from_extents(*terrain_extent, raster_extent),
+        raster_extent,
+    })
 }
 
 /// Fragment-loaded predicate over the system-side texture fragment query. The resolve
@@ -209,10 +194,10 @@ mod tests {
     use navara_tile_component::{RasterTile, TileTextureFragmentMarker};
 
     #[derive(Resource, Default)]
-    struct Out(Vec<ResolvedRasterTexture>);
+    struct Out(Option<ResolvedRasterTexture>);
 
-    /// WebMercator terrain over its own tile resolves to a single identity drape
-    /// (one texture, identity UV) — the Phase 1 behaviour the N:M path subsumes.
+    /// WebMercator terrain over its own tile resolves to the identity drape
+    /// (one texture, identity UV).
     #[test]
     fn resolve_wm_identity_single_texture() {
         let mut app = App::new();
@@ -243,26 +228,19 @@ mod tests {
             move |raster_qt: Res<RasterTileQuadtree>,
                   texture_fragment: TileTextureFragmentQuery,
                   mut out: ResMut<Out>| {
-                out.0 = resolve_raster_textures(
-                    &raster_qt,
-                    &terrain_extent,
-                    0,
-                    8,
-                    0,
-                    &texture_fragment,
-                );
+                out.0 =
+                    resolve_raster_texture(&raster_qt, &terrain_extent, 0, 0, &texture_fragment);
             },
         );
         app.update();
 
-        let resolved = &app.world().resource::<Out>().0;
-        assert_eq!(resolved.len(), 1);
-        assert_eq!(resolved[0].entity, entity);
+        let resolved = app.world().resource::<Out>().0.expect("loaded fragment");
+        assert_eq!(resolved.entity, entity);
         // identity UV (terrain extent == raster extent).
-        assert!((resolved[0].uv_transform.scale.x - 1.0).abs() < 1e-9);
-        assert!((resolved[0].uv_transform.scale.y - 1.0).abs() < 1e-9);
-        assert!(resolved[0].uv_transform.offset.x.abs() < 1e-9);
-        assert!(resolved[0].uv_transform.offset.y.abs() < 1e-9);
+        assert!((resolved.uv_transform.scale.x - 1.0).abs() < 1e-9);
+        assert!((resolved.uv_transform.scale.y - 1.0).abs() < 1e-9);
+        assert!(resolved.uv_transform.offset.x.abs() < 1e-9);
+        assert!(resolved.uv_transform.offset.y.abs() < 1e-9);
     }
 
     // ----- resolve_raster_tile_states (baked drape) ---------------------------
@@ -417,7 +395,7 @@ mod tests {
         assert_eq!(states[0].fragment, entities[1]);
     }
 
-    /// Nothing loaded anywhere → no slots (the layer simply doesn't draw yet).
+    /// Nothing loaded anywhere → no drape (the layer simply doesn't draw yet).
     #[test]
     fn resolve_empty_when_unloaded() {
         let mut app = App::new();
@@ -433,17 +411,11 @@ mod tests {
             move |raster_qt: Res<RasterTileQuadtree>,
                   texture_fragment: TileTextureFragmentQuery,
                   mut out: ResMut<Out>| {
-                out.0 = resolve_raster_textures(
-                    &raster_qt,
-                    &terrain_extent,
-                    0,
-                    8,
-                    0,
-                    &texture_fragment,
-                );
+                out.0 =
+                    resolve_raster_texture(&raster_qt, &terrain_extent, 0, 0, &texture_fragment);
             },
         );
         app.update();
-        assert!(app.world().resource::<Out>().0.is_empty());
+        assert!(app.world().resource::<Out>().0.is_none());
     }
 }

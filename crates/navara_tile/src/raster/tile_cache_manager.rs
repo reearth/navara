@@ -24,4 +24,10 @@ pub struct RasterTileCacheManager {
     /// the resolve-revision bump in `update_raster_tiles` — a per-frame opacity
     /// animation must not re-resolve every visible terrain tile's drape.
     pub bake_config_fingerprint: Vec<(bool, bool, Option<String>)>,
+    /// A bake-relevant layer change observed by a run of `update_raster_tiles`
+    /// that early-returned before committing it (occluder/camera not spawned
+    /// yet). `Changed<TilesLayer>` fires only once, so the swallowed trigger is
+    /// carried here until a run gets far enough to commit the fingerprint and
+    /// bump the resolve revision.
+    pub pending_layers_changed: bool,
 }
