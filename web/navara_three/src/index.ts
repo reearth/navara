@@ -1079,10 +1079,7 @@ export default class ThreeView<
     return null;
   }
 
-  private async initializeRenderPass() {
-    // Initialize atmosphere
-    await this._atmosphere._init();
-
+  private initializeRenderPass() {
     this.skyEnvMap = this.addEffect<SkyEnvMapEffectDesc>({
       skyEnvMap: {},
     });
@@ -1326,9 +1323,15 @@ export default class ThreeView<
         budgets.maxWorkerHeapBytes,
     });
 
-    // Asynchronous initialization in parallel, pre-warming all workers with
-    // WASM initialization.
-    await Promise.all([warmUpWorkerPool(), initCore(), initNavaraApi()]);
+    // 1. Pre-fetch atmosphere resources. Non-blocking: consumers receive
+    // the textures through onTexturesReady() once they arrive.
+    this._atmosphere._init().then(
+      () => this.forceUpdate(),
+      (e) => console.error("Failed to load atmosphere textures:", e),
+    );
+
+    // 2. Fetch WASM resources.
+    await Promise.all([initCore(), initNavaraApi()]);
 
     this._core = new Core(newId());
     this._core.start();
@@ -1464,9 +1467,16 @@ export default class ThreeView<
       this._pickHelper.enablePick(this._options.picking ?? true);
     }
 
-    await this.initializeRenderPass();
+    this.initializeRenderPass();
 
     this.viewContext._setRenderPass(this.renderPass);
+
+    // 3. Warm up workers. Non-blocking: warms one worker, the rest follow
+    // in the background off the HTTP cache; tasks dispatched to a still-cold
+    // worker just await WASM inside the task.
+    warmUpWorkerPool().catch((e) =>
+      console.error("Failed to warm up the worker pool:", e),
+    );
 
     await Promise.all(this.plugins.map((p) => p.init(this, this.viewContext)));
 

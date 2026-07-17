@@ -106,6 +106,13 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
   private _camera: ThreeViewCamera | undefined;
 
   /**
+   * In-flight texture loading promise, shared across concurrent
+   * {@link initTextures} calls so the assets are fetched only once.
+   * @private
+   */
+  private texturesPromise: Promise<void> | undefined;
+
+  /**
    * Creates a new Atmosphere instance.
    * @param renderer - The WebGL renderer used for texture type detection.
    * @param options - Configuration options for the atmosphere.
@@ -143,14 +150,22 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
   async initTextures() {
     if (this.textures) return;
 
-    this.textures = await new PrecomputedTexturesLoader()
+    this.texturesPromise ??= new PrecomputedTexturesLoader()
       .setType(this.renderer)
       .loadAsync(
         this.options.atmosphereAssetsUrl ??
           DEFAULT_ATMOSPHERE_OPTIONS.atmosphereAssetsUrl,
-      );
+      )
+      .then((textures) => {
+        this.textures = textures;
+        this.emit("textureLoaded");
+      })
+      .finally(() => {
+        // Allow retrying after a failed load instead of caching the rejection.
+        this.texturesPromise = undefined;
+      });
 
-    this.emit("textureLoaded");
+    await this.texturesPromise;
   }
 
   /**

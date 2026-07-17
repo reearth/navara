@@ -150,12 +150,35 @@ export class RecyclingWorkerPool {
   }
 
   /**
-   * Pre-initializes WASM on every worker so that upcoming tasks don't pay
-   * the initialization latency. Resolves when all workers are warm.
+   * Pre-initializes WASM on the workers so that upcoming tasks don't pay
+   * the initialization latency. Warms a single worker and resolves once it
+   * is ready; the rest warm in the background. Correctness doesn't depend
+   * on warm workers (every task awaits WASM internally), and a slot whose
+   * warm-up fails surfaces the error on its next real task — the same
+   * policy as a recycled slot. Rejects only when every worker fails to
+   * warm, which signals a broken worker setup.
    */
   warmUp(): Promise<void> {
-    return Promise.all(this.slots.map((slot) => this.warmSlot(slot))).then(
-      () => undefined,
+    // Warming every slot at once would fetch and compile the worker WASM N
+    // times concurrently, competing over the same HTTP/2 connection with
+    // the main-thread WASM and other startup fetches. The first warm-up
+    // populates the HTTP cache, so the background ones load from cache.
+    const [first, ...rest] = this.slots;
+    return this.warmSlot(first).then(
+      () => {
+        for (const slot of rest) {
+          // Fire-and-forget; a failure surfaces on the slot's next real task.
+          this.warmSlot(slot).catch(() => undefined);
+        }
+      },
+      (e) => {
+        // A single failed spawn doesn't prove the setup is broken; fall
+        // back to the remaining workers and reject only when all fail.
+        if (rest.length === 0) throw e;
+        return Promise.any(rest.map((slot) => this.warmSlot(slot))).then(
+          () => undefined,
+        );
+      },
     );
   }
 
