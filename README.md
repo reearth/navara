@@ -26,8 +26,11 @@ You have to install the following environment.
 cargo install cargo-make
 cargo install cargo-watch
 cargo install wasm-bindgen-cli --version 0.2.118
+rustup component add rust-src
 ```
 Optional: Install binaryen for `wasm-opt` optimization: https://github.com/WebAssembly/binaryen
+
+`rust-src` is required by release WASM builds, which rebuild std with `-Z build-std` for smaller binaries.
 
 ### Initial setup
 
