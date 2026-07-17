@@ -30,7 +30,7 @@ A Promise that resolves when initialization is complete
 **Example:**
 
 ```typescript
-import { initNavaraApi } from "@navara/three_api";
+import { initNavaraApi } from "@navaramap/three_api";
 
 // Initialize at application startup
 await initNavaraApi();
@@ -152,7 +152,7 @@ Position in the ECEF coordinate system (Three.js Vector3)
 **Example:**
 
 ```typescript
-import { geodeticToVector3, degreeToRadian } from "@navara/three_api";
+import { geodeticToVector3, degreeToRadian } from "@navaramap/three_api";
 
 const lle = {
   lat: degreeToRadian(35.6762), // Latitude of Tokyo
@@ -187,7 +187,7 @@ Geodetic coordinates:
 **Example:**
 
 ```typescript
-import { vector3ToGeodetic, radianToDegree } from "@navara/three_api";
+import { vector3ToGeodetic, radianToDegree } from "@navaramap/three_api";
 import { Vector3 } from "three";
 
 const position = new Vector3(-3946416, 3364068, 3702654);
@@ -281,7 +281,7 @@ Position in world coordinates, or undefined if no intersection
 **Example:**
 
 ```typescript
-import { convertScreenToWorld } from "@navara/three_api";
+import { convertScreenToWorld } from "@navaramap/three_api";
 import { Vector2 } from "three";
 
 // Create window information object
@@ -326,7 +326,7 @@ Screen coordinates, or undefined if outside the field of view
 **Example:**
 
 ```typescript
-import { convertWorldToScreen, geodeticToVector3 } from "@navara/three_api";
+import { convertWorldToScreen, geodeticToVector3 } from "@navaramap/three_api";
 
 const lle = { lat: 0.622, lng: 2.435, height: 100 };
 const worldPos = geodeticToVector3(lle);
@@ -363,7 +363,7 @@ The created plane
 **Example:**
 
 ```typescript
-import { getPlaneFromPointNormal } from "@navara/three_api";
+import { getPlaneFromPointNormal } from "@navaramap/three_api";
 import { Vector3 } from "three";
 
 const point = new Vector3(0, 0, 0);
@@ -398,7 +398,7 @@ The generated ray
 **Example:**
 
 ```typescript
-import { getPickRay } from "@navara/three_api";
+import { getPickRay } from "@navaramap/three_api";
 import { Vector2 } from "three";
 
 const screenPos = new Vector2(event.clientX, event.clientY);
@@ -431,7 +431,7 @@ import {
   getPickRay,
   getPlaneFromPointNormal,
   getRayPlaneIntersection,
-} from "@navara/three_api";
+} from "@navaramap/three_api";
 import { Vector2, Vector3 } from "three";
 
 // Generate a ray from the mouse position
@@ -474,7 +474,7 @@ Height above the ellipsoid (meters)
 **Example:**
 
 ```typescript
-import { getHeightFromEllipsoid } from "@navara/three_api";
+import { getHeightFromEllipsoid } from "@navaramap/three_api";
 import { Vector3 } from "three";
 
 const position = new Vector3(-3946416, 3364068, 3702654);
@@ -507,7 +507,7 @@ Normalized surface normal vector (Three.js Vector3)
 **Example:**
 
 ```typescript
-import { geodeticSurfaceNormal, degreeToRadian } from "@navara/three_api";
+import { geodeticSurfaceNormal, degreeToRadian } from "@navaramap/three_api";
 
 const lle = {
   lat: degreeToRadian(35.6762),
@@ -543,7 +543,7 @@ import {
   eastNorthUpToFixedFrame,
   geodeticToVector3,
   degreeToRadian,
-} from "@navara/three_api";
+} from "@navaramap/three_api";
 
 const tokyoLle = {
   lat: degreeToRadian(35.6762),
@@ -643,7 +643,7 @@ Object with `high` and `low` Vector3 components
 **Example:**
 
 ```typescript
-import { encodePositionRTE } from "@navara/three_api";
+import { encodePositionRTE } from "@navaramap/three_api";
 import { Vector3 } from "three";
 
 const position = new Vector3(6378137, 0, 0);
@@ -678,7 +678,7 @@ Model matrix for RTE (Three.js Matrix4)
 **Example:**
 
 ```typescript
-import { calcModelMatrixRTE } from "@navara/three_api";
+import { calcModelMatrixRTE } from "@navaramap/three_api";
 import { Matrix4 } from "three";
 
 const rteMatrix = calcModelMatrixRTE(
@@ -727,7 +727,7 @@ type EncodedPosition = {
 **Example:**
 
 ```typescript
-import { calcCameraPosition } from "@navara/three_api";
+import { calcCameraPosition } from "@navaramap/three_api";
 
 const encodedCameraPos = calcCameraPosition(camera.position, mesh.matrixWorld);
 
@@ -777,7 +777,7 @@ type ComposeWorldMatrixForRTEResult = {
 **Example:**
 
 ```typescript
-import { composeWorldMatrixForRTE, encodePositionRTE } from "@navara/three_api";
+import { composeWorldMatrixForRTE, encodePositionRTE } from "@navaramap/three_api";
 
 // Compose an NUE-to-ECEF frame with a local offset, then split for RTE
 const { position, rotationScale } = composeWorldMatrixForRTE(
@@ -818,7 +818,7 @@ constructor(start: LatLngHeight, end: LatLngHeight)
 **Example:**
 
 ```typescript
-import { EllipsoidGeodesic, degreeToRadian } from "@navara/three_api";
+import { EllipsoidGeodesic, degreeToRadian } from "@navaramap/three_api";
 
 const start = {
   lat: degreeToRadian(35.6762), // Tokyo
@@ -872,7 +872,7 @@ Azimuth at the start point (radians)
 **Example:**
 
 ```typescript
-import { radianToDegree } from "@navara/three_api";
+import { radianToDegree } from "@navaramap/three_api";
 
 const geodesic = new EllipsoidGeodesic(start, end);
 console.log(`Start heading: ${radianToDegree(geodesic.startHeading)}°`);
@@ -1012,7 +1012,7 @@ import {
   degreeToRadian,
   radianToDegree,
   geodeticToVector3,
-} from "@navara/three_api";
+} from "@navaramap/three_api";
 
 await initNavaraApi();
 
@@ -1088,23 +1088,23 @@ interface WindowObject {
 
 ## Usage Examples
 
-### Using the API from @navara/three
+### Using the API from @navaramap/three
 
-When using `@navara/three`, the `@navara/three_api` APIs are re-exported from `@navara/three`, so you can import them directly from there.
+When using `@navaramap/three`, the `@navaramap/three_api` APIs are re-exported from `@navaramap/three`, so you can import them directly from there.
 
 :::tip[Recommendation]
-When using `@navara/three`, it is recommended to import APIs from `@navara/three`. In this case, calling `initNavaraApi()` is not required (`ThreeView.init()` handles initialization internally).
+When using `@navaramap/three`, it is recommended to import APIs from `@navaramap/three`. In this case, calling `initNavaraApi()` is not required (`ThreeView.init()` handles initialization internally).
 :::
 
-An example of using the API from `@navara/three` to dynamically move a model around the globe:
+An example of using the API from `@navaramap/three` to dynamically move a model around the globe:
 
 ```typescript
 import ThreeView, {
   geodeticToVector3,
   degreeToRadian,
   geodeticSurfaceNormal,
-} from "@navara/three";
-import { GLTFModelDesc } from "@navara/three_default_descs";
+} from "@navaramap/three";
+import { GLTFModelDesc } from "@navaramap/three_default_descs";
 import { Vector3, Quaternion, Euler, Matrix4 } from "three";
 
 const view = new ThreeView({ container });
@@ -1187,8 +1187,8 @@ animate();
 ### Basic Coordinate Transformation
 
 :::note
-When using `@navara/three_api` directly, you must call `initNavaraApi()` before use.
-When using `@navara/three`, refer to the "Using the API from @navara/three" section above.
+When using `@navaramap/three_api` directly, you must call `initNavaraApi()` before use.
+When using `@navaramap/three`, refer to the "Using the API from @navaramap/three" section above.
 :::
 
 ```typescript
@@ -1198,7 +1198,7 @@ import {
   geodeticToVector3,
   vector3ToGeodetic,
   radianToDegree,
-} from "@navara/three_api";
+} from "@navaramap/three_api";
 
 // Initialize
 await initNavaraApi();
@@ -1228,7 +1228,7 @@ import {
   getPlaneFromPointNormal,
   getRayPlaneIntersection,
   getHeightFromEllipsoid,
-} from "@navara/three_api";
+} from "@navaramap/three_api";
 import { Vector2, Vector3 } from "three";
 
 // Mouse click event handler
@@ -1271,7 +1271,7 @@ import {
   geodeticToVector3,
   eastNorthUpToFixedFrame,
   degreeToRadian,
-} from "@navara/three_api";
+} from "@navaramap/three_api";
 import { Mesh, BoxGeometry, MeshBasicMaterial } from "three";
 
 // Tokyo location
@@ -1307,7 +1307,7 @@ import {
   convertWorldToScreen,
   geodeticToVector3,
   degreeToRadian,
-} from "@navara/three_api";
+} from "@navaramap/three_api";
 import { Vector2 } from "three";
 
 const windowObject = {

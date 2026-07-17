@@ -76,7 +76,7 @@ In addition to the properties below, the common properties from the base class (
 **Example:**
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 {
   glowGlobe: {
@@ -110,8 +110,8 @@ import { Color } from "@navara/three";
 ### Basic Usage
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
-import { GlowGlobeMeshDesc } from "@navara/three_default_descs";
+import ThreeView, { Color } from "@navaramap/three";
+import { GlowGlobeMeshDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 view.registerMesh("glowGlobe", GlowGlobeMeshDesc);
@@ -132,7 +132,7 @@ const glowDesc = view.addMesh<GlowGlobeMeshDesc>({
 ### Custom Color
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 const glowDesc = view.addMesh<GlowGlobeMeshDesc>({
   glowGlobe: {
@@ -148,7 +148,7 @@ const glowDesc = view.addMesh<GlowGlobeMeshDesc>({
 ### Subtle Atmospheric Effect
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 const glowDesc = view.addMesh<GlowGlobeMeshDesc>({
   glowGlobe: {

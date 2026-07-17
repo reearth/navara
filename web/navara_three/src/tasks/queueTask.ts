@@ -3,7 +3,7 @@ import {
   type ExecOptions,
   type TaskParams,
   type WorkerTask,
-} from "@navara/worker";
+} from "@navaramap/worker";
 
 import type { Tasks } from "../worker";
 

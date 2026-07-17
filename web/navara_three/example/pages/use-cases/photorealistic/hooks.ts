@@ -1,5 +1,5 @@
-import ThreeView from "@navara/three";
-import type { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView from "@navaramap/three";
+import type { DefaultPlugin } from "@navaramap/three_default_plugin";
 import { useEffect, useRef, useState } from "react";
 
 type DefaultLayers = ReturnType<DefaultPlugin["addDefaultPhotorealScene"]>;

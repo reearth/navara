@@ -1,4 +1,4 @@
-import { EventHandler, Observed, type XYZ } from "@navara/core";
+import { EventHandler, Observed, type XYZ } from "@navaramap/core";
 import {
   getECIToECEFRotationMatrix,
   getMoonDirectionECEF,

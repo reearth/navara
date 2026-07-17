@@ -30,7 +30,7 @@ async function initNavaraApi(): Promise<void>;
 **Example:**
 
 ```typescript
-import { initNavaraApi } from "@navara/three_api";
+import { initNavaraApi } from "@navaramap/three_api";
 
 // アプリケーション起動時に初期化
 await initNavaraApi();
@@ -152,7 +152,7 @@ ECEF 座標系での位置（Three.js Vector3）
 **Example:**
 
 ```typescript
-import { geodeticToVector3, degreeToRadian } from "@navara/three_api";
+import { geodeticToVector3, degreeToRadian } from "@navaramap/three_api";
 
 const lle = {
   lat: degreeToRadian(35.6762), // 東京の緯度
@@ -187,7 +187,7 @@ function vector3ToGeodetic(xyz: Vector3): LatLngHeight;
 **Example:**
 
 ```typescript
-import { vector3ToGeodetic, radianToDegree } from "@navara/three_api";
+import { vector3ToGeodetic, radianToDegree } from "@navaramap/three_api";
 import { Vector3 } from "three";
 
 const position = new Vector3(-3946416, 3364068, 3702654);
@@ -281,7 +281,7 @@ function convertScreenToWorld(
 **Example:**
 
 ```typescript
-import { convertScreenToWorld } from "@navara/three_api";
+import { convertScreenToWorld } from "@navaramap/three_api";
 import { Vector2 } from "three";
 
 // ウィンドウ情報オブジェクトを作成
@@ -326,7 +326,7 @@ function convertWorldToScreen(
 **Example:**
 
 ```typescript
-import { convertWorldToScreen, geodeticToVector3 } from "@navara/three_api";
+import { convertWorldToScreen, geodeticToVector3 } from "@navaramap/three_api";
 
 const lle = { lat: 0.622, lng: 2.435, height: 100 };
 const worldPos = geodeticToVector3(lle);
@@ -363,7 +363,7 @@ function getPlaneFromPointNormal(point: Vector3, normal: Vector3): Plane;
 **Example:**
 
 ```typescript
-import { getPlaneFromPointNormal } from "@navara/three_api";
+import { getPlaneFromPointNormal } from "@navaramap/three_api";
 import { Vector3 } from "three";
 
 const point = new Vector3(0, 0, 0);
@@ -398,7 +398,7 @@ function getPickRay(
 **Example:**
 
 ```typescript
-import { getPickRay } from "@navara/three_api";
+import { getPickRay } from "@navaramap/three_api";
 import { Vector2 } from "three";
 
 const screenPos = new Vector2(event.clientX, event.clientY);
@@ -431,7 +431,7 @@ import {
   getPickRay,
   getPlaneFromPointNormal,
   getRayPlaneIntersection,
-} from "@navara/three_api";
+} from "@navaramap/three_api";
 import { Vector2, Vector3 } from "three";
 
 // マウス位置からレイを生成
@@ -474,7 +474,7 @@ function getHeightFromEllipsoid(point: Vector3): number;
 **Example:**
 
 ```typescript
-import { getHeightFromEllipsoid } from "@navara/three_api";
+import { getHeightFromEllipsoid } from "@navaramap/three_api";
 import { Vector3 } from "three";
 
 const position = new Vector3(-3946416, 3364068, 3702654);
@@ -507,7 +507,7 @@ function geodeticSurfaceNormal(lle: LatLngHeight): Vector3;
 **Example:**
 
 ```typescript
-import { geodeticSurfaceNormal, degreeToRadian } from "@navara/three_api";
+import { geodeticSurfaceNormal, degreeToRadian } from "@navaramap/three_api";
 
 const lle = {
   lat: degreeToRadian(35.6762),
@@ -543,7 +543,7 @@ import {
   eastNorthUpToFixedFrame,
   geodeticToVector3,
   degreeToRadian,
-} from "@navara/three_api";
+} from "@navaramap/three_api";
 
 const tokyoLle = {
   lat: degreeToRadian(35.6762),
@@ -643,7 +643,7 @@ function encodePositionRTE(
 **Example:**
 
 ```typescript
-import { encodePositionRTE } from "@navara/three_api";
+import { encodePositionRTE } from "@navaramap/three_api";
 import { Vector3 } from "three";
 
 const position = new Vector3(6378137, 0, 0);
@@ -678,7 +678,7 @@ RTE 用のモデル行列（Three.js Matrix4）
 **Example:**
 
 ```typescript
-import { calcModelMatrixRTE } from "@navara/three_api";
+import { calcModelMatrixRTE } from "@navaramap/three_api";
 import { Matrix4 } from "three";
 
 const rteMatrix = calcModelMatrixRTE(
@@ -727,7 +727,7 @@ type EncodedPosition = {
 **Example:**
 
 ```typescript
-import { calcCameraPosition } from "@navara/three_api";
+import { calcCameraPosition } from "@navaramap/three_api";
 
 const encodedCameraPos = calcCameraPosition(camera.position, mesh.matrixWorld);
 
@@ -777,7 +777,7 @@ type ComposeWorldMatrixForRTEResult = {
 **Example:**
 
 ```typescript
-import { composeWorldMatrixForRTE, encodePositionRTE } from "@navara/three_api";
+import { composeWorldMatrixForRTE, encodePositionRTE } from "@navaramap/three_api";
 
 // NUE-to-ECEF フレームとローカルオフセットを合成し、RTE 用に分割
 const { position, rotationScale } = composeWorldMatrixForRTE(
@@ -818,7 +818,7 @@ constructor(start: LatLngHeight, end: LatLngHeight)
 **Example:**
 
 ```typescript
-import { EllipsoidGeodesic, degreeToRadian } from "@navara/three_api";
+import { EllipsoidGeodesic, degreeToRadian } from "@navaramap/three_api";
 
 const start = {
   lat: degreeToRadian(35.6762), // 東京
@@ -872,7 +872,7 @@ get startHeading(): number
 **Example:**
 
 ```typescript
-import { radianToDegree } from "@navara/three_api";
+import { radianToDegree } from "@navaramap/three_api";
 
 const geodesic = new EllipsoidGeodesic(start, end);
 console.log(`開始点方位角: ${radianToDegree(geodesic.startHeading)}°`);
@@ -1012,7 +1012,7 @@ import {
   degreeToRadian,
   radianToDegree,
   geodeticToVector3,
-} from "@navara/three_api";
+} from "@navaramap/three_api";
 
 await initNavaraApi();
 
@@ -1088,23 +1088,23 @@ interface WindowObject {
 
 ## Usage Examples
 
-### @navara/three から API を使用する場合
+### @navaramap/three から API を使用する場合
 
-`@navara/three` を使用する場合は、`@navara/three_api` の API が `@navara/three` から再エクスポートされているため、そちらから直接 import することができます。
+`@navaramap/three` を使用する場合は、`@navaramap/three_api` の API が `@navaramap/three` から再エクスポートされているため、そちらから直接 import することができます。
 
 :::tip[推奨]
-`@navara/three` を使用する場合は、`@navara/three` から API をインポートすることを推奨します。この場合、`initNavaraApi()` の呼び出しは不要です（`ThreeView.init()` が内部で初期化を行います）。
+`@navaramap/three` を使用する場合は、`@navaramap/three` から API をインポートすることを推奨します。この場合、`initNavaraApi()` の呼び出しは不要です（`ThreeView.init()` が内部で初期化を行います）。
 :::
 
-`@navara/three` から API を使用して、地球上でモデルを動的に移動させる例です：
+`@navaramap/three` から API を使用して、地球上でモデルを動的に移動させる例です：
 
 ```typescript
 import ThreeView, {
   geodeticToVector3,
   degreeToRadian,
   geodeticSurfaceNormal,
-} from "@navara/three";
-import { GLTFModelDesc } from "@navara/three_default_descs";
+} from "@navaramap/three";
+import { GLTFModelDesc } from "@navaramap/three_default_descs";
 import { Vector3, Quaternion, Euler, Matrix4 } from "three";
 
 const view = new ThreeView({ container });
@@ -1187,8 +1187,8 @@ animate();
 ### 基本的な座標変換
 
 :::note
-`@navara/three_api` を直接使用する場合は、使用前に `initNavaraApi()` を呼び出す必要があります。
-`@navara/three` を使用する場合は、上記の「@navara/three から API を使用する場合」のセクションを参照してください。
+`@navaramap/three_api` を直接使用する場合は、使用前に `initNavaraApi()` を呼び出す必要があります。
+`@navaramap/three` を使用する場合は、上記の「@navaramap/three から API を使用する場合」のセクションを参照してください。
 :::
 
 ```typescript
@@ -1198,7 +1198,7 @@ import {
   geodeticToVector3,
   vector3ToGeodetic,
   radianToDegree,
-} from "@navara/three_api";
+} from "@navaramap/three_api";
 
 // 初期化
 await initNavaraApi();
@@ -1228,7 +1228,7 @@ import {
   getPlaneFromPointNormal,
   getRayPlaneIntersection,
   getHeightFromEllipsoid,
-} from "@navara/three_api";
+} from "@navaramap/three_api";
 import { Vector2, Vector3 } from "three";
 
 // マウスクリックイベントハンドラ
@@ -1271,7 +1271,7 @@ import {
   geodeticToVector3,
   eastNorthUpToFixedFrame,
   degreeToRadian,
-} from "@navara/three_api";
+} from "@navaramap/three_api";
 import { Mesh, BoxGeometry, MeshBasicMaterial } from "three";
 
 // 東京の位置
@@ -1307,7 +1307,7 @@ import {
   convertWorldToScreen,
   geodeticToVector3,
   degreeToRadian,
-} from "@navara/three_api";
+} from "@navaramap/three_api";
 import { Vector2 } from "three";
 
 const windowObject = {

@@ -1,4 +1,4 @@
-import { Unimplemented } from "@navara/core";
+import { Unimplemented } from "@navaramap/core";
 import { Object3D, type Vector2 } from "three";
 
 /**

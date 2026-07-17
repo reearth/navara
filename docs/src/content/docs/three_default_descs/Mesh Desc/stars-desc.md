@@ -104,8 +104,8 @@ For details on the atmosphere system, see the [Atmosphere class](../../../three/
 ## Usage Examples
 
 ```typescript
-import ThreeView from "@navara/three";
-import { StarsDesc } from "@navara/three_default_descs";
+import ThreeView from "@navaramap/three";
+import { StarsDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 view.registerMesh("stars", StarsDesc);

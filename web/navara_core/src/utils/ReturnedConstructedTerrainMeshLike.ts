@@ -1,4 +1,4 @@
-import type { ReturnedConstructedTerrainMesh } from "@navara/engine";
+import type { ReturnedConstructedTerrainMesh } from "@navaramap/engine";
 
 import type { RemoveFreeRecursively } from "../types";
 

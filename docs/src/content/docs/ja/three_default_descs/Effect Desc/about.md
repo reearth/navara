@@ -8,7 +8,7 @@ sidebar:
 `EffectDesc`は、レンダリングパイプラインにポストプロセッシングエフェクトを適用するためのDescriptorタイプです。アンチエイリアシング、被写界深度、トーンマッピングなど、様々なビジュアルエフェクトを追加できます。
 
 :::note
-このページでは `@navara/three_default_descs` が提供するエフェクトを扱います。レンダリングパイプラインと密結合した一部のエフェクト（`SkyEnvMapEffectDesc` など）は `@navara/three` コアに含まれます。[Effect Descriptor（three コア）](../../../three/effect-desc/about/) を参照してください。
+このページでは `@navaramap/three_default_descs` が提供するエフェクトを扱います。レンダリングパイプラインと密結合した一部のエフェクト（`SkyEnvMapEffectDesc` など）は `@navaramap/three` コアに含まれます。[Effect Descriptor（three コア）](../../../three/effect-desc/about/) を参照してください。
 :::
 
 ## 利用可能なEffectDescタイプ
@@ -37,8 +37,8 @@ navara_threeでは、以下のEffectDescタイプが利用可能です:
 EffectDescは、Descriptorクラスを登録した後、`view.addEffect()`メソッドで追加します:
 
 ```typescript
-import ThreeView from "@navara/three";
-import { AerialPerspectiveEffectDesc } from "@navara/three_default_descs";
+import ThreeView from "@navaramap/three";
+import { AerialPerspectiveEffectDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 

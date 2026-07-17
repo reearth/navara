@@ -2,20 +2,23 @@ import {
   JAPAN_GSI_ELEVATION_DECODER,
   Color,
   type LayerDescription,
-} from "@navara/three";
-import type { RainMeshConfig, CloudsConfig } from "@navara/three_default_descs";
+} from "@navaramap/three";
+import type {
+  RainMeshConfig,
+  CloudsConfig,
+} from "@navaramap/three_default_descs";
 import type {
   DefaultPlugin,
   DefaultEffectDescription,
   DefaultLightDescription,
-} from "@navara/three_default_plugin";
+} from "@navaramap/three_default_plugin";
 import {
   Layer,
   MeshDesc,
   LightDesc,
   EffectDesc,
   useViewContext,
-} from "@navara/three_react";
+} from "@navaramap/three_react";
 import { useEffect, useMemo, type FC } from "react";
 import { SphericalHarmonics3, Vector2 } from "three";
 

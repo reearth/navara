@@ -1,4 +1,4 @@
-import { Unimplemented } from "@navara/core";
+import { Unimplemented } from "@navaramap/core";
 import {
   BufferAttribute,
   BufferGeometry,

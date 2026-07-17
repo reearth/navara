@@ -22,8 +22,8 @@ sidebar:
 大気遠近法（Aerial Perspective）は、距離に応じた空気感・霞の効果を付与します。`DefaultPlugin` を使うと、すべてのデフォルトDescriptorが登録され、`addDefaultPhotorealScene()` でフォトリアルなシーンを一括セットアップできます。
 
 ```typescript
-import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
+import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navaramap/three";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
 
 const plugin = new DefaultPlugin();
 const view = new ThreeView<DefaultDescriptions>({ shadow: true });
@@ -286,9 +286,9 @@ view.setCamera({
 以下は大気エフェクト、雨、水面マテリアルをすべて組み合わせた完全な例です。
 
 ```typescript
-import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import { type CloudsEffectDesc, type RainDropEffectDesc, type RainMeshDesc, type SnowMeshDesc, type SSREffectDesc, ToneMappingMode } from "@navara/three_default_descs";
-import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
+import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navaramap/three";
+import { type CloudsEffectDesc, type RainDropEffectDesc, type RainMeshDesc, type SnowMeshDesc, type SSREffectDesc, ToneMappingMode } from "@navaramap/three_default_descs";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
 
 const plugin = new DefaultPlugin();
 const view = new ThreeView<DefaultDescriptions>({

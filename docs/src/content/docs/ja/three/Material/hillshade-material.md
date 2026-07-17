@@ -32,7 +32,7 @@ DEM タイルをデコードするため、[`raster-dem`](../../../three/source/
 `raster-dem` の Source を参照して、平坦なベースマップの上に陰影起伏を追加します。デコーダは Source 側にあります。
 
 ```typescript
-import ThreeView, { TERRARIUM_ELEVATION_DECODER } from "@navara/three";
+import ThreeView, { TERRARIUM_ELEVATION_DECODER } from "@navaramap/three";
 
 const view = new ThreeView({ container: document.getElementById("map") });
 await view.init();

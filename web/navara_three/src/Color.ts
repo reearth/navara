@@ -1,4 +1,4 @@
-import { Color as CoreColor } from "@navara/core";
+import { Color as CoreColor } from "@navaramap/core";
 import { NoColorSpace, SRGBColorSpace, Color as ThreeColor } from "three";
 
 /**

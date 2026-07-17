@@ -52,8 +52,8 @@ Plugins operate in the following order:
 4. **Use** -- After initialization, the methods and descriptors provided by the plugin are available
 
 ```typescript
-import ThreeView from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView from "@navaramap/three";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
 
 // 1. Create a plugin instance
 const plugin = new DefaultPlugin();
@@ -78,8 +78,8 @@ const layers = plugin.addDefaultPhotorealScene();
 The `DefaultPlugin` provided by the [three_default_plugin](../../../three_default_plugin/about/) package is a plugin that bulk-registers all 40 Descriptors from [three_default_descs](../../../three_default_descs/about/) (22 mesh types, 14 effect types, 4 light types). For most projects, this alone is sufficient.
 
 ```typescript
-import ThreeView from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView from "@navaramap/three";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
 
 const plugin = new DefaultPlugin();
 const view = new ThreeView({});
@@ -102,7 +102,7 @@ The [three_plugins](../../../three_plugins/about/) package provides a collection
 - **OverlayPlugin** — Projects world coordinates to screen coordinates for HTML overlays
 
 ```typescript
-import { PersonViewPlugin, OverlayPlugin } from "@navara/three_plugins";
+import { PersonViewPlugin, OverlayPlugin } from "@navaramap/three_plugins";
 ```
 
 For details, see the [three_plugins documentation](../../../three_plugins/about/).

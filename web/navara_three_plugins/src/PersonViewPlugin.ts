@@ -10,9 +10,9 @@
  * ## Usage
  *
  * ```ts
- * import ThreeView from "@navara/three";
- * import { DefaultPlugin } from "@navara/three_default_plugin";
- * import { PersonViewPlugin } from "@navara/three_plugins";
+ * import ThreeView from "@navaramap/three";
+ * import { DefaultPlugin } from "@navaramap/three_default_plugin";
+ * import { PersonViewPlugin } from "@navaramap/three_plugins";
  *
  * const view = new ThreeView({ container, animation: true });
  * const defaultPlugin = new DefaultPlugin();
@@ -59,9 +59,9 @@ import ThreeView, {
   degreeToRadian,
   radianToDegree,
   type ViewContext,
-} from "@navara/three";
-import type { GLTFModelDesc } from "@navara/three_default_descs";
-import type { DefaultDescriptions } from "@navara/three_default_plugin";
+} from "@navaramap/three";
+import type { GLTFModelDesc } from "@navaramap/three_default_descs";
+import type { DefaultDescriptions } from "@navaramap/three_default_plugin";
 import { Vector3, Matrix4 } from "three";
 
 type View = ThreeView<DefaultDescriptions>;

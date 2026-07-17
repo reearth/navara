@@ -12,7 +12,7 @@ sidebar:
 `Color` クラスは、メソッドチェーンを使用して色を設定します。コンストラクタは引数を取らず、`setRGB()`、`setHex()`、`setStyle()` のいずれかのメソッドで色を設定します。
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 // RGB値で設定（各成分は 0.0〜1.0）
 const red = new Color().setRGB(1.0, 0.0, 0.0);
@@ -319,7 +319,7 @@ const srgbColor = linearColor.srgb();
 ### マテリアルでの使用
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
+import ThreeView, { Color } from "@navaramap/three";
 
 const view = new ThreeView();
 await view.init();
@@ -331,8 +331,8 @@ view.globe.color = new Color().setStyle("#1a1a2e");
 ### ライトでの使用
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
-import { SunLightDesc } from "@navara/three_default_descs";
+import ThreeView, { Color } from "@navaramap/three";
+import { SunLightDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -349,7 +349,7 @@ view.addLight<SunLightDesc>({
 ### ColorMap での使用
 
 ```typescript
-import { ColorMap, Color } from "@navara/three";
+import { ColorMap, Color } from "@navaramap/three";
 
 // ref: https://colorbrewer2.org/#type=sequential&scheme=YlGnBu&n=9
 const ylGnBu = new ColorMap("sequential", "YlGnBu", [

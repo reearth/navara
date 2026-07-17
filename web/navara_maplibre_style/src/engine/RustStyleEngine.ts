@@ -7,7 +7,7 @@
 
 import { validateStyleMin } from "@maplibre/maplibre-gl-style-spec";
 import type { StyleSpecification } from "@maplibre/maplibre-gl-style-spec";
-import { CompiledExpression, CompiledFilter } from "@navara/engine";
+import { CompiledExpression, CompiledFilter } from "@navaramap/engine";
 
 import { PAINT_SPECS_BY_TYPE } from "./paintSpecs";
 import type { StyleEngine } from "./StyleEngine";

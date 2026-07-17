@@ -1,4 +1,4 @@
-import { PolylineMesh as NavaraPolylineMesh } from "@navara/engine";
+import { PolylineMesh as NavaraPolylineMesh } from "@navaramap/engine";
 
 import { PolylineMesh } from "../../mesh";
 import type { EventContext } from "../context";

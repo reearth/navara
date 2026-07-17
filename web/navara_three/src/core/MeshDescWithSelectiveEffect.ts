@@ -1,4 +1,4 @@
-import type { BaseEventMap } from "@navara/core";
+import type { BaseEventMap } from "@navaramap/core";
 import { Mesh, type Object3D } from "three";
 
 import type ThreeView from "../index";

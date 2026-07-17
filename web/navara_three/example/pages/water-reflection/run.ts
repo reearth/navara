@@ -2,12 +2,12 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   Color,
   type LayerDescription,
-} from "@navara/three";
-import { SSREffectDesc } from "@navara/three_default_descs";
+} from "@navaramap/three";
+import { SSREffectDesc } from "@navaramap/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
+} from "@navaramap/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import {

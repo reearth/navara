@@ -1,4 +1,4 @@
-import { EventHandler, type BaseEventMap } from "@navara/core";
+import { EventHandler, type BaseEventMap } from "@navaramap/core";
 import {
   EffectPass,
   Effect as PostProcessingEffect,

@@ -20,7 +20,7 @@ A `geojson` source provides vector data from a GeoJSON document, either fetched 
 ## Examples
 
 ```typescript
-import ThreeView from "@navara/three";
+import ThreeView from "@navaramap/three";
 
 // From a URL
 const roads = view.addSource({

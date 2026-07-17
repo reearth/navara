@@ -1,9 +1,9 @@
-import { MapLibreStylePlugin } from "@navara/maplibre_style";
-import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
+import { MapLibreStylePlugin } from "@navaramap/maplibre_style";
+import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navaramap/three";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
+} from "@navaramap/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import { TILE_DATASETS, TERRAIN_DATASETS } from "../../helpers/constants";

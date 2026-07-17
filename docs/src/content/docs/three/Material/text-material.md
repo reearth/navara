@@ -20,7 +20,7 @@ sidebar:
 **Example:**
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 {
   text: {
@@ -40,7 +40,7 @@ import { Color } from "@navara/three";
 **Example:**
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 {
   text: {
@@ -114,7 +114,7 @@ import { Color } from "@navara/three";
 **Example:**
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 {
   text: {
@@ -303,7 +303,7 @@ view.addFontFamily({
 **Example:**
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 {
   text: {

@@ -1,9 +1,9 @@
-import { Unimplemented } from "@navara/core";
+import { Unimplemented } from "@navaramap/core";
 import {
   ModelMaterial as NavaraModelMaterial,
   ModelMesh as NavaraModelMesh,
   Vec3,
-} from "@navara/engine";
+} from "@navaramap/engine";
 import {
   BufferAttribute,
   BufferGeometry,

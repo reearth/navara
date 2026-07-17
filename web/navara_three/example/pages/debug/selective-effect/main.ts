@@ -1,5 +1,5 @@
-import ThreeView from "@navara/three";
-import type { DefaultDescriptions } from "@navara/three_default_plugin";
+import ThreeView from "@navaramap/three";
+import type { DefaultDescriptions } from "@navaramap/three_default_plugin";
 
 import { run } from "./run";
 

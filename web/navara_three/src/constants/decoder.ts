@@ -1,4 +1,4 @@
-import { ElevationDecoder } from "@navara/engine";
+import { ElevationDecoder } from "@navaramap/engine";
 
 // Evaluate them lazily because we need to wait until WASM module is ready.
 // If we can use top-level-await, we don't need to do it.

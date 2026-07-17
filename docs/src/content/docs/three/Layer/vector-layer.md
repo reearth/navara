@@ -32,7 +32,7 @@ Specify one or more, depending on the geometry types present:
 ### GeoJSON features
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
+import ThreeView, { Color } from "@navaramap/three";
 
 const view = new ThreeView(/* options */);
 await view.init();

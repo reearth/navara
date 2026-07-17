@@ -2,7 +2,7 @@
   "extends": "../tsconfig.common.json",
   "compilerOptions": {
     "paths": {
-      "@navara/core": ["../navara_core/src"]
+      "@navaramap/core": ["../navara_core/src"]
     }
   },
   "include": ["./src"]

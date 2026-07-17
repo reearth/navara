@@ -1,5 +1,5 @@
-import { ExtentRadianF32Like } from "@navara/core";
-import type { ParsedMvtTileResultLike, Promise } from "@navara/worker";
+import { ExtentRadianF32Like } from "@navaramap/core";
+import type { ParsedMvtTileResultLike, Promise } from "@navaramap/worker";
 
 import { queueTask } from "./queueTask";
 

@@ -1,4 +1,4 @@
-import ThreeView, { Plugin, type ViewContext } from "@navara/three";
+import ThreeView, { Plugin, type ViewContext } from "@navaramap/three";
 
 import { setupDebugViews } from "./debugView";
 

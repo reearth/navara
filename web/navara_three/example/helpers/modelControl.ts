@@ -6,8 +6,8 @@ import ThreeView, {
   radianToDegree,
   geodeticSurfaceNormal,
   eastNorthUpToFixedFrame,
-} from "@navara/three";
-import type { GLTFModelDesc } from "@navara/three_default_descs";
+} from "@navaramap/three";
+import type { GLTFModelDesc } from "@navaramap/three_default_descs";
 import { Vector3, Quaternion, Euler, Matrix4 } from "three";
 
 export type ModelControlParams = {

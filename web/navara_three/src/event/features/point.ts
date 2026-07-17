@@ -1,4 +1,4 @@
-import { PointMesh as NavaraPointMesh } from "@navara/engine";
+import { PointMesh as NavaraPointMesh } from "@navaramap/engine";
 
 import { InstancedSpriteMesh } from "../../mesh";
 import { FEATURE_RENDER_ORDER } from "../../renderOrder";

@@ -1,4 +1,4 @@
-import type { BaseEventMap, XYZ } from "@navara/core";
+import type { BaseEventMap, XYZ } from "@navaramap/core";
 import { Euler, Matrix4, Object3D, Vector3 } from "three";
 import invariant from "tiny-invariant";
 

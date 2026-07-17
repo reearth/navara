@@ -115,7 +115,7 @@ const terrainHandle = view.addLayer({
 - **使用前に Descriptor クラスの登録が必要**（`registerMesh`, `registerEffect`, `registerLight`）
 
 ```typescript
-import { BoxMeshDesc, FXAAEffectDesc, SunLightDesc } from "@navara/three_default_descs";
+import { BoxMeshDesc, FXAAEffectDesc, SunLightDesc } from "@navaramap/three_default_descs";
 
 // Register descriptor classes (required before addMesh/addEffect/addLight)
 view.registerMesh("box", BoxMeshDesc);

@@ -1,7 +1,7 @@
 import type {
   PolylineInternalMaterial,
   PolylineMaterial,
-} from "@navara/engine";
+} from "@navaramap/engine";
 
 export class PolylineMaterialLike {
   clampToGround?: boolean;

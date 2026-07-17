@@ -1,4 +1,4 @@
-import type { Core } from "@navara/engine";
+import type { Core } from "@navaramap/engine";
 
 import type { SourceDescription } from "./type";
 

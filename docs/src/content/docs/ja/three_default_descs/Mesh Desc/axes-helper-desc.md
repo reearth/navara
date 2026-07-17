@@ -30,8 +30,8 @@ sidebar:
 ## 使用例
 
 ```typescript
-import ThreeView from "@navara/three";
-import { AxesHelperDesc } from "@navara/three_default_descs";
+import ThreeView from "@navaramap/three";
+import { AxesHelperDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 view.registerMesh("axesHelper", AxesHelperDesc);

@@ -1,4 +1,4 @@
-import type ThreeView from "@navara/three";
+import type ThreeView from "@navaramap/three";
 import {
   Color,
   MeshDesc,
@@ -7,7 +7,7 @@ import {
   type MeshUpdate,
   getWGS84SemiMajorAxis,
   getWGS84Flattening,
-} from "@navara/three";
+} from "@navaramap/three";
 import GlowGlobeFS from "@shaders/glsl/glowGlobe.frag.glsl";
 import GlowGlobeVS from "@shaders/glsl/glowGlobe.vert.glsl";
 import { BackSide, Mesh, ShaderMaterial, SphereGeometry, Vector4 } from "three";

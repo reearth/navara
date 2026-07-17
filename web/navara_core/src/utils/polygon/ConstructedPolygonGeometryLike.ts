@@ -1,4 +1,4 @@
-import type { ConstructedPolygonGeometry } from "@navara/engine";
+import type { ConstructedPolygonGeometry } from "@navaramap/engine";
 
 import { ExtentRadianF32Like } from "../ExtentRadianF32Like";
 import { Vec3Like } from "../Vec3Like";

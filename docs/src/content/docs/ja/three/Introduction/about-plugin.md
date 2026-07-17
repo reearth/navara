@@ -52,8 +52,8 @@ navara_three はできるだけ汎用性の高いモジュールであること�
 4. **利用** — 初期化後、プラグインが提供するメソッドや Descriptor を利用可能
 
 ```typescript
-import ThreeView from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView from "@navaramap/three";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
 
 // 1. プラグインインスタンスを作成
 const plugin = new DefaultPlugin();
@@ -78,8 +78,8 @@ const layers = plugin.addDefaultPhotorealScene();
 [three_default_plugin](../../../three_default_plugin/about/) パッケージが提供する `DefaultPlugin` は、[three_default_descs](../../../three_default_descs/about/) の全 40 Descriptor（メッシュ 22 種、エフェクト 14 種、ライト 4 種）を一括登録するプラグインです。ほとんどのプロジェクトではこれだけで十分です。
 
 ```typescript
-import ThreeView from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView from "@navaramap/three";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
 
 const plugin = new DefaultPlugin();
 const view = new ThreeView({});
@@ -102,7 +102,7 @@ view.addEffect({ toneMapping: {} });
 - **OverlayPlugin** — ワールド座標からスクリーン座標への HTML オーバーレイ投影
 
 ```typescript
-import { PersonViewPlugin, OverlayPlugin } from "@navara/three_plugins";
+import { PersonViewPlugin, OverlayPlugin } from "@navaramap/three_plugins";
 ```
 
 詳細は [three_plugins のドキュメント](../../../three_plugins/about/) を参照してください。

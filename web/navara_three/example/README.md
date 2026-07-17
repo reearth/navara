@@ -1,6 +1,6 @@
 # Navara Three — Examples
 
-This folder contains the WebGL examples for `@navara/three`. Each subfolder in `pages/` is an example that is built as its own page by Vite's multi‑page setup. The index page lists all examples grouped by category and shows a thumbnail for each one.
+This folder contains the WebGL examples for `@navaramap/three`. Each subfolder in `pages/` is an example that is built as its own page by Vite's multi‑page setup. The index page lists all examples grouped by category and shows a thumbnail for each one.
 
 ## Directory Structure
 
@@ -56,7 +56,7 @@ mkdir -p web/navara_three/example/pages/<example-name>
 Create a `main.ts` file in your example directory. Here's a minimal template:
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
+import ThreeView, { Color } from "@navaramap/three";
 import { Pane } from "tweakpane";
 
 const run = async () => {
@@ -108,7 +108,7 @@ run();
 ```bash
 cargo make dev
 # or
-pnpm --filter @navara/three dev
+pnpm --filter @navaramap/three dev
 ```
 
 Your example is now available at:
@@ -300,7 +300,7 @@ The repository contains a shadcn CLI configuration at `web/navara_three/componen
 2. Use the shadcn CLI to add components (writes into `example/components/ui` via the alias):
    - Add specific components: `npx shadcn@latest add button card input label separator`
    - Add another component later: `npx shadcn@latest add textarea`
-3. Re-run the dev server if needed: `pnpm --filter @navara/three dev` or `pnpm --filter @navara/three build:example`.
+3. Re-run the dev server if needed: `pnpm --filter @navaramap/three dev` or `pnpm --filter @navaramap/three build:example`.
 
 Notes:
 
@@ -319,6 +319,6 @@ If you prefer MCP, add the shadcn MCP server config manually following [shadcn d
 ### What these components are (and aren’t)
 
 - They are example‑only UI primitives used to build the example pages quickly.
-- They are not exported by `@navara/three` and won’t ship in the library build.
+- They are not exported by `@navaramap/three` and won’t ship in the library build.
 
 [shadcn/ui]: https://ui.shadcn.com

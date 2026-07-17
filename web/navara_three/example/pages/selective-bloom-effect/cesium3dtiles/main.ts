@@ -1,8 +1,11 @@
-import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
+import ThreeView, {
+  Color,
+  JAPAN_GSI_ELEVATION_DECODER,
+} from "@navaramap/three";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
+} from "@navaramap/three_default_plugin";
 
 import {
   TERRAIN_DATASETS,

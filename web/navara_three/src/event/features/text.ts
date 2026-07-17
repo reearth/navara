@@ -1,4 +1,4 @@
-import { type TextMesh as NavaraTextMesh } from "@navara/engine";
+import { type TextMesh as NavaraTextMesh } from "@navaramap/engine";
 
 import { BatchedSdfTextMesh } from "../../mesh";
 import { FEATURE_RENDER_ORDER } from "../../renderOrder";

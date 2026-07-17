@@ -22,7 +22,7 @@ sidebar:
 [`addSource`](../../../three/api/threeview-functions/) で Source を登録します。これは `Source` ハンドルを返します。
 
 ```typescript
-import ThreeView from "@navara/three";
+import ThreeView from "@navaramap/three";
 
 const imagery = view.addSource({
   type: "raster-tile",

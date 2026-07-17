@@ -56,8 +56,8 @@ import ThreeView, {
   geodeticToVector3,
   eastNorthUpToFixedFrame,
   degreeToRadian,
-} from "@navara/three";
-import { BoxMeshDesc } from "@navara/three_default_descs";
+} from "@navaramap/three";
+import { BoxMeshDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 view.registerMesh("box", BoxMeshDesc);
@@ -97,8 +97,8 @@ const box2 = view.addMesh<BoxMeshDesc>({
 ### 基本的な使い方
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
-import { BoxMeshDesc } from "@navara/three_default_descs";
+import ThreeView, { Color } from "@navaramap/three";
+import { BoxMeshDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView({ picking: true });
 view.registerMesh("box", BoxMeshDesc);
@@ -173,8 +173,8 @@ import ThreeView, {
   Color,
   geodeticToVector3,
   degreeToRadian,
-} from "@navara/three";
-import { SphereMeshDesc } from "@navara/three_default_descs";
+} from "@navaramap/three";
+import { SphereMeshDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 view.registerMesh("sphere", SphereMeshDesc);
@@ -205,7 +205,7 @@ const sphereDesc = view.addMesh<SphereMeshDesc>({
 
 `position` プロパティはデフォルトで直交座標系（ECEF）です。そのため、単に `position` を指定しただけでは、指定した経度・緯度でメッシュが正しく上向きに立ちません。地理的に配置するには、原点でのローカル接線フレームを計算して `matrixWorld` に渡します。すると `position`/`rotation`/`scale` はそのフレーム内のオフセットとして解釈されます。
 
-メッシュが想定する軸の向きに合わせてフレーム関数を選びます。いずれも ECEF 原点（`Vector3`）を受け取り `Matrix4` を返し、すべて `@navara/three` からエクスポートされています:
+メッシュが想定する軸の向きに合わせてフレーム関数を選びます。いずれも ECEF 原点（`Vector3`）を受け取り `Matrix4` を返し、すべて `@navaramap/three` からエクスポートされています:
 
 | 関数 | ローカル軸 (x, y, z) |
 | ------ | ------ |
@@ -221,8 +221,8 @@ import {
   geodeticToVector3,
   eastNorthUpToFixedFrame,
   degreeToRadian,
-} from "@navara/three";
-import { GLTFModelDesc } from "@navara/three_default_descs";
+} from "@navaramap/three";
+import { GLTFModelDesc } from "@navaramap/three_default_descs";
 
 // GLTFModelDesc が登録済みであること
 

@@ -130,7 +130,7 @@ In addition to the properties below, all common properties from the base class (
 **Example:**
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 {
   box: {
@@ -157,7 +157,7 @@ import { Color } from "@navara/three";
 **Example:**
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 {
   box: {
@@ -279,8 +279,8 @@ import { Color } from "@navara/three";
 ### Basic Usage
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
-import { BoxMeshDesc } from "@navara/three_default_descs";
+import ThreeView, { Color } from "@navaramap/three";
+import { BoxMeshDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 view.registerMesh("box", BoxMeshDesc);
@@ -301,8 +301,8 @@ const boxDesc = view.addMesh<BoxMeshDesc>({
 ### Box with Shadows
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
-import { BoxMeshDesc } from "@navara/three_default_descs";
+import ThreeView, { Color } from "@navaramap/three";
+import { BoxMeshDesc } from "@navaramap/three_default_descs";
 
 const boxDesc = view.addMesh<BoxMeshDesc>({
   box: {
@@ -320,8 +320,8 @@ const boxDesc = view.addMesh<BoxMeshDesc>({
 ### Semi-transparent Box
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
-import { BoxMeshDesc } from "@navara/three_default_descs";
+import ThreeView, { Color } from "@navaramap/three";
+import { BoxMeshDesc } from "@navaramap/three_default_descs";
 
 const boxDesc = view.addMesh<BoxMeshDesc>({
   box: {

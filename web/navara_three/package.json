@@ -1,8 +1,7 @@
 {
-  "name": "@navara/three",
+  "name": "@navaramap/three",
   "type": "module",
   "version": "0.0.0",
-  "private": true,
   "main": "dist/index.umd.cjs",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -28,18 +27,26 @@
     "screenshots": "tsx scripts/generate-screenshots.ts"
   },
   "license": "MIT OR Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eukarya-inc/navara.git",
+    "directory": "web/navara_three"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "peerDependencies": {
     "postprocessing": ">=6.38.0",
     "three": ">=0.183.0"
   },
   "dependencies": {
-    "@navara/core": "workspace:*",
-    "@navara/engine": "workspace:*",
-    "@navara/engine-api": "workspace:*",
-    "@navara/font": "workspace:*",
-    "@navara/three_api": "workspace:*",
-    "@navara/three_csm": "workspace:*",
-    "@navara/worker": "workspace:*",
+    "@navaramap/core": "workspace:*",
+    "@navaramap/engine": "workspace:*",
+    "@navaramap/engine-api": "workspace:*",
+    "@navaramap/font": "workspace:*",
+    "@navaramap/three_api": "workspace:*",
+    "@navaramap/three_csm": "workspace:*",
+    "@navaramap/worker": "workspace:*",
     "@takram/three-atmosphere": "0.19.1",
     "@takram/three-clouds": "0.7.6",
     "@takram/three-geospatial": "0.9.1",
@@ -49,10 +56,10 @@
     "three-stdlib": "2.36.1"
   },
   "devDependencies": {
-    "@navara/three_default_descs": "workspace:*",
-    "@navara/three_default_plugin": "workspace:*",
-    "@navara/three_plugins": "workspace:*",
-    "@navara/three_react": "workspace:*",
+    "@navaramap/three_default_descs": "workspace:*",
+    "@navaramap/three_default_plugin": "workspace:*",
+    "@navaramap/three_plugins": "workspace:*",
+    "@navaramap/three_react": "workspace:*",
     "@playwright/test": "1.59.1",
     "@radix-ui/react-collapsible": "1.1.12",
     "@radix-ui/react-label": "2.1.8",

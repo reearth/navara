@@ -1,13 +1,13 @@
-import ThreeView, { type AttributionSource } from "@navara/three";
+import ThreeView, { type AttributionSource } from "@navaramap/three";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
+} from "@navaramap/three_default_plugin";
 import {
   PersonViewPlugin,
   OverlayPlugin,
   moveOverlayElement,
-} from "@navara/three_plugins";
+} from "@navaramap/three_plugins";
 
 import { LOCAL_DATASETS, TILES_3D_DATASETS } from "../../../helpers/constants";
 import { atZoneTime } from "../../../helpers/control";

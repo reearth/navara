@@ -1,4 +1,4 @@
-import type { BaseEventMap, XYZ } from "@navara/core";
+import type { BaseEventMap, XYZ } from "@navaramap/core";
 import {
   BufferGeometry,
   Color as ThreeColor,

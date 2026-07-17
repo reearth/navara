@@ -10,7 +10,7 @@ import {
   type LightConfig,
   type EffectConfig,
   type BuiltInEffectDescription,
-} from "@navara/three";
+} from "@navaramap/three";
 import { useCallback, useEffect, useRef, type PropsWithChildren } from "react";
 
 import { useViewContext } from "./ViewContext";

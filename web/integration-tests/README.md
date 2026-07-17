@@ -15,8 +15,8 @@ These integration tests help catch issues that only appear when consuming the li
 
 ```
 integration-tests/
-├── navara-three              # Integration test for @navara/three
-└── navara-three-react        # Integration test for @navara/three_react
+├── navara-three              # Integration test for @navaramap/three
+└── navara-three-react        # Integration test for @navaramap/three_react
 ```
 
 ## Prerequisites
@@ -67,7 +67,7 @@ pnpm preview
 
 ## Adding New Integration Tests
 
-To add a new integration test (e.g., for a future `@navara/babylon` package):
+To add a new integration test (e.g., for a future `@navaramap/babylon` package):
 
 1. Create a new directory under `integration-tests/`:
    ```
@@ -77,12 +77,12 @@ To add a new integration test (e.g., for a future `@navara/babylon` package):
 2. Add a `package.json` with the package as a dependency:
    ```json
    {
-     "name": "@navara/integration-test-babylon",
+     "name": "@navaramap/integration-test-babylon",
      "dependencies": {
-       "@navara/babylon": "workspace:*",
-       "@navara/engine": "workspace:*",
-       "@navara/engine-api": "workspace:*",
-       "@navara/engine-worker": "workspace:*"
+       "@navaramap/babylon": "workspace:*",
+       "@navaramap/engine": "workspace:*",
+       "@navaramap/engine-api": "workspace:*",
+       "@navaramap/engine-worker": "workspace:*"
      }
    }
    ```

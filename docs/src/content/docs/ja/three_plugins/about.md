@@ -33,7 +33,7 @@ import {
   CesiumIonPlugin,
   TileJsonPlugin,
   moveOverlayElement,
-} from "@navara/three_plugins";
+} from "@navaramap/three_plugins";
 ```
 
 ## 提供プラグイン
@@ -59,9 +59,9 @@ TileJSON 3.0.0 ドキュメントを取得し、`addSource()` を通じて単一
 すべてのプラグインは標準的なプラグインのライフサイクルに従います。インスタンスを作成し、`view.init()` の前に `view.addPlugin()` で登録し、初期化後にプラグイン固有のメソッドを使用します。
 
 ```typescript
-import ThreeView from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
-import { PersonViewPlugin, OverlayPlugin } from "@navara/three_plugins";
+import ThreeView from "@navaramap/three";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { PersonViewPlugin, OverlayPlugin } from "@navaramap/three_plugins";
 
 const view = new ThreeView({ container, animation: true });
 

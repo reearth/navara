@@ -40,8 +40,8 @@ npm install
 次に、`src/main.ts` を開くと、以下のようになっています。
 
 ```typescript
-import ThreeView from "@navara/three";
-import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
+import ThreeView from "@navaramap/three";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
 
 // ThreeView インスタンスを作成
 const plugin = new DefaultPlugin();
@@ -126,8 +126,8 @@ OpenStreetMap のラスタタイルを使用して地図レイヤーを追加し
 ### 完全なコード
 
 ```typescript
-import ThreeView from "@navara/three";
-import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
+import ThreeView from "@navaramap/three";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
 
 // ThreeView インスタンスを作成
 const plugin = new DefaultPlugin();
@@ -184,8 +184,8 @@ view.setCamera({
 ### 完全なコード
 
 ```typescript
-import ThreeView from "@navara/three";
-import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
+import ThreeView from "@navaramap/three";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
 
 // ThreeView インスタンスを作成
 const plugin = new DefaultPlugin();
@@ -232,7 +232,7 @@ view.setCamera({
 まずは、地形タイルをデコードするために JAPAN_GSI_ELEVATION_DECODER をインポートします。
 
 ```typescript
-import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
+import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navaramap/three";
 ```
 
 ラスタタイルレイヤーの**前**に地形レイヤーを追加してください（レイヤーは追加順に描画されます）：
@@ -308,8 +308,8 @@ terrain: {
 ### 完全なコード
 
 ```typescript
-import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
+import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navaramap/three";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
 
 // ThreeView インスタンスを作成
 const plugin = new DefaultPlugin();
@@ -429,8 +429,8 @@ view.addLayer({
 すべてを組み合わせた完全な例：
 
 ```typescript
-import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
+import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navaramap/three";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
 
 const plugin = new DefaultPlugin();
 const view = new ThreeView<DefaultDescriptions>({});

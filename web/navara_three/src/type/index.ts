@@ -1,4 +1,4 @@
-import type { NormalizeWASMClass, TileHandle } from "@navara/core";
+import type { NormalizeWASMClass, TileHandle } from "@navaramap/core";
 import type {
   B3dmLayerDescription,
   PntsLayerDescription,
@@ -18,8 +18,8 @@ import type {
   QuantizedMeshSourceDescription,
   Tiles3dSourceDescription,
   SourceDescription as SourceDescriptionImpl,
-} from "@navara/engine";
-import type { Promise as WorkerPoolPromise } from "@navara/worker";
+} from "@navaramap/engine";
+import type { Promise as WorkerPoolPromise } from "@navaramap/worker";
 import type { Feature, FeatureCollection, Geometry } from "geojson";
 import type { Mesh, Sprite, Object3D } from "three";
 
@@ -34,7 +34,7 @@ import type {
 import type { TileMesh } from "../mesh";
 import type { Source } from "../source";
 
-export type { Promise as WorkerPoolPromise } from "@navara/worker";
+export type { Promise as WorkerPoolPromise } from "@navaramap/worker";
 
 export type Descriptions = {
   mesh?: object;

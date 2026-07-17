@@ -1,4 +1,4 @@
-import { EventHandler } from "@navara/core";
+import { EventHandler } from "@navaramap/core";
 import { AmbientLight as AmbientLightImpl, Color } from "three";
 
 export type AmbientLightEvents = {

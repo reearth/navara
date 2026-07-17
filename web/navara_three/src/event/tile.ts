@@ -1,5 +1,5 @@
-import { generate_id_from_entity } from "@navara/core";
-import { type MeshAdded, MeshChanged } from "@navara/engine";
+import { generate_id_from_entity } from "@navaramap/core";
+import { type MeshAdded, MeshChanged } from "@navaramap/engine";
 
 import { TileMesh } from "../mesh";
 

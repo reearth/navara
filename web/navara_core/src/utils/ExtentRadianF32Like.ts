@@ -1,4 +1,4 @@
-import type { ExtentRadianF32 } from "@navara/engine";
+import type { ExtentRadianF32 } from "@navaramap/engine";
 
 import type { RemoveFreeRecursively } from "../types";
 

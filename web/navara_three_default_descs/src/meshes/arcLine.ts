@@ -1,4 +1,4 @@
-import type { LatLng } from "@navara/three";
+import type { LatLng } from "@navaramap/three";
 import {
   Color,
   setupMaterialForMRT,
@@ -8,7 +8,7 @@ import {
   geodeticToVector3,
   degreeToRadian,
   encodePositionRTE,
-} from "@navara/three";
+} from "@navaramap/three";
 import ArclineFragShader from "@shaders/glsl/arcLine.frag.glsl";
 import ArclineVertShader from "@shaders/glsl/arcLine.vert.glsl";
 import {

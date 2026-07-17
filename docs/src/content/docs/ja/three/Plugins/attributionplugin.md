@@ -20,7 +20,7 @@ sidebar:
 ## 使い方
 
 ```typescript
-import ThreeView from "@navara/three";
+import ThreeView from "@navaramap/three";
 
 // アトリビューション UI は ThreeView がデフォルトで生成します。
 // view.attribution からアクセスします。
@@ -108,7 +108,7 @@ new ThreeView({
 
 `view.attribution` が `undefined` になるのは `defaultAttribution: false` で無効化したとき、または worker / DOM なし環境です（組み込みプラグインは DOM を必要とします）。`position` は ⓘ ボタンとポップオーバーのカードを置く下部の角を選びます（デフォルト `"bottom-right"`）。右下がページ独自の HUD などで埋まっている場合は `"bottom-left"` を使ってください。ロゴフレームはどちらの位置設定でも左下エリアに置かれます。`"bottom-left"` では ⓘ ボタンが左端に置かれ、ロゴフレームはその右に移動します。`style` は初期の色を設定します（[AttributionStyle](#attributionstyle) を参照）。
 
-**上級者向け:** `AttributionPlugin` は `@navara/three` からも export されており、手動で生成（`new AttributionPlugin({ style?, position? })`）して `view.init()` の**前に** `view.addPlugin()` で登録することもできます（例: `defaultAttribution: false` で生成した view に付ける場合）。
+**上級者向け:** `AttributionPlugin` は `@navaramap/three` からも export されており、手動で生成（`new AttributionPlugin({ style?, position? })`）して `view.init()` の**前に** `view.addPlugin()` で登録することもできます（例: `defaultAttribution: false` で生成した view に付ける場合）。
 
 ## メソッド
 

@@ -8,7 +8,7 @@ sidebar:
 `EffectDesc` is a descriptor type for applying post-processing effects to the rendering pipeline. You can add various visual effects such as anti-aliasing, depth of field, tone mapping, and more.
 
 :::note
-This page covers the effects provided by `@navara/three_default_descs`. A few effects that are tightly coupled to the rendering pipeline (e.g. `SkyEnvMapEffectDesc`) live in `@navara/three` core instead — see [Effect Descriptor (three core)](../../../three/effect-desc/about/).
+This page covers the effects provided by `@navaramap/three_default_descs`. A few effects that are tightly coupled to the rendering pipeline (e.g. `SkyEnvMapEffectDesc`) live in `@navaramap/three` core instead — see [Effect Descriptor (three core)](../../../three/effect-desc/about/).
 :::
 
 ## Available EffectDescriptor Types
@@ -37,8 +37,8 @@ The following EffectDescriptor types are available in navara_three:
 Effect Descriptors are added by registering the descriptor class and then calling the `view.addEffect()` method:
 
 ```typescript
-import ThreeView from "@navara/three";
-import { AerialPerspectiveEffectDesc } from "@navara/three_default_descs";
+import ThreeView from "@navaramap/three";
+import { AerialPerspectiveEffectDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 

@@ -191,8 +191,8 @@ sidebar:
 ### 基本的なフォグライトエフェクトの追加
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
-import { FogLightEffectDesc } from "@navara/three_default_descs";
+import ThreeView, { Color } from "@navaramap/three";
+import { FogLightEffectDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -217,8 +217,8 @@ view.addEffect<FogLightEffectDesc>({
 ### 夜間シーンでの街灯エフェクト
 
 ```typescript
-import ThreeView, { Color, type LayerDescription } from "@navara/three";
-import { FogLightEffectDesc } from "@navara/three_default_descs";
+import ThreeView, { Color, type LayerDescription } from "@navaramap/three";
+import { FogLightEffectDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -247,8 +247,8 @@ view.addEffect<FogLightEffectDesc>(fogEffectDesc);
 ### 動的にライトを追加するシーン
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
-import { FogLightEffectDesc, type FogLightDefinition } from "@navara/three_default_descs";
+import ThreeView, { Color } from "@navaramap/three";
+import { FogLightEffectDesc, type FogLightDefinition } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -288,8 +288,8 @@ function addLight(x: number, y: number, z: number) {
 ### 夜間のみ表示するフォグライト
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
-import { FogLightEffectDesc } from "@navara/three_default_descs";
+import ThreeView, { Color } from "@navaramap/three";
+import { FogLightEffectDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 await view.init();

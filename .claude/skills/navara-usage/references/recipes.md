@@ -18,9 +18,9 @@ Proven combinations that get from zero to a high-quality scene. Prefer starting 
 | `AttributionPlugin` | Required data credits for the above |
 
 ```typescript
-import ThreeView from "@navara/three";
-import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
-import { AttributionPlugin } from "@navara/three_plugins";
+import ThreeView from "@navaramap/three";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
+import { AttributionPlugin } from "@navaramap/three_plugins";
 
 const view = new ThreeView<DefaultDescriptions>({ shadow: true });
 const defaultPlugin = new DefaultPlugin();

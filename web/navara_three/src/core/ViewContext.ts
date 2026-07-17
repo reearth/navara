@@ -1,6 +1,6 @@
-import { EventHandler } from "@navara/core";
-import type { Core } from "@navara/engine";
-import type { ConcurrencyManager } from "@navara/worker";
+import { EventHandler } from "@navaramap/core";
+import type { Core } from "@navaramap/engine";
+import type { ConcurrencyManager } from "@navaramap/worker";
 import type { Pass as PostProcessingPass } from "postprocessing";
 import type { Material, Object3D, WebGLRenderer } from "three";
 import invariant from "tiny-invariant";

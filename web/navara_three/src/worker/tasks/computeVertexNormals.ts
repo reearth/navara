@@ -1,4 +1,4 @@
-import { transfer } from "@navara/worker";
+import { transfer } from "@navaramap/worker";
 
 import {
   fromBufferGeometryLike,

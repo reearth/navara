@@ -1,7 +1,7 @@
 import type {
   ElevationDecoder,
   TransferableRasterDEMData,
-} from "@navara/engine";
+} from "@navaramap/engine";
 
 import type { RemoveFreeRecursively } from "../types";
 

@@ -1,10 +1,10 @@
-import type ThreeView from "@navara/three";
+import type ThreeView from "@navaramap/three";
 import {
   LightDesc,
   type LightConfig,
   type ViewContext,
   type LightUpdate,
-} from "@navara/three";
+} from "@navaramap/three";
 
 import { SkyLightProbe, type SkyLightProbeOptions } from "./skyLightProbe";
 

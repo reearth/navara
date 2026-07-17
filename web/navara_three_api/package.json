@@ -1,8 +1,7 @@
 {
-  "name": "@navara/three_api",
+  "name": "@navaramap/three_api",
   "type": "module",
   "version": "0.0.0",
-  "private": true,
   "main": "dist/index.umd.cjs",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -22,12 +21,20 @@
     "format:check": "prettier --check --ignore-path ../../.gitignore --ignore-path ../../.prettierignore ."
   },
   "license": "MIT OR Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eukarya-inc/navara.git",
+    "directory": "web/navara_three_api"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "peerDependencies": {
     "three": ">=0.183.0"
   },
   "dependencies": {
-    "@navara/core": "workspace:*",
-    "@navara/engine-api": "workspace:*"
+    "@navaramap/core": "workspace:*",
+    "@navaramap/engine-api": "workspace:*"
   },
   "devDependencies": {
     "@types/three": "0.184.0",

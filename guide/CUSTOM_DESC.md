@@ -4,7 +4,7 @@ This document explains the plugin system and custom descriptor architecture in N
 
 ## Motivation
 
-Rendering descriptors (meshes, lights, effects) are purely Three.js constructs with no dependency on the GIS engine or WASM modules. Keeping them separate from `@navara/three` ensures that:
+Rendering descriptors (meshes, lights, effects) are purely Three.js constructs with no dependency on the GIS engine or WASM modules. Keeping them separate from `@navaramap/three` ensures that:
 
 - **The core stays focused** on bridging the GIS engine to Three.js, without being inflated by rendering-only implementations.
 - **GIS and rendering concerns stay decoupled** — GIS-driven descriptors (tiles, vector features) and rendering-only descriptors (decorative meshes, atmospheric effects, lights) have a clear boundary.
@@ -24,7 +24,7 @@ All three are available to plugins, giving external packages the same capabiliti
 
 ## Plugin System
 
-### Plugin base class (`@navara/core`)
+### Plugin base class (`@navaramap/core`)
 
 A minimal `Plugin` base class that any package can extend:
 
@@ -34,7 +34,7 @@ export class Plugin {
 }
 ```
 
-### Plugin lifecycle (`@navara/three`)
+### Plugin lifecycle (`@navaramap/three`)
 
 Plugins are registered before initialization and initialized during `view.init()`:
 
@@ -43,7 +43,7 @@ view.addPlugin(plugin);   // Register before init()
 await view.init();        // Calls plugin.init(view) for each registered plugin
 ```
 
-Light, effect, and mesh descriptors are registered through the plugin system (e.g., `@navara/three_default_plugin`). Core effect descriptors (MRT, selective effects, final copy) are registered by `@navara/three` itself.
+Light, effect, and mesh descriptors are registered through the plugin system (e.g., `@navaramap/three_default_plugin`). Core effect descriptors (MRT, selective effects, final copy) are registered by `@navaramap/three` itself.
 
 Multiple plugins can be composed together:
 
@@ -66,7 +66,7 @@ import {
   type MeshUpdate,
   type ViewContext,
   Color,
-} from "@navara/three";
+} from "@navaramap/three";
 import { Mesh, SphereGeometry, MeshStandardMaterial } from "three";
 
 type MyMeshDescription = {
@@ -123,7 +123,7 @@ Mesh layers can opt into GPU-based click picking by setting `pickable: true` in 
 For layers that use standard Three.js materials (`MeshStandardMaterial`, `MeshLambertMaterial`, etc.) or `ShaderMaterial`/`LineMaterial`, wrap the mesh in a `PickableMeshWrapper`. The wrapper automatically injects picking shader code via `onBeforeCompile` (for standard materials) or direct source mutation (for `ShaderMaterial`).
 
 ```typescript
-import { MeshDesc, PickableMeshWrapper, type ViewContext } from "@navara/three";
+import { MeshDesc, PickableMeshWrapper, type ViewContext } from "@navaramap/three";
 
 class MyPickableDesc extends MeshDesc</* ... */> {
   private pickWrapper?: PickableMeshWrapper;
@@ -167,7 +167,7 @@ For instanced meshes, use `PickableInstancedMeshWrapper` instead. It assigns a u
 When you need full control over the picking shader (e.g., for a custom `ShaderMaterial` with a non-standard rendering pipeline), implement the `PickableMesh` interface directly. Your implementation must output the batch ID as an RGB-encoded color during the pick pass.
 
 ```typescript
-import { type PickableMesh } from "@navara/three";
+import { type PickableMesh } from "@navaramap/three";
 
 class CustomPickable extends Object3D implements PickableMesh {
   batchId: number;
@@ -234,7 +234,7 @@ import {
   type InstancedMeshUpdate,
   type ViewContext,
   Color,
-} from "@navara/three";
+} from "@navaramap/three";
 import { BoxGeometry, Color as ThreeColor, MeshLambertMaterial, Vector3 } from "three";
 
 type BoxChildConfig = InstancedChildConfig & {
@@ -295,8 +295,8 @@ See `InstancedBoxMeshDesc` and the `mesh-layers/instanced-mesh` example for a co
 A plugin registers descriptor classes so they can be used via `view.addMesh()`, `view.addLight()`, `view.addEffect()`:
 
 ```typescript
-import { Plugin } from "@navara/core";
-import type ThreeView from "@navara/three";
+import { Plugin } from "@navaramap/core";
+import type ThreeView from "@navaramap/three";
 
 type CustomDescriptions = {
   mesh: MyMeshDescription;
@@ -313,13 +313,13 @@ class MyPlugin extends Plugin {
 }
 ```
 
-## `@navara/three_default_plugin`
+## `@navaramap/three_default_plugin`
 
-`@navara/three_default_plugin` is a plugin that registers the default descriptors from `@navara/three_default_descs`. It also exports `DefaultDescriptions` — a structured type with `mesh`, `light`, and `effect` fields for type-safe descriptions.
+`@navaramap/three_default_plugin` is a plugin that registers the default descriptors from `@navaramap/three_default_descs`. It also exports `DefaultDescriptions` — a structured type with `mesh`, `light`, and `effect` fields for type-safe descriptions.
 
 ```typescript
-import ThreeView from "@navara/three";
-import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
+import ThreeView from "@navaramap/three";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
 
 const view = new ThreeView<DefaultDescriptions>({ /* options */ });
 view.addPlugin(new DefaultPlugin());

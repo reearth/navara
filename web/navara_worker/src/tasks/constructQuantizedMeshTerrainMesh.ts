@@ -1,8 +1,8 @@
 import type {
   ReturnedConstructedTerrainMeshLike,
   TransferableTileLike,
-} from "@navara/core";
-import { constructQuantizedMeshTerrainMesh as constructQuantizedMeshTerrainMeshImpl } from "@navara/engine-worker";
+} from "@navaramap/core";
+import { constructQuantizedMeshTerrainMesh as constructQuantizedMeshTerrainMeshImpl } from "@navaramap/engine-worker";
 
 import { transfer } from "..";
 import { transferReturnedConstructedTerrainMesh } from "../helpers/transferReturnedConstructedTerrainMesh";

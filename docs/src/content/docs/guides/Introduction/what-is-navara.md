@@ -9,7 +9,7 @@ sidebar:
 
 Web map engines have long forced a choice: engines with polished declarative APIs are easy to adopt but hard to extend beyond their built-in features, while engines that expose deep low-level control are powerful but demand steep expertise — and fully 3D globe applications usually leave no option but the latter. Navara is a highly extensible, general-purpose 3D globe map engine built to remove that trade-off. It streams real-world geospatial data — satellite imagery, terrain, 3D city models, and vector data — onto an interactive globe, and lets you present it the way your application needs: as a clean basemap for data visualization, styled per feature by attributes, or as a photorealistic scene with atmosphere, sunlight, and shadows.
 
-You use Navara through a library that wraps a rendering engine such as Three.js (e.g. `@navara/three`). All geospatial computation runs in a Rust/WASM GIS engine spread across Web Workers, so the map stays responsive even with large datasets. If you are curious how the pieces fit together, see [How Navara Works](../how-navara-works/).
+You use Navara through a library that wraps a rendering engine such as Three.js (e.g. `@navaramap/three`). All geospatial computation runs in a Rust/WASM GIS engine spread across Web Workers, so the map stays responsive even with large datasets. If you are curious how the pieces fit together, see [How Navara Works](../how-navara-works/).
 
 ## A Globe in a Few Lines of Code
 
@@ -18,8 +18,8 @@ This is all it takes to display satellite imagery on the globe — here with the
 ![Hero](@assets/hero.png)
 
 ```typescript
-import ThreeView from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView from "@navaramap/three";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
 
 const view = new ThreeView({ useNormal: true });
 
@@ -70,7 +70,7 @@ Ready-made [plugins](../../../three_plugins/about/) bundle purpose-built feature
 
 ### Low-level API
 
-When config objects and ready-made plugins are not enough, drop down one tier: style individual features by their attributes with [`FeatureEvaluator`](../../../three/api/feature-evaluator/) — color-code buildings by height, or filter features by attribute values — pick features and query terrain interactively through the `pick` event and terrain sampling, and compute coordinate transforms and geodesic distances with the geodetic/ECEF math utilities. The GIS math is also available as a [standalone package](../../../three/api/navara_three_api/) (`@navara/three_api`) that works without the map engine.
+When config objects and ready-made plugins are not enough, drop down one tier: style individual features by their attributes with [`FeatureEvaluator`](../../../three/api/feature-evaluator/) — color-code buildings by height, or filter features by attribute values — pick features and query terrain interactively through the `pick` event and terrain sampling, and compute coordinate transforms and geodesic distances with the geodetic/ECEF math utilities. The GIS math is also available as a [standalone package](../../../three/api/navara_three_api/) (`@navaramap/three_api`) that works without the map engine.
 
 ### Custom Descriptors
 

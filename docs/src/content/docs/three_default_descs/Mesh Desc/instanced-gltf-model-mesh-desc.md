@@ -226,8 +226,8 @@ Stops the currently playing animation on all instances.
 ### Basic Usage
 
 ```typescript
-import ThreeView from "@navara/three";
-import { InstancedGltfModelMeshDesc } from "@navara/three_default_descs";
+import ThreeView from "@navaramap/three";
+import { InstancedGltfModelMeshDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 view.registerMesh("gltfModels", InstancedGltfModelMeshDesc);

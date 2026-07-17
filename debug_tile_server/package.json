@@ -2,6 +2,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts"
   },
+  "private": true,
   "dependencies": {
     "@hono/node-server": "2.0.0",
     "canvas": "3.2.3",

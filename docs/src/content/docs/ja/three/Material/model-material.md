@@ -114,7 +114,7 @@ sidebar:
 **Example:**
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 {
   model: {
@@ -189,7 +189,7 @@ import { Color } from "@navara/three";
 **Example:**
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 {
   model: {

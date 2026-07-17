@@ -10,7 +10,7 @@ sidebar:
 ## アクセス方法
 
 ```typescript
-import ThreeView from "@navara/three";
+import ThreeView from "@navaramap/three";
 
 const view = new ThreeView({ container: element });
 await view.init();

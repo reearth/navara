@@ -48,7 +48,7 @@ export type EffectBaseInstance<Instance extends object = object> =
  * Navara {@link Effect} class with typed options and reactive setters:
  *
  * ```typescript
- * import { Effect } from "@navara/three";
+ * import { Effect } from "@navaramap/three";
  * import { VignetteEffect } from "postprocessing";
  *
  * type VignetteOptions = {

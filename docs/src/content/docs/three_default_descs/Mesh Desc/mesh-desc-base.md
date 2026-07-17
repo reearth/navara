@@ -56,8 +56,8 @@ import ThreeView, {
   geodeticToVector3,
   eastNorthUpToFixedFrame,
   degreeToRadian,
-} from "@navara/three";
-import { BoxMeshDesc } from "@navara/three_default_descs";
+} from "@navaramap/three";
+import { BoxMeshDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 view.registerMesh("box", BoxMeshDesc);
@@ -97,8 +97,8 @@ To use picking, you must set `picking: true` in the ThreeView constructor.
 ### Basic Usage
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
-import { BoxMeshDesc } from "@navara/three_default_descs";
+import ThreeView, { Color } from "@navaramap/three";
+import { BoxMeshDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView({ picking: true });
 view.registerMesh("box", BoxMeshDesc);
@@ -173,8 +173,8 @@ import ThreeView, {
   Color,
   geodeticToVector3,
   degreeToRadian,
-} from "@navara/three";
-import { SphereMeshDesc } from "@navara/three_default_descs";
+} from "@navaramap/three";
+import { SphereMeshDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 view.registerMesh("sphere", SphereMeshDesc);
@@ -205,7 +205,7 @@ const sphereDesc = view.addMesh<SphereMeshDesc>({
 
 The `position` property is Cartesian ECEF by default, so a bare `position` will not stand a mesh upright at a given longitude/latitude. For geographic placement, compute a local tangent frame at the origin and pass it as `matrixWorld`; `position`/`rotation`/`scale` are then interpreted as offsets within that frame.
 
-Choose the frame function that matches the axis orientation your mesh expects. All take an ECEF origin (`Vector3`) and return a `Matrix4`, and all are exported from `@navara/three`:
+Choose the frame function that matches the axis orientation your mesh expects. All take an ECEF origin (`Vector3`) and return a `Matrix4`, and all are exported from `@navaramap/three`:
 
 | Function | Local axes (x, y, z) |
 |------|------|
@@ -221,8 +221,8 @@ import {
   geodeticToVector3,
   eastNorthUpToFixedFrame,
   degreeToRadian,
-} from "@navara/three";
-import { GLTFModelDesc } from "@navara/three_default_descs";
+} from "@navaramap/three";
+import { GLTFModelDesc } from "@navaramap/three_default_descs";
 
 // GLTFModelDesc must be registered
 

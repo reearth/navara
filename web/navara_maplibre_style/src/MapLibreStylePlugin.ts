@@ -5,13 +5,13 @@
  * operations and feature evaluators.
  */
 
-import { Plugin } from "@navara/core";
+import { Plugin } from "@navaramap/core";
 import ThreeView, {
   type ViewContext,
   type Layer,
   type FeatureEvaluator,
   type FeatureInfo,
-} from "@navara/three";
+} from "@navaramap/three";
 
 import {
   createPaintEvaluators,

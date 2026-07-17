@@ -1,4 +1,4 @@
-import type { Nullable } from "@navara/core";
+import type { Nullable } from "@navaramap/core";
 import {
   type Atmosphere,
   CLOUD_ASSETS_URL,
@@ -6,7 +6,7 @@ import {
   CustomEffectPass,
   Pass,
   type EffectOptions,
-} from "@navara/three";
+} from "@navaramap/three";
 import {
   CLOUD_SHAPE_DETAIL_TEXTURE_SIZE,
   CLOUD_SHAPE_TEXTURE_SIZE,

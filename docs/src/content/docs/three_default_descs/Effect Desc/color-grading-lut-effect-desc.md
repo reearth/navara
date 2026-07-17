@@ -104,8 +104,8 @@ The `ColorGradingLUTEffectDesc` class is a Descriptor that applies color grading
 ### Adding basic color grading
 
 ```typescript
-import ThreeView from "@navara/three";
-import { ColorGradingLUTEffectDesc } from "@navara/three_default_descs";
+import ThreeView from "@navaramap/three";
+import { ColorGradingLUTEffectDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -119,9 +119,9 @@ const colorGradingDesc = view.addEffect<ColorGradingLUTEffectDesc>({
 ### Color grading with a custom LUT
 
 ```typescript
-import ThreeView from "@navara/three";
-import { ColorGradingLUTEffectDesc } from "@navara/three_default_descs";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView from "@navaramap/three";
+import { ColorGradingLUTEffectDesc } from "@navaramap/three_default_descs";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
 
 const view = new ThreeView();
 const plugin = new DefaultPlugin();
@@ -143,8 +143,8 @@ const colorGradingDesc = view.addEffect<ColorGradingLUTEffectDesc>({
 ### Dynamic color grading updates
 
 ```typescript
-import ThreeView from "@navara/three";
-import { ColorGradingLUTEffectDesc } from "@navara/three_default_descs";
+import ThreeView from "@navaramap/three";
+import { ColorGradingLUTEffectDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 await view.init();

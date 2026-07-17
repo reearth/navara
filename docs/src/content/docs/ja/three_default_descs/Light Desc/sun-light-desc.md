@@ -73,7 +73,7 @@ sidebar:
 **Example:**
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 {
   sun: {
@@ -345,9 +345,9 @@ import { Color } from "@navara/three";
 ### 基本的な使用例
 
 ```typescript
-import ThreeView from "@navara/three";
-import { SunLightDesc } from "@navara/three_default_descs";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView from "@navaramap/three";
+import { SunLightDesc } from "@navaramap/three_default_descs";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
 
 const view = new ThreeView({
   shadow: true  // シャドウを有効化
@@ -428,7 +428,7 @@ sun.update({
 ### カスタムカラーの適用
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 // 大気計算を無効化してカスタムカラーを使用
 const sun = view.addLight<SunLightDesc>({

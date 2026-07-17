@@ -1,4 +1,4 @@
-import { Effect, type Quality, type EffectOptions } from "@navara/three";
+import { Effect, type Quality, type EffectOptions } from "@navaramap/three";
 import {
   EdgeDetectionMode as PostProcessingEdgeDetectionMode,
   FXAAEffect,

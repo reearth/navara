@@ -2,8 +2,8 @@
  * Converts MapLibre Style layer definitions to Navara LayerDescription.
  */
 
-import { Color } from "@navara/three";
-import type { LayerDescription } from "@navara/three";
+import { Color } from "@navaramap/three";
+import type { LayerDescription } from "@navaramap/three";
 
 import type { ParsedStyle, StyleLayer } from "../engine/types";
 

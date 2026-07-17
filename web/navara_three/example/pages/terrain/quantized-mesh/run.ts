@@ -1,9 +1,9 @@
-import ThreeView, { Color, type Layer, type Source } from "@navara/three";
+import ThreeView, { Color, type Layer, type Source } from "@navaramap/three";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
-import { CesiumIonPlugin } from "@navara/three_plugins";
+} from "@navaramap/three_default_plugin";
+import { CesiumIonPlugin } from "@navaramap/three_plugins";
 import { ButtonApi, Pane } from "tweakpane";
 
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";

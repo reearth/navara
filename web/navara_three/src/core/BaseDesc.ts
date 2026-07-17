@@ -1,5 +1,5 @@
-import { EventHandler, type BaseEventMap } from "@navara/core";
-import { generateId } from "@navara/engine";
+import { EventHandler, type BaseEventMap } from "@navaramap/core";
+import { generateId } from "@navaramap/engine";
 
 import type ThreeView from "../index";
 

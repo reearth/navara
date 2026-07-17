@@ -1,4 +1,4 @@
-import { createConcurrencyManager } from "@navara/worker";
+import { createConcurrencyManager } from "@navaramap/worker";
 
 /** Maximum workers on mobile: limits thermal throttling AND peak memory —
  * every busy worker's WASM heap ratchets to its decode working set, so a

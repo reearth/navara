@@ -2,7 +2,7 @@ import type {
   CachedMeshHandle,
   TileXYZ,
   TransferableTile,
-} from "@navara/engine";
+} from "@navaramap/engine";
 
 import type { RemoveFreeRecursively } from "../types";
 

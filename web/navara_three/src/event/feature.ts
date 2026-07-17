@@ -1,10 +1,10 @@
-import type { TileHandle } from "@navara/core";
-import { generate_id_from_entity } from "@navara/core";
+import type { TileHandle } from "@navaramap/core";
+import { generate_id_from_entity } from "@navaramap/core";
 import {
   type RenderableFeatureAddedEvent,
   type RenderableFeature,
   RenderableFeatureChangedEvent,
-} from "@navara/engine";
+} from "@navaramap/engine";
 import { Mesh, Sprite, Object3D, Scene } from "three";
 
 import {

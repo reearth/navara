@@ -1,9 +1,9 @@
 {
-  "name": "@navara/integration-test-iife",
+  "name": "@navaramap/integration-test-iife",
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Integration test for @navara/three IIFE bundle - loads via script tag",
+  "description": "Integration test for @navaramap/three IIFE bundle - loads via script tag",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

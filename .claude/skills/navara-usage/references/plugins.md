@@ -11,12 +11,12 @@ A plugin bundles descriptor registrations and/or high-level behavior behind one 
 
 | Plugin | Package | Purpose / key API |
 |---|---|---|
-| `DefaultPlugin` | `@navara/three_default_plugin` | Registers ~40 built-in descriptors; provides `DefaultDescriptions` type; `addDefaultPhotorealScene()` |
-| `AttributionPlugin` | `@navara/three_plugins` | Zoom-aware credit UI: `attribution.show([{ attribution, attributionUrl }, { attributionHtml }, ...])` — see recipes.md for a full call |
-| `PersonViewPlugin` | `@navara/three_plugins` | WASD first/third-person walk with GLTF character: `.start()`, `.teleport()`, `.setViewMode()` |
-| `OverlayPlugin` | `@navara/three_plugins` | World→screen DOM overlays: `.setPositions([...])`, `.onUpdate(({ projected }) => ...)` |
-| `CesiumIonPlugin` | `@navara/three_plugins` | Cesium Ion assets (quantized-mesh terrain) |
-| `MapLibreStylePlugin` | `@navara/maplibre_style` | Render a MapLibre style JSON: `new MapLibreStylePlugin(styleJson)` |
+| `DefaultPlugin` | `@navaramap/three_default_plugin` | Registers ~40 built-in descriptors; provides `DefaultDescriptions` type; `addDefaultPhotorealScene()` |
+| `AttributionPlugin` | `@navaramap/three_plugins` | Zoom-aware credit UI: `attribution.show([{ attribution, attributionUrl }, { attributionHtml }, ...])` — see recipes.md for a full call |
+| `PersonViewPlugin` | `@navaramap/three_plugins` | WASD first/third-person walk with GLTF character: `.start()`, `.teleport()`, `.setViewMode()` |
+| `OverlayPlugin` | `@navaramap/three_plugins` | World→screen DOM overlays: `.setPositions([...])`, `.onUpdate(({ projected }) => ...)` |
+| `CesiumIonPlugin` | `@navaramap/three_plugins` | Cesium Ion assets (quantized-mesh terrain) |
+| `MapLibreStylePlugin` | `@navaramap/maplibre_style` | Render a MapLibre style JSON: `new MapLibreStylePlugin(styleJson)` |
 
 ## addDefaultPhotorealScene()
 
@@ -50,7 +50,7 @@ Plugin docs: https://navara-docs.netlify.app/three_plugins/about/ — runnable r
 Extend `Plugin<TView, TCtx>` and implement the single hook `init(view, ctx)`. Typical work inside `init`: bulk-register mesh/effect/light descriptor classes, wire event listeners, expose high-level methods on the plugin instance.
 
 ```typescript
-import { Plugin } from "@navara/three";
+import { Plugin } from "@navaramap/three";
 
 export class MyPlugin extends Plugin {
   async init(view, ctx) {

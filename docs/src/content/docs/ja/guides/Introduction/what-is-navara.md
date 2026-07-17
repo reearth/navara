@@ -9,7 +9,7 @@ sidebar:
 
 Web マップエンジンは長らく、二者択一を強いてきました。洗練された宣言的 API を持つエンジンは導入しやすい一方でビルトイン機能を超えた拡張が難しく、低レベルの制御を提供するエンジンは強力な反面、高度な専門知識を要求します。そして完全な 3D 地球儀アプリケーションでは、事実上後者しか選択肢がありませんでした。Navara は、このトレードオフをなくすために開発された、拡張性の高い汎用 3D 地図エンジンです。衛星画像、地形、3D 都市モデル、ベクターデータといった現実世界の地理空間データをインタラクティブな地球儀上にストリーミングし、アプリケーションの用途に合わせて表現できます。データ可視化のためのシンプルなベースマップ、属性に基づくフィーチャー単位のスタイリングから、大気・太陽光・影を備えたフォトリアルなシーンまで対応します。
 
-Navara は、Three.js などのレンダリングエンジンをラップしたライブラリ（`@navara/three` 等）を通して利用します。すべての地理空間計算は Web Worker に分散された Rust/WASM GIS エンジンが担うため、大規模データセットでもマップはレスポンシブに動作します。仕組みの詳細に興味があれば [How Navara Works](../how-navara-works/) を参照してください。
+Navara は、Three.js などのレンダリングエンジンをラップしたライブラリ（`@navaramap/three` 等）を通して利用します。すべての地理空間計算は Web Worker に分散された Rust/WASM GIS エンジンが担うため、大規模データセットでもマップはレスポンシブに動作します。仕組みの詳細に興味があれば [How Navara Works](../how-navara-works/) を参照してください。
 
 ## 数行のコードで地球儀を
 
@@ -18,8 +18,8 @@ Navara は、Three.js などのレンダリングエンジンをラップした�
 ![Hero](@assets/hero.png)
 
 ```typescript
-import ThreeView from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView from "@navaramap/three";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
 
 const view = new ThreeView({ useNormal: true });
 
@@ -70,7 +70,7 @@ Navara の機能は 4 つの階層に整理されています。まずは宣言�
 
 ### 低レベル API
 
-設定オブジェクトや既製のプラグインでは足りないときは 1 つ下の階層へ。[`FeatureEvaluator`](../../../three/api/feature-evaluator/) で属性に基づいて個々のフィーチャーをスタイリングし（建物を高さで色分けする、属性値でフィルタリングするなど）、`pick` イベントや地形サンプリングでフィーチャーのピックや地形の照会を行い、測地系 / ECEF の数学ユーティリティで座標変換や測地線距離を計算できます。GIS 計算はマップエンジンなしで動作する[スタンドアロンパッケージ](../../../three/api/navara_three_api/)（`@navara/three_api`）としても利用できます。
+設定オブジェクトや既製のプラグインでは足りないときは 1 つ下の階層へ。[`FeatureEvaluator`](../../../three/api/feature-evaluator/) で属性に基づいて個々のフィーチャーをスタイリングし（建物を高さで色分けする、属性値でフィルタリングするなど）、`pick` イベントや地形サンプリングでフィーチャーのピックや地形の照会を行い、測地系 / ECEF の数学ユーティリティで座標変換や測地線距離を計算できます。GIS 計算はマップエンジンなしで動作する[スタンドアロンパッケージ](../../../three/api/navara_three_api/)（`@navaramap/three_api`）としても利用できます。
 
 ### カスタム Descriptor
 

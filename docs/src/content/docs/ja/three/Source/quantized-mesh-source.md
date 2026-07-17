@@ -25,7 +25,7 @@ sidebar:
 ## 使用例
 
 ```typescript
-import ThreeView from "@navara/three";
+import ThreeView from "@navaramap/three";
 
 const terrain = view.addSource({
   type: "quantized-mesh",

@@ -1,4 +1,4 @@
-import type ThreeView from "@navara/three";
+import type ThreeView from "@navaramap/three";
 import {
   Color,
   DrapedMesh,
@@ -10,7 +10,7 @@ import {
   type CustomObject3DEventMap,
   type PassKey,
   setupSelectiveEffectUniforms,
-} from "@navara/three";
+} from "@navaramap/three";
 import {
   CylinderGeometry,
   MeshBasicMaterial,

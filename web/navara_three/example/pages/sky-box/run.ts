@@ -1,4 +1,4 @@
-import ThreeView, { Color, MeshHandle, type BlendMode } from "@navara/three";
+import ThreeView, { Color, MeshHandle, type BlendMode } from "@navaramap/three";
 import {
   SunLightDesc,
   AmbientLightDesc,
@@ -7,11 +7,11 @@ import {
   DEFAULT_SKY_BOX_OPTIONS,
   ColorGradingLUTEffectDesc,
   ToneMappingMode,
-} from "@navara/three_default_descs";
+} from "@navaramap/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
+} from "@navaramap/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import { TILE_DATASETS, LUT_DATASETS } from "../../helpers/constants";

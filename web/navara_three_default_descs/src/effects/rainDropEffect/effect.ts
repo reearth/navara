@@ -1,4 +1,8 @@
-import { Effect, type EffectEvents, type EffectOptions } from "@navara/three";
+import {
+  Effect,
+  type EffectEvents,
+  type EffectOptions,
+} from "@navaramap/three";
 import { type Camera } from "three";
 
 import {

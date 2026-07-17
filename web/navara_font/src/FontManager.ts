@@ -1,4 +1,4 @@
-import type { ConcurrencyManager } from "@navara/worker";
+import type { ConcurrencyManager } from "@navaramap/worker";
 import {
   DataTexture,
   LinearFilter,

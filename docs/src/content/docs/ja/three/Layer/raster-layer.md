@@ -31,7 +31,7 @@ sidebar:
 ### 画像
 
 ```typescript
-import ThreeView from "@navara/three";
+import ThreeView from "@navaramap/three";
 
 const view = new ThreeView(/* options */);
 await view.init();
@@ -50,7 +50,7 @@ view.addLayer({ type: "raster", source: imagery, raster: { opacity: 1 } });
 `raster-dem` の Source を参照します。デコーダは Source 側にあります。
 
 ```typescript
-import ThreeView, { TERRARIUM_ELEVATION_DECODER } from "@navara/three";
+import ThreeView, { TERRARIUM_ELEVATION_DECODER } from "@navaramap/three";
 
 const dem = view.addSource({
   type: "raster-dem",

@@ -1,4 +1,4 @@
-import { encodePosition } from "@navara/engine-api";
+import { encodePosition } from "@navaramap/engine-api";
 import { Matrix4, Vector3 } from "three";
 
 /**

@@ -1,4 +1,4 @@
-import { Color, ColorMap, type ColorTuple } from "@navara/three";
+import { Color, ColorMap, type ColorTuple } from "@navaramap/three";
 
 // Ref: https://github.com/eukarya-inc/PLATEAU-VIEW/blob/26c98fa36e6cfe5776c04d1d2cbf77cc69eb264d/extension/src/prototypes/color-maps/colorMaps/plateau.ts
 export const PLATEAU_COLOR_MAP = new ColorMap("sequential", "Plateau", [

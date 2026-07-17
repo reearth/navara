@@ -252,8 +252,8 @@ sidebar:
 ## Usage Examples
 
 ```typescript
-import ThreeView from "@navara/three";
-import { SmoothLineMeshDesc } from "@navara/three_default_descs";
+import ThreeView from "@navaramap/three";
+import { SmoothLineMeshDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 view.registerMesh("smoothLines", SmoothLineMeshDesc);

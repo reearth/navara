@@ -2,7 +2,7 @@ import type {
   CRS,
   ReturnedTransferablePolygonBatchedFeature,
   TransferablePolygonBatchedFeature,
-} from "@navara/engine";
+} from "@navaramap/engine";
 
 import type { RemoveFreeRecursively } from "../../types";
 

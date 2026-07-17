@@ -2,11 +2,11 @@ import ThreeView, {
   TERRARIUM_ELEVATION_DECODER,
   type AttributionPlugin,
   type AttributionStyle,
-} from "@navara/three";
+} from "@navaramap/three";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
+} from "@navaramap/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import {

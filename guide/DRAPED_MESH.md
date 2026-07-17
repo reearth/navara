@@ -6,7 +6,7 @@ This document explains how DrapedMesh works and how to use it in custom descript
 
 DrapedMesh projects a 3D mesh onto terrain using a stencil-buffer technique. Instead of floating above or clipping through the ground, a draped mesh paints its shape directly onto the terrain surface, similar to how a decal is applied to a surface.
 
-This is a purely Three.js construct with no WASM dependency, so it can be used in any layer package including `@navara/three_default_descs`.
+This is a purely Three.js construct with no WASM dependency, so it can be used in any layer package including `@navaramap/three_default_descs`.
 
 ## How It Works
 
@@ -70,7 +70,7 @@ When `getPassKey()` returns `"draped"`, the layer's mesh is added to the draped 
 `DrapedMesh` is a drop-in replacement for Three.js `Mesh`:
 
 ```typescript
-import { DrapedMesh } from "@navara/three";
+import { DrapedMesh } from "@navaramap/three";
 import { BoxGeometry, MeshBasicMaterial } from "three";
 
 const geometry = new BoxGeometry(1000, 10000, 1000);
@@ -101,7 +101,7 @@ import {
   type PassKey,
   type ViewContext,
   Color,
-} from "@navara/three";
+} from "@navaramap/three";
 import { BoxGeometry, MeshBasicMaterial, MeshLambertMaterial } from "three";
 
 type MyDescription = {
@@ -187,7 +187,7 @@ layer.update({ myBox: { draped: false } });
 
 ## Built-in Support
 
-The default descriptors `BoxMeshDesc` and `CylinderMeshDesc` in `@navara/three_default_descs` support the `draped` option out of the box:
+The default descriptors `BoxMeshDesc` and `CylinderMeshDesc` in `@navaramap/three_default_descs` support the `draped` option out of the box:
 
 ```typescript
 const layer = view.addLayer<BoxMeshDesc>({

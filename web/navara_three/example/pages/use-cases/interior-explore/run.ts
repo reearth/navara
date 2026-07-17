@@ -1,9 +1,12 @@
-import ThreeView, { JAPAN_GSI_ELEVATION_DECODER, Color } from "@navara/three";
+import ThreeView, {
+  JAPAN_GSI_ELEVATION_DECODER,
+  Color,
+} from "@navaramap/three";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
-import { PersonViewPlugin } from "@navara/three_plugins";
+} from "@navaramap/three_default_plugin";
+import { PersonViewPlugin } from "@navaramap/three_plugins";
 import { Pane } from "tweakpane";
 
 import {

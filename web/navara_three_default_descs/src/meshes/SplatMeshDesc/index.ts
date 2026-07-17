@@ -1,11 +1,11 @@
-import type ThreeView from "@navara/three";
+import type ThreeView from "@navaramap/three";
 import {
   MeshDesc,
   type MeshConfig,
   type MeshUpdate,
   type PassKey,
   type ViewContext,
-} from "@navara/three";
+} from "@navaramap/three";
 import { SparkRenderer, SplatMesh } from "@sparkjsdev/spark";
 import { SRGBColorSpace, type Scene } from "three";
 

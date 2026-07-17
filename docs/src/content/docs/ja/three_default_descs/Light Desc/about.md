@@ -32,8 +32,8 @@ navara_three は、様々な照明要件に対応する複数のライトタイ�
 
 **使用例:**
 ```typescript
-import ThreeView, { Color } from "@navara/three";
-import { AmbientLightDesc } from "@navara/three_default_descs";
+import ThreeView, { Color } from "@navaramap/three";
+import { AmbientLightDesc } from "@navaramap/three_default_descs";
 
 view.registerLight("ambient", AmbientLightDesc);
 
@@ -56,8 +56,8 @@ view.addLight<AmbientLightDesc>({
 
 **使用例:**
 ```typescript
-import ThreeView from "@navara/three";
-import { LightProbeDesc } from "@navara/three_default_descs";
+import ThreeView from "@navaramap/three";
+import { LightProbeDesc } from "@navaramap/three_default_descs";
 
 view.registerLight("lightProbe", LightProbeDesc);
 
@@ -80,8 +80,8 @@ view.addLight<LightProbeDesc>({
 
 **使用例:**
 ```typescript
-import ThreeView from "@navara/three";
-import { SkyLightProbeDesc } from "@navara/three_default_descs";
+import ThreeView from "@navaramap/three";
+import { SkyLightProbeDesc } from "@navaramap/three_default_descs";
 
 view.registerLight("skyLightProbe", SkyLightProbeDesc);
 
@@ -103,8 +103,8 @@ view.addLight<SkyLightProbeDesc>({
 
 **使用例:**
 ```typescript
-import ThreeView from "@navara/three";
-import { SunLightDesc } from "@navara/three_default_descs";
+import ThreeView from "@navaramap/three";
+import { SunLightDesc } from "@navaramap/three_default_descs";
 
 view.registerLight("sun", SunLightDesc);
 
@@ -145,7 +145,7 @@ view.addLight<AmbientLightDesc>({
 リアルなシーンには、複数のライトを組み合わせます。[three_default_plugin](../../../three_default_plugin/about/) の `DefaultPlugin` を使用すると、すべてのDescriptorが一括登録され、`addDefaultPhotorealScene()` でフォトリアルなシーンを簡単にセットアップできます。
 
 ```typescript
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
 
 const plugin = new DefaultPlugin();
 view.addPlugin(plugin);

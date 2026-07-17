@@ -1,4 +1,4 @@
-import type ThreeView from "@navara/three";
+import type ThreeView from "@navaramap/three";
 import {
   Color,
   MeshDesc,
@@ -11,7 +11,7 @@ import {
   type PassKey,
   type RTEUserData,
   type ViewContext,
-} from "@navara/three";
+} from "@navaramap/three";
 import ProjectVertexRteModel from "@shaders/glsl/chunks/project_vertex_rte_model.glsl";
 import RteUniformParsVertex from "@shaders/glsl/chunks/rte_uniform_pars_vertex.glsl";
 import {

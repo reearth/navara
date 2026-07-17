@@ -1,4 +1,4 @@
-import type { XYZ } from "@navara/core";
+import type { XYZ } from "@navaramap/core";
 import { Light } from "three";
 
 import type ThreeView from "../index";

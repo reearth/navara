@@ -177,8 +177,8 @@ sidebar:
 ### デフォルトエフェクトで大気遠近法を有効にする
 
 ```typescript
-import ThreeView from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView from "@navaramap/three";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
 
 const view = new ThreeView();
 const plugin = new DefaultPlugin();
@@ -201,9 +201,9 @@ defaultLayers.aerialPerspective.update({
 ### 雲の影と組み合わせた大気遠近法
 
 ```typescript
-import ThreeView from "@navara/three";
-import { CloudsEffectDesc } from "@navara/three_default_descs";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView from "@navaramap/three";
+import { CloudsEffectDesc } from "@navaramap/three_default_descs";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
 
 const view = new ThreeView();
 const plugin = new DefaultPlugin();

@@ -1,4 +1,4 @@
-# @navara/three_csm
+# @navaramap/three_csm
 
 This is a library to extend Three.js to enable Cascaded Shadow Map(CSM).
 

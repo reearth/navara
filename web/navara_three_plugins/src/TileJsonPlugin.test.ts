@@ -2,12 +2,12 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 
 import { TileJsonPlugin, type TileJson } from "./TileJsonPlugin";
 
-// Importing the real @navara/three touches WASM/os at module load, which fails
+// Importing the real @navaramap/three touches WASM/os at module load, which fails
 // in the test environment. TileJsonPlugin only needs `Plugin` and `EventHandler`
 // as runtime values (everything else it imports from there is type-only), so
 // stub the module. The EventHandler stub mirrors the real on/once/off/emit/clear.
 /* eslint-disable @typescript-eslint/no-extraneous-class */
-vi.mock("@navara/three", () => ({
+vi.mock("@navaramap/three", () => ({
   default: class ThreeView {},
   Plugin: class Plugin {},
   EventHandler: class EventHandler {

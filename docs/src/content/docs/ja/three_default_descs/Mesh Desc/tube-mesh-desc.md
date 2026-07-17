@@ -132,7 +132,7 @@ sidebar:
 **Example:**
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 {
   tube: {
@@ -188,7 +188,7 @@ import { Color } from "@navara/three";
 **Example:**
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 {
   tube: {
@@ -274,8 +274,8 @@ import { Color } from "@navara/three";
 ## Usage Examples
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
-import { TubeMeshDesc } from "@navara/three_default_descs";
+import ThreeView, { Color } from "@navaramap/three";
+import { TubeMeshDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 view.registerMesh("tube", TubeMeshDesc);

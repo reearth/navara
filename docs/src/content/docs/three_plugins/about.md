@@ -33,7 +33,7 @@ import {
   moveOverlayElement,
   CesiumIonPlugin,
   TileJsonPlugin,
-} from "@navara/three_plugins";
+} from "@navaramap/three_plugins";
 ```
 
 ## Available Plugins
@@ -59,9 +59,9 @@ Fetches a TileJSON 3.0.0 document and registers it as a single raster or vector 
 All plugins follow the standard plugin lifecycle: create an instance, register it with `view.addPlugin()` before `view.init()`, and then use plugin-specific methods after initialization.
 
 ```typescript
-import ThreeView from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
-import { PersonViewPlugin, OverlayPlugin } from "@navara/three_plugins";
+import ThreeView from "@navaramap/three";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { PersonViewPlugin, OverlayPlugin } from "@navaramap/three_plugins";
 
 const view = new ThreeView({ container, animation: true });
 

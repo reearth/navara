@@ -5,9 +5,9 @@ import ThreeView, {
   LightHandle,
   type Cesium3dTilesLayer,
   type TerrainSourceLayer,
-} from "@navara/three";
-import { SunLightDesc, type ShadowMode } from "@navara/three_default_descs";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+} from "@navaramap/three";
+import { SunLightDesc, type ShadowMode } from "@navaramap/three_default_descs";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import {

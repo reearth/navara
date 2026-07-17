@@ -1,4 +1,4 @@
-import type { TileHandle } from "@navara/core";
+import type { TileHandle } from "@navaramap/core";
 import { OrthographicCamera, Scene, WebGLRenderer, Mesh, Group } from "three";
 
 export type Scenes = {

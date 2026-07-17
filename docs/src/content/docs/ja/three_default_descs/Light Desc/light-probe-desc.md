@@ -113,8 +113,8 @@ sh.coefficients = nightCoefficients;
 ### 基本的な使用例（夜間シーン）
 
 ```typescript
-import ThreeView from "@navara/three";
-import { LightProbeDesc } from "@navara/three_default_descs";
+import ThreeView from "@navaramap/three";
+import { LightProbeDesc } from "@navaramap/three_default_descs";
 import * as THREE from "three";
 
 const view = new ThreeView();

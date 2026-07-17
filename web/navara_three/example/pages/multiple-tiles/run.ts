@@ -1,4 +1,4 @@
-import ThreeView, { Color } from "@navara/three";
+import ThreeView, { Color } from "@navaramap/three";
 
 import { TILE_DATASETS } from "../../helpers/constants";
 import { addCtrlPanel } from "../../helpers/panel";

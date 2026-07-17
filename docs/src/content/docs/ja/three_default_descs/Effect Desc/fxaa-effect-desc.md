@@ -27,8 +27,8 @@ sidebar:
 ### FXAAアンチエイリアシングの有効化
 
 ```typescript
-import ThreeView from "@navara/three";
-import { FXAAEffectDesc } from "@navara/three_default_descs";
+import ThreeView from "@navaramap/three";
+import { FXAAEffectDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 await view.init();

@@ -21,8 +21,8 @@ export default defineConfig((env) => {
         ...common.build.rollupOptions,
         external: [
           ...(common.build.rollupOptions.external as string[]),
-          "@navara/three",
-          "@navara/core",
+          "@navaramap/three",
+          "@navaramap/core",
           "three",
           "@maplibre/maplibre-gl-style-spec",
         ],

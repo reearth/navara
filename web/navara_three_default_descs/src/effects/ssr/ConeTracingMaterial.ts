@@ -1,4 +1,4 @@
-import { assertType } from "@navara/core";
+import { assertType } from "@navaramap/core";
 import fragmentShader from "@shaders/glsl/coneTracing.frag.glsl?raw";
 import vertexShader from "@shaders/glsl/coneTracing.vert.glsl?raw";
 import { resolveIncludes } from "@takram/three-geospatial";

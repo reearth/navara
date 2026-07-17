@@ -8,9 +8,9 @@
  * ## Usage
  *
  * ```ts
- * import ThreeView from "@navara/three";
- * import { DefaultPlugin } from "@navara/three_default_plugin";
- * import { OverlayPlugin, moveOverlayElement } from "@navara/three_plugins";
+ * import ThreeView from "@navaramap/three";
+ * import { DefaultPlugin } from "@navaramap/three_default_plugin";
+ * import { OverlayPlugin, moveOverlayElement } from "@navaramap/three_plugins";
  *
  * const view = new ThreeView({ container, animation: true });
  * const overlayPlugin = new OverlayPlugin({ maxDistance: 100_000 });
@@ -40,8 +40,8 @@ import ThreeView, {
   degreeToRadian,
   type ViewContext,
   type Window,
-} from "@navara/three";
-import type { DefaultDescriptions } from "@navara/three_default_plugin";
+} from "@navaramap/three";
+import type { DefaultDescriptions } from "@navaramap/three_default_plugin";
 
 type View = ThreeView<DefaultDescriptions>;
 

@@ -25,7 +25,7 @@ A `quantized-mesh` source describes Cesium quantized-mesh terrain. Render it wit
 ## Example
 
 ```typescript
-import ThreeView from "@navara/three";
+import ThreeView from "@navaramap/three";
 
 const terrain = view.addSource({
   type: "quantized-mesh",
