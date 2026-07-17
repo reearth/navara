@@ -31,6 +31,9 @@ export type DeclutterCandidate = {
   handle: number;
 };
 
+/** Duration of the show/hide fade applied to placement results (ms). */
+export const DECLUTTER_FADE_MS = 300;
+
 /** A mesh that contributes label candidates to the shared declutter pass. */
 export type DeclutterParticipant = {
   /**
@@ -39,8 +42,15 @@ export type DeclutterParticipant = {
    */
   collectDeclutterCandidates: (out: DeclutterCandidate[]) => void;
   /**
-   * Apply a placement result. Must be cheap and idempotent — the pass calls
-   * it for every candidate on every run, most often with an unchanged value.
+   * Apply a placement result as the label's fade *target*. Must be cheap and
+   * idempotent — the pass calls it for every candidate on every run, most
+   * often with an unchanged value.
    */
   applyDeclutter: (handle: number, hidden: boolean) => void;
+  /**
+   * Advance this participant's hide factors toward their targets by
+   * `deltaMs / DECLUTTER_FADE_MS`. Called by the manager every update while
+   * anything is fading; returns true while any label is still mid-fade.
+   */
+  stepDeclutterFade: (deltaMs: number) => boolean;
 };

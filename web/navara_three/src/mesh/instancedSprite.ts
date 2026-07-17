@@ -22,9 +22,10 @@ import {
 } from "three";
 import invariant from "tiny-invariant";
 
-import type {
-  DeclutterCandidate,
-  DeclutterParticipant,
+import {
+  DECLUTTER_FADE_MS,
+  type DeclutterCandidate,
+  type DeclutterParticipant,
 } from "../declutter/types";
 import type { EventContext } from "../event/context";
 import { TEXTURE_LOADER } from "../event/loaders";
@@ -78,6 +79,11 @@ export class InstancedSpriteMesh
   /** Whether this mesh's instances participate in screen-space decluttering. */
   private _declutter = false;
   private _declutterPriority = 0;
+  /** Per-instance fade targets for `instanceDeclutterHide` (0 = shown,
+   *  1 = hidden); the attribute animates toward these in stepDeclutterFade. */
+  private _declutterTargets: Float32Array | null = null;
+  /** True while any instance's hide factor may differ from its target. */
+  private _declutterAnimating = false;
 
   constructor(options: InstancedSpriteOptions) {
     super();
@@ -143,6 +149,38 @@ export class InstancedSpriteMesh
     this.setDeclutterHiddenByInstance(handle, hidden);
   }
 
+  stepDeclutterFade(deltaMs: number): boolean {
+    if (!this._declutterAnimating) return false;
+    const attr = this.geometry?.getAttribute("instanceDeclutterHide") as
+      | InstancedBufferAttribute
+      | undefined;
+    const targets = this._declutterTargets;
+    if (!attr || !targets) {
+      this._declutterAnimating = false;
+      return false;
+    }
+
+    const step = deltaMs / DECLUTTER_FADE_MS;
+    const count = Math.min(attr.count, targets.length);
+    let stillAnimating = false;
+    let changed = false;
+    for (let i = 0; i < count; i++) {
+      let value = attr.getX(i);
+      const target = targets[i];
+      if (value === target) continue;
+      value =
+        value < target
+          ? Math.min(value + step, target)
+          : Math.max(value - step, target);
+      attr.setX(i, value);
+      changed = true;
+      if (value !== target) stillAnimating = true;
+    }
+    if (changed) attr.needsUpdate = true;
+    this._declutterAnimating = stillAnimating;
+    return stillAnimating;
+  }
+
   private _cacheDeclutterState(m: NavaraPointMesh | NavaraBillboardMesh) {
     const nextDeclutter = m.material.declutter ?? false;
     if (this._declutter && !nextDeclutter) {
@@ -155,18 +193,11 @@ export class InstancedSpriteMesh
   }
 
   private _clearDeclutterHidden(): void {
-    const attr = this.geometry?.getAttribute("instanceDeclutterHide") as
-      | InstancedBufferAttribute
-      | undefined;
-    if (!attr) return;
-    let changed = false;
-    for (let i = 0; i < attr.count; i++) {
-      if (attr.getX(i) !== 0.0) {
-        attr.setX(i, 0.0);
-        changed = true;
-      }
-    }
-    if (changed) attr.needsUpdate = true;
+    const targets = this._declutterTargets;
+    if (!targets) return;
+    targets.fill(0.0);
+    // Everything fades back in from wherever its hide factor currently is.
+    this._declutterAnimating = true;
   }
 
   /** Reconstruct absolute ECEF anchors from the same arrays the position
@@ -450,11 +481,15 @@ export class InstancedSpriteMesh
       "instanceColor",
       new InstancedBufferAttribute(colorBuffer, 3),
     );
-    // Declutter hide flags (>0.5 hides). Zero-initialized: everything visible
-    // until a declutter pass says otherwise.
+    // Declutter hide factors (0 = shown … 1 = hidden). Decluttered instances
+    // start hidden and fade in once the placement pass grants them space, so
+    // dense tiles don't flash their full clutter before the first pass runs.
+    const initialHide = this._declutter ? 1.0 : 0.0;
+    const declutterBuffer = new Float32Array(instanceCount).fill(initialHide);
+    this._declutterTargets = new Float32Array(instanceCount).fill(initialHide);
     instancedGeometry.setAttribute(
       "instanceDeclutterHide",
-      new InstancedBufferAttribute(new Float32Array(instanceCount), 1),
+      new InstancedBufferAttribute(declutterBuffer, 1),
     );
     instancedGeometry.setAttribute(
       "instanceBatchID",
@@ -773,21 +808,20 @@ export class InstancedSpriteMesh
   }
 
   /**
-   * Hide/show one instance from the screen-space declutter pass. Deliberately
-   * separate from the `show` component of `instanceParams` so user-driven
-   * visibility and declutter results compose instead of clobbering each other.
-   * Skips the buffer re-upload when the value is unchanged.
+   * Set one instance's declutter fade target; the attribute animates toward
+   * it in {@link stepDeclutterFade}. Deliberately separate from the `show`
+   * component of `instanceParams` so user-driven visibility and declutter
+   * results compose instead of clobbering each other.
    */
   setDeclutterHiddenByInstance(instanceIndex: number, hidden: boolean) {
-    const attr = this.geometry.getAttribute(
-      "instanceDeclutterHide",
-    ) as InstancedBufferAttribute;
-    if (!attr || instanceIndex < 0 || instanceIndex >= attr.count) return;
-
-    const v = hidden ? 1.0 : 0.0;
-    if (attr.getX(instanceIndex) === v) return;
-    attr.setX(instanceIndex, v);
-    attr.needsUpdate = true;
+    const targets = this._declutterTargets;
+    if (!targets || instanceIndex < 0 || instanceIndex >= targets.length) {
+      return;
+    }
+    targets[instanceIndex] = hidden ? 1.0 : 0.0;
+    // Cheap over-approximation; stepDeclutterFade clears it when everything
+    // has reached its target.
+    this._declutterAnimating = true;
   }
 
   setFeatureSizeByBatchId(batchId: number, size: number) {
@@ -830,5 +864,6 @@ export class InstancedSpriteMesh
     this._batchIdToInstance.clear();
     this._loadedUrls.clear();
     this._anchors = null;
+    this._declutterTargets = null;
   }
 }

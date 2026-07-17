@@ -101,6 +101,14 @@ export class BatchedSdfTextMesh
     this.meshes()[handle]?.setDeclutterHidden(hidden);
   }
 
+  stepDeclutterFade(deltaMs: number): boolean {
+    let animating = false;
+    for (const mesh of this.meshes()) {
+      animating = mesh.stepDeclutterFade(deltaMs) || animating;
+    }
+    return animating;
+  }
+
   /** Candidates changed (text, style, position, visibility): ask the shared
    *  declutter pass to re-place on its next update. */
   private _markDeclutterDirty(): void {

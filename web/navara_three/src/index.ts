@@ -447,8 +447,10 @@ export default class ThreeView<
   private _declutter = new DeclutterManager();
   /** Reusable Vector2 for the declutter pass's per-frame viewport query. */
   private _declutterSize = new Vector2();
-  /** Pending follow-up frame for a throttled declutter pass. */
+  /** Pending follow-up frame for a throttled declutter pass or an active
+   *  fade, with the delay it was scheduled at (so a shorter need preempts). */
   private _declutterRetry: ReturnType<typeof setTimeout> | undefined;
+  private _declutterRetryDelay = 0;
   private _isIdle = false;
   private _uniforms: CommonUniforms;
 
@@ -1740,6 +1742,25 @@ export default class ThreeView<
     }
   }
 
+  /**
+   * Ask for a future frame on behalf of the declutter pass. Runs through a
+   * timer because the main loop clears `forceUpdate` right after `_render` —
+   * a flag set synchronously here would be wiped before the next tick reads
+   * it. A pending longer timer is preempted when a shorter delay is needed
+   * (a fade must not wait out a throttle window).
+   */
+  private _scheduleDeclutterFrame(delayMs: number) {
+    if (this._declutterRetry !== undefined) {
+      if (delayMs >= this._declutterRetryDelay) return;
+      clearTimeout(this._declutterRetry);
+    }
+    this._declutterRetryDelay = delayMs;
+    this._declutterRetry = setTimeout(() => {
+      this._declutterRetry = undefined;
+      this._renderFlag.forceUpdate = true;
+    }, delayMs);
+  }
+
   private _render(updatedAt: number) {
     // Read the vector resolution revision once per frame so each terrain tile's
     // `onBeforeRender` can gate its slot re-fetch against it without its own FFI call.
@@ -1750,11 +1771,8 @@ export default class ThreeView<
     this._atmosphere._update();
 
     // Screen-space label decluttering runs before the render passes so
-    // placement changes land in this frame. When the throttle skips a due
-    // pass, schedule a follow-up frame via a timer: the main loop resets
-    // `forceUpdate` right after `_render`, so setting it synchronously here
-    // would be cleared before the next tick could see it — the retry must
-    // land between ticks.
+    // placement changes land in this frame. Throttled passes and active
+    // fades both need future frames, requested via _scheduleDeclutterFrame.
     {
       const size = this._renderer.getDrawingBufferSize(this._declutterSize);
       const pixelRatio = this._renderer.getPixelRatio();
@@ -1764,11 +1782,12 @@ export default class ThreeView<
         size.y / pixelRatio,
         updatedAt,
       );
-      if (result === "throttled" && this._declutterRetry === undefined) {
-        this._declutterRetry = setTimeout(() => {
-          this._declutterRetry = undefined;
-          this._renderFlag.forceUpdate = true;
-        }, DeclutterManager.MIN_INTERVAL_MS);
+      if (result === "throttled") {
+        this._scheduleDeclutterFrame(DeclutterManager.MIN_INTERVAL_MS);
+      } else if (result === "animating") {
+        // Keep frames coming at fade cadence until every label reaches its
+        // placement target.
+        this._scheduleDeclutterFrame(16);
       }
     }
 

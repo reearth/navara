@@ -13,6 +13,9 @@ export type DeclutterUpdateResult =
   | "idle"
   /** A placement pass ran; results are applied to the participants. */
   | "ran"
+  /** Labels are mid-fade — the caller should schedule a prompt follow-up
+   *  frame so the animation keeps stepping. */
+  | "animating"
   /** A pass is due but the throttle window hasn't elapsed — the caller should
    *  schedule another frame so placement settles after the camera stops. */
   | "throttled";
@@ -38,6 +41,9 @@ export class DeclutterManager {
   /** Padding added around every collision box (px); two labels never sit
    *  closer than twice this. */
   static readonly PADDING_PX = 2;
+  /** Largest single fade step (ms), so a frame after an idle gap doesn't
+   *  swallow most of a fade in one jump. */
+  static readonly MAX_FADE_STEP_MS = 50;
 
   private _participants = new Set<DeclutterParticipant>();
   /** Set when the label set changed (register/update/text change) so the next
@@ -47,6 +53,7 @@ export class DeclutterManager {
   // Snapshot of the camera/viewport the last pass ran with.
   private _prevCamera = new Float64Array(34).fill(Number.NaN);
   private _lastRunAt = Number.NEGATIVE_INFINITY;
+  private _lastStepAt = Number.NaN;
 
   // Reused per-pass scratch to keep steady-state allocations low.
   private _grid = new ScreenCollisionGrid();
@@ -74,9 +81,10 @@ export class DeclutterManager {
   }
 
   /**
-   * Run a placement pass if one is due. `widthPx`/`heightPx` are the viewport
-   * in CSS pixels (matching the `uScreenHeightPx` uniform); `nowMs` is the
-   * frame timestamp used for throttling.
+   * Run a placement pass if one is due, then advance any active show/hide
+   * fades. `widthPx`/`heightPx` are the viewport in CSS pixels (matching the
+   * `uScreenHeightPx` uniform); `nowMs` is the frame timestamp used for
+   * throttling and fade stepping.
    */
   update(
     camera: PerspectiveCamera,
@@ -85,18 +93,39 @@ export class DeclutterManager {
     nowMs: number,
   ): DeclutterUpdateResult {
     if (this._participants.size === 0) return "idle";
-    if (!this._dirty && !this._snapshotChanged(camera, widthPx, heightPx)) {
-      return "idle";
-    }
-    if (nowMs - this._lastRunAt < DeclutterManager.MIN_INTERVAL_MS) {
-      return "throttled";
+
+    let ran = false;
+    let throttled = false;
+    if (this._dirty || this._snapshotChanged(camera, widthPx, heightPx)) {
+      if (nowMs - this._lastRunAt >= DeclutterManager.MIN_INTERVAL_MS) {
+        this._run(camera, widthPx, heightPx);
+        this._takeSnapshot(camera, widthPx, heightPx);
+        this._dirty = false;
+        this._lastRunAt = nowMs;
+        ran = true;
+      } else {
+        throttled = true;
+      }
     }
 
-    this._run(camera, widthPx, heightPx);
-    this._takeSnapshot(camera, widthPx, heightPx);
-    this._dirty = false;
-    this._lastRunAt = nowMs;
-    return "ran";
+    // Step fades even when no pass ran — placement only sets targets; the
+    // animation itself advances here, frame by frame. Clamp the step so the
+    // first frame after an idle gap doesn't jump most of the fade at once.
+    const deltaMs = Number.isFinite(this._lastStepAt)
+      ? Math.min(nowMs - this._lastStepAt, DeclutterManager.MAX_FADE_STEP_MS)
+      : 0;
+    this._lastStepAt = nowMs;
+    let animating = false;
+    for (const p of this._participants) {
+      animating = p.stepDeclutterFade(deltaMs) || animating;
+    }
+
+    // "animating" wins over "throttled": its prompt follow-up frames re-enter
+    // this method, so a pending throttled pass still runs once the window
+    // elapses.
+    if (animating) return "animating";
+    if (throttled) return "throttled";
+    return ran ? "ran" : "idle";
   }
 
   private _run(

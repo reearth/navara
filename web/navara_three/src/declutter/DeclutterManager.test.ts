@@ -19,6 +19,9 @@ function makeCamera(): PerspectiveCamera {
 
 class FakeParticipant implements DeclutterParticipant {
   hidden = new Map<number, boolean>();
+  /** How many more stepDeclutterFade calls report an active fade. */
+  fadeStepsLeft = 0;
+  fadeDeltas: number[] = [];
 
   constructor(readonly candidates: Omit<DeclutterCandidate, "owner">[]) {}
 
@@ -28,6 +31,13 @@ class FakeParticipant implements DeclutterParticipant {
 
   applyDeclutter(handle: number, hidden: boolean): void {
     this.hidden.set(handle, hidden);
+  }
+
+  stepDeclutterFade(deltaMs: number): boolean {
+    this.fadeDeltas.push(deltaMs);
+    if (this.fadeStepsLeft <= 0) return false;
+    this.fadeStepsLeft--;
+    return true;
   }
 }
 
@@ -139,6 +149,50 @@ describe("DeclutterManager", () => {
 
     // A viewport resize also invalidates placement.
     expect(manager.update(camera, 1024, 768, 3000)).toBe("ran");
+  });
+
+  it("reports 'animating' while fades are active, then settles", () => {
+    const manager = new DeclutterManager();
+    const p = new FakeParticipant([label({ handle: 0 })]);
+    manager.register(p);
+    const camera = makeCamera();
+
+    // The pass that (re)targets labels also starts their fade.
+    p.fadeStepsLeft = 2;
+    expect(manager.update(camera, 800, 600, 0)).toBe("animating");
+    expect(manager.update(camera, 800, 600, 16)).toBe("animating");
+    expect(manager.update(camera, 800, 600, 32)).toBe("idle");
+  });
+
+  it("clamps fade steps after an idle gap", () => {
+    const manager = new DeclutterManager();
+    const p = new FakeParticipant([label({ handle: 0 })]);
+    manager.register(p);
+    const camera = makeCamera();
+
+    manager.update(camera, 800, 600, 0);
+    // 10s of engine idle must not advance a new fade by 10s worth.
+    manager.update(camera, 800, 600, 10_000);
+    for (const delta of p.fadeDeltas) {
+      expect(delta).toBeLessThanOrEqual(DeclutterManager.MAX_FADE_STEP_MS);
+    }
+  });
+
+  it("prefers 'animating' over 'throttled' so pending passes still settle", () => {
+    const manager = new DeclutterManager();
+    const p = new FakeParticipant([label({ handle: 0 })]);
+    manager.register(p);
+    const camera = makeCamera();
+
+    expect(manager.update(camera, 800, 600, 0)).toBe("ran");
+    manager.markDirty();
+    p.fadeStepsLeft = 1;
+    // Dirty + inside the throttle window + fading: animating wins because its
+    // prompt follow-ups re-enter update, which runs the pass once due.
+    expect(manager.update(camera, 800, 600, 50)).toBe("animating");
+    expect(
+      manager.update(camera, 800, 600, DeclutterManager.MIN_INTERVAL_MS),
+    ).toBe("ran");
   });
 
   it("goes idle when the last participant unregisters", () => {

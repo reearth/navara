@@ -13,6 +13,7 @@ const WGS84_A = 6378137.0;
 const NOOP_OWNER = {
   collectDeclutterCandidates: () => {},
   applyDeclutter: () => {},
+  stepDeclutterFade: () => false,
 };
 
 function makeCandidate(

@@ -26,9 +26,10 @@ import {
   Vector2,
 } from "three";
 
-import type {
-  DeclutterCandidate,
-  DeclutterParticipant,
+import {
+  DECLUTTER_FADE_MS,
+  type DeclutterCandidate,
+  type DeclutterParticipant,
 } from "../declutter/types";
 import type { MaterialEnhancer } from "../material/enhancer/MaterialEnhancer";
 import {
@@ -229,6 +230,10 @@ export class SDFTextMesh
   /** Whether this label participates in screen-space decluttering. */
   private _declutter = false;
   private _declutterPriority = 0;
+  /** Current animated hide factor (mirrors the uDeclutterHide uniform) and
+   *  the placement target it is fading toward. */
+  private _declutterHide = 0;
+  private _declutterTarget = 0;
   /** Text block dimensions in em units, mirroring the uTextWidth/uTextHeight/
    *  uBgYBounds uniforms; 0 width means "no collision box" (empty text). */
   private _labelWidthEm = 0;
@@ -333,6 +338,15 @@ export class SDFTextMesh
       transform.ty,
       transform.tz,
     ]);
+
+    // Decluttered labels start hidden and fade in once the placement pass
+    // grants them space — otherwise dense tiles flash their full clutter for
+    // a frame before the first pass runs.
+    if (material.declutter ?? false) {
+      this._declutterHide = 1;
+      this._declutterTarget = 1;
+      mutates.setDeclutterHide(1);
+    }
 
     // Register shader hook
     mat.onBeforeCompile = this._enhancer.transformShader;
@@ -571,13 +585,33 @@ export class SDFTextMesh
   }
 
   /**
-   * Hide/show this label from the screen-space declutter pass. A cheap uniform
-   * flip, deliberately separate from `visible`/`show`: it neither churns
-   * scene-graph membership nor releases glyph atlas retains, so the declutter
-   * pass can toggle it every placement run at no cost.
+   * Set this label's declutter fade target; the actual hide factor animates
+   * toward it in {@link stepDeclutterFade}. Deliberately separate from
+   * `visible`/`show`: it neither churns scene-graph membership nor releases
+   * glyph atlas retains, so the declutter pass can retarget it every
+   * placement run at no cost.
    */
   setDeclutterHidden(hidden: boolean): void {
-    this._enhancer.mutates().setDeclutterHidden(hidden);
+    this._declutterTarget = hidden ? 1 : 0;
+  }
+
+  /**
+   * Advance the hide factor toward its target by `deltaMs / DECLUTTER_FADE_MS`
+   * and push it to the uniform. Returns true while still mid-fade.
+   */
+  stepDeclutterFade(deltaMs: number): boolean {
+    const target = this._declutterTarget;
+    let value = this._declutterHide;
+    if (value === target) return false;
+
+    const step = deltaMs / DECLUTTER_FADE_MS;
+    value =
+      value < target
+        ? Math.min(value + step, target)
+        : Math.max(value - step, target);
+    this._declutterHide = value;
+    this._enhancer.mutates().setDeclutterHide(value);
+    return value !== target;
   }
 
   _setFeatureWidth(_width: number): void {

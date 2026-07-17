@@ -231,8 +231,8 @@ export const createBaseMutates = (
       refs.nvr_uBatchId.value = id;
     },
 
-    setDeclutterHidden: (hidden: boolean) => {
-      refs.uDeclutterHide.value = hidden ? 1.0 : 0.0;
+    setDeclutterHide: (value: number) => {
+      refs.uDeclutterHide.value = value;
     },
   };
 };
