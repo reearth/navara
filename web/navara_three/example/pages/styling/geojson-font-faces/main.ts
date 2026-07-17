@@ -83,6 +83,7 @@ const run = async () => {
         maxWidth: params.maxWidth,
         lineHeight: params.lineHeight,
         textAlign: params.textAlign,
+        declutter: true,
       },
     });
 
