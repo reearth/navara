@@ -166,7 +166,7 @@ sidebar:
 **Example:**
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 {
   cylinder: {
@@ -222,7 +222,7 @@ import { Color } from "@navara/three";
 **Example:**
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 {
   cylinder: {
@@ -310,8 +310,8 @@ import { Color } from "@navara/three";
 ### 基本的な円柱
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
-import { CylinderMeshDesc } from "@navara/three_default_descs";
+import ThreeView, { Color } from "@navaramap/three";
+import { CylinderMeshDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 view.registerMesh("cylinder", CylinderMeshDesc);
@@ -332,8 +332,8 @@ const cylinderDesc = view.addMesh<CylinderMeshDesc>({
 ### 円錐の作成
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
-import { CylinderMeshDesc } from "@navara/three_default_descs";
+import ThreeView, { Color } from "@navaramap/three";
+import { CylinderMeshDesc } from "@navaramap/three_default_descs";
 
 const coneDesc = view.addMesh<CylinderMeshDesc>({
   cylinder: {

@@ -2,12 +2,12 @@ import ThreeView, {
   geodeticToVector3,
   degreeToRadian,
   northUpEastToFixedFrame,
-} from "@navara/three";
-import type { SplatMeshDesc } from "@navara/three_default_descs";
+} from "@navaramap/three";
+import type { SplatMeshDesc } from "@navaramap/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
+} from "@navaramap/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import { SPLAT_DATASETS, TILE_DATASETS } from "../../helpers/constants";

@@ -30,7 +30,7 @@ sidebar:
 複数の `vector` レイヤーが 1 つの vector-tile Source を参照できます。タイルデータと走査は共有され、各レイヤーは自身の `sourceLayers` をスタイリングします。
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
+import ThreeView, { Color } from "@navaramap/three";
 
 const tiles = view.addSource({
   type: "vector-tile",
@@ -60,7 +60,7 @@ view.addLayer({
 利用するには Source の `url` にアーカイブを指定します。URL に `{z}/{x}/{y}` プレースホルダーは **不要** で、`.pmtiles` で終わります。エンジンがアーカイブ用の実装を自動的に選択します。
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
+import ThreeView, { Color } from "@navaramap/three";
 
 // Credit: © OpenStreetMap contributors, © Protomaps (https://protomaps.com)
 const PMTILES_URL =

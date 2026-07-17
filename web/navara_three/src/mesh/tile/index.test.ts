@@ -7,7 +7,7 @@ import { TileMesh } from ".";
 
 // The package barrel pulled in by tile.ts initializes a worker pool at module
 // load (os.cpus()), which is unavailable in the test environment. Stub it.
-vi.mock("@navara/worker", () => ({
+vi.mock("@navaramap/worker", () => ({
   initializeWorkerPool: vi.fn(),
   terminateWorkerPool: vi.fn(),
 }));

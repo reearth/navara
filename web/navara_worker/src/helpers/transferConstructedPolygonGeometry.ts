@@ -1,5 +1,5 @@
-import { isNotNullish, ConstructedPolygonGeometryLike } from "@navara/core";
-import type { ConstructedPolygonGeometry } from "@navara/engine-worker";
+import { isNotNullish, ConstructedPolygonGeometryLike } from "@navaramap/core";
+import type { ConstructedPolygonGeometry } from "@navaramap/engine-worker";
 
 export function transferConstructedPolygonGeometry(
   r: ConstructedPolygonGeometry,

@@ -1,6 +1,6 @@
-# @navara/three Integration Test
+# @navaramap/three Integration Test
 
-This project tests `@navara/three` from an end user's perspective, using the built library files instead of source files.
+This project tests `@navaramap/three` from an end user's perspective, using the built library files instead of source files.
 
 ## What This Tests
 

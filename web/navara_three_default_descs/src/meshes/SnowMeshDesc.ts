@@ -1,10 +1,10 @@
-import type ThreeView from "@navara/three";
+import type ThreeView from "@navaramap/three";
 import {
   MeshDesc,
   type MeshConfig,
   type ViewContext,
   type MeshUpdate,
-} from "@navara/three";
+} from "@navaramap/three";
 
 import { SnowMesh, type SnowConfig } from "./snow";
 

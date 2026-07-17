@@ -1,4 +1,4 @@
-import { generate_id_from_entity, type TileHandle } from "@navara/core";
+import { generate_id_from_entity, type TileHandle } from "@navaramap/core";
 import type {
   MeshAdded,
   Mesh as EventMesh,
@@ -7,7 +7,7 @@ import type {
   TextureFragment,
   MeshChanged,
   Globe,
-} from "@navara/engine";
+} from "@navaramap/engine";
 import BranchFreeTernary from "@shaders/glsl/chunks/branchFreeTernary.glsl?raw";
 import SpecularParsFragment from "@shaders/glsl/chunks/spucular_pars_fragment.glsl";
 import WaterParsFragment from "@shaders/glsl/chunks/water_pars_fragment.glsl?raw";

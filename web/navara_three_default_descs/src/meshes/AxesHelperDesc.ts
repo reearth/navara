@@ -1,5 +1,5 @@
-import type ThreeView from "@navara/three";
-import { MeshDesc, type MeshConfig, type ViewContext } from "@navara/three";
+import type ThreeView from "@navaramap/three";
+import { MeshDesc, type MeshConfig, type ViewContext } from "@navaramap/three";
 import { AxesHelper } from "three";
 
 type Description = {

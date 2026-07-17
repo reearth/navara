@@ -23,9 +23,9 @@ sidebar:
 まずベースとなるビューを作成します。背景色を暗くし、星空と衛星写真タイルを追加します。
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
-import { ToneMappingMode } from "@navara/three_default_descs";
-import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
+import ThreeView, { Color } from "@navaramap/three";
+import { ToneMappingMode } from "@navaramap/three_default_descs";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
 
 const plugin = new DefaultPlugin();
 const view = new ThreeView<DefaultDescriptions>({
@@ -122,7 +122,7 @@ NASA の Earth at Night 画像を XYZ タイル形式に変換する必要があ
 `GlowGlobeMeshDesc` を使うと、地球の周りに美しいグローエフェクトを追加できます。
 
 ```typescript
-import type { GlowGlobeMeshDesc } from "@navara/three_default_descs";
+import type { GlowGlobeMeshDesc } from "@navaramap/three_default_descs";
 
 // 地球のグローエフェクトを追加
 view.addMesh<GlowGlobeMeshDesc>({
@@ -180,7 +180,7 @@ const data: AirportTrafficData = await response.json();
 `ColorMap` クラスを使うと、数値データを色にマッピングできます。ここでは便数に基づいて色を割り当てます。
 
 ```typescript
-import { Color, ColorMap, geodeticToVector3, degreeToRadian } from "@navara/three";
+import { Color, ColorMap, geodeticToVector3, degreeToRadian } from "@navaramap/three";
 
 // ref: https://matplotlib.org/stable/users/explain/colors/colormaps.html
 const PLASMA_COLORMAP = new ColorMap("sequential", "Plasma", [
@@ -255,7 +255,7 @@ const arcLines = data.features.map((feature) => {
 作成したアーチライン定義をメッシュとして追加します。
 
 ```typescript
-import type { ArclineMeshDesc } from "@navara/three_default_descs";
+import type { ArclineMeshDesc } from "@navaramap/three_default_descs";
 
 const arcLineHandle = view.addMesh<ArclineMeshDesc>({
   arcLines,
@@ -305,13 +305,13 @@ import ThreeView, {
   ColorMap,
   geodeticToVector3,
   degreeToRadian,
-} from "@navara/three";
+} from "@navaramap/three";
 import {
   ToneMappingMode,
   type ArclineMeshDesc,
   type GlowGlobeMeshDesc,
-} from "@navara/three_default_descs";
-import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
+} from "@navaramap/three_default_descs";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
 import type { FeatureCollection, MultiLineString } from "geojson";
 
 // 航空交通量データの型定義

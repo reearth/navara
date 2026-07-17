@@ -2,11 +2,11 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 
 import { CesiumIonPlugin } from "./CesiumIonPlugin";
 
-// Importing the real @navara/three touches WASM/os at module load, which fails
+// Importing the real @navaramap/three touches WASM/os at module load, which fails
 // in the test environment. CesiumIonPlugin only needs `Plugin` as a runtime base
 // class (everything else it imports is type-only), so stub the module.
 /* eslint-disable @typescript-eslint/no-extraneous-class */
-vi.mock("@navara/three", () => ({
+vi.mock("@navaramap/three", () => ({
   default: class ThreeView {},
   Plugin: class Plugin {},
 }));

@@ -1,7 +1,7 @@
 import {
   PolygonMesh as NavaraPolygonMesh,
   PolygonMaterial,
-} from "@navara/engine";
+} from "@navaramap/engine";
 import BatchTextureParsVertex from "@shaders/glsl/chunks/batch_texture_pars_vertex.glsl";
 import BranchFreeTernary from "@shaders/glsl/chunks/branchFreeTernary.glsl";
 import ExtrudedHeightParsVertex from "@shaders/glsl/chunks/extruded_height_pars_vertex.glsl";

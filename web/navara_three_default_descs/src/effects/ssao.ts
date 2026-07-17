@@ -1,8 +1,8 @@
 // eslint-disable-next-line @typescript-eslint/triple-slash-reference
 /// <reference path="../external/types/n8ao.d.ts" />
 
-import type { Nullable } from "@navara/core";
-import { Color, Pass, type EffectOptions } from "@navara/three";
+import type { Nullable } from "@navaramap/core";
+import { Color, Pass, type EffectOptions } from "@navaramap/three";
 import { N8AOPostPass, type QualityMode } from "n8ao";
 import { Scene, type Camera } from "three";
 

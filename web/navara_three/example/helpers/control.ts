@@ -1,4 +1,4 @@
-import type ThreeView from "@navara/three";
+import type ThreeView from "@navaramap/three";
 import dayjs, { type Dayjs } from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";

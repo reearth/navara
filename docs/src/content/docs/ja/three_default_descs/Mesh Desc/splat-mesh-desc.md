@@ -76,12 +76,12 @@ sidebar:
 ### 基本的な使い方
 
 ```typescript
-import ThreeView, { geodeticToVector3, degreeToRadian } from "@navara/three";
-import type { SplatMeshDesc } from "@navara/three_default_descs";
+import ThreeView, { geodeticToVector3, degreeToRadian } from "@navaramap/three";
+import type { SplatMeshDesc } from "@navaramap/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
+} from "@navaramap/three_default_plugin";
 
 const view = new ThreeView<DefaultDescriptions>();
 view.addPlugin(new DefaultPlugin()); // "splat" → SplatMeshDesc を登録

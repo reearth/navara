@@ -7,7 +7,7 @@ sidebar:
 
 ![実行結果](@assets/tutorial/model-animation.png)
 
-`@navara/three_plugins` の [PersonViewPlugin](../../../three_plugins/personviewplugin/) を使って、3D Tiles の建物内をキャラクター操作で探索する方法を学びます。キャラクター操作処理をプラグインを使用することで簡単に実装できます。
+`@navaramap/three_plugins` の [PersonViewPlugin](../../../three_plugins/personviewplugin/) を使って、3D Tiles の建物内をキャラクター操作で探索する方法を学びます。キャラクター操作処理をプラグインを使用することで簡単に実装できます。
 
 **このチュートリアルで学べること:**
 
@@ -22,12 +22,12 @@ sidebar:
 まずは建物探索用のシーンを構築します。影と背景色を設定した `ThreeView` を作成します。
 
 ```typescript
-import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
+import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navaramap/three";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
-import { PersonViewPlugin } from "@navara/three_plugins";
+} from "@navaramap/three_default_plugin";
+import { PersonViewPlugin } from "@navaramap/three_plugins";
 
 const plugin = new DefaultPlugin();
 const view = new ThreeView<DefaultDescriptions>({
@@ -227,12 +227,12 @@ personView.teleport({ lng: 139.7397, lat: 35.6352, alt: 45 });
 3D Tiles 建物と組み合わせた完全な例です。入力・キャラクター・アニメーション・カメラをすべてプラグインが担うため、アプリ側のコードは短く保てます。
 
 ```typescript
-import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
+import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navaramap/three";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
-import { PersonViewPlugin } from "@navara/three_plugins";
+} from "@navaramap/three_default_plugin";
+import { PersonViewPlugin } from "@navaramap/three_plugins";
 
 const plugin = new DefaultPlugin();
 const view = new ThreeView<DefaultDescriptions>({

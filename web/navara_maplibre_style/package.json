@@ -1,8 +1,7 @@
 {
-  "name": "@navara/maplibre_style",
+  "name": "@navaramap/maplibre_style",
   "type": "module",
   "version": "0.0.0",
-  "private": true,
   "main": "dist/index.umd.cjs",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -22,16 +21,24 @@
     "format:check": "prettier --check --ignore-path ../../.gitignore ."
   },
   "license": "MIT OR Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eukarya-inc/navara.git",
+    "directory": "web/navara_maplibre_style"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "peerDependencies": {
-    "@navara/three": "workspace:*"
+    "@navaramap/three": "workspace:*"
   },
   "dependencies": {
     "@maplibre/maplibre-gl-style-spec": "^20.3.1",
-    "@navara/core": "workspace:*",
-    "@navara/engine": "workspace:*",
+    "@navaramap/core": "workspace:*",
+    "@navaramap/engine": "workspace:*",
     "@types/geojson": "7946.0.16"
   },
   "devDependencies": {
-    "@navara/three": "workspace:*"
+    "@navaramap/three": "workspace:*"
   }
 }

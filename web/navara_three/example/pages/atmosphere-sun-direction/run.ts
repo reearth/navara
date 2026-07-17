@@ -1,9 +1,9 @@
-import ThreeView, { TERRARIUM_ELEVATION_DECODER } from "@navara/three";
-import { ToneMappingMode } from "@navara/three_default_descs";
+import ThreeView, { TERRARIUM_ELEVATION_DECODER } from "@navaramap/three";
+import { ToneMappingMode } from "@navaramap/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
+} from "@navaramap/three_default_plugin";
 import { AstroTime, Body, Equator, Horizon, Observer } from "astronomy-engine";
 import { Pane } from "tweakpane";
 

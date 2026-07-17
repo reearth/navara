@@ -6,7 +6,7 @@ import ThreeView, {
   MeshHandle,
   LightHandle,
   EffectHandle,
-} from "@navara/three";
+} from "@navaramap/three";
 import {
   SunLightDesc,
   AmbientLightDesc,
@@ -22,11 +22,11 @@ import {
   type CloudsOptions,
   type SSAOQualityMode,
   type TextureChannel,
-} from "@navara/three_default_descs";
+} from "@navaramap/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
+} from "@navaramap/three_default_plugin";
 import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 

@@ -3,14 +3,14 @@
   "compilerOptions": {
     "noEmit": true,
     "paths": {
-      "@navara/three": ["../navara_three/src"],
-      "@navara/three_default_descs": ["../navara_three_default_descs/src"],
-      "@navara/three_default_plugin": ["../navara_three_default_plugin/src"],
-      "@navara/three_api": ["../navara_three_api/src"],
-      "@navara/three_csm": ["../navara_three_csm/src"],
-      "@navara/core": ["../navara_core/src"],
-      "@navara/font": ["../navara_font/src"],
-      "@navara/worker": ["../navara_worker/src"],
+      "@navaramap/three": ["../navara_three/src"],
+      "@navaramap/three_default_descs": ["../navara_three_default_descs/src"],
+      "@navaramap/three_default_plugin": ["../navara_three_default_plugin/src"],
+      "@navaramap/three_api": ["../navara_three_api/src"],
+      "@navaramap/three_csm": ["../navara_three_csm/src"],
+      "@navaramap/core": ["../navara_core/src"],
+      "@navaramap/font": ["../navara_font/src"],
+      "@navaramap/worker": ["../navara_worker/src"],
       "@shaders/*": ["../../shaders"]
     }
   },

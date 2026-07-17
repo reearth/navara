@@ -1,6 +1,6 @@
 # Custom Descriptors — meshes, effects, depth/normal buffer access
 
-For expression the built-ins can't produce, extend the descriptor base classes from `@navara/three`: `MeshDesc`, `InstancedMeshDesc`, `EffectDesc`, `LightDesc` (all extend `BaseDesc`). Register the class, then add instances declaratively — the config object's key selects the class.
+For expression the built-ins can't produce, extend the descriptor base classes from `@navaramap/three`: `MeshDesc`, `InstancedMeshDesc`, `EffectDesc`, `LightDesc` (all extend `BaseDesc`). Register the class, then add instances declaratively — the config object's key selects the class.
 
 ## Lifecycle hooks (all descriptor kinds)
 
@@ -13,7 +13,7 @@ For expression the built-ins can't produce, extend the descriptor base classes f
 ## Custom effect (post-processing) with pipeline ordering
 
 ```typescript
-import { EffectDesc } from "@navara/three";
+import { EffectDesc } from "@navaramap/three";
 
 class VignetteEffectDesc extends EffectDesc<VignetteEffectConfig, VignetteEffectUpdate, Vignette> {
   static key = "vignette";
@@ -47,19 +47,19 @@ Ordering is declared statically via `key` / `insertAfter` / `insertBefore` relat
 
 Navara renders into a multi-render-target (MRT) G-buffer, so custom work can both **write to** and **read from** it:
 
-- **Built-in materials are automatic.** Importing `@navara/three` monkey-patches every Three.js `ShaderLib` material (`MeshStandard/Basic/Lambert/Phong`, `Sprite`, `Points`) to write the G-buffer — nothing to do for `MeshStandardMaterial` et al.
+- **Built-in materials are automatic.** Importing `@navaramap/three` monkey-patches every Three.js `ShaderLib` material (`MeshStandard/Basic/Lambert/Phong`, `Sprite`, `Points`) to write the G-buffer — nothing to do for `MeshStandardMaterial` et al.
 - **Custom `ShaderMaterial`/`LineMaterial` must opt in** — they bypass `ShaderLib`, so wire them in with one call:
   ```typescript
-  import { setupMaterialForMRT } from "@navara/three";
+  import { setupMaterialForMRT } from "@navaramap/three";
   const material = new ShaderMaterial({ uniforms, vertexShader, fragmentShader });
   setupMaterialForMRT(material, { normal: "vNormal" });   // name your VIEW-SPACE normal varying (default "normal")
   // LineMaterial (three-stdlib) is detected and routed automatically; the `normal` option is ignored for it:
   setupMaterialForMRT(lineMaterial);
   ```
   `normal` must name a **view-space** normal (it's packed with `packNormalToVec2`). Skipping this makes the mesh write nothing to the normal/id/emissive buffers, so depth/normal-based effects (SSAO, SSR, outlines) and SelectiveEffect (Bloom/Outline) break on it. Idempotent. Reference: `example/pages/custom-shader/` (MarchingCubes), `example/pages/mesh-layers/custom-pickable/` (Navara repo).
-- **Read depth/normal in a custom effect** — the canonical pattern (used by the built-in aerial-perspective and clouds effects): find the MRT pass from inside your `EffectDesc` via `this.find()` and wire its buffers into your pass. `MRTPassEffectDesc` is exported from `@navara/three` and auto-registered by `ThreeView` under the key `"mrt"`:
+- **Read depth/normal in a custom effect** — the canonical pattern (used by the built-in aerial-perspective and clouds effects): find the MRT pass from inside your `EffectDesc` via `this.find()` and wire its buffers into your pass. `MRTPassEffectDesc` is exported from `@navaramap/three` and auto-registered by `ThreeView` under the key `"mrt"`:
   ```typescript
-  import { EffectDesc, type MRTPassEffectDesc } from "@navara/three";
+  import { EffectDesc, type MRTPassEffectDesc } from "@navaramap/three";
 
   class MyDepthEffectDesc extends EffectDesc<Config, Update, MyPass> {
     static key = "myDepthEffect";
@@ -79,7 +79,7 @@ Navara renders into a multi-render-target (MRT) G-buffer, so custom work can bot
   - `ctx.getGlobeDepthTexture()` / `ctx.getGlobeNormalTexture()` — globe-only depth/normal copies for post-processing
   - `ctx.getRenderTarget()` — the main G-buffer render target; `ctx.getNormalTexture()` / `ctx.getEffectIdsTexture()` / `ctx.getEmissiveTexture()` — its attachments 1–3
   - `ctx.getInputBuffer()` — the effect composer's input buffer; `ctx.getRenderer()` — the `WebGLRenderer`
-- **Read the G-buffer back on the CPU** — `BufferView` (from `@navara/three`) reads MRT attachments off a render target, e.g. for debug visualization. Use `renderFromPixels()` for HalfFloat attachments (plain `render()` reads `Uint8Array` data only). Reference: `example/pages/debug/selective-effect/debugView.ts` (Navara repo).
+- **Read the G-buffer back on the CPU** — `BufferView` (from `@navaramap/three`) reads MRT attachments off a render target, e.g. for debug visualization. Use `renderFromPixels()` for HalfFloat attachments (plain `render()` reads `Uint8Array` data only). Reference: `example/pages/debug/selective-effect/debugView.ts` (Navara repo).
 - Depth-position queries from app code (no custom descriptor needed): `view.pickDepthPosition(x, y)` returns the ECEF position under a pixel using the full depth buffer.
 
 Gotchas: some effects don't support `logarithmicDepthBuffer` (set it `false` when using them) and `hideUnderground: false` can break effect descriptors.
@@ -87,7 +87,7 @@ Gotchas: some effects don't support `logarithmicDepthBuffer` (set it `false` whe
 ## Custom mesh
 
 ```typescript
-import { MeshDesc } from "@navara/three";
+import { MeshDesc } from "@navaramap/three";
 
 export class MarchingCubesDesc extends MeshDesc<Config, Update, MarchingCubes> {
   createMesh() { /* build and return the Three.js object; apply matrix, shadows */ }

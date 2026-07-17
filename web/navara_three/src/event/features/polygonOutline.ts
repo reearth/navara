@@ -1,4 +1,4 @@
-import type { PolygonMesh as NavaraPolygonMesh } from "@navara/engine";
+import type { PolygonMesh as NavaraPolygonMesh } from "@navaramap/engine";
 
 import { PolygonOutlineMesh } from "../../mesh";
 import type { EventContext } from "../context";

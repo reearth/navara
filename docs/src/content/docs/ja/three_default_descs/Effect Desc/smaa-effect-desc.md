@@ -58,8 +58,8 @@ sidebar:
 ### デフォルトエフェクトでSMAAを使用
 
 ```typescript
-import ThreeView from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView from "@navaramap/three";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
 
 const view = new ThreeView();
 const plugin = new DefaultPlugin();
@@ -82,8 +82,8 @@ defaultLayers.smaa.update({
 ### 高品質SMAAの設定
 
 ```typescript
-import ThreeView from "@navara/three";
-import { SMAAEffectDesc } from "@navara/three_default_descs";
+import ThreeView from "@navaramap/three";
+import { SMAAEffectDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -100,9 +100,9 @@ view.addEffect<SMAAEffectDesc>({
 ### SMAAの品質とエッジ検出モードの動的変更
 
 ```typescript
-import ThreeView from "@navara/three";
-import { FXAAEffectDesc } from "@navara/three_default_descs";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView from "@navaramap/three";
+import { FXAAEffectDesc } from "@navaramap/three_default_descs";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
 
 const view = new ThreeView();
 const plugin = new DefaultPlugin();

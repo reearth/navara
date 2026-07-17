@@ -1,4 +1,4 @@
-import type { Color } from "@navara/three";
+import type { Color } from "@navaramap/three";
 import FogLightFragment from "@shaders/glsl/fogLight.frag.glsl?raw";
 import { resolveIncludes } from "@takram/three-geospatial";
 import { depth, packing, transform } from "@takram/three-geospatial/shaders";

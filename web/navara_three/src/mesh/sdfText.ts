@@ -1,8 +1,8 @@
-import { Unimplemented } from "@navara/core";
+import { Unimplemented } from "@navaramap/core";
 import type {
   TextMaterial as NavaraTextMaterial,
   Transform,
-} from "@navara/engine";
+} from "@navaramap/engine";
 import {
   COLOR_GLYPH_PX_SIZE,
   GlyphCharClass,
@@ -11,8 +11,8 @@ import {
   type GlyphMetrics,
   type ShapedGlyph,
   type ShapeTextResult,
-} from "@navara/font";
-import { degreeToRadian } from "@navara/three_api";
+} from "@navaramap/font";
+import { degreeToRadian } from "@navaramap/three_api";
 import {
   BufferAttribute,
   type Color,

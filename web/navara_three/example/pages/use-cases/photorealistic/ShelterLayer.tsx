@@ -4,12 +4,12 @@ import {
   Color,
   type Layer as NavaraLayer,
   type LayerDescription,
-} from "@navara/three";
+} from "@navaramap/three";
 import type {
   FogLightDefinition,
   FogLightConfig,
-} from "@navara/three_default_descs";
-import { Layer, EffectDesc, useViewContext } from "@navara/three_react";
+} from "@navaramap/three_default_descs";
+import { Layer, EffectDesc, useViewContext } from "@navaramap/three_react";
 import type { FeatureCollection, Point } from "geojson";
 import { useEffect, useMemo, useRef, useState, type FC } from "react";
 

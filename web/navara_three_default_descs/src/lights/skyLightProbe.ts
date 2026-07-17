@@ -1,4 +1,4 @@
-import { EventHandler } from "@navara/core";
+import { EventHandler } from "@navaramap/core";
 import {
   SkyLightProbe as SkyLightProbeImpl,
   type PrecomputedTextures,

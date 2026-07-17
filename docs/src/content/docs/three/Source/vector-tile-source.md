@@ -30,7 +30,7 @@ Both forms produce the same source; the engine picks the right implementation au
 Multiple `vector` layers can reference one vector-tile source; the tile data and traversal are shared, and each layer styles its own `sourceLayers`.
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
+import ThreeView, { Color } from "@navaramap/three";
 
 const tiles = view.addSource({
   type: "vector-tile",
@@ -60,7 +60,7 @@ A [PMTiles](https://docs.protomaps.com/pmtiles/) archive packs an entire tile py
 To use one, point the source `url` at the archive. The URL has **no** `{z}/{x}/{y}` placeholders and ends in `.pmtiles`; the engine selects the archive source implementation automatically:
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
+import ThreeView, { Color } from "@navaramap/three";
 
 // Credit: © OpenStreetMap contributors, © Protomaps (https://protomaps.com)
 const PMTILES_URL =

@@ -1,4 +1,4 @@
-import { encodePosition } from "@navara/engine-api";
+import { encodePosition } from "@navaramap/engine-api";
 import {
   type Matrix4,
   type Texture,

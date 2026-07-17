@@ -1,10 +1,10 @@
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 import type {
   LayerDescription,
   Layer as NavaraLayer,
   FeatureUpdatedParams,
-} from "@navara/three";
-import { Layer } from "@navara/three_react";
+} from "@navaramap/three";
+import { Layer } from "@navaramap/three_react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { czmlToGeoJSON, type GeoJSONFC } from "./czml";

@@ -3,11 +3,11 @@ import ThreeView, {
   CameraDirection,
   JAPAN_GSI_ELEVATION_DECODER,
   type LatLngHeight,
-} from "@navara/three";
+} from "@navaramap/three";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
+} from "@navaramap/three_default_plugin";
 import { Vector3 } from "three";
 import { Pane, FolderApi } from "tweakpane";
 

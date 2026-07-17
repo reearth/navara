@@ -31,7 +31,7 @@ A `raster` layer renders a [`raster-tile`](../../../three/source/raster-tile-sou
 ### Imagery
 
 ```typescript
-import ThreeView from "@navara/three";
+import ThreeView from "@navaramap/three";
 
 const view = new ThreeView(/* options */);
 await view.init();
@@ -50,7 +50,7 @@ view.addLayer({ type: "raster", source: imagery, raster: { opacity: 1 } });
 Reference a `raster-dem` source; the decoder lives on the source.
 
 ```typescript
-import ThreeView, { TERRARIUM_ELEVATION_DECODER } from "@navara/three";
+import ThreeView, { TERRARIUM_ELEVATION_DECODER } from "@navaramap/three";
 
 const dem = view.addSource({
   type: "raster-dem",

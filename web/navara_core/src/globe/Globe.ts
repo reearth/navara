@@ -1,4 +1,4 @@
-import type { Globe as GlobeWasm } from "@navara/engine";
+import type { Globe as GlobeWasm } from "@navaramap/engine";
 
 import { ColorMap, Color } from "../color";
 import type { RemoveFreeRecursively } from "../types";

@@ -1,4 +1,4 @@
-import type ThreeView from "@navara/three";
+import type ThreeView from "@navaramap/three";
 import {
   Color,
   MeshDescWithSelectiveEffect,
@@ -6,7 +6,7 @@ import {
   type MeshConfigWithSelectiveEffect,
   type MeshUpdateWithSelectiveEffect,
   type ViewContext,
-} from "@navara/three";
+} from "@navaramap/three";
 
 import { DefaultArcLineConfig, ArcLine, type ArcLineConfig } from "./arcLine";
 

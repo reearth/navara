@@ -2,7 +2,7 @@
 
 /* eslint-env worker */
 
-import { transfer } from "@navara/worker";
+import { transfer } from "@navaramap/worker";
 import { toCreasedNormals as toCreasedNormalsImpl } from "three-stdlib";
 
 import {

@@ -2,16 +2,16 @@ import ThreeView, {
   Color,
   geodeticToVector3,
   degreeToRadian,
-} from "@navara/three";
+} from "@navaramap/three";
 import {
   ToneMappingMode,
   type ArclineMeshDesc,
   type GlowGlobeMeshDesc,
-} from "@navara/three_default_descs";
+} from "@navaramap/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
+} from "@navaramap/three_default_plugin";
 import type { FeatureCollection, MultiLineString } from "geojson";
 
 import { PLASMA_COLORMAP } from "../../../helpers/colors";

@@ -40,7 +40,7 @@ Shared properties applied to all instances. These are specified in the `planes` 
 **Example:**
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 {
   planes: {
@@ -215,8 +215,8 @@ Gets the number of active instances.
 ### Basic Usage
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
-import { InstancedPlaneMeshDesc } from "@navara/three_default_descs";
+import ThreeView, { Color } from "@navaramap/three";
+import { InstancedPlaneMeshDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 view.registerMesh("planes", InstancedPlaneMeshDesc);

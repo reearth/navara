@@ -10,7 +10,7 @@ The `ThreeViewCamera` class manages the camera's position, orientation, projecti
 ## How to Access
 
 ```typescript
-import ThreeView from "@navara/three";
+import ThreeView from "@navaramap/three";
 
 const view = new ThreeView({ container: element });
 await view.init();

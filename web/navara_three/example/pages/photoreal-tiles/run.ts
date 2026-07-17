@@ -1,4 +1,4 @@
-import ThreeView, { type Layer } from "@navara/three";
+import ThreeView, { type Layer } from "@navaramap/three";
 import { Pane } from "tweakpane";
 
 import { TILES_3D_DATASETS } from "../../helpers/constants";

@@ -1,11 +1,11 @@
-import type ThreeView from "@navara/three";
+import type ThreeView from "@navaramap/three";
 import {
   EffectDesc,
   type EffectConfig,
   type EffectUpdate,
   type ViewContext,
   type MRTPassEffectDesc,
-} from "@navara/three";
+} from "@navaramap/three";
 import invariant from "tiny-invariant";
 
 import { FogLight, type FogLightOptions } from "./fogLight";

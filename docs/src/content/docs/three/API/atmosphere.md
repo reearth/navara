@@ -12,7 +12,7 @@ A `ThreeView` instance holds an instance of this class through the `atmosphere` 
 ## Basic Usage
 
 ```typescript
-import ThreeView from "@navara/three";
+import ThreeView from "@navaramap/three";
 
 const view = new ThreeView({
   atmosphere: {

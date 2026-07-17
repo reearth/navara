@@ -13,8 +13,8 @@ Users/Application
    Application ←→ GPU (WebGL rendering)
        ↓
 Rendering Engine Layer
-├─ API Library (@navara/three_api)
-├─ Core Library (@navara/three) 
+├─ API Library (@navaramap/three_api)
+├─ Core Library (@navaramap/three) 
 └─ Rendering Engine (Three.js)
        ↑
    Rendering Data
@@ -65,11 +65,11 @@ GIS Processing Modules
   - Event-driven updates for new mesh additions
 
 #### **3. Application Layer Integration - Dual Path Architecture**
-- **`@navara/three`** (Main 3D Engine Interface)
+- **`@navaramap/three`** (Main 3D Engine Interface)
   - Receives comprehensive processed data from `navara_wasm`
   - Handles complex layer management and stateful operations
   - Manages event-driven rendering updates and buffer transfers
-- **`@navara/three_api`** (Utility Bridge)
+- **`@navaramap/three_api`** (Utility Bridge)
   - Provides lightweight bridge to `navara_wasm_api` utilities
   - Handles simple coordinate transformations and geometric calculations
   - Used for specific operations like screen-to-world coordinate conversion
@@ -129,10 +129,10 @@ The project implements a sophisticated multi-language architecture:
 │                    Navara Architecture                      │
 ├─────────────────────────────────────────────────────────────┤
 │  TypeScript Frontend (Three.js + Web APIs)                 │
-│  ├─ @navara/three     - Main 3D rendering engine          │
-│  ├─ @navara/core      - Core utilities and types          │
-│  ├─ @navara/worker    - Web Worker coordination           │
-│  └─ @navara/three_api - API bridge utilities              │
+│  ├─ @navaramap/three     - Main 3D rendering engine          │
+│  ├─ @navaramap/core      - Core utilities and types          │
+│  ├─ @navaramap/worker    - Web Worker coordination           │
+│  └─ @navaramap/three_api - API bridge utilities              │
 ├─────────────────────────────────────────────────────────────┤
 │  WebAssembly Interface Layer                               │
 │  ├─ navara_wasm        - Main engine (40+ crates)         │
@@ -151,10 +151,10 @@ The project implements a sophisticated multi-language architecture:
 ## TypeScript Web Ecosystem
 
 ### **Core Packages**
-- **`@navara/core`** (`web/navara_core/`) - Core utilities, event management, type definitions
-- **`@navara/three`** (`web/navara_three/`) - Main Three.js integration with comprehensive 3D engine
-- **`@navara/worker`** (`web/navara_worker/`) - Web Worker abstraction with task queuing
-- **`@navara/three_api`** (`web/navara_three_api/`) - Bridge between Three.js and WASM API
+- **`@navaramap/core`** (`web/navara_core/`) - Core utilities, event management, type definitions
+- **`@navaramap/three`** (`web/navara_three/`) - Main Three.js integration with comprehensive 3D engine
+- **`@navaramap/worker`** (`web/navara_worker/`) - Web Worker abstraction with task queuing
+- **`@navaramap/three_api`** (`web/navara_three_api/`) - Bridge between Three.js and WASM API
 
 ### **WASM Integration** (`web/wasm/`)
 - **`navara_engine`** - Main engine functionality (generated from `navara_wasm`)

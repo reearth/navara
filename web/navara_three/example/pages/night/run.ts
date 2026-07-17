@@ -8,18 +8,18 @@ import ThreeView, {
   degreeToRadian,
   geodeticToVector3,
   Color,
-} from "@navara/three";
+} from "@navaramap/three";
 import type {
   LightProbeDesc,
   SkyLightProbeDesc,
   StarsDesc,
   FogLightEffectDesc,
   FogLightDefinition,
-} from "@navara/three_default_descs";
+} from "@navaramap/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
+} from "@navaramap/three_default_plugin";
 import type { FeatureCollection, Point } from "geojson";
 import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";

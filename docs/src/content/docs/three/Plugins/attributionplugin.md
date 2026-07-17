@@ -20,7 +20,7 @@ Credits may contain inline `<a>` links; they are sanitized before display. The c
 ## Usage
 
 ```typescript
-import ThreeView from "@navara/three";
+import ThreeView from "@navaramap/three";
 
 // ThreeView creates the attribution UI by default; access it via view.attribution.
 const view = new ThreeView({ container });
@@ -107,7 +107,7 @@ new ThreeView({
 
 `view.attribution` is `undefined` when disabled via `defaultAttribution: false`, or in a worker / no-DOM environment (the built-in plugin needs the DOM). `position` chooses the bottom corner for the ⓘ button and its popover card (default `"bottom-right"`); use `"bottom-left"` when the bottom-right corner is occupied, e.g. a page with its own HUD there. The logo frame lives in the bottom-left area in both modes; in `"bottom-left"` the ⓘ takes the far-left corner and the logos shift right to sit beside it. `style` sets the initial colors (see [AttributionStyle](#attributionstyle)).
 
-**Advanced:** `AttributionPlugin` is also exported from `@navara/three` and can be constructed manually (`new AttributionPlugin({ style?, position? })`) and registered with `view.addPlugin()` **before** `view.init()` — e.g. to attach one to a view created with `defaultAttribution: false`.
+**Advanced:** `AttributionPlugin` is also exported from `@navaramap/three` and can be constructed manually (`new AttributionPlugin({ style?, position? })`) and registered with `view.addPlugin()` **before** `view.init()` — e.g. to attach one to a view created with `defaultAttribution: false`.
 
 ## Methods
 

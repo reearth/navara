@@ -2,14 +2,14 @@ import {
   type ExtractProperties,
   type FeatureSetId,
   type LayerId,
-} from "@navara/core";
+} from "@navaramap/core";
 import type {
   ModelMaterial as NavaraModelMaterial,
   PointMaterial,
   PolygonMaterial,
   PolylineMaterial,
   TextMaterial,
-} from "@navara/engine";
+} from "@navaramap/engine";
 import { BufferGeometry, Mesh, Object3D } from "three";
 import type { NormalBufferAttributes } from "three";
 

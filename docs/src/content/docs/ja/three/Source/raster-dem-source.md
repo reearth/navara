@@ -28,7 +28,7 @@ RGB→高さのデコードは `elevationDecoder` で設定します。
 ## 使用例
 
 ```typescript
-import ThreeView, { TERRARIUM_ELEVATION_DECODER } from "@navara/three";
+import ThreeView, { TERRARIUM_ELEVATION_DECODER } from "@navaramap/three";
 
 const dem = view.addSource({
   type: "raster-dem",
@@ -51,7 +51,7 @@ view.addLayer({ type: "raster", source: dem, hillshade: { exaggeration: 1.5 } })
 
 ### 定義済みの定数
 
-`@navara/three` は、一般的な標高タイルプロバイダー向けのデコーダ定数を提供しています。
+`@navaramap/three` は、一般的な標高タイルプロバイダー向けのデコーダ定数を提供しています。
 
 | 定数                             | ユースケース                                                       |
 | ------------------------------- | ----------------------------------------------------------------- |
@@ -60,7 +60,7 @@ view.addLayer({ type: "raster", source: dem, hillshade: { exaggeration: 1.5 } })
 | `TERRARIUM_ELEVATION_DECODER()` | Terrarium 形式の標高タイル                                          |
 
 ```typescript
-import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
+import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navaramap/three";
 
 view.addSource({
   type: "raster-dem",

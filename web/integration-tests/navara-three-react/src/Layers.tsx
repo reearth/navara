@@ -2,10 +2,10 @@ import {
   type LayerDescription,
   Color,
   JAPAN_GSI_ELEVATION_DECODER,
-} from "@navara/three";
-import type { CloudsConfig } from "@navara/three_default_descs";
-import type { DefaultPlugin } from "@navara/three_default_plugin";
-import { EffectDesc, Layer, useViewContext } from "@navara/three_react";
+} from "@navaramap/three";
+import type { CloudsConfig } from "@navaramap/three_default_descs";
+import type { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { EffectDesc, Layer, useViewContext } from "@navaramap/three_react";
 import { useMemo, type FC } from "react";
 
 import { useDefaultLayers } from "./hooks";

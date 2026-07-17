@@ -7,9 +7,9 @@
  * ## Usage
  *
  * ```ts
- * import ThreeView from "@navara/three";
- * import { DefaultPlugin } from "@navara/three_default_plugin";
- * import { CesiumIonPlugin } from "@navara/three_plugins";
+ * import ThreeView from "@navaramap/three";
+ * import { DefaultPlugin } from "@navaramap/three_default_plugin";
+ * import { CesiumIonPlugin } from "@navaramap/three_plugins";
  *
  * const view = new ThreeView({ container, animation: true });
  * const cesiumIon = new CesiumIonPlugin({
@@ -37,8 +37,8 @@ import ThreeView, {
   type QuantizedMeshSource,
   type TerrainSourceLayer,
   type ViewContext,
-} from "@navara/three";
-import type { DefaultDescriptions } from "@navara/three_default_plugin";
+} from "@navaramap/three";
+import type { DefaultDescriptions } from "@navaramap/three_default_plugin";
 
 type View = ThreeView<DefaultDescriptions>;
 

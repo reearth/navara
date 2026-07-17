@@ -111,14 +111,14 @@ Navara は複数のレンダーターゲット（MRT）からなる G-buffer に
 
 ### 組み込みマテリアルは自動対応
 
-`@navara/three` を import すると、組み込みの Three.js マテリアル（`MeshStandardMaterial`、`MeshBasicMaterial`、`MeshLambertMaterial`、`MeshPhongMaterial`、`SpriteMaterial`、`PointsMaterial`）は G-buffer に書き込むよう自動的にパッチされます。カスタム Descriptor がこれらを使う場合、何もする必要はありません。
+`@navaramap/three` を import すると、組み込みの Three.js マテリアル（`MeshStandardMaterial`、`MeshBasicMaterial`、`MeshLambertMaterial`、`MeshPhongMaterial`、`SpriteMaterial`、`PointsMaterial`）は G-buffer に書き込むよう自動的にパッチされます。カスタム Descriptor がこれらを使う場合、何もする必要はありません。
 
 ### カスタムマテリアルは明示的な有効化が必要
 
 `ShaderMaterial` と three-stdlib の `LineMaterial` は Three.js の `ShaderLib` を経由しないため、Navara は自動でパッチできません。`setupMaterialForMRT()` で有効化してください。
 
 ```typescript
-import { setupMaterialForMRT } from "@navara/three";
+import { setupMaterialForMRT } from "@navaramap/three";
 
 const material = new ShaderMaterial({ uniforms, vertexShader, fragmentShader });
 
@@ -164,7 +164,7 @@ class MyMeshDesc extends MeshDesc<
 ### 設定型の定義
 
 ```typescript
-import type { MeshConfig, MeshUpdate } from "@navara/three";
+import type { MeshConfig, MeshUpdate } from "@navaramap/three";
 
 type MyMeshDescription = {
   myMesh?: {
@@ -202,7 +202,7 @@ import ThreeView, {
   type MeshUpdate,
   type ViewContext,
   Color,
-} from "@navara/three";
+} from "@navaramap/three";
 import {
   Mesh,
   SphereGeometry,
@@ -280,7 +280,7 @@ export class MySphereMeshDesc extends MeshDesc<
 ### 登録と使用
 
 ```typescript
-import ThreeView from "@navara/three";
+import ThreeView from "@navaramap/three";
 
 const view = new ThreeView({});
 view.registerMesh("mySphere", MySphereMeshDesc);
@@ -378,7 +378,7 @@ import ThreeView, {
   type InstancedChildConfig,
   type ViewContext,
   Color,
-} from "@navara/three";
+} from "@navaramap/three";
 import {
   BoxGeometry,
   MeshStandardMaterial,
@@ -433,7 +433,7 @@ export class MyBoxesDesc extends InstancedMeshDesc<
 ### Registration and Usage
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
+import ThreeView, { Color } from "@navaramap/three";
 
 const view = new ThreeView({});
 view.registerMesh("myBoxes", MyBoxesDesc);
@@ -492,7 +492,7 @@ import ThreeView, {
   type EffectConfig,
   type EffectUpdate,
   type ViewContext,
-} from "@navara/three";
+} from "@navaramap/three";
 
 type MyEffectDescription = {
   myEffect?: {
@@ -580,7 +580,7 @@ import ThreeView, {
   type LightUpdate,
   type ViewContext,
   Color,
-} from "@navara/three";
+} from "@navaramap/three";
 import { PointLight } from "three";
 
 type MyPointLightDescription = {
@@ -661,7 +661,7 @@ import ThreeView, {
   type MeshUpdate,
   type ViewContext,
   Color,
-} from "@navara/three";
+} from "@navaramap/three";
 import { Mesh, BoxGeometry, MeshStandardMaterial } from "three";
 
 type MyConfig = MeshConfig & { myBox?: { color?: Color } };
@@ -713,7 +713,7 @@ class MyPickableBoxDesc extends MeshDesc<
 import {
   InstancedMeshDesc,
   PickableInstancedMeshWrapper,
-} from "@navara/three";
+} from "@navaramap/three";
 
 class MyPickableInstancedDesc extends InstancedMeshDesc</* ... */> {
   private pickWrapper?: PickableInstancedMeshWrapper;
@@ -758,7 +758,7 @@ class MyPickableInstancedDesc extends InstancedMeshDesc</* ... */> {
 完全にカスタムなシェーダーを持つ Descriptor では、`PickableMesh` インターフェースを直接実装します。フラグメントシェーダーで、ピッキングユニフォームがアクティブな場合にバッチ ID を RGB カラーとしてエンコードする必要があります。
 
 ```typescript
-import { type PickableMesh } from "@navara/three";
+import { type PickableMesh } from "@navaramap/three";
 
 class CustomPickable extends Object3D implements PickableMesh {
   batchId: number;

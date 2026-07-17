@@ -6,9 +6,9 @@ import ThreeView, {
   degreeToRadian,
   geodeticSurfaceNormal,
   Color,
-} from "@navara/three";
-import type { GLTFModelDesc } from "@navara/three_default_descs";
-import type { DefaultDescriptions } from "@navara/three_default_plugin";
+} from "@navaramap/three";
+import type { GLTFModelDesc } from "@navaramap/three_default_descs";
+import type { DefaultDescriptions } from "@navaramap/three_default_plugin";
 import { Vector3, Quaternion, Euler } from "three";
 import { Pane, type FolderApi } from "tweakpane";
 

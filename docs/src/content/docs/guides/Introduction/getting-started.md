@@ -33,8 +33,8 @@ Here is the core code — the same example shown in [What is Navara?](../what-is
 ![Hero](@assets/hero.png)
 
 ```typescript
-import ThreeView from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView from "@navaramap/three";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
 
 const view = new ThreeView({ useNormal: true });
 

@@ -1,4 +1,4 @@
-import type { EntityEvent, HillshadeBackfilledEvent } from "@navara/engine";
+import type { EntityEvent, HillshadeBackfilledEvent } from "@navaramap/engine";
 import { Texture } from "three";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -12,7 +12,7 @@ import {
 import { HillshadeContext } from "./HillshadeContext";
 
 // Mock generate_id_from_entity
-vi.mock("@navara/core", () => ({
+vi.mock("@navaramap/core", () => ({
   generate_id_from_entity: (event: any) => `${event.ind}_${event.gen}`,
 }));
 

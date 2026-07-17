@@ -25,7 +25,7 @@ sidebar:
 ### 基本的なタイルセット
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
+import ThreeView, { Color } from "@navaramap/three";
 
 const view = new ThreeView(/* options */);
 await view.init();

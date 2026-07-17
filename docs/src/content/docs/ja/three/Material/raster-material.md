@@ -26,7 +26,7 @@ sidebar:
 **説明:** ラスター画像に適用するティント色。`Color` インスタンスで指定します。
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 { raster: { color: new Color().setHex(0xffffff) } }
 ```

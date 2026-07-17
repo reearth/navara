@@ -32,7 +32,7 @@ Because it decodes DEM tiles, it requires a [`raster-dem`](../../../three/source
 Add hillshade on top of a flat basemap by referencing a `raster-dem` source. The decoder lives on the source.
 
 ```typescript
-import ThreeView, { TERRARIUM_ELEVATION_DECODER } from "@navara/three";
+import ThreeView, { TERRARIUM_ELEVATION_DECODER } from "@navaramap/three";
 
 const view = new ThreeView({ container: document.getElementById("map") });
 await view.init();

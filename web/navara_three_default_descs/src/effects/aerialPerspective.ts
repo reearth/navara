@@ -3,7 +3,7 @@ import {
   Pass,
   CustomEffectPass,
   type EffectOptions,
-} from "@navara/three";
+} from "@navaramap/three";
 import {
   AerialPerspectiveEffect,
   type AtmosphereOverlay,

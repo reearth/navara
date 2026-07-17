@@ -155,7 +155,7 @@ evaluate(
 **Example:**
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 // 3D Tiles の建物を高さで色分け
 layer.on("featureUpdated", ({ evaluator }) => {

@@ -78,7 +78,7 @@ export function composePlugins(
   additionalPlugins: PluginOption[] = [],
 ): PluginOption[] {
   const basePlugins: PluginOption[] = [
-    watchPackages(["@navara/engine", "@navara/engine-worker", "@navara/engine-font-worker", "@navara/engine-api"]),
+    watchPackages(["@navaramap/engine", "@navaramap/engine-worker", "@navaramap/engine-font-worker", "@navaramap/engine-api"]),
     noInlineWasm(),
     tsconfig(),
     dts({ bundleTypes: true, tsconfigPath: "./tsconfig.build.json" }),
@@ -114,7 +114,7 @@ export const commonConfig = (name: string, env: ConfigEnv) => ({
     outDir: "dist",
     emptyOutDir: true,
     rollupOptions: {
-      external: ["@navara/engine", "@navara/engine-worker", "@navara/engine-font-worker", "@navara/engine-api"],
+      external: ["@navaramap/engine", "@navaramap/engine-worker", "@navaramap/engine-font-worker", "@navaramap/engine-api"],
     },
     watch:
       env.mode === "watch"

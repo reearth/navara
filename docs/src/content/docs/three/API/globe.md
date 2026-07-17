@@ -12,7 +12,7 @@ The Globe class provides an interface for accessing and modifying properties rel
 The Globe instance is accessed through the `globe` property of ThreeView.
 
 ```typescript
-import ThreeView from "@navara/three";
+import ThreeView from "@navaramap/three";
 
 const view = new ThreeView();
 
@@ -89,7 +89,7 @@ console.log(view.globe.segments);
 **Example:**
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
+import ThreeView, { Color } from "@navaramap/three";
 
 const view = new ThreeView();
 
@@ -223,7 +223,7 @@ view.globe.wireframe = false;
 **Example:**
 
 ```typescript
-import ThreeView, { ColorMap, Color } from "@navara/three";
+import ThreeView, { ColorMap, Color } from "@navaramap/three";
 
 const view = new ThreeView();
 
@@ -258,7 +258,7 @@ import ThreeView, {
   ColorMap,
   Color,
   TERRARIUM_ELEVATION_DECODER,
-} from "@navara/three";
+} from "@navaramap/three";
 
 const view = new ThreeView({
   animation: true,
@@ -330,7 +330,7 @@ view.setCamera({
 Some properties can only be set at initialization time. These are specified in the ThreeView constructor options.
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
+import ThreeView, { Color } from "@navaramap/three";
 
 const view = new ThreeView({
   // Properties that can only be set at initialization

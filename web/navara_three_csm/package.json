@@ -1,8 +1,7 @@
 {
-  "name": "@navara/three_csm",
+  "name": "@navaramap/three_csm",
   "type": "module",
   "version": "0.0.0",
-  "private": true,
   "main": "dist/index.umd.cjs",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -21,6 +20,14 @@
     "format:check": "prettier --check --ignore-path ../../.gitignore --ignore-path ../../.prettierignore ."
   },
   "license": "MIT OR Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eukarya-inc/navara.git",
+    "directory": "web/navara_three_csm"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "peerDependencies": {
     "three": ">=0.183.0"
   },

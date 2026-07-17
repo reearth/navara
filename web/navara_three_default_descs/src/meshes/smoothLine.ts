@@ -1,4 +1,4 @@
-import type { LatLngHeight } from "@navara/three";
+import type { LatLngHeight } from "@navaramap/three";
 import {
   createReplacer,
   setupMaterialForMRT,
@@ -7,7 +7,7 @@ import {
   calcCameraPosition,
   calcModelMatrixRTE,
   encodePositionRTE,
-} from "@navara/three";
+} from "@navaramap/three";
 import {
   Object3D,
   CatmullRomCurve3,

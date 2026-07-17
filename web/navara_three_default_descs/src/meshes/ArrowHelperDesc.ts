@@ -1,11 +1,11 @@
-import type ThreeView from "@navara/three";
+import type ThreeView from "@navaramap/three";
 import {
   type XYZ,
   Color,
   MeshDesc,
   type MeshConfig,
   type ViewContext,
-} from "@navara/three";
+} from "@navaramap/three";
 import { ArrowHelper, Vector3 } from "three";
 
 type Description = {

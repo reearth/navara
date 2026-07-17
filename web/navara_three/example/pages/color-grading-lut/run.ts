@@ -3,15 +3,15 @@ import ThreeView, {
   type BlendMode,
   EffectHandle,
   JAPAN_GSI_ELEVATION_DECODER,
-} from "@navara/three";
+} from "@navaramap/three";
 import {
   ColorGradingLUTEffectDesc,
   DEFAULT_COLOR_GRADING_LUT_OPTIONS,
-} from "@navara/three_default_descs";
+} from "@navaramap/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
+} from "@navaramap/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import {

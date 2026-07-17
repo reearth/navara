@@ -1,4 +1,4 @@
-import type { Promise } from "@navara/worker";
+import type { Promise } from "@navaramap/worker";
 
 import { queueTask } from "./queueTask";
 

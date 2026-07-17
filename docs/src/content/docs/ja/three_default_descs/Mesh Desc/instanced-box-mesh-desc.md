@@ -24,7 +24,7 @@ sidebar:
 **Example:**
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 {
   boxes: {
@@ -44,7 +44,7 @@ import { Color } from "@navara/three";
 **Example:**
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 {
   boxes: {
@@ -218,7 +218,7 @@ import { Color } from "@navara/three";
 **Example:**
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 {
   boxes: {
@@ -398,8 +398,8 @@ console.log("Instance count:", handle.ref.count);
 ### 基本的な使い方
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
-import { InstancedBoxMeshDesc } from "@navara/three_default_descs";
+import ThreeView, { Color } from "@navaramap/three";
+import { InstancedBoxMeshDesc } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 view.registerMesh("boxes", InstancedBoxMeshDesc);

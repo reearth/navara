@@ -1,4 +1,4 @@
-import type { ColorTuple } from "@navara/three";
+import type { ColorTuple } from "@navaramap/three";
 import {
   Layers as LayersIcon,
   Clock,

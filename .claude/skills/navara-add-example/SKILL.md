@@ -46,7 +46,7 @@ Non-trivial examples split into two files:
 
 ```typescript
 // main.ts — thin entry: construct the view, delegate
-import ThreeView from "@navara/three";
+import ThreeView from "@navaramap/three";
 import { run, type CustomDescriptions } from "./run";
 const view = new ThreeView<CustomDescriptions>({ shadow: true });
 run(view);
@@ -101,7 +101,7 @@ Dev/debug page UI is **Tweakpane** (`new Pane({ title })` + `.addBinding(...).on
 
 1. Pick the track: dev/debug or unprompted additions → `pages/<category>/<name>/`; curated gallery (`pages/examples/`) only with explicit design approval. Create the directory.
 2. Write `main.ts` (+ `run.ts`, + `meta.ts` for the gallery track). Code comments in English.
-3. Run it: `cargo make dev` (or `pnpm --filter @navara/three dev`) → `http://localhost:5173/<category>-<name>`.
+3. Run it: `cargo make dev` (or `pnpm --filter @navaramap/three dev`) → `http://localhost:5173/<category>-<name>`.
 4. Show data credits via `AttributionPlugin` when using external datasets.
 5. Screenshot for the index card: `pnpm navara_three screenshots <page>` (dev server must be running; adjust wait time in `web/navara_three/scripts/generate-screenshots.ts` via `PAGE_CONFIGS` if the scene loads slowly).
 6. Before committing: `pnpm run build:example`, `pnpm run format`, `pnpm run lint`, `pnpm run test` (from the repo root).

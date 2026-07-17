@@ -3,17 +3,17 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   geodeticToVector3,
   degreeToRadian,
-} from "@navara/three";
+} from "@navaramap/three";
 import type {
   BoxMeshDesc,
   SelectiveBloomEffectDesc,
   SelectiveOutlineEffectDesc,
   SphereMeshDesc,
-} from "@navara/three_default_descs";
+} from "@navaramap/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
+} from "@navaramap/three_default_plugin";
 import { Vector3 } from "three";
 import { Pane } from "tweakpane";
 

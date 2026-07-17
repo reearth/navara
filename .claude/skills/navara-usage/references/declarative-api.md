@@ -14,7 +14,7 @@ The core design: a **Source** describes *where and how data is fetched*; a **Lay
 ## Basic pattern
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 const imagery = view.addSource({
   type: "raster-tile",
@@ -33,7 +33,7 @@ view.addLayer({
 });
 ```
 
-Layer material `color` fields take the `Color` class from `@navara/three` (`new Color().setHex(...)` / `.setStyle("#00aaff")`), not raw hex numbers — raw numbers only work in mesh Descriptor configs. For one-off inline data, a `geojson` **source** accepts a `data` field (a GeoJSON object) instead of a URL; layers themselves always reference a source.
+Layer material `color` fields take the `Color` class from `@navaramap/three` (`new Color().setHex(...)` / `.setStyle("#00aaff")`), not raw hex numbers — raw numbers only work in mesh Descriptor configs. For one-off inline data, a `geojson` **source** accepts a `data` field (a GeoJSON object) instead of a URL; layers themselves always reference a source.
 
 ## Terrain
 
@@ -68,7 +68,7 @@ Layer events: `featureCreated` / `featureUpdated` / `featureVisibilityChanged` /
 Layers need no registration, but mesh/effect/light **Descriptors must be registered before use** — the key of the config object selects the descriptor class:
 
 ```typescript
-import { BoxMeshDesc, FXAAEffectDesc, SunLightDesc } from "@navara/three_default_descs";
+import { BoxMeshDesc, FXAAEffectDesc, SunLightDesc } from "@navaramap/three_default_descs";
 
 view.registerMesh("box", BoxMeshDesc);          // DefaultPlugin does this for ~40 built-ins
 const box = view.addMesh<BoxMeshDesc>({ box: { width: 100, height: 100 } });

@@ -40,8 +40,8 @@ The `ToneMappingEffectDesc` class is a Descriptor that applies a tone mapping ef
 ### Using tone mapping with default effects
 
 ```typescript
-import ThreeView from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView from "@navaramap/three";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
 
 const view = new ThreeView();
 const plugin = new DefaultPlugin();
@@ -58,8 +58,8 @@ view.toneMappingExposure = 10;
 ### Using different tone mapping modes
 
 ```typescript
-import ThreeView from "@navara/three";
-import { ToneMappingEffectDesc, ToneMappingMode } from "@navara/three_default_descs";
+import ThreeView from "@navaramap/three";
+import { ToneMappingEffectDesc, ToneMappingMode } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -89,9 +89,9 @@ view.addEffect<ToneMappingEffectDesc>({
 ### Usage combined with exposure adjustment
 
 ```typescript
-import ThreeView from "@navara/three";
-import { ToneMappingMode } from "@navara/three_default_descs";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView from "@navaramap/three";
+import { ToneMappingMode } from "@navaramap/three_default_descs";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
 
 const view = new ThreeView();
 const plugin = new DefaultPlugin();
@@ -118,8 +118,8 @@ view.toneMappingExposure = 5;
 ### Adding a tone mapping Descriptor individually
 
 ```typescript
-import ThreeView from "@navara/three";
-import { ToneMappingEffectDesc, SMAAEffectDesc, ToneMappingMode } from "@navara/three_default_descs";
+import ThreeView from "@navaramap/three";
+import { ToneMappingEffectDesc, SMAAEffectDesc, ToneMappingMode } from "@navaramap/three_default_descs";
 
 const view = new ThreeView();
 await view.init();

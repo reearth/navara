@@ -1,4 +1,4 @@
-import type { Window as WindowObject } from "@navara/core";
+import type { Window as WindowObject } from "@navaramap/core";
 import {
   angleToRadian,
   getPlaneFromPointNormal as nvGetPlaneFromPointNormal,
@@ -11,7 +11,7 @@ import {
   Transform,
   CameraFrustum,
   Ray as WASMRay,
-} from "@navara/engine-api";
+} from "@navaramap/engine-api";
 import {
   Vector3,
   Vector2,

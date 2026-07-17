@@ -1,4 +1,4 @@
-// Effect implementations (moved from @navara/three)
+// Effect implementations (moved from @navaramap/three)
 export * from "./aa";
 export * from "./aerialPerspective";
 export * from "./clouds/index";

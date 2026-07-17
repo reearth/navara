@@ -3,8 +3,8 @@ import {
   TransferableRasterDEMDataLike,
   TransferableTileLike,
   UpsamplableTerrainGeometryLike,
-} from "@navara/core";
-import { upsampleTerrainMesh as upsampleTerrainMeshImpl } from "@navara/engine-worker";
+} from "@navaramap/core";
+import { upsampleTerrainMesh as upsampleTerrainMeshImpl } from "@navaramap/engine-worker";
 
 import { transfer } from "..";
 import { transferReturnedConstructedTerrainMesh } from "../helpers/transferReturnedConstructedTerrainMesh";

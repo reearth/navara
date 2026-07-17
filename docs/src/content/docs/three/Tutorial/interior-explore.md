@@ -7,7 +7,7 @@ sidebar:
 
 ![Result](@assets/tutorial/model-animation.png)
 
-Learn how to explore the interior of 3D Tiles buildings while controlling a character with [PersonViewPlugin](../../../three_plugins/personviewplugin/) from `@navara/three_plugins`. The plugin lets you wire up character controls with minimal code.
+Learn how to explore the interior of 3D Tiles buildings while controlling a character with [PersonViewPlugin](../../../three_plugins/personviewplugin/) from `@navaramap/three_plugins`. The plugin lets you wire up character controls with minimal code.
 
 **What you will learn in this tutorial:**
 
@@ -22,12 +22,12 @@ Learn how to explore the interior of 3D Tiles buildings while controlling a char
 First, build a scene for building exploration. Create a `ThreeView` with shadow and background color settings.
 
 ```typescript
-import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
+import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navaramap/three";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
-import { PersonViewPlugin } from "@navara/three_plugins";
+} from "@navaramap/three_default_plugin";
+import { PersonViewPlugin } from "@navaramap/three_plugins";
 
 const plugin = new DefaultPlugin();
 const view = new ThreeView<DefaultDescriptions>({
@@ -227,12 +227,12 @@ The chase camera snaps to the new location and the state listener fires once wit
 A complete example that combines the plugin with a 3D Tiles building. The code is intentionally short: the plugin owns the input, character, animation, and camera.
 
 ```typescript
-import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
+import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navaramap/three";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
-import { PersonViewPlugin } from "@navara/three_plugins";
+} from "@navaramap/three_default_plugin";
+import { PersonViewPlugin } from "@navaramap/three_plugins";
 
 const plugin = new DefaultPlugin();
 const view = new ThreeView<DefaultDescriptions>({

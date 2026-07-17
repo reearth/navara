@@ -1,8 +1,7 @@
 {
-  "name": "@navara/font",
+  "name": "@navaramap/font",
   "type": "module",
   "version": "0.0.0",
-  "private": true,
   "main": "dist/index.umd.cjs",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -33,10 +32,18 @@
     "format:check": "prettier --check --ignore-path ../../.gitignore --ignore-path ../../.prettierignore ."
   },
   "license": "MIT OR Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eukarya-inc/navara.git",
+    "directory": "web/navara_font"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "three": "0.184.0",
-    "@navara/engine-font-worker": "workspace:*",
-    "@navara/worker": "workspace:*"
+    "@navaramap/engine-font-worker": "workspace:*",
+    "@navaramap/worker": "workspace:*"
   },
   "devDependencies": {
     "@types/three": "0.184.0"

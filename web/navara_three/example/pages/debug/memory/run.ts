@@ -6,11 +6,14 @@
  * slider to watch retention/eviction live and a fly-to button reproducing
  * the z4→z16 descent burst.
  */
-import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
+import ThreeView, {
+  Color,
+  JAPAN_GSI_ELEVATION_DECODER,
+} from "@navaramap/three";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
+} from "@navaramap/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import {

@@ -1,4 +1,4 @@
-import type { EntityEvent } from "@navara/engine";
+import type { EntityEvent } from "@navaramap/engine";
 
 export function generate_id_from_entity(entity: EntityEvent) {
   return generate_id_from_ind_gen(entity.ind, entity.gen);

@@ -28,7 +28,7 @@ The RGB→height decoding is configured by `elevationDecoder`.
 ## Examples
 
 ```typescript
-import ThreeView, { TERRARIUM_ELEVATION_DECODER } from "@navara/three";
+import ThreeView, { TERRARIUM_ELEVATION_DECODER } from "@navaramap/three";
 
 const dem = view.addSource({
   type: "raster-dem",
@@ -51,7 +51,7 @@ The `elevationDecoder` describes how the tile's RGB(A) channels decode into a he
 
 ### Pre-defined constants
 
-`@navara/three` provides decoder constants for common elevation tile providers:
+`@navaramap/three` provides decoder constants for common elevation tile providers:
 
 | Constant                        | Use case                                                          |
 | ------------------------------- | ----------------------------------------------------------------- |
@@ -60,7 +60,7 @@ The `elevationDecoder` describes how the tile's RGB(A) channels decode into a he
 | `TERRARIUM_ELEVATION_DECODER()` | Terrarium format elevation tiles                                  |
 
 ```typescript
-import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
+import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navaramap/three";
 
 view.addSource({
   type: "raster-dem",

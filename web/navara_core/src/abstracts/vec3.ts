@@ -1,4 +1,4 @@
-import { Vec3 } from "@navara/engine";
+import { Vec3 } from "@navaramap/engine";
 
 export abstract class BaseAbstractedVec3 {
   value: Vec3;

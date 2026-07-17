@@ -3,7 +3,7 @@ import {
   type BlendMode,
   Effect,
   type EffectOptions,
-} from "@navara/three";
+} from "@navaramap/three";
 import { LookupTexture, RawImageData, LUT3DEffect } from "postprocessing";
 import { type Camera, TextureLoader } from "three";
 import { LUT3dlLoader } from "three/examples/jsm/loaders/LUT3dlLoader.js";

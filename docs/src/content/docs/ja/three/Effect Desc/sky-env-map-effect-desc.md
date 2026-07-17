@@ -40,8 +40,8 @@ sidebar:
 ### 基本的な空環境マップの追加
 
 ```typescript
-import ThreeView, { SkyEnvMapEffectDesc } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView, { SkyEnvMapEffectDesc } from "@navaramap/three";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
 
 const view = new ThreeView();
 const plugin = new DefaultPlugin();
@@ -62,8 +62,8 @@ view.addEffect<SkyEnvMapEffectDesc>({
 ### 高解像度の環境マップ
 
 ```typescript
-import ThreeView, { SkyEnvMapEffectDesc } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView, { SkyEnvMapEffectDesc } from "@navaramap/three";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
 
 const view = new ThreeView();
 const plugin = new DefaultPlugin();
@@ -84,8 +84,8 @@ view.addEffect<SkyEnvMapEffectDesc>({
 ### 反射マテリアルと組み合わせた使用
 
 ```typescript
-import ThreeView, { SkyEnvMapEffectDesc, Color } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView, { SkyEnvMapEffectDesc, Color } from "@navaramap/three";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
 
 const view = new ThreeView();
 const plugin = new DefaultPlugin();

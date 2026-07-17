@@ -1,8 +1,16 @@
 {
-  "name": "@navara/engine-api",
+  "name": "@navaramap/engine-api",
   "type": "module",
-  "version": "0.1.0",
-  "license": "MIT/Apache-2.0",
+  "version": "0.0.0",
+  "license": "MIT OR Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eukarya-inc/navara.git",
+    "directory": "web/wasm/navara_engine_api"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "files": [
     "navara_wasm_api_bg.wasm",
     "navara_wasm_api.js",

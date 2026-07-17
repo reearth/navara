@@ -1,9 +1,9 @@
 {
-  "name": "@navara/integration-test-three-react",
+  "name": "@navaramap/integration-test-three-react",
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Integration test for @navara/three_react - uses built library files",
+  "description": "Integration test for @navaramap/three_react - uses built library files",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
@@ -16,13 +16,13 @@
   },
   "license": "MIT OR Apache-2.0",
   "dependencies": {
-    "@navara/three": "workspace:*",
-    "@navara/three_react": "workspace:*",
-    "@navara/engine": "workspace:*",
-    "@navara/engine-api": "workspace:*",
-    "@navara/engine-worker": "workspace:*",
-    "@navara/three_default_plugin": "workspace:*",
-    "@navara/three_default_descs": "workspace:*",
+    "@navaramap/three": "workspace:*",
+    "@navaramap/three_react": "workspace:*",
+    "@navaramap/engine": "workspace:*",
+    "@navaramap/engine-api": "workspace:*",
+    "@navaramap/engine-worker": "workspace:*",
+    "@navaramap/three_default_plugin": "workspace:*",
+    "@navaramap/three_default_descs": "workspace:*",
     "three": "0.184.0"
   },
   "devDependencies": {

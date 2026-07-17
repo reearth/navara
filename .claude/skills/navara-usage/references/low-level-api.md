@@ -7,7 +7,7 @@ Use these when declarative layer config isn't enough: data-driven styling per fe
 Obtained from layer `featureCreated`/`featureUpdated` events. `evaluate()` runs per batch and returns only the properties you want to override (all optional: `color`, `show`, `height`, `extrudedHeight`, `text`, `width`, `size`, `opacity`):
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 const updatedFeatures = new Set<bigint>();
 layer.on("featureUpdated", ({ evaluator }) => {
@@ -41,7 +41,7 @@ const unobserve = view.observeTerrainHeightAt({ lat, lng }, (height) => { ... })
 
 Mouse events (`click`, `mousemove`, …) deliver `MapMouseEvent` with `.clientX/Y` and `.map` (ECEF coords). The `idle` event fires after `idleThreshold` ms without tile/data activity.
 
-## Geodetic / ECEF math (exported from `@navara/three`; standalone in `@navara/three_api`)
+## Geodetic / ECEF math (exported from `@navaramap/three`; standalone in `@navaramap/three_api`)
 
 Positions in the scene are **ECEF meters**. Geodetic helpers take **radians**.
 
@@ -51,7 +51,7 @@ import {
   eastNorthUpToFixedFrame, geodeticSurfaceNormal,
   getPickRay, getPlaneFromPointNormal, getRayPlaneIntersection,
   convertWorldToScreen, EllipsoidGeodesic,
-} from "@navara/three";
+} from "@navaramap/three";
 
 // position is Cartesian ECEF by default — a bare position won't stand upright at a
 // lng/lat. Build a tangent frame at the origin and pass it as matrixWorld; then
@@ -73,7 +73,7 @@ const geodesic = new EllipsoidGeodesic(startLLE, endLLE);
 geodesic.distance; geodesic.interpolatePoints(64);
 ```
 
-Pick the tangent-frame function by the axis orientation your mesh expects — all take an ECEF origin `Vector3` and return a `Matrix4`, all exported from `@navara/three`:
+Pick the tangent-frame function by the axis orientation your mesh expects — all take an ECEF origin `Vector3` and return a `Matrix4`, all exported from `@navaramap/three`:
 
 | Function | Local axes (x, y, z) |
 |---|---|

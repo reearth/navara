@@ -40,8 +40,8 @@ Open `index.html` and you will see the following:
 Next, open `src/main.ts` and you will see the following:
 
 ```typescript
-import ThreeView from "@navara/three";
-import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
+import ThreeView from "@navaramap/three";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
 
 // Create a ThreeView instance
 const plugin = new DefaultPlugin();
@@ -126,8 +126,8 @@ Add a map layer using OpenStreetMap raster tiles.
 ### Complete Code
 
 ```typescript
-import ThreeView from "@navara/three";
-import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
+import ThreeView from "@navaramap/three";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
 
 // Create a ThreeView instance
 const plugin = new DefaultPlugin();
@@ -184,8 +184,8 @@ You can set the camera position and orientation using the `view.setCamera()` met
 ### Complete Code
 
 ```typescript
-import ThreeView from "@navara/three";
-import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
+import ThreeView from "@navaramap/three";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
 
 // Create a ThreeView instance
 const plugin = new DefaultPlugin();
@@ -232,7 +232,7 @@ Add a terrain layer to `src/main.ts`.
 First, import JAPAN_GSI_ELEVATION_DECODER to decode the terrain tiles.
 
 ```typescript
-import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
+import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navaramap/three";
 ```
 
 Add the terrain layer **before** the raster tile layer (layers are rendered in the order they are added):
@@ -308,8 +308,8 @@ For details, see [Terrain Layer](../../../three/layer/terrain-layer/).
 ### Complete Code
 
 ```typescript
-import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
+import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navaramap/three";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
 
 // Create a ThreeView instance
 const plugin = new DefaultPlugin();
@@ -429,8 +429,8 @@ For details, see [Vector Layer](../../../three/layer/vector-layer/).
 A complete example combining everything:
 
 ```typescript
-import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
+import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navaramap/three";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
 
 const plugin = new DefaultPlugin();
 const view = new ThreeView<DefaultDescriptions>({});

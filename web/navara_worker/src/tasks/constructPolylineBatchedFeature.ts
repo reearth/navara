@@ -2,8 +2,8 @@ import {
   TransferablePolylineBatchedFeatureLike,
   PolylineMaterialLike,
   ConstructedPolylineGeometryLike,
-} from "@navara/core";
-import { constructPolylineBatchedFeature as constructPolylineBatchedFeatureImpl } from "@navara/engine-worker";
+} from "@navaramap/core";
+import { constructPolylineBatchedFeature as constructPolylineBatchedFeatureImpl } from "@navaramap/engine-worker";
 
 import { transfer } from "..";
 import { transferConstructedPolylineGeometry } from "../helpers/transferConstructedPolylineGeometry";

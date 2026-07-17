@@ -1,4 +1,4 @@
-import { registerTasks } from "@navara/worker";
+import { registerTasks } from "@navaramap/worker";
 
 import { computeVertexNormals } from "./tasks/computeVertexNormals";
 import { toCreasedNormals } from "./tasks/toCreasedNormals";

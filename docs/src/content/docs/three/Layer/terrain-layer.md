@@ -25,7 +25,7 @@ A `terrain` layer renders a [`raster-dem`](../../../three/source/raster-dem-sour
 ### Raster DEM
 
 ```typescript
-import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
+import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navaramap/three";
 
 const view = new ThreeView(/* options */);
 await view.init();

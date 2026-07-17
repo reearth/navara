@@ -3,7 +3,7 @@ import ThreeView, {
   type Layer,
   Color,
   type Nullable,
-} from "@navara/three";
+} from "@navaramap/three";
 import { isNumber } from "lodash-es";
 import {
   FolderApi,

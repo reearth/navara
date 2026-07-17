@@ -1,5 +1,5 @@
-import { EventHandler } from "@navara/core";
-import { CascadedShadowMaps, CSMHelper } from "@navara/three_csm";
+import { EventHandler } from "@navaramap/core";
+import { CascadedShadowMaps, CSMHelper } from "@navaramap/three_csm";
 import { SunDirectionalLight } from "@takram/three-atmosphere";
 import { Color, Texture, Vector3, Material, PerspectiveCamera } from "three";
 

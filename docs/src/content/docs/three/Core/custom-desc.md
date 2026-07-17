@@ -111,14 +111,14 @@ Navara renders into a multiple-render-target (MRT) G-buffer. Beyond color, every
 
 ### Built-in Materials Are Automatic
 
-Importing `@navara/three` patches every built-in Three.js material — `MeshStandardMaterial`, `MeshBasicMaterial`, `MeshLambertMaterial`, `MeshPhongMaterial`, `SpriteMaterial`, `PointsMaterial` — so they write the G-buffer. When your custom Descriptor uses one of these, there is nothing to do.
+Importing `@navaramap/three` patches every built-in Three.js material — `MeshStandardMaterial`, `MeshBasicMaterial`, `MeshLambertMaterial`, `MeshPhongMaterial`, `SpriteMaterial`, `PointsMaterial` — so they write the G-buffer. When your custom Descriptor uses one of these, there is nothing to do.
 
 ### Custom Materials Must Opt In
 
 `ShaderMaterial` and three-stdlib `LineMaterial` do not go through Three.js `ShaderLib`, so Navara cannot patch them automatically. Opt them in with `setupMaterialForMRT()`.
 
 ```typescript
-import { setupMaterialForMRT } from "@navara/three";
+import { setupMaterialForMRT } from "@navaramap/three";
 
 const material = new ShaderMaterial({ uniforms, vertexShader, fragmentShader });
 
@@ -164,7 +164,7 @@ class MyMeshDesc extends MeshDesc<
 ### Defining Configuration Types
 
 ```typescript
-import type { MeshConfig, MeshUpdate } from "@navara/three";
+import type { MeshConfig, MeshUpdate } from "@navaramap/three";
 
 type MyMeshDescription = {
   myMesh?: {
@@ -202,7 +202,7 @@ import ThreeView, {
   type MeshUpdate,
   type ViewContext,
   Color,
-} from "@navara/three";
+} from "@navaramap/three";
 import {
   Mesh,
   SphereGeometry,
@@ -280,7 +280,7 @@ export class MySphereMeshDesc extends MeshDesc<
 ### Registration and Usage
 
 ```typescript
-import ThreeView from "@navara/three";
+import ThreeView from "@navaramap/three";
 
 const view = new ThreeView({});
 view.registerMesh("mySphere", MySphereMeshDesc);
@@ -378,7 +378,7 @@ import ThreeView, {
   type InstancedChildConfig,
   type ViewContext,
   Color,
-} from "@navara/three";
+} from "@navaramap/three";
 import {
   BoxGeometry,
   MeshStandardMaterial,
@@ -433,7 +433,7 @@ export class MyBoxesDesc extends InstancedMeshDesc<
 ### Registration and Usage
 
 ```typescript
-import ThreeView, { Color } from "@navara/three";
+import ThreeView, { Color } from "@navaramap/three";
 
 const view = new ThreeView({});
 view.registerMesh("myBoxes", MyBoxesDesc);
@@ -492,7 +492,7 @@ import ThreeView, {
   type EffectConfig,
   type EffectUpdate,
   type ViewContext,
-} from "@navara/three";
+} from "@navaramap/three";
 
 type MyEffectDescription = {
   myEffect?: {
@@ -580,7 +580,7 @@ import ThreeView, {
   type LightUpdate,
   type ViewContext,
   Color,
-} from "@navara/three";
+} from "@navaramap/three";
 import { PointLight } from "three";
 
 type MyPointLightDescription = {
@@ -661,7 +661,7 @@ import ThreeView, {
   type MeshUpdate,
   type ViewContext,
   Color,
-} from "@navara/three";
+} from "@navaramap/three";
 import { Mesh, BoxGeometry, MeshStandardMaterial } from "three";
 
 type MyConfig = MeshConfig & { myBox?: { color?: Color } };
@@ -713,7 +713,7 @@ For instanced mesh Descriptors, use `PickableInstancedMeshWrapper`. It assigns a
 import {
   InstancedMeshDesc,
   PickableInstancedMeshWrapper,
-} from "@navara/three";
+} from "@navaramap/three";
 
 class MyPickableInstancedDesc extends InstancedMeshDesc</* ... */> {
   private pickWrapper?: PickableInstancedMeshWrapper;
@@ -758,7 +758,7 @@ class MyPickableInstancedDesc extends InstancedMeshDesc</* ... */> {
 For Descriptors with fully custom shaders, implement the `PickableMesh` interface directly. Your fragment shader must encode the batch ID as an RGB color when the picking uniform is active.
 
 ```typescript
-import { type PickableMesh } from "@navara/three";
+import { type PickableMesh } from "@navaramap/three";
 
 class CustomPickable extends Object3D implements PickableMesh {
   batchId: number;

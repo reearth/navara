@@ -2,8 +2,8 @@ import {
   ReturnedConstructedTerrainMeshLike,
   TransferableTileLike,
   UpsamplableTerrainGeometryLike,
-} from "@navara/core";
-import { upsampleQuantizedMeshTerrainMesh as upsampleQuantizedMeshTerrainMeshImpl } from "@navara/engine-worker";
+} from "@navaramap/core";
+import { upsampleQuantizedMeshTerrainMesh as upsampleQuantizedMeshTerrainMeshImpl } from "@navaramap/engine-worker";
 
 import { transfer } from "..";
 import { transferReturnedConstructedTerrainMesh } from "../helpers/transferReturnedConstructedTerrainMesh";

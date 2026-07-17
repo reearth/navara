@@ -3,7 +3,7 @@ import type {
   ColorMap,
   EventHandler,
   EventManager,
-} from "@navara/core";
+} from "@navaramap/core";
 import type {
   DelegatedWorkerTasksResult,
   ElevationDecoder,
@@ -15,8 +15,8 @@ import type {
   TransferableMartini,
   TransferableTile,
   VectorTileState,
-} from "@navara/engine";
-import type { FontManager } from "@navara/font";
+} from "@navaramap/engine";
+import type { FontManager } from "@navaramap/font";
 import type { Texture } from "three";
 
 import type { ViewEvents } from "..";

@@ -1,4 +1,4 @@
-import type ThreeView from "@navara/three";
+import type ThreeView from "@navaramap/three";
 import {
   Color,
   Pass,
@@ -8,7 +8,7 @@ import {
   type EffectUpdate,
   type SelectiveEffectConfig,
   type ViewContext,
-} from "@navara/three";
+} from "@navaramap/three";
 import SelectiveEffectMaskChunk from "@shaders/glsl/chunks/selective_effect_mask.glsl?raw";
 import { Pass as PostProcessingPass } from "postprocessing";
 import {

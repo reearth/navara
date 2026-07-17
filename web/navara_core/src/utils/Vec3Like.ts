@@ -1,4 +1,4 @@
-import type { Vec3 } from "@navara/engine";
+import type { Vec3 } from "@navaramap/engine";
 
 import type { RemoveFreeRecursively } from "../types";
 

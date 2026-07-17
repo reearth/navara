@@ -1,8 +1,8 @@
-import type { TileHandle } from "@navara/core";
+import type { TileHandle } from "@navaramap/core";
 import {
   PolygonMesh as NavaraPolygonMesh,
   PolygonMaterial,
-} from "@navara/engine";
+} from "@navaramap/engine";
 import type { Texture } from "three";
 import {
   BufferAttribute,

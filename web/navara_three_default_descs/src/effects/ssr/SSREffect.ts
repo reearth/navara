@@ -1,6 +1,6 @@
 // Research and development by https://github.com/takram-design-engineering
 
-import { blendFunction, type BlendMode } from "@navara/three";
+import { blendFunction, type BlendMode } from "@navaramap/three";
 import fragmentShader from "@shaders/glsl/ssrEffect.frag.glsl?raw";
 import {
   Effect,

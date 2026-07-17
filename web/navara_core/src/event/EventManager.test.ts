@@ -1,4 +1,4 @@
-import type { RenderableFeatureAddedEvent } from "@navara/engine";
+import type { RenderableFeatureAddedEvent } from "@navaramap/engine";
 import { expect, it, vi } from "vitest";
 
 import { wait } from "../time";

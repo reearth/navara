@@ -1,9 +1,12 @@
-import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import { ToneMappingMode } from "@navara/three_default_descs";
+import ThreeView, {
+  Color,
+  JAPAN_GSI_ELEVATION_DECODER,
+} from "@navaramap/three";
+import { ToneMappingMode } from "@navaramap/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navara/three_default_plugin";
+} from "@navaramap/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import { FLOOD_RANK_COLOR_MAP } from "../../../helpers/colors";

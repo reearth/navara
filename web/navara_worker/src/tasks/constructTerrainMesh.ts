@@ -2,11 +2,11 @@ import type {
   TransferableTileLike,
   TransferableRasterDEMDataLike,
   ReturnedConstructedTerrainMeshLike,
-} from "@navara/core";
+} from "@navaramap/core";
 import {
   constructTerrainMesh as constructTerrainMeshImpl,
   TransferableMartini,
-} from "@navara/engine-worker";
+} from "@navaramap/engine-worker";
 
 import { transfer } from "..";
 import { transferReturnedConstructedTerrainMesh } from "../helpers/transferReturnedConstructedTerrainMesh";

@@ -155,7 +155,7 @@ Evaluated styles override the layer's default styles.
 **Example:**
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 // Color 3D Tiles buildings by height
 layer.on("featureUpdated", ({ evaluator }) => {

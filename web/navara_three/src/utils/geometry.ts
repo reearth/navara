@@ -1,6 +1,6 @@
 // Ref: https://github.com/takram-design-engineering/geovanni/blob/ee91f675ba2558ee3099f635dfa30bbe3adfe103/libs/core/src/utils.ts
 
-import { isNotNullish } from "@navara/core";
+import { isNotNullish } from "@navaramap/core";
 import { pick } from "lodash-es";
 import { BufferAttribute, BufferGeometry } from "three";
 

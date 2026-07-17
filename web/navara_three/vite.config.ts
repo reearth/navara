@@ -20,11 +20,11 @@ export default defineConfig((env) => {
         tsconfigPath: "./tsconfig.build.json",
         bundleTypes: {
           bundledPackages: [
-            "@navara/engine",
-            "@navara/engine-api",
-            "@navara/core",
-            "@navara/three_api",
-            "@navara/worker",
+            "@navaramap/engine",
+            "@navaramap/engine-api",
+            "@navaramap/core",
+            "@navaramap/three_api",
+            "@navaramap/worker",
           ],
         },
       }),

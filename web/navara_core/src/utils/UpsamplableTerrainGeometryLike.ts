@@ -1,4 +1,4 @@
-import type { UpsamplableTerrainGeometry } from "@navara/engine";
+import type { UpsamplableTerrainGeometry } from "@navaramap/engine";
 
 import type { RemoveFreeRecursively } from "../types";
 

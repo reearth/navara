@@ -1,8 +1,7 @@
 {
-  "name": "@navara/three_react",
+  "name": "@navaramap/three_react",
   "type": "module",
   "version": "0.0.0",
-  "private": true,
   "main": "dist/index.umd.cjs",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -22,10 +21,18 @@
     "format:check": "prettier --check --ignore-path ../../.gitignore --ignore-path ../../.prettierignore ."
   },
   "license": "MIT OR Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eukarya-inc/navara.git",
+    "directory": "web/navara_three_react"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "peerDependencies": {
     "three": ">=0.183.0",
     "react": ">=19",
-    "@navara/three": "workspace:*"
+    "@navaramap/three": "workspace:*"
   },
   "dependencies": {},
   "devDependencies": {
@@ -33,6 +40,6 @@
     "@types/react-dom": "19.2.3",
     "@types/three": "0.184.0",
     "three": "0.184.0",
-    "@navara/three": "workspace:*"
+    "@navaramap/three": "workspace:*"
   }
 }

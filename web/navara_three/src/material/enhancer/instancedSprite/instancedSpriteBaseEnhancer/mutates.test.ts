@@ -1,4 +1,4 @@
-import { degreeToRadian } from "@navara/three_api";
+import { degreeToRadian } from "@navaramap/three_api";
 import { Matrix4, type Texture } from "three";
 import { describe, expect, it, vi } from "vitest";
 
@@ -8,11 +8,11 @@ import { createBaseMutates } from "./mutates";
 import { DEFAULT_BASE_STATE } from "./state";
 import type { InstancedSpriteBaseState } from "./types";
 
-vi.mock("@navara/three_api", () => ({
+vi.mock("@navaramap/three_api", () => ({
   degreeToRadian: (degree: number) => (degree * Math.PI) / 180,
 }));
 
-vi.mock("@navara/engine-api", () => ({
+vi.mock("@navaramap/engine-api", () => ({
   encodePosition: (_x: number, _y: number, _z: number) => ({
     high: { x: 1000, y: 2000, z: 3000 },
     low: { x: 0.5, y: 0.25, z: 0.125 },

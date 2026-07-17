@@ -73,7 +73,7 @@ This property can only be set when creating the Descriptor. It cannot be changed
 **Example:**
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 {
   sun: {
@@ -345,9 +345,9 @@ import { Color } from "@navara/three";
 ### Basic Usage
 
 ```typescript
-import ThreeView from "@navara/three";
-import { SunLightDesc } from "@navara/three_default_descs";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView from "@navaramap/three";
+import { SunLightDesc } from "@navaramap/three_default_descs";
+import { DefaultPlugin } from "@navaramap/three_default_plugin";
 
 const view = new ThreeView({
   shadow: true  // Enable shadows
@@ -428,7 +428,7 @@ sun.update({
 ### Applying Custom Color
 
 ```typescript
-import { Color } from "@navara/three";
+import { Color } from "@navaramap/three";
 
 // Disable atmospheric calculation and use custom color
 const sun = view.addLight<SunLightDesc>({
