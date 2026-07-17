@@ -1,4 +1,4 @@
-import { generate_id_from_ind_gen, type TileHandle } from "@navara/core";
+import { generate_id_from_ind_gen, type TileHandle } from "@navaramap/core";
 import {
   NearestFilter,
   NoColorSpace,

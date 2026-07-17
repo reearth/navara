@@ -1,4 +1,4 @@
-import type { TileHandle } from "@navara/core";
+import type { TileHandle } from "@navaramap/core";
 import {
   Color,
   DataTexture,
