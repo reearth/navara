@@ -1,7 +1,7 @@
 import { encodePosition } from "@navara/engine-api";
 import {
-  DataArrayTexture,
   type Matrix4,
+  type Texture,
   Vector2 as ThreeVector2,
   Vector3 as ThreeVector3,
 } from "three";
@@ -44,7 +44,7 @@ export const createBaseMutates = (
     uOffsetDepth: { value: true },
     uAlphaTest: { value: 0.0 },
     uFarPlane: { value: 0.0 },
-    uAspect: { value: 1.0 },
+    uAtlasSize: { value: new ThreeVector2(1, 1) },
     nvr_uPickable: { value: 0.0 },
     uEffectIdsMask: { value: 0 },
     uEmissiveColor: { value: new ThreeVector3(0, 0, 0) },
@@ -65,7 +65,7 @@ export const createBaseMutates = (
       refs.uSizeInMeters.value = state.sizeInMeters;
       refs.uOffsetDepth.value = state.offsetDepth;
       refs.uAlphaTest.value = state.alphaTest;
-      refs.uAspect.value = state.aspect;
+      refs.uAtlasSize.value.set(state.atlasSize[0], state.atlasSize[1]);
       refs.nvr_uPickable.value = state.pickable ? 1.0 : 0.0;
       refs.uEffectIdsMask.value = state.effectIdsMask;
       const c = state.emissiveColor;
@@ -88,7 +88,7 @@ export const createBaseMutates = (
       uniforms.uOffsetDepth = refs.uOffsetDepth;
       uniforms.uAlphaTest = refs.uAlphaTest;
       uniforms.uFarPlane = refs.uFarPlane;
-      uniforms.uAspect = refs.uAspect;
+      uniforms.uAtlasSize = refs.uAtlasSize;
       uniforms.uFovRad = refs.uFovRad;
       uniforms.uScreenHeightPx = refs.uScreenHeightPx;
       uniforms.nvr_uPickable = refs.nvr_uPickable;
@@ -142,7 +142,7 @@ export const createBaseMutates = (
       refs.uScreenHeightPx.value = height;
     },
 
-    setTexture: (texture: UniformValue<DataArrayTexture | null>) => {
+    setTexture: (texture: UniformValue<Texture | null>) => {
       if (refs.uTexture) {
         refs.uTexture.value = texture.value;
       }

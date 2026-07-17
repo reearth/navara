@@ -481,6 +481,10 @@ export const addCtrlPanel = (
       });
     }
   }
+
+  // Added layers in insertion order, keyed by id, for callers that need to
+  // attach their own handlers on top of the panel's.
+  return layerInstMap;
 };
 
 function createParamCtrl(

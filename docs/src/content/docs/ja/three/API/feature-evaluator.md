@@ -146,6 +146,7 @@ evaluate(
 | `width` | `number` | ライン幅（ピクセル、ポリライン地物用） |
 | `size` | `number` | ポイント/テキストサイズ（メートルまたはピクセル、ポイント/テキスト地物用） |
 | `opacity` | `number` | 地物の不透明度、範囲 0.0-1.0（ポリゴン/ポイント/ビルボード/モデル/テキスト用） |
+| `image` | `string \| null` | 画像の URL（ビルボード地物用）。個別の URL ごとに一度だけ読み込まれ、レイヤーのテクスチャアトラスにパックされます。`null` を返すと以前に設定した地物ごとの画像がクリアされ、ビルボードマテリアルのデフォルト `url` に戻ります |
 
 :::note
 評価されたスタイルはレイヤーのデフォルトスタイルを上書きします。
@@ -225,6 +226,21 @@ layer.on("featureUpdated", ({ evaluator }) => {
 ```
 
 ```typescript
+// プロパティに基づいて地物ごとのビルボード画像を設定
+layer.on("featureUpdated", ({ evaluator }) => {
+  evaluator.evaluate(
+    ({ properties }) => {
+      const icon = properties?.["icon"] as string | undefined;
+      // icon を持たない地物にはビルボードマテリアルのデフォルト url が適用される。
+      // `image: null` は以前に設定した画像のクリアにもなる
+      return { image: icon ? `/icons/${icon}.svg` : null };
+    },
+    { filters: ["icon"] },
+  );
+});
+```
+
+```typescript
 // pick イベントで選択した地物をハイライト
 let selectedId: string | undefined;
 
@@ -268,6 +284,10 @@ type EvaluatedValue = {
   size?: number;
   /** 地物の不透明度、範囲 0.0-1.0（ポリゴン/ポイント/ビルボード/モデル/テキスト用） */
   opacity?: number;
+  /** 画像の URL（ビルボード地物用）。個別の URL ごとに一度だけ読み込まれ、
+   * レイヤーのテクスチャアトラスにパックされます。`null` は以前に設定した
+   * 地物ごとの画像をクリアし、ビルボードマテリアルのデフォルト url に戻します */
+  image?: string | null;
 };
 ```
 

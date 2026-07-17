@@ -63,9 +63,9 @@ describe("instancedSpriteBaseEnhancer / state", () => {
       expect(state.depthTest).toBe(false);
     });
 
-    it("updates aspect", () => {
-      const state = updateState({ aspect: 1.5 }, DEFAULT_BASE_STATE);
-      expect(state.aspect).toBe(1.5);
+    it("updates atlasSize", () => {
+      const state = updateState({ atlasSize: [512, 256] }, DEFAULT_BASE_STATE);
+      expect(state.atlasSize).toEqual([512, 256]);
     });
 
     it("falls back to currentState for missing props", () => {

@@ -48,6 +48,17 @@ const moonDirection = view.atmosphere.getMoonDirection();
 view.atmosphere.date = new Date("2024-06-21T12:00:00");
 ```
 
+:::caution
+`atmosphere.date` is a plain JavaScript `Date`, so it follows the standard `Date` parsing rules. A string without a timezone such as `new Date("2024-06-21T12:00:00")` is interpreted in the **device's local timezone**, which means the sun ends up in a different position on machines in different timezones. To pin a global instant, specify the time in UTC with a trailing `Z`:
+
+```typescript
+// Same instant everywhere, regardless of device timezone
+view.atmosphere.date = new Date("2024-06-21T12:00:00Z");
+```
+
+When moving the camera to another country, use [`setDateFromCameraAt()`](#setdatefromcameraat) or [`setElevationFromCameraAt()`](#setelevationfromcameraat) to preserve the local solar time or sun elevation instead of recomputing the date manually.
+:::
+
 ### sunDirection
 
 **Type:** `Vector3` (read-only)

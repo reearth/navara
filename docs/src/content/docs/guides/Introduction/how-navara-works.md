@@ -5,13 +5,31 @@ sidebar:
   order: 2
 ---
 
+## Headless Architecture
+
+Navara is a headless 3D globe map engine. Its GIS core is written in Rust and compiled to WebAssembly, deliberately separated from any specific rendering technology. Currently, Navara provides a Three.js-based rendering backend (`@navara/three`), but the engine is designed so that other rendering engines — and even native platforms — can be supported in the future.
+
+```mermaid
+graph TD
+  subgraph GIS["Headless GIS Core (Rust)"]
+    B["Data Processing / Spatial Index / Ellipsoid Geometry etc"]
+  end
+
+  GIS --> C["Rendering-ready Output"]
+  C --> D["@navara/three (Three.js)"]
+  C --> E["Future Backend (Other Engines)"]
+  C --> F["Future Backend (Native)"]
+```
+
+The Rust/WASM GIS engine handles all geospatial computation independently of the renderer, and CPU-intensive tasks are distributed across Web Workers for responsive performance even with large datasets.
+
 ## Plugin-Based Architecture
 
 Navara uses a plugin system to register descriptor types. Before calling `init()`, you add plugins to a `ThreeView` instance. Each plugin registers the mesh, light, and effect descriptor types it provides. After initialization, you can add descriptors of those registered types.
 
 [`DefaultPlugin`](../../../three_default_plugin/about/) (from `@navara/three_default_plugin`) registers built-in mesh, light, and effect descriptors. For most applications, adding `DefaultPlugin` is all you need to get started.
 
-You can also create your own mesh descriptors, effect descriptors, and light descriptors with full access to the Three.js scene graph. This is the same mechanism that powers Navara's built-in descriptors. For details, see the [Custom Descriptor](../../../three/core/custom-desc/) documentation.
+You can also create your own mesh descriptors, effect descriptors, and light descriptors with full access to the rendering engine's scene graph. This is the same mechanism that powers Navara's built-in descriptors. For details, see the [Custom Descriptor](../../../three/core/custom-desc/) documentation.
 
 In addition to these, Navara provides [**layers**](../../../three/layer/about/) for loading and displaying geographic data such as GeoJSON, MVT, and 3D Tiles. Layers handle the complexity of features and their attributes — parsing, spatial indexing, and attribute-based styling through [`FeatureEvaluator`](../../../three/api/feature-evaluator/). Mesh descriptors, on the other hand, deal only with geometry and rendering, which allows them to be optimized purely for draw performance and is suited for rendering large numbers of objects efficiently. This separation lets you choose the right tool for each use case. For more on descriptor types, see [Layer Types](../../../three/layer/about/).
 

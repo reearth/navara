@@ -246,6 +246,12 @@ importers:
       '@navara/core':
         specifier: workspace:*
         version: link:../navara_core
+      '@navara/engine':
+        specifier: workspace:*
+        version: link:../wasm/navara_engine
+      '@types/geojson':
+        specifier: 7946.0.16
+        version: 7946.0.16
     devDependencies:
       '@navara/three':
         specifier: workspace:*

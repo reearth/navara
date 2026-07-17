@@ -71,6 +71,20 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
 
 Tiny examples (hello-world scale) may inline everything in `main.ts` and use **top-level `await`** directly (`await view.init()`) — no `run()` wrapper or async IIFE. The example bundler supports top-level await.
 
+## Curated gallery code layout — main.ts is the displayed story
+
+The detail page (`pages/detail/DetailApp.tsx`) renders **only the example's `main.ts`** (collected via a vite `?raw` glob) as its "Source" section. Structure gallery examples so that single file reads as the feature's API story (reference: `pages/examples/getting-started/layers/`):
+
+- **`main.ts`** — view/plugin setup + the feature's Navara API calls, written with top-level `await` (no `run()` wrapper). Keep `addSource` / `addLayer` / `layer.update()` / `layer.delete()` calls direct and visible (philosophy rule). Comments: only a few one-liners stating non-obvious API facts (e.g. why extruded polygons need `clampToGround: false`); **no header doc comment** — the example's summary belongs in `meta.ts` (`title` / `description`), not main.ts.
+- **`data.ts`** — bulky inline data (GeoJSON fixtures etc.) as a typed exported constant. It is not shown on the detail page, so main.ts stays readable.
+- **UI chrome → `example/helpers/button.ts`** — gallery demos use a few plain DOM buttons via `addButton(label)` (fixed top-left bar styled for the neutral basemap; returns a plain `HTMLButtonElement` — drive it with `.textContent` / `.disabled` / `.onclick` from main.ts). **Tweakpane is for dev/debug pages only, not the gallery.** Never move Navara API calls into helpers — helpers hold presentation only.
+
+Gallery visual conventions (from the AD_EXAMPLE.md direction):
+
+- Neutral stage: the grayscale basemap `https://papers.reearth.land/styles/grayscale/tilejson.json` added via `TileJsonPlugin` (`tilejson.addSource({ type: "raster-tile", url }) ` + `view.addLayer({ type: "raster", source })`), so the data colors are the hero.
+- Data colors: one vivid accent per state rather than one hue per geometry (e.g. blue `#0091ff`, switching to orange `#ff6b2c` to visualize a style update).
+- Lighting for meshes/extrusions (Lambert materials render black unlit): `view.addLight({ ambient: { intensity: 0.6 } })` + `view.addLight({ sun: { intensity: 1.8 } })` with a **fixed UTC** `view.atmosphere.date`, instead of the full photoreal scene.
+
 ## Shared helpers — use these, don't reinvent
 
 Under `example/helpers/`:
@@ -78,9 +92,10 @@ Under `example/helpers/`:
 - `constants.ts` — `TERRAIN_DATASETS`, `TILE_DATASETS`, `TILES_3D_DATASETS`, `VECTOR_DATASETS`, `LOCAL_DATASETS` (GSI tiles/terrain, PLATEAU 3D Tiles, etc. with attribution metadata)
 - `control.ts` — `addCameraControl(view, pane)`, `addDateControl(view, pane)`, `addHidePaneKeyShortcut`
 - `panel.ts` — `addFieldsToFolder` for Tweakpane folders with many fields
+- `button.ts` — `addButton(label, onClick?)` plain DOM buttons for gallery examples (see the gallery code layout section)
 - `keys.ts` — API keys (e.g. `GOOGLE_MAPS_API_KEY`)
 
-UI is **Tweakpane** (`new Pane({ title })` + `.addBinding(...).on("change", ...)`); the gallery/detail pages additionally use React + local shadcn/ui components (`example/components/ui`, imported via `@/components/ui/*`) — those are example-only, not part of the library.
+Dev/debug page UI is **Tweakpane** (`new Pane({ title })` + `.addBinding(...).on("change", ...)`); gallery example UI is plain DOM buttons from `button.ts`. The gallery/detail pages additionally use React + local shadcn/ui components (`example/components/ui`, imported via `@/components/ui/*`) — those are example-only, not part of the library.
 
 ## Checklist for a new example
 

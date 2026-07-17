@@ -92,6 +92,14 @@ export default defineConfig((env) => {
             src: normalizePath(resolve(__dirname, "./assets")),
             dest: "./",
           },
+          {
+            // The prebuilt @navara/three worker chunks are re-emitted here as
+            // opaque assets, so Vite never sees the .wasm they fetch relative
+            // to their own URL at runtime; copy those files through verbatim.
+            src: normalizePath(resolve(__dirname, "./dist/assets/*.wasm")),
+            dest: "./",
+            rename: { stripBase: true },
+          },
         ],
       }),
       createMpaPlugin({

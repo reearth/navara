@@ -1,26 +1,31 @@
 import ThreeView from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
+import { TileJsonPlugin } from "@navara/three_plugins";
 
-/**
- * Hello world — the shortest code that puts a map on screen.
- *
- * Create a `ThreeView`, initialize it, register a raster imagery source and
- * render it on the globe. No UI, no plugins — the minimum copy-paste start.
- */
-const view = new ThreeView();
+const view = new ThreeView({ useNormal: true });
+
+// Plugin settings
+
+const tilejson = new TileJsonPlugin();
+view.addPlugin(tilejson);
+
+const defaultPlugin = new DefaultPlugin();
+view.addPlugin(defaultPlugin);
+
+// Initialize
 
 await view.init();
 
-// Register a raster imagery source, then render it on the globe.
-const imagery = view.addSource({
+// Set up the default scene
+
+defaultPlugin.addDefaultPhotorealScene();
+view.atmosphere.date = new Date("2026-07-16T01:00:00Z");
+view.toneMappingExposure = 10;
+
+// Layer
+
+const imagery = await tilejson.addSource({
   type: "raster-tile",
-  url: "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_NextGeneration/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg",
-  maxZoom: 8,
+  url: "https://papers.reearth.land/bluemarble/tilejson.json",
 });
 view.addLayer({ type: "raster", source: imagery });
-
-view.attribution?.add([
-  {
-    attributionHtml:
-      '<a href="https://papers.reearth.land">Re:Earth Papers</a> · Imagery courtesy of <a href="https://earthdata.nasa.gov/gibs">NASA EOSDIS GIBS</a> · Blue Marble: Next Generation (public domain)',
-  },
-]);

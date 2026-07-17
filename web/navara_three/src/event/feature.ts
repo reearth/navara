@@ -142,6 +142,19 @@ export async function processRenderableFeatureAdded(
       if (model && r) {
         featureHandler.reportFeatureGpuBytes(ev.bits, sumModelGpuBytes(r));
       }
+      // The billboard image atlas (CPU pixel buffer + GPU texture) is
+      // allocated and grown lazily on the JS side as images load, so the
+      // mesh reports its measured footprint whenever it changes; the ledger
+      // folds it into the owning vector tile's cost. Capture `bits` as a
+      // plain number now: the reporter fires long after this WASM event
+      // object is freed (async image packs), and a deferred `ev.bits` read
+      // would throw "null pointer passed to rust".
+      if (billboard && r instanceof InstancedSpriteMesh) {
+        const featureBits = ev.bits;
+        r.setAtlasBytesReporter((bytes) =>
+          featureHandler.reportFeatureGpuBytes(featureBits, bytes),
+        );
+      }
       return r;
     })
     .finally(() => {

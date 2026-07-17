@@ -146,6 +146,7 @@ The callback function can return an object containing the following properties:
 | `width` | `number` | Line width (pixels, for polyline features) |
 | `size` | `number` | Point/text size (meters or pixels, for point/text features) |
 | `opacity` | `number` | Feature opacity, range 0.0-1.0 (for polygons/points/billboards/models/text) |
+| `image` | `string \| null` | Image URL (for billboard features); each distinct URL is loaded once and packed into the layer's texture atlas. Return `null` to clear a previous per-feature image and revert to the billboard material's default `url` |
 
 :::note
 Evaluated styles override the layer's default styles.
@@ -225,6 +226,21 @@ layer.on("featureUpdated", ({ evaluator }) => {
 ```
 
 ```typescript
+// Set per-feature billboard images based on a property
+layer.on("featureUpdated", ({ evaluator }) => {
+  evaluator.evaluate(
+    ({ properties }) => {
+      const icon = properties?.["icon"] as string | undefined;
+      // Features without an icon fall back to the billboard material's
+      // default url; `image: null` also clears a previously set image
+      return { image: icon ? `/icons/${icon}.svg` : null };
+    },
+    { filters: ["icon"] },
+  );
+});
+```
+
+```typescript
 // Highlight selected feature with pick event
 let selectedId: string | undefined;
 
@@ -268,6 +284,10 @@ type EvaluatedValue = {
   size?: number;
   /** Feature opacity, range 0.0-1.0 (for polygons/points/billboards/models/text) */
   opacity?: number;
+  /** Image URL (for billboard features); each distinct URL is loaded once and
+   * packed into the layer's texture atlas. `null` clears a previous
+   * per-feature image, reverting to the billboard material's default url */
+  image?: string | null;
 };
 ```
 

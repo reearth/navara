@@ -3,7 +3,12 @@
  * These types define the interface between the plugin and the style engine,
  * allowing easy swap between JS and future Rust/WASM implementations.
  */
-import type { GeoJSON } from "geojson";
+
+import type {
+  GeoJSONSourceSpecification,
+  VectorSourceSpecification,
+} from "@maplibre/maplibre-gl-style-spec";
+
 /**
  * Simplified MapLibre Style specification.
  * For the PoC, we only support a subset of the full spec.
@@ -15,25 +20,23 @@ export type ParsedStyle = {
 };
 
 /**
- * Style source types we support in the PoC.
+ * Source types from MapLibre Style Spec.
+ * Currently only GeoJSON sources are supported in the PoC implementation.
+ * Vector sources are defined for type completeness but will throw at runtime.
  */
-export type StyleSource = GeoJSONSource | VectorSource;
+export type StyleSource = VectorSource | GeoJSONSource;
 
-export type GeoJSONSource = {
-  type: "geojson";
-  data: string | GeoJSON;
-  maxzoom?: number;
-  buffer?: number;
-  tolerance?: number;
-};
+/**
+ * GeoJSON source from MapLibre Style Spec.
+ * @see https://maplibre.org/maplibre-style-spec/sources/#geojson
+ */
+export type GeoJSONSource = GeoJSONSourceSpecification;
 
-export type VectorSource = {
-  type: "vector";
-  url?: string;
-  tiles?: string[];
-  minzoom?: number;
-  maxzoom?: number;
-};
+/**
+ * Vector tile source from MapLibre Style Spec.
+ * @see https://maplibre.org/maplibre-style-spec/sources/#vector
+ */
+export type VectorSource = VectorSourceSpecification;
 
 /**
  * Layer types supported in PoC: fill, line, circle.
@@ -111,13 +114,51 @@ export type FeatureContext = {
 };
 
 /**
+ * MapLibre Color object format (consistent with @maplibre/maplibre-gl-style-spec).
+ * Alpha channel is optional (defaults to 1 when missing).
+ */
+export type MapLibreColor = {
+  r: number;
+  g: number;
+  b: number;
+  a?: number;
+};
+
+/**
+ * Type guard to check if a value is a valid MapLibre Color object.
+ * Validates that r, g, b are finite numbers and a (if present) is also finite.
+ */
+export function isMapLibreColor(value: unknown): value is MapLibreColor {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+  const obj = value as Record<string, unknown>;
+  return (
+    typeof obj.r === "number" &&
+    typeof obj.g === "number" &&
+    typeof obj.b === "number" &&
+    Number.isFinite(obj.r) &&
+    Number.isFinite(obj.g) &&
+    Number.isFinite(obj.b) &&
+    (obj.a === undefined ||
+      (typeof obj.a === "number" && Number.isFinite(obj.a)))
+  );
+}
+
+/**
  * Possible return types from style expressions.
+ *
+ * Common array-valued properties in MapLibre Style Spec:
+ * - line-dasharray: number[]
+ * - text-offset, icon-offset, translate: number[] (typically 2 elements)
  */
 export type StyleValue =
   | number
   | string
   | boolean
-  | [number, number, number, number];
+  | MapLibreColor
+  | [number, number, number, number] // Legacy color array format
+  | number[]; // Array-valued properties (dasharray, offset, translate, etc.)
 
 /**
  * Property specification for type checking and defaults.

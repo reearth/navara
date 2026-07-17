@@ -37,6 +37,11 @@ export function toLayerDescription(
     };
   }
 
+  if (source.type === "vector") {
+    // TODO: Handle vector tile sources
+    throw new Error("Unsupported source type: vector");
+  }
+
   // TODO: Handle other source types
   throw new Error(
     `Unsupported source type: ${(source as { type: string }).type}`,

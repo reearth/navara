@@ -1,33 +1,80 @@
 ---
 title: What is Navara?
-description: Overview of Navara, a high-performance 3D globe map engine for the web.
+description: Overview of Navara, a highly extensible, general-purpose 3D globe map engine.
 sidebar:
   order: 1
 ---
 
 ## What is Navara?
 
-Navara is a headless 3D globe map engine. Its GIS core is written in Rust and compiled to WebAssembly, deliberately separated from any specific rendering technology. Currently, Navara provides a Three.js-based rendering backend (`@navara/three`), but the engine is designed so that other rendering engines — and even native platforms — can be supported in the future.
+Web map engines have long forced a choice: engines with polished declarative APIs are easy to adopt but hard to extend beyond their built-in features, while engines that expose deep low-level control are powerful but demand steep expertise — and fully 3D globe applications usually leave no option but the latter. Navara is a highly extensible, general-purpose 3D globe map engine built to remove that trade-off. It streams real-world geospatial data — satellite imagery, terrain, 3D city models, and vector data — onto an interactive globe, and lets you present it the way your application needs: as a clean basemap for data visualization, styled per feature by attributes, or as a photorealistic scene with atmosphere, sunlight, and shadows.
 
-```mermaid
-graph TD
-  subgraph GIS["Headless GIS Core (Rust)"]
-    B["Data Processing / Spatial Index / Ellipsoid Geometry etc"]
-  end
+You use Navara through a library that wraps a rendering engine such as Three.js (e.g. `@navara/three`). All geospatial computation runs in a Rust/WASM GIS engine spread across Web Workers, so the map stays responsive even with large datasets. If you are curious how the pieces fit together, see [How Navara Works](../how-navara-works/).
 
-  GIS --> C["Rendering-ready Output"]
-  C --> D["@navara/three (Three.js)"]
-  C --> E["Future Backend (Other Engines)"]
-  C --> F["Future Backend (Native)"]
+## A Globe in a Few Lines of Code
+
+This is all it takes to display satellite imagery on the globe — here with the optional photorealistic sky, sun, and atmosphere enabled:
+
+![Hero](@assets/hero.png)
+
+```typescript
+import ThreeView from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
+
+const view = new ThreeView({ useNormal: true });
+
+const defaultPlugin = new DefaultPlugin();
+view.addPlugin(defaultPlugin);
+
+// Initialization
+
+await view.init();
+
+// Setup scene
+defaultPlugin.addDefaultPhotorealScene();
+view.atmosphere.date = new Date("2026-07-16T01:00:00Z");
+view.toneMappingExposure = 10;
+
+// Layer declaration
+
+const raster = view.addSource({
+  type: "raster-tile",
+  url: "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_NextGeneration/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg",
+  maxZoom: 8,
+});
+
+view.addLayer({
+  type: "raster",
+  source: raster,
+  raster: {},
+});
+
+// Attribution
+
+view.attribution?.add([{ attributionHtml: `Imagery courtesy of <a href="https://earthdata.nasa.gov/gibs">NASA EOSDIS GIBS</a> · Blue Marble: Next Generation (public domain)` }]);
 ```
 
-## Key Features
+Want to try it yourself? [Getting Started](../getting-started/) walks you through setting up a project, and the [Examples](https://navara-preview.netlify.app/) gallery shows what Navara can do live in your browser.
 
-Navara supports a wide range of geospatial data formats including GeoJSON, Mapbox Vector Tiles (MVT), Cesium 3D Tiles, raster tiles, and terrain data. You can display and style these data sources as layers on a 3D globe, with per-feature styling through [`FeatureEvaluator`](../../../three/api/feature-evaluator/).
+## What You Can Build
 
-The Three.js rendering backend includes photorealistic capabilities such as atmospheric scattering, shadow mapping, volumetric clouds, and post-processing effects. These are all available as composable effect descriptors through the plugin system.
+Navara organizes its capabilities into four tiers. Start with the declarative API, and reach for a lower tier only when you need it.
 
-The Rust/WASM GIS engine handles all geospatial computation independently of the renderer, and CPU-intensive tasks are distributed across Web Workers for responsive performance even with large datasets.
+### Declarative API
+
+Add [sources](../../../three/source/about/) and [layers](../../../three/layer/about/) with plain config objects — basemaps, terrain, vector data, and Cesium 3D Tiles. Each source handles fetching, caching, and level-of-detail automatically, and one source can feed multiple layers so you can restyle without refetching. Mesh, effect, and light Descriptors work the same declarative way: atmospheric scattering, volumetric clouds, and post-processing effects are all added as config objects through `addMesh` / `addEffect` / `addLight`.
+
+### Plugins
+
+Ready-made [plugins](../../../three_plugins/about/) bundle purpose-built features: the photorealistic scene ([`addDefaultPhotorealScene()`](../../../three_default_plugin/about/)), first-person walking (`PersonViewPlugin`), DOM overlays pinned to geographic coordinates (`OverlayPlugin`), and the attribution UI. You can also [write your own plugin](../../../three/core/plugin/) to package reusable functionality.
+
+### Low-level API
+
+When config objects and ready-made plugins are not enough, drop down one tier: style individual features by their attributes with [`FeatureEvaluator`](../../../three/api/feature-evaluator/) — color-code buildings by height, or filter features by attribute values — pick features and query terrain interactively through the `pick` event and terrain sampling, and compute coordinate transforms and geodesic distances with the geodetic/ECEF math utilities. The GIS math is also available as a [standalone package](../../../three/api/navara_three_api/) (`@navara/three_api`) that works without the map engine.
+
+### Custom Descriptors
+
+When the built-ins are not enough, write your own mesh, effect, and light [Descriptors](../../../three/core/custom-desc/) with full access to the rendering engine's scene graph and the render pipeline — including the depth buffer and the normal/G-buffer (MRT). This is the same foundation that powers Navara's built-in Descriptors, not a limited escape hatch.
 
 ## How Navara Compares to Other Map Engines
 
@@ -39,8 +86,8 @@ Each web map engine has its own design philosophy and strengths. Understanding t
 
 **deck.gl** extends MapLibre GL JS (or MapboxGL) with a rich set of visualization layers and a clear composable layer model. The combination is powerful, but it requires learning both libraries and their integration patterns.
 
-**Navara** aims to combine the strengths of these approaches under a single, tiered API. For general users, Navara provides a high-level, declarative API for adding layers and styling features through [`FeatureEvaluator`](../../../three/api/feature-evaluator/). Plugins can further simplify workflows — for example, loading layer definitions from JSON, or using the MapLibre Style Plugin (in development) to define feature styles in a familiar JSON format. For advanced users who need to build custom functionality, Navara exposes a lower-level API through the plugin system, custom mesh descriptors, and custom effect descriptors — the same foundation that powers Navara's own built-in descriptors. Additionally, Navara offers standalone GIS APIs for coordinate transforms and geodesic calculations that can be used independently of the map engine itself.
+**Navara** aims to combine the strengths of these approaches under a single, tiered API. For general users, Navara provides a high-level, declarative API for adding layers and styling features through [`FeatureEvaluator`](../../../three/api/feature-evaluator/). Plugins can further simplify workflows — for example, loading layer definitions from JSON, or using the MapLibre Style Plugin (in development) to define feature styles in a familiar JSON format. For advanced users who need to build custom functionality, Navara exposes a lower-level API through the plugin system, custom mesh Descriptors, and custom effect Descriptors — the same foundation that powers Navara's own built-in Descriptors. Additionally, Navara offers standalone GIS APIs for coordinate transforms and geodesic calculations that can be used independently of the map engine itself.
 
 ## Next Steps
 
-To understand how Navara is structured and why it has multiple packages, continue to [How Navara Works](../how-navara-works/).
+Head to [Getting Started](../getting-started/) to build your first globe, or read [How Navara Works](../how-navara-works/) to understand Navara's architecture and package structure.

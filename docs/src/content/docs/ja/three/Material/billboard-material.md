@@ -288,7 +288,7 @@ import { Color } from "@navara/three";
 
 **Type:** `string`
 
-**Description:** オブジェクトの URL を指定します。画像ファイルをサポートします。
+**Description:** オブジェクトの URL を指定します。画像ファイルをサポートします。これはレイヤー内のすべての地物に適用されるデフォルト画像です。[`FeatureEvaluator.evaluate()`](../../api/feature-evaluator/#evaluate) から `image` を返すことで、地物ごとに上書きできます。`image: null` を返すと、上書きした地物はこのデフォルトに戻ります。
 
 **Default:** Required
 

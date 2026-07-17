@@ -9,7 +9,7 @@ description: >
 
 # Using Navara (@navara/three)
 
-Navara is a 3D globe map engine: a Rust/WASM GIS core driven from TypeScript, rendered with Three.js. The public API is `ThreeView` plus a declarative Source/Layer/Descriptor model.
+Navara is a 3D globe map engine: reusable GIS logic lives in a Rust/WASM core, and drawing is delegated to a swappable CG-rendering library. `@navara/three` is the Three.js-based binding (currently the only one; more rendering engines are planned — avoid wording that fixes Navara to Three.js in prose). Its public API is `ThreeView` plus a declarative Source/Layer/Descriptor model.
 
 ## Packages
 
@@ -55,15 +55,38 @@ For "make it look good" goals, use the proven compositions in [references/recipe
 ## Critical gotchas (apply everywhere)
 
 - **`addPlugin()` after `init()` throws.** All plugin `init()`s run in parallel during `view.init()`.
-- **Update semantics differ:** `Layer.update()` replaces the *whole* config; `Source.update()` and mesh/effect/light handle `.update()` are *partial merges* (omitted fields preserved).
+- **Updates are partial merges:** `Layer.update()`, `Source.update()` and mesh/effect/light handle `.update()` all merge into the current config — omitted materials and omitted fields within a material are preserved (verified: `layer.update({ point: { color } })` keeps `size`/`clampToGround`). Note: `Layer.update()`'s JSDoc says "the entire configuration is replaced" — that text is outdated; trust the merge behavior shown in its own `@example`.
 - **Sources are reference-counted:** `source.delete()` returns `false` while any layer still references it. Updating a source resets and reloads every referencing layer.
 - **Layer render order = add order** (e.g. add terrain before the raster basemap draped on it).
 - **Never write to `view.camera.raw` frustum fields** (`fov` etc.) — the engine overwrites them and Rust-side culling desyncs. Use the `view.camera.fov/near/far` setters.
 - **Units:** mesh `position` is ECEF meters; `sampleTerrainHeight`/`observeTerrainHeightAt` take **radians** (use `degreeToRadian`); batch IDs are 24-bit.
+- **Mesh placement is Cartesian (ECEF) by default:** raw `position`/`rotation`/`scale` are earth-centered ECEF meters, so a bare `position` won't sit upright at a lng/lat. For geographic placement set `matrixWorld` to a tangent-frame matrix — then `position`/`rotation`/`scale` become offsets *within* that frame. Pick the frame function whose axis orientation you want (all exported from `@navara/three`): `eastNorthUpToFixedFrame` (ENU), `northEastDownToFixedFrame` (NED), `northUpEastToFixedFrame` (NUE), `northWestUpToFixedFrame` (NWU). See [references/low-level-api.md](references/low-level-api.md).
 - **Init-only options** cannot change after `init()`: `shadow`, `maxSse`, `segments`, `useNormal`.
 - **Effect compatibility:** `hideUnderground: false` and `logarithmicDepthBuffer` break some effect descriptors — test, and prefer defaults.
 - `picking: true` (constructor, default on) is required for the `pick` event and pickable meshes.
 - **API stability tiers:** `ThreeView` = Tier 0 (stable). `Plugin` + `ViewContext` = Tier 1 (may break between minor versions). Keep app code on Tier 0 where possible.
+
+## Lighting — when it's needed and which light to add
+
+Lighting only affects surfaces that carry **normals**. Anything without normals is shaded uniformly (fullbright) and needs no light. But once normals are present, **no light means the surface renders black**. Add at least one light when you have:
+
+- meshes / GLTF models that ship vertex normals
+- `quantized-mesh` terrain loaded with `requestVertexNormals: true`
+- `raster-dem` terrain rendered with a `hillshade` material
+- the bare globe when the view was constructed with `useNormal: true` (init-only) — needed for the sun to shade the globe when no terrain or hillshade layer supplies normals
+
+Built-in lights — register via `DefaultPlugin`, then `view.addLight<T>({ ... })`:
+
+| Descriptor | Key | Use |
+|---|---|---|
+| `AmbientLightDesc` | `ambient` | flat fill — raise overall brightness or light everything uniformly; no direction, no shadows |
+| `LightProbeDesc` | `lightProbe` | pseudo-IBL from spherical-harmonics coefficients (e.g. a baked night ambient) |
+| `SkyLightProbeDesc` | `skyLightProbe` | dynamic sky ambient that follows the sun through the atmosphere system |
+| `SunLightDesc` | `sun` | directional sun; its direction is derived from `atmosphere.date`, and it casts CSM shadows |
+
+`addDefaultPhotorealScene()` already adds a `sun` + `skyLightProbe` — start there for realistic scenes and add `ambient`/`lightProbe` to taste.
+
+**`atmosphere.date` is local-time-sensitive.** It's a plain JS `Date`, so `new Date("2024-06-21T12:00:00")` is read in the *device's* timezone — the sun lands in a different place per machine. Pin a global instant with an explicit UTC string (`new Date("2024-06-21T12:00:00Z")`). To hold the same time-of-day or sun elevation while flying the camera to another country, don't recompute by hand — use `view.atmosphere.setDateFromCameraAt({ lng })` (keeps local solar time) or `setElevationFromCameraAt({ lat, lng })` (keeps sun elevation).
 
 ## Where to verify — never guess API details
 
