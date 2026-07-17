@@ -28,7 +28,6 @@ impl Plugin for TilePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<TileCacheManager>()
             .init_resource::<CachedMartini>()
-            .init_resource::<tile::system::RasterDrapeConfig>()
             .init_resource::<DataManager>()
             .insert_resource(TerrainTileQuadtree::new_with_linear_qt())
             .insert_resource(TerrainInformationQuadtree::new_with_linear_qt())

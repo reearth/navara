@@ -1,9 +1,9 @@
 import { Mesh, BoxGeometry, MeshBasicMaterial } from "three";
 import { describe, expect, it, vi } from "vitest";
 
-import { TexturizedSceneByTileCoordinates } from "../scene";
+import { TexturizedSceneByTileCoordinates } from "../../scene";
 
-import { TileMesh } from "./tile";
+import { TileMesh } from ".";
 
 // The package barrel pulled in by tile.ts initializes a worker pool at module
 // load (os.cpus()), which is unavailable in the test environment. Stub it.
@@ -86,6 +86,9 @@ function makeTile(atlasSize = 512) {
 
   const meshAdded = {
     tile_handle: 1n,
+    // WebMercator tiling → the direct (no-op) raster drape resolver, keeping
+    // the baked-raster machinery out of these vector-drape tests.
+    globe: { isGeographicTiling: false, free: vi.fn() },
   } as unknown as ConstructorParameters<typeof TileMesh>[1];
 
   const tile = new TileMesh(ctx, meshAdded);
@@ -109,8 +112,11 @@ const RT_BYTES_SMALL = 256 * 256 * 4;
 const ATLAS_BYTES_SMALL = 256 * 256 * 4 * 3;
 
 function renderTargetCount(tile: TileMesh): number {
-  return (tile as unknown as { texturizedSceneRenderTargets: unknown[] })
-    .texturizedSceneRenderTargets.length;
+  return (
+    tile as unknown as {
+      vectorDrape: { liveRenderTargetCount(): number };
+    }
+  ).vectorDrape.liveRenderTargetCount();
 }
 
 /** Invoke the private onBeforeRender hook (args are ignored by the impl). */
@@ -207,8 +213,11 @@ describe("TileMesh vector bake dirty-gating", () => {
 
     frame(tile);
 
-    const slots = (tile as unknown as { vectorSlots: { layerId: string }[] })
-      .vectorSlots;
+    const slots = (
+      tile as unknown as {
+        vectorDrape: { vectorSlots: { layerId: string }[] };
+      }
+    ).vectorDrape.vectorSlots;
     expect(slots.map((s) => s.layerId).sort()).toEqual(["a", "c"]);
     expect(renderVectorScenes).toHaveBeenCalledTimes(1);
   });

@@ -1339,24 +1339,6 @@ export default class ThreeView<
     this._core = new Core(newId());
     this._core.start();
 
-    // Tell Rust the real raster texture-slot count so the drape budget matches this
-    // device instead of a conservative constant. Mirrors TileMesh's slot split
-    // (numTexturizedVector / texturizedSceneIndexFrom): the raster region is
-    // `[0, texturizedSceneIndexFrom)`, so that boundary IS the max raster tiles a
-    // terrain tile can drape. Undersizing it forced every layer to coarsen on
-    // Geographic terrain once 3+ layers shared the budget.
-    {
-      const to = this._defaultTextureOptions;
-      const additional = to.additionalTexturesInUse ?? {};
-      let numAdditional = 0;
-      if (additional.waterTexture) numAdditional++;
-      if (additional.colorMapTexture) numAdditional++;
-      const numTexturizedVector =
-        Math.floor(to.maxTextures / 2) - numAdditional;
-      const rasterSlots = to.maxTextures - numTexturizedVector;
-      this._core.setRasterDrapeSlotBudget(rasterSlots);
-    }
-
     const cacheBytes = this._options.cacheBytes ?? budgets.cacheBytes;
     this._options.cacheBytes = cacheBytes;
     this._core.setCacheBytes(cacheBytes);

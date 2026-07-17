@@ -54,43 +54,6 @@ use navara_layer::{
     UpdateRasterTileLayerMarker, UpdateTerrainLayerMarker,
 };
 
-/// Raster texture slots a single terrain tile may fill with draped imagery,
-/// shared across all of its raster (non-hillshade) layers. Draping WebMercator
-/// raster onto a Geographic terrain tile is N:M — one terrain tile overlaps
-/// several WM tiles, growing toward the poles — so without a cap the per-tile
-/// texture count can exceed the GPU slots the composite shader binds. This
-/// mirrors the web renderer's `texturizedSceneIndexFrom` (half the GPU texture
-/// budget, typically 5); the web side clamps as a final safety net. Each layer
-/// gets an even share and coarsens its WM zoom to fit (see
-/// [`resolve_raster_textures`](crate::raster::resolve_raster_textures)).
-///
-/// This is only the fallback default. The live budget comes from
-/// [`RasterDrapeConfig`], set by the web renderer from its actual GPU texture-slot
-/// capacity — a device-independent constant was too small on capable hardware, so
-/// with 3+ layers on Geographic terrain every layer was needlessly coarsened.
-const RASTER_DRAPE_SLOT_BUDGET: usize = 5;
-
-/// Live cap on the number of WebMercator raster tiles one terrain tile may drape,
-/// shared across its raster (non-hillshade) layers. The web renderer sets
-/// `slot_budget` from its real raster texture-slot count (`texturizedSceneIndexFrom`,
-/// typically ≥6 on desktop) via `setRasterDrapeSlotBudget`; until then it defaults to
-/// [`RASTER_DRAPE_SLOT_BUDGET`]. Because draping WM raster onto a Geographic terrain
-/// tile is N:M (one terrain tile overlaps ~2 WM tiles at mid-latitude), a budget that
-/// can't give each layer ≥2 slots forces `resolve_raster_textures` to coarsen the
-/// drape zoom — the "everything pulled to a coarser level with 3+ layers" bug.
-#[derive(Debug, Clone, Copy, Resource)]
-pub struct RasterDrapeConfig {
-    pub slot_budget: usize,
-}
-
-impl Default for RasterDrapeConfig {
-    fn default() -> Self {
-        Self {
-            slot_budget: RASTER_DRAPE_SLOT_BUDGET,
-        }
-    }
-}
-
 /// System parameter that groups BufferStore and DataManager to reduce parameter count
 #[derive(SystemParam)]
 pub struct DataResources<'w> {
@@ -1273,7 +1236,6 @@ pub fn update_mesh_material(
         ),
         Without<Deleted>,
     >,
-    raster_drape_config: Res<RasterDrapeConfig>,
 ) {
     let are_tile_layers_updated = !tile_layers.p1().is_empty();
     let are_tile_layers_removed = !tile_layers.p2().is_empty();
@@ -1300,29 +1262,11 @@ pub fn update_mesh_material(
     // Sort the layer list once per run; the loop below runs per rendered tile.
     let sorted_layers: Vec<_> = tile_layers.iter().sort::<&Order>().collect();
 
-    // Split the raster slot budget evenly across the draped (non-hillshade) layers.
-    // Hillshade layers are terrain-side and contribute exactly one slot each, so
-    // they're subtracted from the budget rather than sharing the per-layer cap.
-    // Each draped layer then coarsens its WM zoom to stay within its share, keeping
-    // the per-tile texture count under the GPU slots the composite shader binds.
-    // Baked layers (every non-hillshade layer on Geographic terrain, heatmaps
-    // included) bypass this division: they cost one slot each regardless of overlap
-    // (see the baked branch below), so only WebMercator-terrain drapes (1:1 anyway)
-    // consume shares.
-    let num_hillshade_layers = sorted_layers
-        .iter()
-        .filter(|(l, _)| l.hillshade_config.is_some())
-        .count();
-    let num_draped_layers = sorted_layers.len() - num_hillshade_layers;
-    let slot_budget = raster_drape_config.slot_budget;
-    let max_tiles_per_layer = if num_draped_layers == 0 {
-        1
-    } else {
-        (slot_budget.saturating_sub(num_hillshade_layers) / num_draped_layers).max(1)
-    };
-    // Upper bound of composite slots a tile can emit: one per hillshade layer
-    // plus up to `max_tiles_per_layer` per draped layer.
-    let max_slots = num_hillshade_layers + num_draped_layers * max_tiles_per_layer;
+    // Every branch below emits exactly one composite slot per layer: hillshade
+    // is terrain-side, Geographic drapes bake their N overlapping WM tiles into
+    // one render target, and a WebMercator drape is a single identity/ancestor
+    // tile by construction.
+    let max_slots = sorted_layers.len();
 
     for (rendered_tile, _) in rendered_tiles.iter().sort::<&OrderByDistance>() {
         let Some(tile) = qt.qt.get(rendered_tile.tile_handle) else {
@@ -1346,12 +1290,10 @@ pub fn update_mesh_material(
             || tile_mesh_marker.ready_parent_tile_handle
                 != cached_rendered_tile.ready_parent_tile_handle;
 
-        // Per-composite-slot arrays. A hillshade layer contributes one slot
-        // (resolved terrain-side); a regular raster / elevation-heatmap layer
-        // contributes one slot per overlapping WebMercator tile (N:M for
-        // cross-scheme terrain, a single identity tile for WebMercator terrain).
-        // Layers are emitted in sorted order, so z-stacking is preserved; the N
-        // tiles within one layer are non-overlapping so their order is free.
+        // Per-composite-slot arrays, one slot per layer: hillshade resolves
+        // terrain-side, a Geographic drape binds its baked render target, and a
+        // WebMercator drape is a single identity (or ancestor-fallback) tile.
+        // Layers are emitted in sorted order, so z-stacking is preserved.
         let terrain_extent = tile.extent;
         // WebMercator raster draped on a Geographic terrain tile must be
         // reprojected (Mercator) on the latitude axis in the composite shader;
@@ -1456,6 +1398,10 @@ pub fn update_mesh_material(
                     heatmap_elevation_decoder = layer_decoder(l);
                 }
             } else {
+                // WebMercator terrain (the Geographic case is the baked branch
+                // above): the drape is same-scheme, so the resolve yields at
+                // most one tile — the terrain tile's identity WM tile, or its
+                // nearest loaded ancestor — and never reprojects.
                 let lng_span = (terrain_extent.east - terrain_extent.west).val();
                 // Max zoom now lives on the referenced source.
                 let max_zoom = l
@@ -1470,7 +1416,7 @@ pub fn update_mesh_material(
                     &raster_qt,
                     &terrain_extent,
                     target_z,
-                    max_tiles_per_layer,
+                    1,
                     i,
                     &texture_fragment,
                 );
@@ -1482,7 +1428,7 @@ pub fn update_mesh_material(
                     is_hillshades.push(false);
                     layer_fragments.push(Some(r.entity));
                     layer_uv_transforms.push(Some(r.uv_transform));
-                    layer_reproject.push(terrain_is_geographic);
+                    layer_reproject.push(false);
                 }
 
                 if is_heatmap && elevation_heatmap_config.is_none() {

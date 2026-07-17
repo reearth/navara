@@ -1,8 +1,4 @@
-import {
-  generate_id_from_entity,
-  generate_id_from_ind_gen,
-  type TileHandle,
-} from "@navara/core";
+import { generate_id_from_entity, type TileHandle } from "@navara/core";
 import type {
   MeshAdded,
   Mesh as EventMesh,
@@ -24,7 +20,6 @@ import {
   Mesh,
   MeshLambertMaterial,
   RedFormat,
-  RGBAFormat,
   SRGBColorSpace,
   Texture,
   UnsignedByteType,
@@ -33,7 +28,6 @@ import {
   Vector4,
   AddOperation,
   Object3D,
-  WebGLRenderTarget,
   type MagnificationTextureFilter,
   type MinificationTextureFilter,
   ShaderChunk,
@@ -45,9 +39,8 @@ import {
   LinearFilter,
 } from "three";
 
-import { PolygonMesh, PolylineMesh } from "..";
-import { setTransform } from "../event";
-import type { EventContext, TileHandler } from "../event/context";
+import { setTransform } from "../../event";
+import type { EventContext, TileHandler } from "../../event/context";
 import {
   generateTileCommonInjection,
   generateTileMapFragment,
@@ -56,89 +49,36 @@ import {
   TILE_NORMAL_BUFFER_REPLACEMENT,
   TILE_PICK_FRAGMENT_OVERRIDE,
   TILE_VERTEX_INJECTIONS,
-} from "../material";
-import { deriveCompositeFeatures } from "../material/enhancer/tileComposite";
-import type { CustomObject3DEventMap } from "../object3DEvent";
-import type { TexturizedSceneByTileCoordinates } from "../scene";
-import type { TextureOptions } from "../textures";
+} from "../../material";
+import { deriveCompositeFeatures } from "../../material/enhancer/tileComposite";
+import type { CustomObject3DEventMap } from "../../object3DEvent";
+import type { TextureOptions } from "../../textures";
 import {
   planSlots,
   type CompositeFeatures,
   type CompositeGlobals,
   type CompositeLayer,
-  type RasterBakeSlot,
   type TileTextureCompositor,
-} from "../tileTexture";
-import type { TileMapByHandle } from "../type";
-import type { CommonUniforms } from "../uniforms";
-import { createReplacer } from "../utils";
-import { demNoDataColorBytes } from "../utils/demNoDataColor";
+} from "../../tileTexture";
+import type { TileMapByHandle } from "../../type";
+import type { CommonUniforms } from "../../uniforms";
+import { createReplacer } from "../../utils";
 import {
   type TextureSlot,
   updateTextureFragmentIndex,
   removeTextureFragmentIndex,
-} from "../utils/textureFragmentIndex";
+} from "../../utils/textureFragmentIndex";
+import type { PickableMesh } from "../pickableMesh";
+import { releaseGeometryArraysAfterUpload } from "../releaseGeometryArrays";
 
-import type { PickableMesh } from "./pickableMesh";
-import { releaseGeometryArraysAfterUpload } from "./releaseGeometryArrays";
+import type { DrapeResolver } from "./drapeResolver";
+import {
+  BakedRasterDrapeResolver,
+  DirectRasterDrapeResolver,
+} from "./rasterDrapeResolver";
+import { VectorDrapeResolver } from "./vectorDrapeResolver";
 
 export type TileMaterial = MeshBasicMaterial | MeshLambertMaterial;
-
-/**
- * One WebMercator vector source tile baked into a layer's render target.
- * `tileHandle` keys the cached offscreen scene; `uvOffset`/`uvScale` are the
- * **mercator** affine framing the terrain tile's sub-region of that (possibly
- * coarser, ancestor-resolved) source tile, driving the bake camera (identity for
- * an exact same-tile drape).
- */
-type VectorSource = {
-  tileHandle: TileHandle;
-  uvOffset: [number, number];
-  uvScale: [number, number];
-};
-
-/**
- * One clamp-to-ground vector layer draped on this terrain tile, resolved by Rust.
- * A layer is backed by one source on WebMercator terrain, but by several when the
- * terrain is Geographic (N:M): every overlapping WM vector tile is baked into the
- * layer's single render target, each framed by its own `uvOffset`/`uvScale`, so
- * the RT ends up spanning the terrain tile's extent. `reproject` carries the
- * terrain `[south, north]` band on Geographic terrain (undefined on WM) so the
- * composite paste can remap the latitude axis WebMercator→Geographic, exactly
- * like a raster slot.
- */
-type VectorSlot = {
-  layerId: string;
-  sources: VectorSource[];
-  reproject?: [number, number];
-};
-
-/**
- * One WebMercator raster tile baked into a baked layer's render target, resolved
- * by Rust (`getRasterTileStates`). `fragmentId` keys the loaded texture in
- * `loadedTexs`; `uvOffset`/`uvScale` are the **mercator** affine framing the
- * terrain tile's sub-region of that (possibly ancestor-resolved) raster tile,
- * driving the bake camera — the raster twin of {@link VectorSource}.
- */
-type RasterSource = {
-  fragmentId: string;
-  uvOffset: [number, number];
-  uvScale: [number, number];
-};
-
-/**
- * One baked raster layer draped on this terrain tile (Geographic terrain only —
- * WebMercator terrain drapes 1:1 through the per-slot material path). Rust emits
- * one fragment-less composite slot per baked layer; the k-th such slot pairs with
- * `ordinal == k` here, and every overlapping WM tile is baked into the slot's one
- * render target — the raster twin of {@link VectorSlot}. `reproject` carries the
- * terrain `[south, north]` band for the composite's Mercator latitude remap.
- */
-type RasterSlot = {
-  ordinal: number;
-  sources: RasterSource[];
-  reproject?: [number, number];
-};
 
 /** The MRT composite atlas has three RGBA attachments (color, attr, normal). */
 const ATLAS_ATTACHMENTS = 3;
@@ -159,32 +99,6 @@ function compositeAtlasBytes(size: number): number {
   return size * size * 4 * ATLAS_ATTACHMENTS;
 }
 
-/** Shared 1×1 transparent texture bound to texturized sampler slots that have
- * no drape render target yet (they are allocated lazily). WebGL requires every
- * sampler to reference a valid texture; the shader gates sampling with `shows`,
- * so this placeholder's content is never visible. */
-const EMPTY_TEXTURIZED_TEXTURE = new DataTexture(
-  new Uint8Array([0, 0, 0, 0]),
-  1,
-  1,
-  RGBAFormat,
-);
-EMPTY_TEXTURIZED_TEXTURE.needsUpdate = true;
-
-/** Apply the shared texturized-slot sampler settings to a drape render target's
- * texture. Returns the texture for call-site chaining. */
-function configureTexturizedTexture(
-  tex: Texture,
-  textureOptions: TextureOptions,
-): Texture {
-  tex.minFilter = textureOptions.minFilter as MinificationTextureFilter;
-  tex.magFilter = textureOptions.magFilter as MagnificationTextureFilter;
-  tex.anisotropy = textureOptions.maxAnisotropy;
-  tex.generateMipmaps = textureOptions.useMipmaps;
-  tex.needsUpdate = true;
-  return tex;
-}
-
 export class TileMesh
   extends Mesh<BufferGeometry, TileMaterial, CustomObject3DEventMap>
   implements PickableMesh
@@ -195,45 +109,19 @@ export class TileMesh
   texturizedSceneIndexFrom: number;
   numTexturizedVector: number;
 
-  // Per-layer texturized-vector slots resolved by Rust: one slot per clamp-to-ground
-  // layer, keyed by the WM vector tile whose offscreen scene backs it. Ancestor
-  // fallback is already resolved in Rust, so the web side just caches + bakes.
-  private vectorSlots: VectorSlot[] = [];
-  // Signature of the last baked slot set; a change drives a re-bake + re-bind.
-  private prevVectorSignature = "";
-  // The vector resolution revision at which `vectorSlots` was last fetched. Re-fetching
-  // is skipped while the global revision is unchanged (the resolve result can only change
-  // when a traverse runs or a scene becomes ready). `-1` forces a fetch on the first frame.
-  private _lastVectorRevision = -1;
-
-  // Baked raster layers (Geographic terrain): per-ordinal slots resolved by Rust,
-  // their render-target pool, and the vector-mirroring refresh/bake gates. The
-  // material's k-th fragment-less non-hillshade slot (`bakedSlotIndices[k]`) is
-  // backed by `rasterSlots[k]` baked into `rasterDrapeRenderTargets[k]`.
-  private rasterSlots: (RasterSlot | undefined)[] = [];
-  private rasterDrapeRenderTargets: (WebGLRenderTarget | undefined)[] = [];
-  // The kind each pooled render target was configured for (heatmap = nearest /
-  // NoColorSpace, color = linear / sRGB). Color space is fixed at GL allocation,
-  // so a layer flipping kinds must get a fresh target, not a reconfigured one.
-  private rasterDrapeRtIsHeatmap: (boolean | undefined)[] = [];
-  // Absolute composite slot index per baked ordinal, derived from the material in
-  // `setupTextures`; empty on WebMercator terrain (no baked slots).
-  private bakedSlotIndices: number[] = [];
-  private bakedSlotIsHeatmap: boolean[] = [];
-  private prevRasterSignature = "";
-  private _lastRasterRevision = -1;
-  // True once every resolved source's texture was present at bake time: the
-  // signature can then only change via a slot refresh (revision bump / material
-  // slot change), so the per-frame signature hashing is skipped until one.
-  private _rasterSignatureSettled = false;
+  // The tile's two drape resolvers (see `drapeResolver.ts`): the vector one is
+  // always the baked path (WebMercator is its degenerate identity case), the
+  // raster one is chosen at construction from the globe tiling scheme —
+  // direct 1:1 material slots on WebMercator terrain, baked per-layer render
+  // targets (with Mercator latitude reprojection) on Geographic terrain.
+  private readonly vectorDrape: DrapeResolver;
+  private readonly rasterDrape: DrapeResolver;
 
   // Separate mesh for shadow casting (uses terrain-only geometry without skirt)
   private shadowMesh?: Mesh<BufferGeometry, TileMaterial>;
 
-  private texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates;
   private compositor: TileTextureCompositor;
 
-  texturizedSceneRenderTargets: WebGLRenderTarget[] = [];
   // Drape RT side length + atlas byte cost, read from the compositor (the
   // single source of truth shared with the Rust cost hints) in the constructor.
   // Per-instance rather than module constants because the compositor size is a
@@ -246,8 +134,6 @@ export class TileMesh
   // is acquired in the constructor) — a tile that never drapes therefore
   // never reports. Assigned in the constructor once `atlasBytes` is known.
   private reportedDrapeGpuBytes: number;
-
-  private warnedExceededTextures = false;
 
   readonly ctx: EventContext;
 
@@ -266,7 +152,6 @@ export class TileMesh
     const handle = mesh.tile_handle;
     this.handle = handle;
 
-    this.texturizedSceneByTileCoordinates = texturizedSceneByTileCoordinates;
     this.compositor = tileTextureCompositor;
 
     // Device-dependent atlas / drape RT sizing, sourced from the compositor so
@@ -302,107 +187,45 @@ export class TileMesh
 
     this.tileHandler = tileHandler;
 
+    // Vector layers always resolve through the baked drape path (WebMercator
+    // terrain is its degenerate identity case).
+    this.vectorDrape = new VectorDrapeResolver({
+      handle,
+      tileHandler,
+      compositor: this.compositor,
+      texturizedScenes: texturizedSceneByTileCoordinates,
+      textureOptions,
+      drapeRtSize: this.drapeRtSize,
+      numTexturizedVector: this.numTexturizedVector,
+      texturizedSceneIndexFrom: this.texturizedSceneIndexFrom,
+      material: () => this.material,
+      reportDrapeGpuBytes: () => this.reportDrapeGpuBytesIfChanged(),
+    });
+
+    // The globe tiling scheme is fixed for this mesh's lifetime (a runtime
+    // scheme flip drains and rebuilds every tile), so the raster drape
+    // resolver is chosen once here. `mesh.globe` clones a wasm object;
+    // release it.
+    const globe = mesh.globe;
+    const isGeographicTiling = globe.isGeographicTiling;
+    globe.free();
+    this.rasterDrape = isGeographicTiling
+      ? new BakedRasterDrapeResolver({
+          handle,
+          tileHandler,
+          compositor: this.compositor,
+          loadedTexs: ctx.loadedTexs,
+          textureOptions,
+          drapeRtSize: this.drapeRtSize,
+          texturizedSceneIndexFrom: this.texturizedSceneIndexFrom,
+          material: () => this.material,
+          reportDrapeGpuBytes: () => this.reportDrapeGpuBytesIfChanged(),
+        })
+      : new DirectRasterDrapeResolver();
+
     tileMapByHandle.set(handle, this);
 
     this.onBeforeRender = this._onBeforeRender;
-  }
-
-  /**
-   * Pull the Rust-resolved texturized-vector slots for this terrain tile into
-   * {@link vectorSlots}: one bake slot per clamp-to-ground layer, keyed by the
-   * rendered WM vector tile that backs it (ancestor fallback already resolved in
-   * Rust). Only layers with an actual draped scene take a slot — Rust also returns
-   * non-draped layers (rendered in the MRT scene), which must not consume the budget.
-   * Capped to the GPU slot budget; warns once when more draped layers are requested.
-   */
-  private refreshVectorSlots() {
-    const states = this.tileHandler.getVectorTileStates(this.handle) ?? [];
-
-    // Group the flattened per-(layer, source) states back into one slot per
-    // layer, each carrying every overlapping WM source tile (N:M on Geographic
-    // terrain). First-seen layer order assigns the render-target index, kept
-    // consistent by renderVectorScenes / bindVectorSlots / buildCompositeLayers.
-    const byLayer = new Map<string, VectorSlot>();
-    const droppedLayers = new Set<string>();
-    for (const state of states) {
-      const layerId = state.layer_id;
-      let slot = byLayer.get(layerId);
-      if (!slot) {
-        // Rust returns a state for every vector layer with a rendered tile, including
-        // non-draped layers (those render in the MRT scene and never create a texturized
-        // scene). Only a layer that actually has a draped scene may consume a bake slot;
-        // otherwise non-draped layers would occupy the limited slot budget and crowd out
-        // genuinely-draped layers past the cap. A draped layer whose scene isn't ready yet
-        // simply gets no slot this pass and is picked up once its scene exists.
-        const hasScene =
-          this.texturizedSceneByTileCoordinates.findSceneByLayerId(
-            state.tile_handle,
-            layerId,
-          ) != null;
-        if (!hasScene) continue;
-        // Cap the layer fan-out to the GPU slot budget; extra layers are dropped.
-        if (byLayer.size >= this.numTexturizedVector) {
-          droppedLayers.add(layerId);
-          continue;
-        }
-        const reproject = state.reproject_terrain_lat;
-        slot = {
-          layerId,
-          sources: [],
-          reproject:
-            reproject.length >= 2 ? [reproject[0], reproject[1]] : undefined,
-        };
-        byLayer.set(layerId, slot);
-      }
-      slot.sources.push({
-        tileHandle: state.tile_handle,
-        uvOffset: [state.uv_offset[0] ?? 0, state.uv_offset[1] ?? 0],
-        uvScale: [state.uv_scale[0] ?? 1, state.uv_scale[1] ?? 1],
-      });
-    }
-
-    if (droppedLayers.size > 0) {
-      if (!this.warnedExceededTextures) {
-        this.warnedExceededTextures = true;
-        console.warn(
-          `[TileMesh] Exceeded maximum MVT texture slots: ${byLayer.size + droppedLayers.size} layers requested, ` +
-            `but only ${this.numTexturizedVector} slots available. ` +
-            `Some MVT layers will not be rendered.`,
-        );
-      }
-    } else {
-      this.warnedExceededTextures = false;
-    }
-
-    this.vectorSlots = [...byLayer.values()];
-    this.syncDrapeRenderTargets();
-  }
-
-  /**
-   * Size the drape render-target pool to the live slot count (already capped to
-   * `numTexturizedVector` by {@link refreshVectorSlots}): allocate the ones a
-   * newly-draped layer needs, dispose the ones a vanished layer freed. Then
-   * report the pool's GPU footprint to the memory ledger so it tracks drape
-   * memory that scales with terrain subdivision past the vector maxZoom — a cost
-   * per-vector-tile accounting cannot see. Reports only when the count changes.
-   */
-  private syncDrapeRenderTargets() {
-    const target = this.vectorSlots.length;
-    const rts = this.texturizedSceneRenderTargets;
-    while (rts.length < target) {
-      const rt = new WebGLRenderTarget(this.drapeRtSize, this.drapeRtSize, {
-        format: RGBAFormat,
-      });
-      // Match the sampler settings setupTextures applies to eager RTs, so the
-      // lazily-grown one binds identically when bindVectorSlots picks it up.
-      configureTexturizedTexture(rt.texture, this.ctx.textureOptions);
-      rts.push(rt);
-    }
-    while (rts.length > target) {
-      rts.pop()?.dispose();
-    }
-
-    this.reportDrapeGpuBytesIfChanged();
   }
 
   /**
@@ -415,10 +238,9 @@ export class TileMesh
    * cost per-source-tile accounting cannot see.
    */
   private reportDrapeGpuBytesIfChanged() {
-    let rtCount = this.texturizedSceneRenderTargets.length;
-    for (const rt of this.rasterDrapeRenderTargets) {
-      if (rt) rtCount++;
-    }
+    const rtCount =
+      this.vectorDrape.liveRenderTargetCount() +
+      this.rasterDrape.liveRenderTargetCount();
     const bytes = this.atlasBytes + rtCount * drapeRtBytes(this.drapeRtSize);
     if (bytes === this.reportedDrapeGpuBytes) return;
     // Only the mesh currently registered for this position-stable handle may
@@ -434,272 +256,14 @@ export class TileMesh
     this.tileHandler.reportDrapeGpuBytes(this.handle, bytes);
   }
 
-  /**
-   * Identity of the current slot set + the backing scenes' content. A change means
-   * the offscreen scenes must be re-baked and the per-slot material state re-bound.
-   */
-  private vectorSignature(): string {
-    return this.vectorSlots
-      .map((slot) => {
-        const sourceSig = slot.sources
-          .map((s) => {
-            const scene =
-              this.texturizedSceneByTileCoordinates.findSceneByLayerId(
-                s.tileHandle,
-                slot.layerId,
-              );
-            return `${s.tileHandle}@${s.uvOffset[0]},${s.uvOffset[1]},${s.uvScale[0]},${s.uvScale[1]}#${scene?.revision ?? -1}:${scene?.children.length ?? 0}`;
-          })
-          .join(",");
-        return `${slot.layerId}[${sourceSig}]`;
-      })
-      .join("|");
-  }
-
-  /**
-   * Pull the Rust-resolved baked-raster states for this terrain tile into
-   * {@link rasterSlots}: one slot per baked (non-hillshade) raster layer on
-   * Geographic terrain, grouped by `layer_ordinal` — the raster twin of
-   * {@link refreshVectorSlots}. An unloaded layer leaves a hole (its ordinal
-   * stays paired with its material slot; the slot just stays transparent).
-   */
-  private refreshRasterSlots() {
-    const states = this.tileHandler.getRasterTileStates(this.handle) ?? [];
-
-    const byOrdinal: (RasterSlot | undefined)[] = [];
-    for (const state of states) {
-      const ordinal = state.layer_ordinal;
-      let slot = byOrdinal[ordinal];
-      if (!slot) {
-        const reproject = state.reproject_terrain_lat;
-        slot = {
-          ordinal,
-          sources: [],
-          reproject:
-            reproject.length >= 2 ? [reproject[0], reproject[1]] : undefined,
-        };
-        byOrdinal[ordinal] = slot;
-      }
-      // Read each wasm getter once — every access crosses the boundary and the
-      // uv getters allocate a fresh Float32Array.
-      const uvOffset = state.uv_offset;
-      const uvScale = state.uv_scale;
-      slot.sources.push({
-        fragmentId: generate_id_from_ind_gen(
-          state.fragment_ind,
-          state.fragment_gen,
-        ),
-        uvOffset: [uvOffset[0] ?? 0, uvOffset[1] ?? 0],
-        uvScale: [uvScale[0] ?? 1, uvScale[1] ?? 1],
-      });
-      // wasm-bindgen objects hold Rust-heap memory; release it deterministically
-      // instead of waiting for the GC's finalizer (see guide/WASM_API_POLICY.md).
-      state.free();
-    }
-
-    this.rasterSlots = byOrdinal;
-    this.syncRasterDrapeRenderTargets();
-  }
-
-  /**
-   * Size the baked-raster render-target pool to the live baked slots: allocate
-   * lazily per ordinal with sources, dispose when a layer vanishes. Heatmap
-   * layers get a value-preserving target (nearest, `NoColorSpace`, no mips) so
-   * the encoded DEM survives the bake; color layers mirror the vector drape
-   * targets (`configureTexturizedTexture`) plus an sRGB declaration so the
-   * composite decodes them exactly like the direct (non-baked) textures.
-   */
-  private syncRasterDrapeRenderTargets() {
-    const rts = this.rasterDrapeRenderTargets;
-    const kinds = this.rasterDrapeRtIsHeatmap;
-    const count = this.bakedSlotIndices.length;
-    for (let ordinal = 0; ordinal < count; ordinal++) {
-      const active = !!this.rasterSlots[ordinal]?.sources.length;
-      const isHeatmap = this.bakedSlotIsHeatmap[ordinal];
-      // A layer that flipped kinds (color ↔ heatmap via updateLayer) must not
-      // reuse the old target: its color space is baked into the GL allocation,
-      // and a heatmap baked into an sRGB/linear-filtered target decodes to
-      // garbage elevations. Dispose and let the branch below re-allocate.
-      if (rts[ordinal] && kinds[ordinal] !== isHeatmap) {
-        rts[ordinal]?.dispose();
-        rts[ordinal] = undefined;
-      }
-      if (active && !rts[ordinal]) {
-        const rt = new WebGLRenderTarget(this.drapeRtSize, this.drapeRtSize, {
-          format: RGBAFormat,
-          depthBuffer: false,
-          stencilBuffer: false,
-        });
-        if (isHeatmap) {
-          rt.texture.minFilter = NearestFilter;
-          rt.texture.magFilter = NearestFilter;
-          rt.texture.generateMipmaps = false;
-          rt.texture.colorSpace = NoColorSpace;
-        } else {
-          configureTexturizedTexture(rt.texture, this.ctx.textureOptions);
-          rt.texture.colorSpace = SRGBColorSpace;
-        }
-        rts[ordinal] = rt;
-        kinds[ordinal] = isHeatmap;
-      } else if (!active && rts[ordinal]) {
-        rts[ordinal]?.dispose();
-        rts[ordinal] = undefined;
-      }
-    }
-    // Layers removed: drop targets past the live baked-slot count.
-    for (let ordinal = count; ordinal < rts.length; ordinal++) {
-      rts[ordinal]?.dispose();
-    }
-    rts.length = count;
-    kinds.length = count;
-
-    this.reportDrapeGpuBytesIfChanged();
-  }
-
-  /**
-   * Identity of the baked slot set + each source texture's availability. A change
-   * means the sources must be re-baked and re-bound — including a texture arriving
-   * in `loadedTexs` after the resolve (decode is async).
-   */
-  private rasterSignature(): string {
-    const { loadedTexs } = this.ctx;
-    return this.bakedSlotIndices
-      .map((absSlot, ordinal) => {
-        const sourceSig = this.rasterSlots[ordinal]?.sources
-          .map(
-            (s) =>
-              `${s.fragmentId}@${s.uvOffset[0]},${s.uvOffset[1]},${s.uvScale[0]},${s.uvScale[1]}#${loadedTexs.has(s.fragmentId) ? 1 : 0}`,
-          )
-          .join(",");
-        return `${absSlot}:${this.bakedSlotIsHeatmap[ordinal] ? 1 : 0}[${sourceSig ?? ""}]`;
-      })
-      .join("|");
-  }
-
-  /** Whether every resolved source's texture is present in `loadedTexs`. */
-  private allRasterTexturesLoaded(): boolean {
-    const { loadedTexs } = this.ctx;
-    for (const slot of this.rasterSlots) {
-      if (!slot) continue;
-      for (const source of slot.sources) {
-        if (!loadedTexs.has(source.fragmentId)) return false;
-      }
-    }
-    return true;
-  }
-
-  /**
-   * Bake each baked layer's loaded source textures into its render target and
-   * bind the targets to the material slots — the raster twin of the
-   * `renderVectorScenes` + `bindVectorSlots` pair in `_onBeforeRender`.
-   */
-  private bakeRasterSlots() {
-    const { loadedTexs } = this.ctx;
-    const ud = this.material.userData;
-    // The decoder's no-data color: painted under a baked heatmap's sources so
-    // uncovered regions decode as "no elevation" (rendered transparent by the
-    // composite) — the DEM alpha channel is never used for coverage.
-    const noDataColor =
-      demNoDataColorBytes(
-        ud.elevationRGBScaler?.value ?? { x: 0, y: 0, z: 0 },
-        ud.elevationMinMaxHeightAndBoundary?.value.z ?? 0,
-      ) ?? undefined;
-    const bakeSlots: (RasterBakeSlot | undefined)[] = this.bakedSlotIndices.map(
-      (_, ordinal) => {
-        const slot = this.rasterSlots[ordinal];
-        // No resolved sources → no live render target for this ordinal.
-        if (!slot?.sources.length) return undefined;
-        const isElevationHeatmap = this.bakedSlotIsHeatmap[ordinal];
-        // Loaded textures only; a slot whose textures are all still decoding
-        // keeps its (cleared + no-data-painted) target until they land.
-        const sources = slot.sources.flatMap((s) => {
-          const texture = loadedTexs.get(s.fragmentId);
-          return texture
-            ? [{ texture, uvOffset: s.uvOffset, uvScale: s.uvScale }]
-            : [];
-        });
-        return {
-          isElevationHeatmap,
-          noDataColor: isElevationHeatmap ? noDataColor : undefined,
-          sources,
-        };
-      },
-    );
-    this.compositor.renderRasterTiles(bakeSlots, this.rasterDrapeRenderTargets);
-    this.bindRasterSlots();
-    this.compositor.markDirty(this.handle, "raster-revision");
-  }
-
-  /**
-   * Bind each baked layer's render target to its material slot. Shows, colors
-   * and opacities already cross via the material's per-slot arrays (the baked
-   * slot is a regular material slot, just fragment-less); only the texture is
-   * bound here. A slot with no target yet stays `null`, which the composite
-   * skips — transparent until the first source texture arrives.
-   */
-  private bindRasterSlots() {
-    const m = this.material;
-    const textures = m?.userData?.textures?.value;
-    if (!textures) return;
-    for (let ordinal = 0; ordinal < this.bakedSlotIndices.length; ordinal++) {
-      const absSlot = this.bakedSlotIndices[ordinal];
-      textures[absSlot] =
-        this.rasterDrapeRenderTargets[ordinal]?.texture ?? null;
-    }
-  }
-
   private _onBeforeRender = () => {
     if (!this.visible) return;
 
-    // Re-fetch the Rust-resolved slots only when the global vector resolution revision
-    // changed; otherwise reuse the cached slots. The resolve result can only flip when a
-    // traverse runs (new/removed rendered tiles, terrain subdivision) or a scene becomes
-    // ready — both bump the revision. This skips a per-tile WASM-boundary resolve every
-    // frame, the dominant steady-state cost when many terrain tiles are visible.
-    const revision = this.tileHandler.vectorRevision();
-    if (revision !== this._lastVectorRevision) {
-      this._lastVectorRevision = revision;
-      this.refreshVectorSlots();
-    }
-
-    // Re-bake the offscreen vector scenes only when the resolved slots or their
-    // backing scenes changed; otherwise the existing render targets stay valid.
-    const signature = this.vectorSignature();
-    if (signature !== this.prevVectorSignature) {
-      this.prevVectorSignature = signature;
-      this.compositor.renderVectorScenes(
-        this.vectorSlots,
-        this.texturizedSceneRenderTargets,
-      );
-      this.bindVectorSlots();
-      this.compositor.markDirty(this.handle, "vector-revision");
-    }
-
-    // Baked raster layers (Geographic terrain), gated exactly like the vector
-    // drape: refresh on the raster resolve revision, re-bake on a slot/texture
-    // signature change (which also catches async texture decodes landing in
-    // `loadedTexs` after the resolve). No-ops on WebMercator terrain, where the
-    // material has no baked slots.
-    if (this.bakedSlotIndices.length > 0) {
-      const rasterRevision = this.tileHandler.rasterRevision();
-      if (rasterRevision !== this._lastRasterRevision) {
-        this._lastRasterRevision = rasterRevision;
-        this.refreshRasterSlots();
-        this._rasterSignatureSettled = false;
-      }
-      if (!this._rasterSignatureSettled) {
-        const rasterSignature = this.rasterSignature();
-        if (rasterSignature !== this.prevRasterSignature) {
-          this.prevRasterSignature = rasterSignature;
-          this.bakeRasterSlots();
-        }
-        // Once every resolved source's texture is present (and thus baked), the
-        // signature is stable until the next refresh — skip hashing per frame.
-        // A vanished texture always comes with a Rust-side destroy bump, which
-        // refreshes and un-settles.
-        this._rasterSignatureSettled = this.allRasterTexturesLoaded();
-      }
-    }
+    // Drape resolvers (see `drapeResolver.ts`): each refreshes its Rust-resolved
+    // slots on a revision bump and re-bakes on a slot/content signature change.
+    // The raster one is a no-op on WebMercator terrain (direct 1:1 slots).
+    this.vectorDrape.update();
+    this.rasterDrape.update();
 
     // MRT composite pass: bakes N source textures into the per-tile atlas.
     // Skip building the layer snapshot entirely when nothing is dirty.
@@ -717,93 +281,6 @@ export class TileMesh
       deriveCompositeFeatures(layers, globals),
     );
   };
-
-  /**
-   * Drive each vector slot's main-shader state per frame: texture, per-slot UV
-   * transform, visibility and the draped mesh's material attributes. One slot per
-   * layer, sourced from the WM vector tile the Rust resolve picked. The resolve
-   * walks up to the nearest rendered tile (readiness derived from ECS activation
-   * / the Rust resolve, not a JS-side scene_ready flag), so the slot's scene is
-   * always bakeable (its own render target was framed by the bake) and the UV is
-   * identity — the ancestor LOD fallback lives entirely in Rust. Replaces the old
-   * scene-observer `updateTexturizedSceneTextureVisibility`.
-   */
-  private bindVectorSlots() {
-    const m = this.material;
-    if (!m || !m.userData || !m.userData.textures?.value) return;
-    const textures = m.userData.textures.value;
-    const uvOffsets: Vector2[] = m.userData.layerUvOffset?.value ?? [];
-    const uvScales: Vector2[] = m.userData.layerUvScale?.value ?? [];
-
-    for (let i = 0; i < this.numTexturizedVector; i++) {
-      const lastIdx = this.texturizedSceneIndexFrom + i;
-      const ownRt = this.texturizedSceneRenderTargets[i];
-      // Slots past the live pool (lazily sized to the draped-layer count) have
-      // no render target: hide the slot and rebind the shared empty texture so
-      // the shader never samples a stale / disposed texture from a layer that
-      // is no longer draped here.
-      if (!ownRt) {
-        m.userData.shows.value[lastIdx] = 0;
-        textures[lastIdx] = EMPTY_TEXTURIZED_TEXTURE;
-        continue;
-      }
-
-      textures[lastIdx] = ownRt.texture;
-      // The bake framed every source into this RT so it spans the terrain tile's
-      // extent: the paste samples it 1:1 in longitude (identity UV here); the
-      // latitude axis is reprojected WebMercator→Geographic in the composite
-      // shader via the slot's reproject band (see buildCompositeLayers).
-      uvOffsets[lastIdx]?.set(0, 0);
-      uvScales[lastIdx]?.set(1, 1);
-
-      const slot = this.vectorSlots[i];
-      const mesh = slot ? this.representativeVectorMesh(slot) : undefined;
-      m.userData.shows.value[lastIdx] = mesh ? 1 : 0;
-      if (mesh) this.copyVectorMeshAttrs(lastIdx, mesh);
-    }
-  }
-
-  /**
-   * First available draped mesh backing any of a layer's sources. A clamp-to-ground
-   * layer's material attributes (water/specular/emissive/…) are uniform across its
-   * tiles, so any source's mesh is a faithful representative for the slot.
-   */
-  private representativeVectorMesh(slot: VectorSlot): Object3D | undefined {
-    for (const source of slot.sources) {
-      const scene = this.texturizedSceneByTileCoordinates.findSceneByLayerId(
-        source.tileHandle,
-        slot.layerId,
-      );
-      if (scene && !scene.removed && scene.children.length) {
-        return scene.children[0];
-      }
-    }
-    return undefined;
-  }
-
-  /** Copy a draped mesh's material attributes into the main shader's slot `lastIdx`. */
-  private copyVectorMeshAttrs(lastIdx: number, mesh: Object3D) {
-    const m = this.material;
-    if (mesh instanceof PolygonMesh) {
-      // Use PolygonMesh getters that expose material enhancer state
-      m.userData.reflectivities.value[lastIdx] = mesh.reflectivity;
-      m.userData.roughnesses.value[lastIdx] = mesh.roughness;
-      m.userData.waters.value[lastIdx] = mesh.water;
-      m.userData.waterScaleNormals.value[lastIdx] = mesh.waterScaleNormal;
-      m.userData.waterSpeeds.value[lastIdx] = mesh.waterSpeed;
-      m.userData.shininesses.value[lastIdx] = mesh.shininess;
-      m.userData.specularStrengths.value[lastIdx] = mesh.specularStrength;
-      m.userData.applyWaterNormals.value[lastIdx] = mesh.applyWaterNormal;
-      m.userData.speculars.value[lastIdx] = mesh.specular;
-      m.userData.emissiveIntensities.value[lastIdx] = mesh.emissiveIntensity;
-      m.userData.emissiveColors.value[lastIdx].set(mesh.emissiveColor);
-      m.userData.effectIdsMasks.value[lastIdx] = mesh.effectIdsMask;
-    } else if (mesh instanceof PolylineMesh) {
-      m.userData.emissiveIntensities.value[lastIdx] = mesh.emissiveIntensity;
-      m.userData.emissiveColors.value[lastIdx].set(mesh.emissiveColor);
-      m.userData.effectIdsMasks.value[lastIdx] = mesh.effectIdsMask;
-    }
-  }
 
   /**
    * Feature flags for the **main** TileMesh shader (atlas-sampling side): drives
@@ -852,13 +329,6 @@ export class TileMesh
     const isHillshades: boolean[] = ud.isHillshades?.value ?? [];
     const isElevationHeatmaps: boolean[] = ud.isElevationHeatmaps?.value ?? [];
     const waters: boolean[] = ud.waters?.value ?? [];
-    // Per-slot Mercator reprojection flag + the shared terrain latitude range.
-    const layerReproject: number[] = ud.layerReproject ?? [];
-    const terrainLatRange: number[] = ud.terrainLatRange ?? [];
-    const reproject: [number, number] | undefined =
-      terrainLatRange.length === 2
-        ? [terrainLatRange[0], terrainLatRange[1]]
-        : undefined;
     const boundary = this.texturizedSceneIndexFrom;
 
     const layers: CompositeLayer[] = [];
@@ -883,18 +353,11 @@ export class TileMesh
           uvScale,
         });
       } else {
-        // WebMercator-on-Geographic latitude reprojection. Raster and heatmap
-        // slots read the shared per-tile flag/band stashed by setupTextures;
-        // baked-vector slots (whose RT spans the terrain extent) carry the
-        // Rust-resolved terrain `[south, north]` band directly on the slot.
-        // `undefined` on WM terrain. Baked raster/heatmap slots have identity
-        // UV, so the band recovered from the affine is exactly the terrain band.
-        const slotReproject =
-          region === "vector"
-            ? this.vectorSlots[absSlot - boundary]?.reproject
-            : layerReproject[absSlot] === 1
-              ? reproject
-              : undefined;
+        // WebMercator-on-Geographic latitude reprojection, resolved by the
+        // slot's drape resolver (always undefined on WM terrain).
+        const slotReproject = (
+          region === "vector" ? this.vectorDrape : this.rasterDrape
+        ).slotReproject(absSlot);
         if (isElevationHeatmaps[absSlot]) {
           layers.push({
             kind: "elevationHeatmap",
@@ -1436,7 +899,7 @@ ${generateTileCommonInjection(maxTextures)}
 
       // Material / texture rebind → force the vector slots to re-bind their
       // per-slot uniform state on the next frame, and repaint the composite atlas.
-      this.prevVectorSignature = "";
+      this.vectorDrape.invalidate();
       this.compositor.markDirty(this.handle, "material");
       this.compositor.markDirty(this.handle, "texture-binding");
     }
@@ -1804,13 +1267,12 @@ ${generateTileCommonInjection(maxTextures)}
     const textureFragments = m.userData.textureFragments?.value;
     const textureFragmentsLen = textureFragments?.length ?? 0;
 
-    const numTexturizedVector = this.numTexturizedVector;
-
     // Raster textures fill slots [0, texturizedSceneIndexFrom); texturized vector
     // scenes occupy the rest. Exactly `texturizedSceneIndexFrom` raster layers fit
-    // (indices 0..from-1), so only a strictly larger count overflows. Rust caps the
-    // draped-tile fan-out (RASTER_DRAPE_SLOT_BUDGET) to keep this from triggering;
-    // this guard is the final safety net and the extra fragments are dropped below.
+    // (indices 0..from-1), so only a strictly larger count overflows. Each layer
+    // costs one slot (a baked layer's overlap is mosaicked into a single render
+    // target), so this guard is the final safety net for an oversized layer
+    // count and the extra fragments are dropped below.
     if (textureFragmentsLen > this.texturizedSceneIndexFrom) {
       console.error(
         `Exceeded maximum textures: ${textureFragmentsLen} layers are provided. Maximum the number of textures is ${this.texturizedSceneIndexFrom}.`,
@@ -1935,69 +1397,11 @@ ${generateTileCommonInjection(maxTextures)}
       textures[i] = t;
     }
 
-    // Baked drape slots (Geographic terrain): a non-hillshade raster slot with no
-    // fragment entity is backed by a per-layer baked render target instead of a
-    // direct texture. The k-th such slot pairs with `layer_ordinal == k` from
-    // `getRasterTileStates` — both sides derive k from the same sorted layer
-    // list. On WebMercator terrain every raster slot carries a fragment, so this
-    // stays empty and the baked path is dormant.
-    const prevBakedSlotIndices = this.bakedSlotIndices;
-    const prevBakedSlotIsHeatmap = this.bakedSlotIsHeatmap;
-    this.bakedSlotIndices = [];
-    this.bakedSlotIsHeatmap = [];
-    const isHillshades: boolean[] = m.userData.isHillshades?.value ?? [];
-    const isHeatmaps: boolean[] = m.userData.isElevationHeatmaps?.value ?? [];
-    for (
-      let i = 0;
-      i < Math.min(textureFragmentsLen, this.texturizedSceneIndexFrom);
-      i++
-    ) {
-      if (!textureFragments?.[i] && !isHillshades[i]) {
-        this.bakedSlotIndices.push(i);
-        this.bakedSlotIsHeatmap.push(!!isHeatmaps[i]);
-      }
-    }
-    // The RT pool follows the baked slot count (disposes leftovers when layers
-    // vanish).
-    this.syncRasterDrapeRenderTargets();
-    const bakedSlotsChanged =
-      prevBakedSlotIndices.length !== this.bakedSlotIndices.length ||
-      this.bakedSlotIndices.some((v, i) => v !== prevBakedSlotIndices[i]) ||
-      this.bakedSlotIsHeatmap.some((v, i) => v !== prevBakedSlotIsHeatmap[i]);
-    if (bakedSlotsChanged) {
-      // Slot pairing changed (layers added/removed/reordered): re-resolve + re-bake.
-      this.prevRasterSignature = "";
-      this._rasterSignatureSettled = false;
-    } else {
-      // Same slots, and the render targets still hold the last bake — but the
-      // texture reset above nulled the material bindings, so rebind them without
-      // paying a re-bake. Material updates fire on every tile activation during
-      // camera motion; an unconditional signature reset here re-baked every such
-      // tile every time (an FPS killer).
-      this.bindRasterSlots();
-    }
-
-    for (let i = 0; i < numTexturizedVector; i++) {
-      // Every texturized sampler slot must reference a valid texture (GLSL/WebGL
-      // requires it even for a sampler never read). Drape render targets are now
-      // allocated lazily, so a slot without one binds the shared empty texture;
-      // `bindVectorSlots` swaps in the real RT texture once a layer drapes here.
-      const lastIndex = this.texturizedSceneIndexFrom + i;
-      const rt = this.texturizedSceneRenderTargets[i];
-      const texturizedSceneTexture = rt
-        ? configureTexturizedTexture(rt.texture, textureOptions)
-        : EMPTY_TEXTURIZED_TEXTURE;
-
-      textures[lastIndex] = texturizedSceneTexture;
-
-      // Per-slot visibility + material attributes are bound by bindVectorSlots once
-      // the Rust-resolved slots are known; default to hidden here.
-      m.userData.shows.value[lastIndex] = 0;
-      m.userData.colors.value[lastIndex] = new Color(0xffffff);
-      m.userData.opacities.value[lastIndex] = 1.0;
-    }
-    // Re-bind vector slots on the next frame now that render targets were rebound.
-    this.prevVectorSignature = "";
+    // Re-derive each drape resolver's slot pairing / bindings from the rebuilt
+    // material (the raster call is a no-op on WebMercator terrain, where every
+    // raster slot carries its own fragment and drapes directly).
+    this.rasterDrape.syncMaterialSlots(textureFragments);
+    this.vectorDrape.syncMaterialSlots(textureFragments);
   }
 
   /**
@@ -2034,13 +1438,13 @@ ${generateTileCommonInjection(maxTextures)}
     this.material.userData.uPickable.value = 1;
 
     // Force the vector scenes to re-bake for the picking pass.
-    this.prevVectorSignature = "";
+    this.vectorDrape.invalidate();
     this.compositor.markDirty(this.handle, "vector-revision");
   }
 
   onAfterPicking(): void {
     this.material.userData.uPickable.value = 0;
-    this.prevVectorSignature = "";
+    this.vectorDrape.invalidate();
     this.compositor.markDirty(this.handle, "vector-revision");
   }
 
@@ -2085,15 +1489,9 @@ ${generateTileCommonInjection(maxTextures)}
       this.shadowMesh = undefined;
     }
 
-    // Dispose WebGLRenderTargets to free GPU memory
-    for (const renderTarget of this.texturizedSceneRenderTargets) {
-      renderTarget.dispose();
-    }
-    this.texturizedSceneRenderTargets.length = 0;
-    for (const renderTarget of this.rasterDrapeRenderTargets) {
-      renderTarget?.dispose();
-    }
-    this.rasterDrapeRenderTargets.length = 0;
+    // Dispose the drape resolvers' WebGLRenderTargets to free GPU memory
+    this.vectorDrape.dispose();
+    this.rasterDrape.dispose();
     // Do NOT report a zero drape cost here. The Rust `TerrainTileGpuCost` /
     // `TileCost` live on the mesh entity, whose despawn already subtracts the
     // full cost from the ledger via the component `on_replace` hook — so the

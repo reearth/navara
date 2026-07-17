@@ -1186,19 +1186,6 @@ impl App {
         }
     }
 
-    /// Set the raster drape slot budget from the web renderer's real GPU texture-slot
-    /// capacity, so a terrain tile can drape enough WM raster tiles per layer (see
-    /// [`navara_tile::tile::RasterDrapeConfig`]). Clamped to at least 1.
-    pub fn set_raster_drape_slot_budget(&mut self, value: usize) {
-        if let Some(mut config) = self
-            .app
-            .world_mut()
-            .get_resource_mut::<navara_tile::tile::RasterDrapeConfig>()
-        {
-            config.slot_budget = value.max(1);
-        }
-    }
-
     pub fn set_globe_segments(&mut self, value: usize) {
         if let Some(mut globe) = self.get_globe_mut() {
             globe.segments = value;

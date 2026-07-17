@@ -27,8 +27,18 @@ export type GlobeHandler = {
   setElevationColormap: (value: ColorMap) => void;
 };
 
+// `isGeographicTiling` is engine-set output (the tiling scheme is dictated by
+// the terrain source, not configurable), so it is excluded from both the
+// options and the wrapper below.
 export type GlobeOptions = Partial<
-  Omit<GlobeWasm, "constructor" | "free" | "elevationColormap" | "color">
+  Omit<
+    GlobeWasm,
+    | "constructor"
+    | "free"
+    | "elevationColormap"
+    | "color"
+    | "isGeographicTiling"
+  >
 > & {
   elevationColormap?: ColorMap;
   color?: Color;
@@ -42,7 +52,7 @@ export type GlobeOptions = Partial<
  */
 export class Globe implements Omit<
   RemoveFreeRecursively<GlobeWasm>,
-  "elevationColormap" | "color"
+  "elevationColormap" | "color" | "isGeographicTiling"
 > {
   private handler: GlobeHandler;
   private _elevationColormap?: ColorMap;

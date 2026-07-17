@@ -11,10 +11,9 @@ use rustc_hash::FxHashSet;
 /// terrain tile. Draping WebMercator raster onto a Geographic terrain tile is N:M and
 /// the overlap grows toward the poles. Every overlapping tile for a layer is baked into
 /// that layer's one render target (see the web `renderRasterTiles`), so this cap is
-/// **per layer** and independent of how many layers are draped — unlike the composite
-/// texture-slot budget the non-baked path divides across layers (which collapsed every
-/// layer to a coarser zoom once 3+ layers shared it). Beyond this the overlap query
-/// coarsens the zoom. Mirrors `VECTOR_DRAPE_OVERLAP_BUDGET`.
+/// **per layer** and independent of how many layers are draped — each layer costs one
+/// composite slot no matter its overlap. Beyond this the overlap query coarsens the
+/// zoom. Mirrors `VECTOR_DRAPE_OVERLAP_BUDGET`.
 pub const RASTER_DRAPE_OVERLAP_BUDGET: usize = 5;
 
 /// One WebMercator raster texture draped on a terrain tile: the texture fragment
@@ -29,13 +28,13 @@ pub struct ResolvedRasterTexture {
 }
 
 /// Resolve the WebMercator raster tiles covering `terrain_extent` for one layer,
-/// at the finest zoom `<= target_z` whose overlap fits `max_tiles` (the layer's
-/// share of the terrain tile's raster texture-slot budget; see
+/// at the finest zoom `<= target_z` whose overlap fits `max_tiles` (see
 /// [`overlapping_tiles_within_budget`]). Each overlapping WM tile contributes one
 /// texture; a tile whose own fragment isn't loaded falls back to its nearest loaded
 /// ancestor (several gaps may share one ancestor, which is emitted once), so the
-/// result is at most `max_tiles` textures. For WebMercator terrain the overlap is a
-/// single identity tile, matching the Phase 1 drape.
+/// result is at most `max_tiles` textures. For WebMercator terrain — the only
+/// remaining caller, since Geographic drapes resolve through the baked path
+/// ([`resolve_raster_tile_states`]) — the overlap is a single identity tile.
 pub fn resolve_raster_textures(
     qt: &RasterTileQuadtree,
     terrain_extent: &Extent<FloatType, Radians>,
