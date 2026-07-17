@@ -34,6 +34,13 @@ const ALLOWED_ANNO_CTG = [
   661, // Shrine
 ];
 
+// Per-feature declutter priority: bigger settlements win overlaps.
+const DECLUTTER_PRIORITY: Record<number, number> = {
+  51301: 3, // Population 1M+
+  51302: 2, // Population 500K-1M
+  51303: 1, // Population <500K
+};
+
 const run = async () => {
   const view = new ThreeView({
     debug: true,
@@ -151,6 +158,7 @@ const run = async () => {
           return {
             text,
             show: !!text,
+            declutterPriority: DECLUTTER_PRIORITY[ftCode] ?? 0,
           };
         },
         { filters: ["knj", "name", "ftCode", "annoCtg"] },

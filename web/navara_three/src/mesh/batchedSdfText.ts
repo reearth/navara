@@ -503,6 +503,17 @@ export class BatchedSdfTextMesh
     }
   }
 
+  setFeatureDeclutterPriorityByBatchIndex(
+    batchIndex: number,
+    priority: number,
+  ) {
+    const mesh = this.meshes()[batchIndex];
+    if (mesh) {
+      mesh.setDeclutterPriority(priority);
+      this._markDeclutterDirty();
+    }
+  }
+
   setFeatureOpacityByBatchIndex(batchIndex: number, opacity: number) {
     const mesh = this.meshes()[batchIndex];
     if (mesh) {

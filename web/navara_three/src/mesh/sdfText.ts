@@ -229,7 +229,11 @@ export class SDFTextMesh
   private _worldAnchor = new Float64Array(3);
   /** Whether this label participates in screen-space decluttering. */
   private _declutter = false;
+  /** Layer-level placement priority from the material. */
   private _declutterPriority = 0;
+  /** Per-feature priority set through the evaluator; overrides the layer
+   *  value when defined. */
+  private _declutterPriorityOverride: number | undefined;
   /** Current animated hide factor (mirrors the uDeclutterHide uniform) and
    *  the placement target it is fading toward. */
   private _declutterHide = 0;
@@ -693,10 +697,19 @@ export class SDFTextMesh
       minY: (this._labelMinYEm - cy * h) * size,
       maxY: (this._labelMaxYEm - cy * h) * size,
       sizeInMeters: state.sizeInMeters,
-      priority: this._declutterPriority,
+      priority: this._declutterPriorityOverride ?? this._declutterPriority,
       owner,
       handle,
     };
+  }
+
+  /**
+   * Set a per-feature placement priority (higher wins), overriding the
+   * layer-level `declutterPriority` for this label. Pass `undefined` to fall
+   * back to the layer value. Driven by the feature evaluator.
+   */
+  setDeclutterPriority(priority: number | undefined): void {
+    this._declutterPriorityOverride = priority;
   }
 
   /**

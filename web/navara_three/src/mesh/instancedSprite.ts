@@ -78,7 +78,11 @@ export class InstancedSpriteMesh
   private _anchors: Float64Array | null = null;
   /** Whether this mesh's instances participate in screen-space decluttering. */
   private _declutter = false;
+  /** Layer-level placement priority from the material. */
   private _declutterPriority = 0;
+  /** Per-instance priorities set through the evaluator (NaN = no override,
+   *  fall back to the layer value). Lazily allocated on first use. */
+  private _declutterPriorityOverrides: Float32Array | null = null;
   /** Per-instance fade targets for `instanceDeclutterHide` (0 = shown,
    *  1 = hidden); the attribute animates toward these in stepDeclutterFade. */
   private _declutterTargets: Float32Array | null = null;
@@ -118,6 +122,7 @@ export class InstancedSpriteMesh
     const cy = Math.min(Math.max(state.center[1], -0.5), 0.5);
     const aspect = state.aspect;
     const anchors = this._anchors;
+    const overrides = this._declutterPriorityOverrides;
     const count = Math.min(params.count, anchors.length / 3);
 
     for (let i = 0; i < count; i++) {
@@ -125,6 +130,8 @@ export class InstancedSpriteMesh
       const instanceSize = params.getY(i);
       const size = instanceSize >= 0.0 ? instanceSize : state.scale;
       if (size <= 0.0) continue;
+
+      const override = overrides ? overrides[i] : Number.NaN;
 
       // Mirror of instancedSprite.vert.glsl:95-97 — the quad spans
       // (position.xy - center) * vec2(aspect, 1) * size around the anchor.
@@ -138,7 +145,8 @@ export class InstancedSpriteMesh
         minY: (-0.5 - cy) * size,
         maxY: (0.5 - cy) * size,
         sizeInMeters: state.sizeInMeters,
-        priority: this._declutterPriority,
+        // NaN-safe: an unset override falls back to the layer priority.
+        priority: Number.isNaN(override) ? this._declutterPriority : override,
         owner: this,
         handle: i,
       });
@@ -824,6 +832,28 @@ export class InstancedSpriteMesh
     this._declutterAnimating = true;
   }
 
+  /**
+   * Set a per-feature placement priority (higher wins), overriding the
+   * layer-level `declutterPriority` for this instance. Driven by the feature
+   * evaluator.
+   */
+  setFeatureDeclutterPriorityByBatchId(batchId: number, priority: number) {
+    const instanceId = this._batchIdToInstance.get(batchId);
+    if (instanceId === undefined) return;
+
+    if (!this._declutterPriorityOverrides) {
+      const count = this._anchors ? this._anchors.length / 3 : 0;
+      if (count === 0) return;
+      this._declutterPriorityOverrides = new Float32Array(count).fill(
+        Number.NaN,
+      );
+    }
+    if (instanceId >= this._declutterPriorityOverrides.length) return;
+    if (this._declutterPriorityOverrides[instanceId] === priority) return;
+    this._declutterPriorityOverrides[instanceId] = priority;
+    this.ctx.declutter?.markDirty();
+  }
+
   setFeatureSizeByBatchId(batchId: number, size: number) {
     const instanceId = this._batchIdToInstance.get(batchId);
     if (instanceId === undefined) return;
@@ -865,5 +895,6 @@ export class InstancedSpriteMesh
     this._loadedUrls.clear();
     this._anchors = null;
     this._declutterTargets = null;
+    this._declutterPriorityOverrides = null;
   }
 }

@@ -55,6 +55,9 @@ export type EvaluatableMaterialProperty = {
   size: AvailableMaterialProperty["size"];
   /** Opacity expression from layer configuration (for polygons/points/text where supported). */
   opacity: AvailableMaterialProperty["opacity"];
+  /** Per-feature declutter placement priority (for points/billboards/text);
+   *  higher wins an overlap. Overrides the layer's `declutterPriority`. */
+  declutterPriority: AvailableMaterialProperty["declutterPriority"];
 };
 
 type EvaluatableMaterialPropertyKey = keyof EvaluatableMaterialProperty;
@@ -68,6 +71,7 @@ type EvaluatedMaterialProperty = {
   width: number;
   size: number;
   opacity: number;
+  declutterPriority: number;
 };
 
 /**
@@ -305,6 +309,8 @@ export class FeatureEvaluator {
    * - `width` - Line width in pixels (for polylines)
    * - `size` - Feature size in pixels (for points/text)
    * - `opacity` - Feature opacity 0-1
+   * - `declutterPriority` - Placement priority for decluttering; higher wins
+   *   an overlap (for points/billboards/text with `declutter` enabled)
    *
    * Note: Evaluated styles override the layer's default styles.
    *
@@ -380,6 +386,12 @@ export class FeatureEvaluator {
       if (evaluated.opacity != null) {
         obj.setFeatureOpacityByBatchId(batchId, evaluated.opacity);
       }
+      if (evaluated.declutterPriority != null) {
+        obj.setFeatureDeclutterPriorityByBatchId(
+          batchId,
+          evaluated.declutterPriority,
+        );
+      }
       return;
     }
 
@@ -401,6 +413,15 @@ export class FeatureEvaluator {
       }
       if (evaluated.opacity != null && obj instanceof BatchedSdfTextMesh) {
         obj.setFeatureOpacityByBatchIndex(batchIndex, evaluated.opacity);
+      }
+      if (
+        evaluated.declutterPriority != null &&
+        obj instanceof BatchedSdfTextMesh
+      ) {
+        obj.setFeatureDeclutterPriorityByBatchIndex(
+          batchIndex,
+          evaluated.declutterPriority,
+        );
       }
       return;
     }
