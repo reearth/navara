@@ -447,6 +447,8 @@ export default class ThreeView<
   private _declutter = new DeclutterManager();
   /** Reusable Vector2 for the declutter pass's per-frame viewport query. */
   private _declutterSize = new Vector2();
+  /** Pending follow-up frame for a throttled declutter pass. */
+  private _declutterRetry: ReturnType<typeof setTimeout> | undefined;
   private _isIdle = false;
   private _uniforms: CommonUniforms;
 
@@ -1534,6 +1536,10 @@ export default class ThreeView<
   dispose() {
     this._disposed = true;
     this._initialized = false;
+    if (this._declutterRetry !== undefined) {
+      clearTimeout(this._declutterRetry);
+      this._declutterRetry = undefined;
+    }
     // Dispose the view-owned attribution plugin (other plugins are the caller's).
     this._attribution?.dispose();
     this._attribution = undefined;
@@ -1745,8 +1751,10 @@ export default class ThreeView<
 
     // Screen-space label decluttering runs before the render passes so
     // placement changes land in this frame. When the throttle skips a due
-    // pass, force a follow-up frame so placement still settles right after
-    // the camera stops moving.
+    // pass, schedule a follow-up frame via a timer: the main loop resets
+    // `forceUpdate` right after `_render`, so setting it synchronously here
+    // would be cleared before the next tick could see it — the retry must
+    // land between ticks.
     {
       const size = this._renderer.getDrawingBufferSize(this._declutterSize);
       const pixelRatio = this._renderer.getPixelRatio();
@@ -1756,8 +1764,11 @@ export default class ThreeView<
         size.y / pixelRatio,
         updatedAt,
       );
-      if (result === "throttled") {
-        this._renderFlag.forceUpdate = true;
+      if (result === "throttled" && this._declutterRetry === undefined) {
+        this._declutterRetry = setTimeout(() => {
+          this._declutterRetry = undefined;
+          this._renderFlag.forceUpdate = true;
+        }, DeclutterManager.MIN_INTERVAL_MS);
       }
     }
 

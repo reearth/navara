@@ -70,6 +70,7 @@ const layers: MaterialDesc[] = [
       transparent: true,
       url: "/example.png",
       offsetDepth: true,
+      declutter: true,
     },
   },
   {
@@ -87,6 +88,7 @@ const layers: MaterialDesc[] = [
       offsetDepth: true,
       depthTest: true,
       transparent: true,
+      declutter: true,
     },
     vectorTile: {
       maxZoom: 6,

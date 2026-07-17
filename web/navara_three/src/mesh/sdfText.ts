@@ -696,7 +696,13 @@ export class SDFTextMesh
 
     // Read before the visibility early-return: the declutter pass consults
     // these even while other style state is skipped for hidden labels.
-    this._declutter = material.declutter ?? false;
+    const nextDeclutter = material.declutter ?? false;
+    if (this._declutter && !nextDeclutter) {
+      // Leaving declutter mode: clear any hide the pass applied — the mesh
+      // stops producing candidates, so nothing else would ever re-show it.
+      this.setDeclutterHidden(false);
+    }
+    this._declutter = nextDeclutter;
     this._declutterPriority = material.declutterPriority ?? 0;
 
     this.visible = (material.show ?? true) && !!this._text;

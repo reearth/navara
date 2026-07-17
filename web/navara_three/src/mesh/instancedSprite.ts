@@ -144,8 +144,29 @@ export class InstancedSpriteMesh
   }
 
   private _cacheDeclutterState(m: NavaraPointMesh | NavaraBillboardMesh) {
-    this._declutter = m.material.declutter ?? false;
+    const nextDeclutter = m.material.declutter ?? false;
+    if (this._declutter && !nextDeclutter) {
+      // Leaving declutter mode: clear hides the pass applied — the mesh stops
+      // producing candidates, so nothing else would ever re-show them.
+      this._clearDeclutterHidden();
+    }
+    this._declutter = nextDeclutter;
     this._declutterPriority = m.material.declutterPriority ?? 0;
+  }
+
+  private _clearDeclutterHidden(): void {
+    const attr = this.geometry?.getAttribute("instanceDeclutterHide") as
+      | InstancedBufferAttribute
+      | undefined;
+    if (!attr) return;
+    let changed = false;
+    for (let i = 0; i < attr.count; i++) {
+      if (attr.getX(i) !== 0.0) {
+        attr.setX(i, 0.0);
+        changed = true;
+      }
+    }
+    if (changed) attr.needsUpdate = true;
   }
 
   /** Reconstruct absolute ECEF anchors from the same arrays the position

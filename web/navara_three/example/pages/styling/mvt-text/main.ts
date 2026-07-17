@@ -92,7 +92,7 @@ const run = async () => {
   // Track updated features to prevent duplicate evaluations
   let updatedFeatures = new Set<bigint>();
 
-  const params = { size: 20 };
+  const params = { size: 20, declutter: true };
 
   // MVT text layer: Symbols from GSI vector tiles
   const addMvtLayer = () => {
@@ -111,6 +111,8 @@ const run = async () => {
         center: { x: 0.5, y: 0.0 },
         outlineColor: new Color().setStyle("#000000"),
         outlineWidth: 2,
+        // Hide labels whose screen boxes overlap a higher-priority one
+        declutter: params.declutter,
       },
       vectorTile: {
         maxZoom: 16,
@@ -182,6 +184,10 @@ const run = async () => {
     .on("change", ({ value }) => {
       layer?.update({ text: { size: value } });
     });
+
+  pane.addBinding(params, "declutter").on("change", ({ value }) => {
+    layer?.update({ text: { declutter: value } });
+  });
 
   attribution?.add([
     TILE_DATASETS.openstreetmap,
