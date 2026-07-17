@@ -167,12 +167,14 @@ type PoiKey = (typeof POI_CATEGORIES)[number]["key"];
 const POI_LABEL_MAX_HEIGHT = 5_000; // 5 km
 const POI_LABEL_MIN_CONFIDENCE = 0.9;
 
-// Deterministic [0,1] hash (FNV-1a) of a string. The engine has no label
-// collision/declutter system and the evaluator sees no geometry, so dense areas
-// (e.g. Tokyo street level) can't be grid-thinned spatially. Instead we hash a
-// stable per-feature key and keep only points below a density threshold: this
-// caps how many icon/label pairs render, is stable across re-evaluation (so
-// nothing flickers on pan/zoom), and thins roughly uniformly across space.
+// Deterministic [0,1] hash (FNV-1a) of a string. The screen-space declutter
+// pass handles label overlap, but icons opt out of it (see the POI layer) and
+// decluttering only hides at render time — it doesn't reduce how many features
+// are batched and shaped. So dense areas (e.g. Tokyo street level) are also
+// thinned data-side: hash a stable per-feature key and keep only points below
+// a density threshold. This caps how many icon/label pairs exist at all, is
+// stable across re-evaluation (nothing flickers on pan/zoom), and thins
+// roughly uniformly across space.
 const hash01 = (s: string): number => {
   let h = 0x811c9dc5;
   for (let i = 0; i < s.length; i++) {
@@ -470,6 +472,9 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       offsetDepth: true,
       depthTest: true,
       maxWidth: params.maxWidth,
+      // Screen-overlapping labels are hidden by priority (set per feature
+      // from the admin tier in the evaluator below).
+      declutter: true,
     },
   });
 
@@ -513,7 +518,14 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
           // replace `/` with a line break
           name = name.replace(/\s*\/\s*/g, "\n");
 
-          return { text: name, show: true };
+          return {
+            text: name,
+            show: true,
+            // Coarser admin levels win overlaps: country > region > county >
+            // locality. POI names use confidence (< 1) so they always rank
+            // below admin labels.
+            declutterPriority: LABEL_TIERS.length - tierIndex,
+          };
         },
         { filters: ["@name", "subtype", "local_type", "population"] },
       );
@@ -551,6 +563,12 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   // offset. To read as `icon │ name` we anchor the icon's RIGHT edge and the
   // text's LEFT edge to the same geographic point, both vertically centered, so
   // the icon sits just left of the point and the name extends right from it.
+  //
+  // Only the NAME opts into decluttering. The icon and its own name touch at
+  // the shared anchor, and the declutter pass can't know they belong to one
+  // feature — enabling both would make the pair fight over the padding gap.
+  // Icons are small and already density-thinned, so letting them overlap is
+  // the standard map trade-off (MapLibre's `icon-allow-overlap` equivalent).
   const poiLayer = view.addLayer({
     type: "vector",
     source: placesSource,
@@ -580,6 +598,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       offsetDepth: true,
       highQuality: true,
       maxWidth: params.maxWidth,
+      declutter: true,
     },
   });
   {
@@ -618,7 +637,15 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
           // replace `/` with a line break
           name = name.replace(/\s*\/\s*/g, "\n");
 
-          return { show: true, text: name };
+          return {
+            show: true,
+            text: name,
+            // Confidence in [0,1]: confident places win among POI names but
+            // always rank below admin labels (tier priorities are >= 1). The
+            // value also reaches the icon mesh, where it is inert (its
+            // material has declutter off).
+            declutterPriority: confidence,
+          };
         },
         {
           filters: ["id", "@name", "taxonomy", "basic_category", "confidence"],
