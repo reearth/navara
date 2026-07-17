@@ -38,10 +38,10 @@ function noInlineWasm(): PluginOption {
     name: "vite-plugin-no-inline-wasm",
     apply: "build",
     transform(code) {
-      if (!code.includes(".wasm'")) return;
+      if (!code.includes(".wasm")) return;
       const replaced = code.replace(
-        /new URL\('([^']+\.wasm)', import\.meta\.url\)/g,
-        "new URL('$1?no-inline', import.meta.url)",
+        /new URL\(\s*(['"])([^'"]+\.wasm)\1\s*,\s*import\.meta\.url\s*\)/g,
+        "new URL('$2?no-inline', import.meta.url)",
       );
       return replaced === code ? undefined : { code: replaced, map: null };
     },
