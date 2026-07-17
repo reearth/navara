@@ -202,9 +202,11 @@ export class TileTextureCompositor {
     this.vectorCamera.position.z = 1;
 
     // Raster-bake quad: spans the source tile's NDC frame like a vector scene,
-    // so the same windowing camera math frames it.
+    // so the same windowing camera math frames it. Shares the fullscreen quad
+    // geometry with `quadMesh` (both are static [-1, 1] planes; the windowing
+    // lives in the camera), so dispose() frees one geometry for both.
     this.rasterBakeScene.add(
-      new Mesh(new PlaneGeometry(2, 2), this.rasterBakeMaterial),
+      new Mesh(this.quadMesh.geometry, this.rasterBakeMaterial),
     );
   }
 
@@ -617,7 +619,9 @@ export class TileTextureCompositor {
       m.placeholderTexture.dispose();
     }
     this.materialCache.clear();
+    // Also frees the raster-bake quad, which shares this geometry.
     this.quadMesh.geometry.dispose();
+    this.rasterBakeMaterial.dispose();
     this.demNoDataTexture?.dispose();
     this.demNoDataTexture = null;
   }
