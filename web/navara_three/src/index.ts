@@ -632,6 +632,8 @@ export default class ThreeView<
   };
   // Per-frame snapshot of the WASM vector resolution revision, refreshed in `_render`.
   private _vectorRevision = 0;
+  // Per-frame snapshot of the WASM raster drape resolution revision, refreshed in `_render`.
+  private _rasterRevision = 0;
   private _tileHandler: TileHandler = {
     getMartini: (id) => {
       return this._core?.getMartini(id);
@@ -651,6 +653,10 @@ export default class ThreeView<
     // Returns the per-frame cached revision (read once in `_render`), so per-tile
     // `onBeforeRender` gating costs no WASM-boundary call.
     vectorRevision: () => this._vectorRevision,
+    getRasterTileStates: (handle) => {
+      return this._core?.getRasterTileStates(handle);
+    },
+    rasterRevision: () => this._rasterRevision,
     reportDrapeGpuBytes: (handle, bytes) => {
       this._core?.reportTerrainDrapeGpuBytes(handle, bytes);
     },
@@ -1333,6 +1339,24 @@ export default class ThreeView<
     this._core = new Core(newId());
     this._core.start();
 
+    // Tell Rust the real raster texture-slot count so the drape budget matches this
+    // device instead of a conservative constant. Mirrors TileMesh's slot split
+    // (numTexturizedVector / texturizedSceneIndexFrom): the raster region is
+    // `[0, texturizedSceneIndexFrom)`, so that boundary IS the max raster tiles a
+    // terrain tile can drape. Undersizing it forced every layer to coarsen on
+    // Geographic terrain once 3+ layers shared the budget.
+    {
+      const to = this._defaultTextureOptions;
+      const additional = to.additionalTexturesInUse ?? {};
+      let numAdditional = 0;
+      if (additional.waterTexture) numAdditional++;
+      if (additional.colorMapTexture) numAdditional++;
+      const numTexturizedVector =
+        Math.floor(to.maxTextures / 2) - numAdditional;
+      const rasterSlots = to.maxTextures - numTexturizedVector;
+      this._core.setRasterDrapeSlotBudget(rasterSlots);
+    }
+
     const cacheBytes = this._options.cacheBytes ?? budgets.cacheBytes;
     this._options.cacheBytes = cacheBytes;
     this._core.setCacheBytes(cacheBytes);
@@ -1729,9 +1753,11 @@ export default class ThreeView<
   }
 
   private _render(updatedAt: number) {
-    // Read the vector resolution revision once per frame so each terrain tile's
-    // `onBeforeRender` can gate its slot re-fetch against it without its own FFI call.
+    // Read the vector/raster resolution revisions once per frame so each terrain
+    // tile's `onBeforeRender` can gate its slot re-fetch against them without its
+    // own FFI calls.
     this._vectorRevision = this._core?.vectorRevision() ?? this._vectorRevision;
+    this._rasterRevision = this._core?.rasterRevision() ?? this._rasterRevision;
 
     this._uniforms.time.value = updatedAt;
 

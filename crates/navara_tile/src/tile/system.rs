@@ -63,7 +63,33 @@ use navara_layer::{
 /// budget, typically 5); the web side clamps as a final safety net. Each layer
 /// gets an even share and coarsens its WM zoom to fit (see
 /// [`resolve_raster_textures`](crate::raster::resolve_raster_textures)).
+///
+/// This is only the fallback default. The live budget comes from
+/// [`RasterDrapeConfig`], set by the web renderer from its actual GPU texture-slot
+/// capacity — a device-independent constant was too small on capable hardware, so
+/// with 3+ layers on Geographic terrain every layer was needlessly coarsened.
 const RASTER_DRAPE_SLOT_BUDGET: usize = 5;
+
+/// Live cap on the number of WebMercator raster tiles one terrain tile may drape,
+/// shared across its raster (non-hillshade) layers. The web renderer sets
+/// `slot_budget` from its real raster texture-slot count (`texturizedSceneIndexFrom`,
+/// typically ≥6 on desktop) via `setRasterDrapeSlotBudget`; until then it defaults to
+/// [`RASTER_DRAPE_SLOT_BUDGET`]. Because draping WM raster onto a Geographic terrain
+/// tile is N:M (one terrain tile overlaps ~2 WM tiles at mid-latitude), a budget that
+/// can't give each layer ≥2 slots forces `resolve_raster_textures` to coarsen the
+/// drape zoom — the "everything pulled to a coarser level with 3+ layers" bug.
+#[derive(Debug, Clone, Copy, Resource)]
+pub struct RasterDrapeConfig {
+    pub slot_budget: usize,
+}
+
+impl Default for RasterDrapeConfig {
+    fn default() -> Self {
+        Self {
+            slot_budget: RASTER_DRAPE_SLOT_BUDGET,
+        }
+    }
+}
 
 /// System parameter that groups BufferStore and DataManager to reduce parameter count
 #[derive(SystemParam)]
@@ -84,6 +110,7 @@ pub fn init_globe_tiling(
     mut qt: ResMut<TerrainTileQuadtree>,
     mut buf: ResMut<BufferStore>,
     source_store: Res<navara_source::SourceStore>,
+    mut raster_revision: ResMut<crate::raster::RasterResolveRevision>,
 ) {
     if let Some(layer) = terrain_layer.iter().next() {
         // A source-less (ellipsoid) terrain keeps the current globe scheme.
@@ -107,6 +134,13 @@ pub fn init_globe_tiling(
                 tile.destroy(&mut commands, &mut buf);
             }
             globe.tiling_scheme = scheme;
+            // The scheme gates whether raster layers drape via baked slots
+            // (`snapshot_raster_bake_inputs` snapshots nothing on non-Geographic
+            // globes): without a bump, a snapshot built under the old scheme
+            // would go stale and every raster/heatmap layer would resolve empty
+            // (fully transparent) until some unrelated bump. Runs before the
+            // snapshot system, so this is captured the same frame.
+            raster_revision.bump();
         }
     }
 
@@ -1110,6 +1144,7 @@ pub fn sync_terrain_layer_changes(
     layers: Query<(Entity, &TerrainLayer)>,
     mut rendered_tiles: Query<(Entity, &mut RenderedTile)>,
     meshes: Query<&Mesh, (With<TileMeshMarker>, Without<Deleted>)>,
+    mut raster_revision: ResMut<crate::raster::RasterResolveRevision>,
 ) {
     if deleted.is_empty() && added.is_empty() {
         return;
@@ -1153,6 +1188,10 @@ pub fn sync_terrain_layer_changes(
             }
             let _ = terrain_qt.qt.drain();
             globe.tiling_scheme = default_scheme;
+            // Falling back to WebMercator switches raster layers from baked to
+            // direct drape slots; bump so the web re-queries the (now empty)
+            // baked states and `snapshot_raster_bake_inputs` clears its snapshot.
+            raster_revision.bump();
         }
     }
 
@@ -1234,6 +1273,7 @@ pub fn update_mesh_material(
         ),
         Without<Deleted>,
     >,
+    raster_drape_config: Res<RasterDrapeConfig>,
 ) {
     let are_tile_layers_updated = !tile_layers.p1().is_empty();
     let are_tile_layers_removed = !tile_layers.p2().is_empty();
@@ -1265,15 +1305,20 @@ pub fn update_mesh_material(
     // they're subtracted from the budget rather than sharing the per-layer cap.
     // Each draped layer then coarsens its WM zoom to stay within its share, keeping
     // the per-tile texture count under the GPU slots the composite shader binds.
+    // Baked layers (every non-hillshade layer on Geographic terrain, heatmaps
+    // included) bypass this division: they cost one slot each regardless of overlap
+    // (see the baked branch below), so only WebMercator-terrain drapes (1:1 anyway)
+    // consume shares.
     let num_hillshade_layers = sorted_layers
         .iter()
         .filter(|(l, _)| l.hillshade_config.is_some())
         .count();
     let num_draped_layers = sorted_layers.len() - num_hillshade_layers;
+    let slot_budget = raster_drape_config.slot_budget;
     let max_tiles_per_layer = if num_draped_layers == 0 {
         1
     } else {
-        (RASTER_DRAPE_SLOT_BUDGET.saturating_sub(num_hillshade_layers) / num_draped_layers).max(1)
+        (slot_budget.saturating_sub(num_hillshade_layers) / num_draped_layers).max(1)
     };
     // Upper bound of composite slots a tile can emit: one per hillshade layer
     // plus up to `max_tiles_per_layer` per draped layer.
@@ -1379,6 +1424,36 @@ pub fn update_mesh_material(
                 if hillshade_config.is_none() {
                     hillshade_config = l.hillshade_config.clone();
                     hillshade_elevation_decoder = layer_decoder(l);
+                }
+            } else if terrain_is_geographic {
+                // Baked drape (non-hillshade raster on Geographic terrain, elevation
+                // heatmaps included): the N:M overlapping WM tiles are baked into ONE
+                // render target per layer on the web side (resolved by
+                // `get_raster_tiles` — mirroring the texturized-vector drape), so the
+                // layer costs exactly one composite slot instead of one per
+                // overlapping tile. The k-th baked slot emitted here pairs with
+                // `layer_ordinal == k` in the resolved states: both come from the same
+                // sorted layer list with the same non-hillshade filter.
+                //
+                // fragment None + identity UV: the web binds the baked render target
+                // (spanning the terrain tile's Mercator-projected extent) to this slot;
+                // `layer_reproject` with identity UV reprojects it by exactly the
+                // terrain `[south, north]` band, like a vector drape slot. Heatmap
+                // slots reproject the same way — the bake copies the encoded DEM
+                // texels raw (nearest, no color conversion), so the composite decode
+                // stays valid.
+                shows.push(a.show);
+                opacities.push(a.opacity.clamp(0., 1.));
+                colors.push(a.color);
+                is_elevation_heatmaps.push(is_heatmap);
+                is_hillshades.push(false);
+                layer_fragments.push(None);
+                layer_uv_transforms.push(None);
+                layer_reproject.push(true);
+
+                if is_heatmap && elevation_heatmap_config.is_none() {
+                    elevation_heatmap_config = l.elevation_heatmap_config.clone();
+                    heatmap_elevation_decoder = layer_decoder(l);
                 }
             } else {
                 let lng_span = (terrain_extent.east - terrain_extent.west).val();
@@ -2586,6 +2661,7 @@ mod delete_layer_tests {
 
         let mut app = App::new();
         app.insert_resource(BufferStore::default());
+        app.init_resource::<crate::raster::RasterResolveRevision>();
         // Default (WebMercator) globe: deleting an ellipsoid terrain keeps the
         // scheme, so the scheme-fallback path does not drain the tiling here.
         app.insert_resource(navara_globe::Globe::default());
@@ -2685,6 +2761,7 @@ mod delete_layer_tests {
 
         let mut app = App::new();
         app.insert_resource(BufferStore::default());
+        app.init_resource::<crate::raster::RasterResolveRevision>();
         // An add keeps the scheme (fallback only fires on the last delete).
         app.insert_resource(navara_globe::Globe::default());
 
@@ -2765,6 +2842,7 @@ mod delete_layer_tests {
 
         let mut app = App::new();
         app.insert_resource(BufferStore::default());
+        app.init_resource::<crate::raster::RasterResolveRevision>();
         // Globe starts at the default WebMercator scheme.
         app.insert_resource(navara_globe::Globe::default());
 
@@ -2820,6 +2898,15 @@ mod delete_layer_tests {
         assert!(qt.qt.leaf((1, 0, 0)).is_some());
         // ...and the stale subdivided WebMercator tile was drained.
         assert!(qt.qt.leaf((0, 0, 1)).is_none());
+        // The flip switches raster layers to baked drape slots, so the resolve
+        // revision must bump or `snapshot_raster_bake_inputs` keeps the stale
+        // (empty) pre-flip snapshot and every raster layer resolves transparent.
+        assert_ne!(
+            app.world()
+                .resource::<crate::raster::RasterResolveRevision>()
+                .0,
+            0,
+        );
     }
 
     /// Seeds a geographic globe + tile and a terrain layer (added a frame earlier),
@@ -2830,6 +2917,7 @@ mod delete_layer_tests {
 
         let mut app = App::new();
         app.insert_resource(BufferStore::default());
+        app.init_resource::<crate::raster::RasterResolveRevision>();
 
         let globe = navara_globe::Globe {
             tiling_scheme: TilingScheme::Geographic { tms: true },
@@ -2887,6 +2975,14 @@ mod delete_layer_tests {
         let qt = app.world().resource::<TerrainTileQuadtree>();
         assert!(qt.qt.leaf((0, 0, 0)).is_none(), "geographic tiling drained");
         assert!(app.world().resource::<TileCacheManager>().force_update);
+        // Raster layers switch from baked back to direct drape slots on the
+        // scheme fallback; the resolve revision must reflect that.
+        assert_ne!(
+            app.world()
+                .resource::<crate::raster::RasterResolveRevision>()
+                .0,
+            0,
+        );
     }
 
     /// A source switch's delete half (marker `reset: true`) must NOT fall back to

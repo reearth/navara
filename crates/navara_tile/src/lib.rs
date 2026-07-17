@@ -28,11 +28,14 @@ impl Plugin for TilePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<TileCacheManager>()
             .init_resource::<CachedMartini>()
+            .init_resource::<tile::system::RasterDrapeConfig>()
             .init_resource::<DataManager>()
             .insert_resource(TerrainTileQuadtree::new_with_linear_qt())
             .insert_resource(TerrainInformationQuadtree::new_with_linear_qt())
             .insert_resource(RasterTileQuadtree::new_with_linear_qt())
             .init_resource::<RasterTileCacheManager>()
+            .init_resource::<raster::RasterResolveRevision>()
+            .init_resource::<raster::RasterBakeSnapshot>()
             .add_message::<MeshPreparedEvent>()
             .add_systems(
                 PreUpdate,
@@ -70,6 +73,9 @@ impl Plugin for TilePlugin {
                         hillshade::backfill_hillshade_on_loaded,
                         tile::system::clear_caches,
                         tile::system::enforce_memory_budget,
+                        // Last raster-revision consumer: every bump this frame
+                        // (traverse, prune, eviction) has already happened.
+                        raster::system::snapshot_raster_bake_inputs,
                         terrain::system::update_height_observers,
                         hillshade::cleanup_hillshade_edges,
                         hillshade::cleanup_hillshade_backfill_events,

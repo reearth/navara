@@ -7,6 +7,7 @@ import type {
 import type {
   DelegatedWorkerTasksResult,
   ElevationDecoder,
+  RasterTileState,
   ReconstructableEntity,
   ReturnedTransferablePolygonBatchedFeature,
   ReturnedTransferablePolylineBatchedFeature,
@@ -106,6 +107,10 @@ export type TileHandler = {
   getTileElevationDecoder: (handle: bigint) => ElevationDecoder | undefined;
   getVectorTileStates: (handle: bigint) => VectorTileState[] | undefined;
   vectorRevision: () => number;
+  /** The WM raster tiles to bake into per-layer drape render targets for a
+   * terrain tile (Geographic terrain only; empty on WebMercator terrain). */
+  getRasterTileStates: (handle: bigint) => RasterTileState[] | undefined;
+  rasterRevision: () => number;
   /** Reports a terrain tile's drape render-target GPU footprint (bytes) so the
    * memory ledger tracks clamp-to-ground vector bakes that scale with terrain
    * subdivision past the vector `maxZoom`. Pass 0 to release on dispose. */

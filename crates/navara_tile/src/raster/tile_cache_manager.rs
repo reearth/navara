@@ -18,4 +18,10 @@ pub struct RasterTileCacheManager {
     pub last_rendered_frame: usize,
     pub is_updated_in_this_frame: bool,
     pub prev_layers_len: usize,
+    /// Bake-relevant layer config from the last change, one entry per layer in
+    /// sorted (`Order`) order: (has hillshade, has heatmap, source id). Filters
+    /// appearance-only `Changed<TilesLayer>` events (opacity/show/color) out of
+    /// the resolve-revision bump in `update_raster_tiles` — a per-frame opacity
+    /// animation must not re-resolve every visible terrain tile's drape.
+    pub bake_config_fingerprint: Vec<(bool, bool, Option<String>)>,
 }

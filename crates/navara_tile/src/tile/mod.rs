@@ -7,3 +7,4 @@ pub mod event;
 pub mod tile_cache_manager;
 
 pub use event::*;
+pub use system::RasterDrapeConfig;

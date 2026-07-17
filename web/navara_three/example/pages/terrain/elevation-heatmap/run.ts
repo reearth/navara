@@ -47,14 +47,6 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     },
   });
 
-  const demMesh = view.addSource({
-    type: "raster-dem",
-    url: TERRAIN_DATASETS.mapterhorn.url,
-    elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
-    tileSize: 512,
-    maxZoom: 17,
-    minZoom: 5,
-  });
   const demRaster = view.addSource({
     type: "raster-dem",
     url: TERRAIN_DATASETS.mapterhorn.url,
@@ -63,15 +55,19 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     maxZoom: 17,
     minZoom: 0,
   });
+
+  const terrainSource = view.addSource({
+    type: "quantized-mesh",
+    url: TERRAIN_DATASETS.reearthQuantizedMesh.url,
+    maxZoom: 18,
+    requestVertexNormals: true,
+    requestWaterMask: true,
+  });
+
   view.addLayer({
     type: "terrain",
-    source: demMesh,
-    terrain: { castShadow: false, receiveShadow: false },
-  });
-  view.addLayer({
-    type: "raster",
-    source: demRaster,
-    hillshade: {},
+    source: terrainSource,
+    terrain: { castShadow: true, receiveShadow: true },
   });
 
   // Set the elevation colormap on the globe

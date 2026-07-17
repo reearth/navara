@@ -234,7 +234,13 @@ float interpolateDEMHeights(float h00, float h10, float h01, float h11, vec2 fra
 
   
   
-  float sampleElevationBilinear(sampler2D demTexture, vec2 uv, ivec2 texSize) {
+  
+  
+  
+  
+  
+  
+  float sampleElevationBilinear(sampler2D demTexture, vec2 uv, ivec2 texSize, out bool valid) {
     
     DEMBilinearData data = prepareDEMBilinear(texSize, uv);
 
@@ -251,7 +257,8 @@ float interpolateDEMHeights(float h00, float h10, float h01, float h11, vec2 fra
       h = interpolateDEMHeights(h00, h10, h01, h11, data.frac);
     }
 
-    if (!isValidHeight(h)) {
+    valid = isValidHeight(h);
+    if (!valid) {
       return 0.0;
     }
 
@@ -329,8 +336,9 @@ void main() {
     vec4 texColor0;
     if (uIsElevationHeatmaps[0]) {
       ivec2 demTexSize = textureSize(uTextures[0], 0);
-      float normalized_h = sampleElevationBilinear(uTextures[0], texUv0, demTexSize);
-      texColor0 = vec4(texture2D(uColorMapTexture, vec2(normalized_h, 0.5)).rgb, 1.0);
+      bool demValid0;
+      float normalized_h = sampleElevationBilinear(uTextures[0], texUv0, demTexSize, demValid0);
+      texColor0 = vec4(texture2D(uColorMapTexture, vec2(normalized_h, 0.5)).rgb, demValid0 ? 1.0 : 0.0);
     } else {
       texColor0 = texture2D(uTextures[0], texUv0) * vec4(uColors[0], 1.0);
     }
@@ -397,8 +405,9 @@ void main() {
     vec4 texColor1;
     if (uIsElevationHeatmaps[1]) {
       ivec2 demTexSize = textureSize(uTextures[1], 0);
-      float normalized_h = sampleElevationBilinear(uTextures[1], texUv1, demTexSize);
-      texColor1 = vec4(texture2D(uColorMapTexture, vec2(normalized_h, 0.5)).rgb, 1.0);
+      bool demValid1;
+      float normalized_h = sampleElevationBilinear(uTextures[1], texUv1, demTexSize, demValid1);
+      texColor1 = vec4(texture2D(uColorMapTexture, vec2(normalized_h, 0.5)).rgb, demValid1 ? 1.0 : 0.0);
     } else {
       texColor1 = texture2D(uTextures[1], texUv1) * vec4(uColors[1], 1.0);
     }
@@ -465,8 +474,9 @@ void main() {
     vec4 texColor2;
     if (uIsElevationHeatmaps[2]) {
       ivec2 demTexSize = textureSize(uTextures[2], 0);
-      float normalized_h = sampleElevationBilinear(uTextures[2], texUv2, demTexSize);
-      texColor2 = vec4(texture2D(uColorMapTexture, vec2(normalized_h, 0.5)).rgb, 1.0);
+      bool demValid2;
+      float normalized_h = sampleElevationBilinear(uTextures[2], texUv2, demTexSize, demValid2);
+      texColor2 = vec4(texture2D(uColorMapTexture, vec2(normalized_h, 0.5)).rgb, demValid2 ? 1.0 : 0.0);
     } else {
       texColor2 = texture2D(uTextures[2], texUv2) * vec4(uColors[2], 1.0);
     }
@@ -533,8 +543,9 @@ void main() {
     vec4 texColor3;
     if (uIsElevationHeatmaps[3]) {
       ivec2 demTexSize = textureSize(uTextures[3], 0);
-      float normalized_h = sampleElevationBilinear(uTextures[3], texUv3, demTexSize);
-      texColor3 = vec4(texture2D(uColorMapTexture, vec2(normalized_h, 0.5)).rgb, 1.0);
+      bool demValid3;
+      float normalized_h = sampleElevationBilinear(uTextures[3], texUv3, demTexSize, demValid3);
+      texColor3 = vec4(texture2D(uColorMapTexture, vec2(normalized_h, 0.5)).rgb, demValid3 ? 1.0 : 0.0);
     } else {
       texColor3 = texture2D(uTextures[3], texUv3) * vec4(uColors[3], 1.0);
     }
@@ -857,7 +868,13 @@ float interpolateDEMHeights(float h00, float h10, float h01, float h11, vec2 fra
 
   
   
-  float sampleElevationBilinear(sampler2D demTexture, vec2 uv, ivec2 texSize) {
+  
+  
+  
+  
+  
+  
+  float sampleElevationBilinear(sampler2D demTexture, vec2 uv, ivec2 texSize, out bool valid) {
     
     DEMBilinearData data = prepareDEMBilinear(texSize, uv);
 
@@ -874,7 +891,8 @@ float interpolateDEMHeights(float h00, float h10, float h01, float h11, vec2 fra
       h = interpolateDEMHeights(h00, h10, h01, h11, data.frac);
     }
 
-    if (!isValidHeight(h)) {
+    valid = isValidHeight(h);
+    if (!valid) {
       return 0.0;
     }
 
@@ -952,8 +970,9 @@ void main() {
     vec4 texColor0;
     if (uIsElevationHeatmaps[0]) {
       ivec2 demTexSize = textureSize(uTextures[0], 0);
-      float normalized_h = sampleElevationBilinear(uTextures[0], texUv0, demTexSize);
-      texColor0 = vec4(texture2D(uColorMapTexture, vec2(normalized_h, 0.5)).rgb, 1.0);
+      bool demValid0;
+      float normalized_h = sampleElevationBilinear(uTextures[0], texUv0, demTexSize, demValid0);
+      texColor0 = vec4(texture2D(uColorMapTexture, vec2(normalized_h, 0.5)).rgb, demValid0 ? 1.0 : 0.0);
     } else {
       texColor0 = texture2D(uTextures[0], texUv0) * vec4(uColors[0], 1.0);
     }
@@ -1016,8 +1035,9 @@ void main() {
     vec4 texColor1;
     if (uIsElevationHeatmaps[1]) {
       ivec2 demTexSize = textureSize(uTextures[1], 0);
-      float normalized_h = sampleElevationBilinear(uTextures[1], texUv1, demTexSize);
-      texColor1 = vec4(texture2D(uColorMapTexture, vec2(normalized_h, 0.5)).rgb, 1.0);
+      bool demValid1;
+      float normalized_h = sampleElevationBilinear(uTextures[1], texUv1, demTexSize, demValid1);
+      texColor1 = vec4(texture2D(uColorMapTexture, vec2(normalized_h, 0.5)).rgb, demValid1 ? 1.0 : 0.0);
     } else {
       texColor1 = texture2D(uTextures[1], texUv1) * vec4(uColors[1], 1.0);
     }

@@ -34,8 +34,8 @@ use navara_math::{FloatType, Transform, Vec3};
 use navara_source::{Source, SourceStore};
 use navara_texture_fragment::{TextureFragmentLoadedEvent, TextureFragmentStatus};
 use navara_tile_component::{
-    MartiniComponent, TerrainHeightObserver, TerrainTile, TerrainTileQuadtree, TileHandle,
-    TileTerrainDataRequesterQuery, VectorTileQuadtree, compute_terrain_height_at_point,
+    MartiniComponent, RasterTileQuadtree, TerrainHeightObserver, TerrainTile, TerrainTileQuadtree,
+    TileHandle, TileTerrainDataRequesterQuery, VectorTileQuadtree, compute_terrain_height_at_point,
 };
 use navara_vector_tile::{LayerResources, VectorResolveRevision, resolve_vector_tile_states};
 use navara_window::{Window, WindowResizeEvent};
@@ -50,6 +50,7 @@ mod memory;
 
 pub use batch_property::*;
 pub use memory::*;
+pub use navara_tile::raster::ResolvedRasterTileState;
 pub use navara_vector_tile::ResolvedVectorTileState;
 
 pub struct App {
@@ -764,6 +765,61 @@ impl App {
             .unwrap_or(0)
     }
 
+    /// Resolve the WebMercator raster tiles to bake into per-layer drape render targets
+    /// for a terrain tile, flattened across the baked (non-hillshade, elevation
+    /// heatmaps included) layers for the wasm boundary. Only Geographic terrain bakes —
+    /// WebMercator terrain drapes 1:1 through the per-slot material path (and keeps the
+    /// snapshot empty) — so this returns empty there. Reads the per-revision
+    /// [`RasterBakeSnapshot`](navara_tile::raster::RasterBakeSnapshot) (sorted baked
+    /// layers + loaded fragment set — this runs per visible terrain tile, so it must
+    /// not rebuild them) and delegates the N:M overlap + per-layer budget logic to
+    /// [`resolve_raster_tile_states`](navara_tile::raster::resolve_raster_tile_states).
+    pub fn get_raster_tiles(&mut self, handle: TileHandle) -> Vec<ResolvedRasterTileState> {
+        let world = self.app.world();
+
+        let Some(snapshot) = world.get_resource::<navara_tile::raster::RasterBakeSnapshot>() else {
+            return vec![];
+        };
+        if snapshot.layers.is_empty() {
+            return vec![];
+        }
+
+        let Some((terrain_extent, terrain_is_geographic)) = world
+            .get_resource::<TerrainTileQuadtree>()
+            .and_then(|qt| qt.qt.get(handle))
+            .map(|tile| (tile.extent, tile.tiling_scheme.is_geographic()))
+        else {
+            return vec![];
+        };
+        if !terrain_is_geographic {
+            return vec![];
+        }
+
+        let Some(raster_qt) = world.get_resource::<RasterTileQuadtree>() else {
+            return vec![];
+        };
+
+        navara_tile::raster::resolve_raster_tile_states(
+            raster_qt,
+            &terrain_extent,
+            terrain_is_geographic,
+            &snapshot.layers,
+            &|e| snapshot.loaded.contains(&e),
+        )
+    }
+
+    /// Monotonic counter that changes only when the raster drape resolution could have
+    /// changed (a raster traverse ran — fragment loads and layer/terrain changes are
+    /// inputs of its change gate). The web side reads this once per frame and skips the
+    /// per-terrain-tile `get_raster_tiles` calls while it is unchanged.
+    pub fn raster_revision(&self) -> u32 {
+        self.app
+            .world()
+            .get_resource::<navara_tile::raster::RasterResolveRevision>()
+            .map(|r| r.0)
+            .unwrap_or(0)
+    }
+
     pub fn get_tile_elevation_decoder(&mut self, handle: TileHandle) -> Option<ElevationDecoder> {
         let world = self.app.world_mut();
         let qt = world.get_resource::<TerrainTileQuadtree>()?;
@@ -1127,6 +1183,19 @@ impl App {
     pub fn set_globe_max_sse(&mut self, value: f32) {
         if let Some(mut globe) = self.get_globe_mut() {
             globe.max_sse = value;
+        }
+    }
+
+    /// Set the raster drape slot budget from the web renderer's real GPU texture-slot
+    /// capacity, so a terrain tile can drape enough WM raster tiles per layer (see
+    /// [`navara_tile::tile::RasterDrapeConfig`]). Clamped to at least 1.
+    pub fn set_raster_drape_slot_budget(&mut self, value: usize) {
+        if let Some(mut config) = self
+            .app
+            .world_mut()
+            .get_resource_mut::<navara_tile::tile::RasterDrapeConfig>()
+        {
+            config.slot_budget = value.max(1);
         }
     }
 

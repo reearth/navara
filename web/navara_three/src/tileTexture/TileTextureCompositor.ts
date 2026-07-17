@@ -3,12 +3,18 @@ import {
   Color,
   DataTexture,
   GLSL3,
+  LinearFilter,
   Mesh,
+  MeshBasicMaterial,
+  NearestFilter,
+  NoBlending,
+  NoColorSpace,
   OrthographicCamera,
   PlaneGeometry,
   RGBAFormat,
   Scene,
   ShaderMaterial,
+  SRGBColorSpace,
   type Texture,
   UnsignedByteType,
   WebGLRenderTarget,
@@ -89,6 +95,30 @@ type CachedMaterial = {
   placeholderTexture: Texture;
 };
 
+/** One WebMercator raster tile texture to bake into a layer's render target,
+ * framed by the Rust-resolved mercator affine (terrain `[0,1]` UV → source UV). */
+export type RasterBakeSource = {
+  texture: Texture;
+  uvOffset: [number, number];
+  uvScale: [number, number];
+};
+
+/** One baked raster layer: its overlapping WM tile textures, mosaicked into one
+ * render target. Heatmap layers carry encoded DEM, copied raw (nearest, no
+ * color conversion) so the composite decode stays valid. */
+export type RasterBakeSlot = {
+  isElevationHeatmap: boolean;
+  /**
+   * The decoder's no-data (boundary) color for heatmap slots: painted across
+   * the render target before the sources so uncovered regions decode as
+   * "no elevation" — the no-data story lives entirely in the encoded-elevation
+   * domain, keeping the alpha channel free for future RGBA encodings. Absent
+   * for color slots and for decoders with no byte-representable boundary.
+   */
+  noDataColor?: [number, number, number];
+  sources: RasterBakeSource[];
+};
+
 /**
  * Integration layer for per-tile texture composition.
  *
@@ -127,6 +157,34 @@ export class TileTextureCompositor {
   // an empty slot whose target was never touched must be skipped entirely —
   // clearing it would allocate size² × 4 bytes of GPU memory for nothing.
   private readonly touchedVectorTargets = new WeakSet<WebGLRenderTarget>();
+  private readonly touchedRasterTargets = new WeakSet<WebGLRenderTarget>();
+
+  // Raster-bake machinery (lazily used): a textured quad drawn once per source
+  // through the same windowing camera as the vector bake. `toneMapped: false` +
+  // per-kind texture color spaces keep the bake a value-preserving copy.
+  //
+  // `transparent: true` + `blending: NoBlending` carries the source ALPHA into
+  // the render target: an opaque material (transparent=false + NormalBlending)
+  // gets three.js's `OPAQUE` define, whose shader forces `diffuseColor.a = 1.0`
+  // and destroys the tile's transparency. NoBlending keeps replace semantics —
+  // sources are disjoint WM tiles (plus a coarse-first ancestor underlay), so
+  // each draw must overwrite, not blend, and straight (r, g, b, a) texels land
+  // in the target for the composite's own alpha blend.
+  private readonly rasterBakeScene = new Scene();
+  private readonly rasterBakeMaterial = new MeshBasicMaterial({
+    toneMapped: false,
+    depthTest: false,
+    depthWrite: false,
+    transparent: true,
+    blending: NoBlending,
+  });
+  // 1×1 no-data underlay for baked heatmap targets, drawn through the same
+  // value-preserving bake pipeline as the sources — a texture upload is
+  // byte-exact, whereas a clear color would pass through the renderer's color
+  // management and could land one byte off (fatal for positional encodings,
+  // where the high byte weighs 65536 in decoded x). Cached per color.
+  private demNoDataTexture: DataTexture | null = null;
+  private demNoDataTextureKey = "";
 
   constructor(opts: TileTextureCompositorOptions) {
     this.renderer = opts.renderer;
@@ -142,6 +200,12 @@ export class TileTextureCompositor {
     this.quadScene.add(this.quadMesh);
     this.quadCamera.position.z = 1;
     this.vectorCamera.position.z = 1;
+
+    // Raster-bake quad: spans the source tile's NDC frame like a vector scene,
+    // so the same windowing camera math frames it.
+    this.rasterBakeScene.add(
+      new Mesh(new PlaneGeometry(2, 2), this.rasterBakeMaterial),
+    );
   }
 
   // ---------------------------------------------------------------------
@@ -256,6 +320,143 @@ export class TileTextureCompositor {
     this.renderer.autoClear = prevAutoClear;
     this.renderer.setRenderTarget(prevTarget);
     this.renderer.setClearColor(prevClear, prevClearAlpha);
+  }
+
+  /**
+   * Bake each raster layer's overlapping WM tile textures into ONE render
+   * target (slot `i` → `renderTargets[i]`), mirroring {@link renderVectorScenes}:
+   * every source is a textured quad framed by the Rust-supplied mercator affine
+   * `uvOffset`/`uvScale`, so the render target ends up spanning the terrain
+   * tile's (Mercator-projected) extent and the composite treats the whole layer
+   * as one slot with the terrain-band reprojection — instead of one composite
+   * slot per overlapping tile, which overflowed the GPU slot budget on
+   * Geographic terrain once 3+ layers were draped.
+   *
+   * Sources are drawn coarse-first (ascending `uvScale`): an ancestor fallback
+   * covers the whole terrain rect, so painting it first lets the finer tiles
+   * overwrite it instead of being buried under coarse texels. The bake is a
+   * value-preserving copy (`toneMapped: false`; per-kind color spaces below), so
+   * heatmap DEM texels survive it bit-faithfully:
+   * - color imagery: source + target declared sRGB — decode at fetch, encode at
+   *   write, decode again at the composite fetch: the same linear values the
+   *   direct (non-baked) path produced.
+   * - elevation heatmap: everything `NoColorSpace` + nearest — raw texels, no
+   *   interpolation, so the composite's decode-then-interpolate keeps working.
+   */
+  renderRasterTiles(
+    slots: (RasterBakeSlot | undefined)[],
+    renderTargets: (WebGLRenderTarget | undefined)[],
+  ): void {
+    const camera = this.vectorCamera;
+    const material = this.rasterBakeMaterial;
+    const prevTarget = this.renderer.getRenderTarget();
+    const prevClear = this.renderer.getClearColor(PREV_CLEAR_COLOR);
+    const prevClearAlpha = this.renderer.getClearAlpha();
+    const prevAutoClear = this.renderer.autoClear;
+    // Accumulate multiple sources into one RT: clear once, never per render.
+    this.renderer.autoClear = false;
+
+    for (let i = 0; i < renderTargets.length; i++) {
+      const renderTarget = renderTargets[i];
+      if (!renderTarget) continue;
+
+      const slot = slots[i];
+      // An empty slot only needs a clear when the target holds stale content
+      // from a previous bake; a never-touched target has no GL storage yet
+      // and must not be render-targeted (that would allocate it).
+      if (!slot && !this.touchedRasterTargets.has(renderTarget)) continue;
+      this.touchedRasterTargets.add(renderTarget);
+
+      this.renderer.setRenderTarget(renderTarget);
+      this.renderer.setClearColor(0x000, 0);
+      this.renderer.clear();
+
+      if (slot) {
+        // Heatmap targets: paint the decoder's no-data color across the whole
+        // target first, so regions no source covers decode as "no elevation"
+        // (the composite renders them transparent) instead of decoding the
+        // cleared black as a height.
+        if (slot.isElevationHeatmap && slot.noDataColor) {
+          const underlay = this.demNoDataUnderlay(slot.noDataColor);
+          this.configureRasterBakeSource(underlay, true);
+          if (material.map === null) material.needsUpdate = true;
+          material.map = underlay;
+          camera.left = -1;
+          camera.right = 1;
+          camera.bottom = -1;
+          camera.top = 1;
+          camera.updateProjectionMatrix();
+          this.renderer.render(this.rasterBakeScene, camera);
+        }
+
+        // Coarse-first painter's order: a shared ancestor spans every finer
+        // source's rect, so it must not be drawn over them.
+        const sources = [...slot.sources].sort(
+          (a, b) => a.uvScale[0] - b.uvScale[0],
+        );
+        for (const source of sources) {
+          this.configureRasterBakeSource(
+            source.texture,
+            slot.isElevationHeatmap,
+          );
+          // First map assignment flips USE_MAP; later swaps are uniform-only.
+          if (material.map === null) material.needsUpdate = true;
+          material.map = source.texture;
+          const [ox, oy] = source.uvOffset;
+          const [sx, sy] = source.uvScale;
+          camera.left = 2 * ox - 1;
+          camera.right = 2 * (ox + sx) - 1;
+          camera.bottom = 2 * oy - 1;
+          camera.top = 2 * (oy + sy) - 1;
+          camera.updateProjectionMatrix();
+          this.renderer.render(this.rasterBakeScene, camera);
+        }
+      }
+
+      renderTarget.texture.needsUpdate = true;
+    }
+
+    this.renderer.autoClear = prevAutoClear;
+    this.renderer.setRenderTarget(prevTarget);
+    this.renderer.setClearColor(prevClear, prevClearAlpha);
+  }
+
+  /** The cached 1×1 no-data texture, (re)created when the color changes. */
+  private demNoDataUnderlay(color: [number, number, number]): DataTexture {
+    const key = color.join(",");
+    if (!this.demNoDataTexture || this.demNoDataTextureKey !== key) {
+      this.demNoDataTexture?.dispose();
+      const texture = new DataTexture(
+        new Uint8Array([...color, 255]),
+        1,
+        1,
+        RGBAFormat,
+        UnsignedByteType,
+      );
+      texture.needsUpdate = true;
+      this.demNoDataTexture = texture;
+      this.demNoDataTextureKey = key;
+    }
+    return this.demNoDataTexture;
+  }
+
+  /** Value-preserving sampler settings for a bake source texture (see
+   * {@link renderRasterTiles}); idempotent so re-bakes don't re-upload. */
+  private configureRasterBakeSource(tex: Texture, isElevationHeatmap: boolean) {
+    const colorSpace = isElevationHeatmap ? NoColorSpace : SRGBColorSpace;
+    const filter = isElevationHeatmap ? NearestFilter : LinearFilter;
+    if (
+      tex.colorSpace !== colorSpace ||
+      tex.minFilter !== filter ||
+      tex.magFilter !== filter ||
+      tex.generateMipmaps
+    ) {
+      tex.colorSpace = colorSpace;
+      tex.minFilter = filter;
+      tex.magFilter = filter;
+      tex.generateMipmaps = false;
+      tex.needsUpdate = true;
+    }
   }
 
   // ---------------------------------------------------------------------
@@ -417,5 +618,7 @@ export class TileTextureCompositor {
     }
     this.materialCache.clear();
     this.quadMesh.geometry.dispose();
+    this.demNoDataTexture?.dispose();
+    this.demNoDataTexture = null;
   }
 }

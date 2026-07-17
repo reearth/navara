@@ -6,6 +6,7 @@ mod event;
 mod geometry;
 mod input;
 mod property_value;
+mod raster_tile;
 mod source_types;
 mod types;
 mod vector_tile;
@@ -30,6 +31,7 @@ pub use event::*;
 pub use input::*;
 pub use navara_wasm_transferable::*;
 pub use navara_wasm_types::*;
+pub use raster_tile::*;
 pub use source_types::*;
 pub use types::*;
 pub use vector_tile::*;
@@ -667,6 +669,26 @@ impl Core {
         self.app.vector_revision()
     }
 
+    /// The WebMercator raster tiles to bake into per-layer drape render targets for a
+    /// terrain tile (baked layers only; empty on WebMercator terrain, which drapes 1:1
+    /// through the per-slot material path).
+    #[wasm_bindgen(js_name = getRasterTileStates)]
+    pub fn get_raster_tile_states(&mut self, handle: TileHandle) -> Vec<RasterTileState> {
+        self.app
+            .get_raster_tiles(handle)
+            .into_iter()
+            .map(RasterTileState::from)
+            .collect()
+    }
+
+    /// Monotonic revision that changes only when the raster drape resolution could have
+    /// changed. The web renderer reads it once per frame and skips the per-terrain-tile
+    /// `getRasterTileStates` calls while it is unchanged.
+    #[wasm_bindgen(js_name = rasterRevision)]
+    pub fn raster_revision(&self) -> u32 {
+        self.app.raster_revision()
+    }
+
     #[wasm_bindgen(js_name = getTileElevationDecoder)]
     pub fn get_tile_elevation_decoder(&mut self, handle: TileHandle) -> Option<ElevationDecoder> {
         self.app
@@ -1087,6 +1109,14 @@ impl Core {
     #[wasm_bindgen(js_name = setGlobeMaxSse)]
     pub fn set_globe_max_sse(&mut self, value: f32) {
         self.app.set_globe_max_sse(value);
+    }
+
+    /// Set the raster drape slot budget from the renderer's real raster texture-slot
+    /// count (`texturizedSceneIndexFrom`). Lets a terrain tile drape enough WM raster
+    /// tiles per layer on Geographic terrain, where each layer needs ~2 tiles.
+    #[wasm_bindgen(js_name = setRasterDrapeSlotBudget)]
+    pub fn set_raster_drape_slot_budget(&mut self, value: u32) {
+        self.app.set_raster_drape_slot_budget(value as usize);
     }
 
     #[wasm_bindgen(js_name = setGlobeSegments)]
