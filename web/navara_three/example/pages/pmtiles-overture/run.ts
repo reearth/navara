@@ -88,25 +88,26 @@ const VIEWPOINTS = {
   "Tokyo (street)": { lng: 139.767, lat: 35.679, height: 1_000, pitch: -35 },
 } as const;
 
+// Admin tiers, coarsest first. They only feed declutter priority: labels are
+// always candidates, and the screen-space declutter pass decides what fits —
+// countries beat regions beat counties beat localities wherever they overlap.
+// (The tile pyramid still gates data naturally: fine admin features only
+// exist in higher-zoom tiles, so the world view never even loads them.)
 const LABEL_TIERS = [
   {
     key: "country",
-    maxHeight: 4_000_000,
     match: ["country"],
   },
   {
     key: "region",
-    maxHeight: 400_000,
     match: ["region", "macroregion", "governorate", "province", "state"],
   },
   {
     key: "county",
-    maxHeight: 100_000,
     match: ["county", "macrocounty", "localadmin", "district"],
   },
   {
     key: "locality",
-    maxHeight: 50_000,
     match: ["locality", "city", "town"],
   },
 ];
@@ -159,12 +160,11 @@ const POI_CATEGORIES = [
 
 type PoiKey = (typeof POI_CATEGORIES)[number]["key"];
 
-// Place names are far more numerous and glyph-diverse than admin labels, so the
-// text is gated harder than the icons: a place gets a label only when the camera
-// is below `POI_LABEL_MAX_HEIGHT` and the place's `confidence` clears a higher
-// floor than the icon needs. This keeps dense cities readable and bounds how
-// many distinct strings the text shaper handles at once. Icons are unaffected.
-const POI_LABEL_MAX_HEIGHT = 5_000; // 5 km
+// Place names are far more numerous and glyph-diverse than admin labels, so
+// the text is gated harder than the icons: a place gets a label only when its
+// `confidence` clears a higher floor than the icon needs. This bounds how many
+// distinct strings the text shaper handles at once; on-screen readability is
+// the declutter pass's job. Icons are unaffected.
 const POI_LABEL_MIN_CONFIDENCE = 0.9;
 
 // Deterministic [0,1] hash (FNV-1a) of a string. The screen-space declutter
@@ -445,15 +445,12 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   }
 
   // Labels. Overture stores the localized primary name under `@name`; the
-  // registered font family resolves the correct face per glyph.
+  // registered font family resolves the correct face per glyph. Visibility is
+  // handled entirely by the screen-space declutter pass — no camera-altitude
+  // gating: whatever fits on screen shows, coarser tiers winning overlaps.
   const labelTitle = "Labels";
   visible[labelTitle] = true;
   const params = { size: 15, maxWidth: 9.0 };
-
-  // The evaluator reads this closure variable to decide which tiers are visible;
-  // kept in sync with the camera below. Seed it from the initial viewpoint, not
-  // `view.camera.positionGeographic` — that getter throws before the first frame.
-  let currentHeight: number = VIEWPOINTS.World.height;
 
   const labelLayer = view.addLayer({
     type: "vector",
@@ -487,7 +484,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
           let name = properties?.["@name"] as string | undefined;
           if (!name) return { text: "", show: false };
 
-          // Assign an altitude tier: prefer locale-specific `local_type`, fall
+          // Assign a priority tier: prefer locale-specific `local_type`, fall
           // back to the stable `subtype` enum. Unrecognized is never labeled.
           const localType = (
             properties?.["local_type"] as string | undefined
@@ -503,9 +500,6 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
           if (tierIndex === undefined) return { text: "", show: false };
 
           const tier = LABEL_TIERS[tierIndex];
-
-          // Hidden until the camera descends to this tier's altitude band.
-          if (currentHeight > tier.maxHeight) return { text: "", show: false };
 
           // Within the locality tier, still keep only the largest cities.
           if (tier.key === "locality") {
@@ -623,16 +617,15 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
             }|${confidence}`;
           if (hash01(key) >= poiState.density) return { show: false };
 
-          // Names are gated tighter than icons (see POI_LABEL_* above): only the
-          // most confident places, and only when zoomed in. Empty text → the
-          // icon draws with no label. `@name` is Overture's computed primary
-          // name (same convention the divisions labels use).
-          const labelable =
-            currentHeight <= POI_LABEL_MAX_HEIGHT &&
-            confidence >= POI_LABEL_MIN_CONFIDENCE;
-          let name = labelable
-            ? ((properties?.["@name"] as string | undefined) ?? "")
-            : "";
+          // Names are gated tighter than icons: only the most confident
+          // places get one (see POI_LABEL_MIN_CONFIDENCE); the declutter pass
+          // handles the rest. Empty text → the icon draws with no label.
+          // `@name` is Overture's computed primary name (same convention the
+          // divisions labels use).
+          let name =
+            confidence >= POI_LABEL_MIN_CONFIDENCE
+              ? ((properties?.["@name"] as string | undefined) ?? "")
+              : "";
 
           // replace `/` with a line break
           name = name.replace(/\s*\/\s*/g, "\n");
@@ -661,19 +654,6 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     poiLayer.forceUpdate();
     view.forceUpdate();
   };
-
-  // Drive label visibility from altitude. The visible tier set only changes when
-  // `currentHeight` crosses a `maxHeight`, so encode it as a "band key" and
-  // restyle only on change — `move` fires every frame and would thrash the batcher.
-  const bandKeyAt = (height: number) =>
-    LABEL_TIERS.map((tier) => (height <= tier.maxHeight ? "1" : "0")).join("");
-  let lastBandKey = bandKeyAt(currentHeight);
-  // POI names appear only below `POI_LABEL_MAX_HEIGHT`; track that band crossing
-  // separately so we re-evaluate the POI layer when it flips (its threshold need
-  // not line up with any `LABEL_TIERS` boundary).
-  let poiLabelsVisible = currentHeight <= POI_LABEL_MAX_HEIGHT;
-  // The `move` handler (readout + tier restyle) is registered at the end, once
-  // the control panel exists.
 
   // Re-evaluate every layer and render. `forceUpdate` re-emits `featureUpdated`
   // for all loaded tiles, so a toggle flips visibility on existing geometry now.
@@ -729,26 +709,6 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       view.forceUpdate();
     });
 
-  // Live-tunable altitude thresholds (km). Changing one re-evaluates the labels
-  // against the current camera height.
-  const tiersFolder = pane.addFolder({ title: "Label altitude (km)" });
-  for (const tier of LABEL_TIERS) {
-    const proxy = { km: Math.round(tier.maxHeight / 1000) };
-    tiersFolder
-      .addBinding(proxy, "km", {
-        min: 0,
-        max: 20_000,
-        step: 10,
-        label: tier.key,
-      })
-      .on("change", ({ value }) => {
-        tier.maxHeight = value * 1000;
-        lastBandKey = bandKeyAt(currentHeight);
-        labelLayer.forceUpdate();
-        view.forceUpdate();
-      });
-  }
-
   // POI controls: pick a category (swaps icon + filter) and a confidence floor.
   const poiFolder = pane.addFolder({ title: "Places (POIs)" });
   poiFolder
@@ -784,46 +744,6 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     .on("change", () => {
       restylePois();
     });
-
-  // Read-only altitude readout. A `readonly` string binding renders as a text
-  // monitor; we mutate `readout.altitude` and `.refresh()` it from the handler.
-  const readout = { altitude: `${(currentHeight / 1000).toFixed(0)} km` };
-  const altitudeMonitor = pane.addBinding(readout, "altitude", {
-    readonly: true,
-    label: "Camera Altitude",
-  });
-
-  // Update the readout every move; restyle labels only when crossing a tier.
-  view.camera.on("move", () => {
-    // `positionGeographic` throws before the core's camera status is ready; skip.
-    let height: number;
-    try {
-      height = view.camera.positionGeographic.height;
-    } catch {
-      return;
-    }
-    currentHeight = height;
-
-    readout.altitude = `${(currentHeight / 1000).toFixed(0)} km`;
-    altitudeMonitor.refresh();
-
-    // POI name gate: re-evaluate the POI layer only when crossing its altitude
-    // threshold (checked before the admin-label early-return below, since the
-    // two band boundaries are independent).
-    const poiVisibleNow = currentHeight <= POI_LABEL_MAX_HEIGHT;
-    if (poiVisibleNow !== poiLabelsVisible) {
-      poiLabelsVisible = poiVisibleNow;
-      poiLayer.forceUpdate();
-      view.forceUpdate();
-    }
-
-    const bandKey = bandKeyAt(currentHeight);
-    if (bandKey === lastBandKey) return;
-    lastBandKey = bandKey;
-    // Re-run the label evaluator against the new altitude and redraw.
-    labelLayer.forceUpdate();
-    view.forceUpdate();
-  });
 
   // All four Overture sources are declared; base/divisions/buildings share one
   // credit, so the AttributionPlugin collapses them to a single rendered line.
