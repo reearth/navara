@@ -146,6 +146,7 @@ The callback function can return an object containing the following properties:
 | `width` | `number` | Line width (pixels, for polyline features) |
 | `size` | `number` | Point/text size (meters or pixels, for point/text features) |
 | `opacity` | `number` | Feature opacity, range 0.0-1.0 (for polygons/points/billboards/models/text) |
+| `declutterPriority` | `number` | Placement priority for decluttering; higher wins an overlap (for points/billboards/text with [`declutter`](../../../three/material/text-material/#declutter) enabled). Overrides the layer's `declutterPriority` |
 | `image` | `string \| null` | Image URL (for billboard features); each distinct URL is loaded once and packed into the layer's texture atlas. Return `null` to clear a previous per-feature image and revert to the billboard material's default `url` |
 
 :::note
@@ -241,6 +242,18 @@ layer.on("featureUpdated", ({ evaluator }) => {
 ```
 
 ```typescript
+// Rank city labels above village labels when decluttering
+const TIER_PRIORITY: Record<number, number> = { 1: 3, 2: 2, 3: 1 };
+
+layer.on("featureUpdated", ({ evaluator }) => {
+  evaluator.evaluate(({ properties }) => ({
+    text: properties?.["name"] as string,
+    declutterPriority: TIER_PRIORITY[properties?.["tier"] as number] ?? 0,
+  }));
+});
+```
+
+```typescript
 // Highlight selected feature with pick event
 let selectedId: string | undefined;
 
@@ -284,6 +297,10 @@ type EvaluatedValue = {
   size?: number;
   /** Feature opacity, range 0.0-1.0 (for polygons/points/billboards/models/text) */
   opacity?: number;
+  /** Placement priority for decluttering; higher wins an overlap (for
+   * points/billboards/text with `declutter` enabled). Overrides the
+   * layer's `declutterPriority` */
+  declutterPriority?: number;
   /** Image URL (for billboard features); each distinct URL is loaded once and
    * packed into the layer's texture atlas. `null` clears a previous
    * per-feature image, reverting to the billboard material's default url */
