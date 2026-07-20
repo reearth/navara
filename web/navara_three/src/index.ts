@@ -1601,6 +1601,10 @@ export default class ThreeView<
     // Cleanup hillshade context (temp DEMs, generator, etc.)
     this._hillshadeContext.dispose();
 
+    // Drop declutter participants so the manager doesn't retain removed
+    // meshes' GPU/font resources past this view's lifetime.
+    this._declutter.dispose();
+
     // Clear caches and maps
     this._meshes.clear();
     this._inMemoryBufferStore.clear();
@@ -1793,7 +1797,9 @@ export default class ThreeView<
         updatedAt,
       );
       if (result === "throttled") {
-        this._scheduleDeclutterFrame(DeclutterManager.MIN_INTERVAL_MS);
+        this._scheduleDeclutterFrame(
+          this._declutter.remainingThrottleMs(updatedAt),
+        );
       } else if (result === "animating") {
         // Keep frames coming at fade cadence until every label reaches its
         // placement target.

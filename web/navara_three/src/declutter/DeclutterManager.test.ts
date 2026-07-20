@@ -222,4 +222,32 @@ describe("DeclutterManager", () => {
     manager.unregister(p);
     expect(manager.update(camera, 800, 600, 1000)).toBe("idle");
   });
+
+  it("reports the remaining throttle window since the last pass, not the full constant", () => {
+    const manager = new DeclutterManager();
+    const p = new FakeParticipant([label({ handle: 0 })]);
+    manager.register(p);
+    const camera = makeCamera();
+
+    expect(manager.update(camera, 800, 600, 0)).toBe("ran");
+    manager.markDirty();
+    expect(manager.update(camera, 800, 600, 100)).toBe("throttled");
+    // 50ms of the 150ms window has already elapsed since the last pass.
+    expect(manager.remainingThrottleMs(100)).toBe(
+      DeclutterManager.MIN_INTERVAL_MS - 100,
+    );
+    // Never negative once the window has fully elapsed.
+    expect(manager.remainingThrottleMs(10_000)).toBe(0);
+  });
+
+  it("dispose() drops participants so a later update() is idle", () => {
+    const manager = new DeclutterManager();
+    const p = new FakeParticipant([label({ handle: 0 })]);
+    manager.register(p);
+    const camera = makeCamera();
+    expect(manager.update(camera, 800, 600, 0)).toBe("ran");
+
+    manager.dispose();
+    expect(manager.update(camera, 800, 600, 1000)).toBe("idle");
+  });
 });

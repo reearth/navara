@@ -72,6 +72,17 @@ export class DeclutterManager {
   private _placeable = new Uint8Array(0);
   private _viewMatrix = new Matrix4();
 
+  /** Milliseconds until the throttle window since the last placement pass
+   *  elapses, clamped to `[0, MIN_INTERVAL_MS]`. Callers use this to schedule
+   *  a follow-up frame after a `"throttled"` result without overshooting the
+   *  window by waiting out the full constant from now. */
+  remainingThrottleMs(nowMs: number): number {
+    return Math.max(
+      0,
+      DeclutterManager.MIN_INTERVAL_MS - (nowMs - this._lastRunAt),
+    );
+  }
+
   register(participant: DeclutterParticipant): void {
     this._participants.add(participant);
     this._dirty = true;
@@ -233,6 +244,14 @@ export class DeclutterManager {
     }
 
     candidates.length = 0;
+  }
+
+  /** Drop all registered participants. Call when the owning view is disposed
+   *  so this manager doesn't keep strong references to removed meshes (and
+   *  their GPU/font resources) past the view's lifetime. */
+  dispose(): void {
+    this._participants.clear();
+    this._candidates.length = 0;
   }
 
   private _snapshotChanged(
