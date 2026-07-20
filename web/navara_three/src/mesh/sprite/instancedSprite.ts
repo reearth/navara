@@ -130,7 +130,14 @@ export class InstancedSpriteMesh
     const state = enhancer.states();
     const cx = Math.min(Math.max(state.center[0], -0.5), 0.5);
     const cy = Math.min(Math.max(state.center[1], -0.5), 0.5);
-    const aspect = state.aspect;
+    // Mirror of instancedSprite.vert.glsl:100-104 — aspect is per-instance
+    // (from the atlas rect), not a material-level uniform; there is no
+    // material-wide "aspect" state to read.
+    const uvRect = state.billboard
+      ? (this.geometry?.getAttribute("instanceUvRect") as
+          | InstancedBufferAttribute
+          | undefined)
+      : undefined;
     const anchors = this._anchors;
     const overrides = this._declutterPriorityOverrides;
     const targets = this._declutterTargets;
@@ -143,6 +150,8 @@ export class InstancedSpriteMesh
       if (size <= 0.0) continue;
 
       const override = overrides ? overrides[i] : Number.NaN;
+      const rectH = uvRect ? uvRect.getW(i) : 0;
+      const aspect = uvRect && rectH > 0.0 ? uvRect.getZ(i) / rectH : 1.0;
 
       // Mirror of instancedSprite.vert.glsl:95-97 — the quad spans
       // (position.xy - center) * vec2(aspect, 1) * size around the anchor.
@@ -922,7 +931,6 @@ export class InstancedSpriteMesh
 
     // Clear internal collections to release references
     this._batchIdToInstance.clear();
-    this._loadedUrls.clear();
     this._anchors = null;
     this._declutterTargets = null;
     this._declutterPriorityOverrides = null;
