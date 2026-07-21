@@ -1,4 +1,9 @@
-import ThreeView, { Color, Layer, Source } from "@navaramap/three";
+import ThreeView, {
+  Color,
+  Layer,
+  Source,
+  type AttributionItem,
+} from "@navaramap/three";
 import { AmbientLightDesc } from "@navaramap/three_default_descs";
 import {
   DefaultPlugin,
@@ -220,7 +225,9 @@ function createMvt(view: ThreeView) {
  * Add a "fly to" button and an add/delete toggle for a layer's source. Deleting
  * removes the layer first (`Source.delete()` is reference-counted and only
  * removes the source once no layer references it); the toggle tracks presence so
- * clicks can't stack duplicate sources or no-op on an already-deleted one.
+ * clicks can't stack duplicate sources or no-op on an already-deleted one. The
+ * optional `credit` supplies the source's current attribution so it is removed
+ * on delete and restored on re-add.
  */
 function addSourceLifecycleButtons(
   view: ThreeView,
@@ -229,6 +236,7 @@ function addSourceLifecycleButtons(
   getSource: () => Source,
   reAdd: () => void,
   flyTarget: () => FlyToTarget,
+  credit?: () => AttributionItem | undefined,
 ) {
   folder
     .addButton({ title: "fly to" })
@@ -240,9 +248,13 @@ function addSourceLifecycleButtons(
     if (present) {
       getLayer().delete();
       getSource().delete();
+      const c = credit?.();
+      if (c) view.attribution?.remove([c]);
       toggle.title = "add source";
     } else {
       reAdd();
+      const c = credit?.();
+      if (c) view.attribution?.add([c]);
       toggle.title = "delete source";
     }
     present = !present;
@@ -273,7 +285,6 @@ export const run = async (view: ThreeView<DefaultDescriptions>) => {
     TILES_3D_DATASETS.plateauChiyoda,
     TILES_3D_DATASETS.plateauKakegawaCastle,
     MVT_DATASETS.plateauTokyoFirePrevention,
-    MVT_DATASETS.plateauTokyoHeightControl,
   ]);
 
   const pane = new Pane({
@@ -354,6 +365,11 @@ function addRasterTileFolder(view: ThreeView, pane: Pane) {
       showBoundingBox: tileParams.rasterShowBoundingBox,
     });
 
+  // Keep the credit in sync with the active base imagery.
+  const attribution = view.attribution;
+  let creditedRaster: keyof typeof TILE_DATASETS = "openstreetmap";
+  attribution?.add([TILE_DATASETS.openstreetmap]);
+
   addSourceLifecycleButtons(
     view,
     tileFolder,
@@ -364,6 +380,7 @@ function addRasterTileFolder(view: ThreeView, pane: Pane) {
       applyRaster();
     },
     () => RASTER_TARGET,
+    () => TILE_DATASETS[creditedRaster],
   );
 
   const rasterFolder = tileFolder.addFolder({
@@ -380,10 +397,6 @@ function addRasterTileFolder(view: ThreeView, pane: Pane) {
     "EOX Sentinel-2": "eox",
   } as const;
   const rasterUrlParams = { source: "openstreetmap" };
-  // Keep the credit in sync with the active base imagery.
-  const attribution = view.attribution;
-  let creditedRaster: keyof typeof TILE_DATASETS = "openstreetmap";
-  attribution?.add([TILE_DATASETS.openstreetmap]);
   rasterFolder
     .addBinding(rasterUrlParams, "source", {
       label: "url",
@@ -648,6 +661,7 @@ function addB3dmLayerFolder(view: ThreeView, pane: Pane) {
       },
     });
 
+  let b3dmCredit: keyof typeof TILES_3D_DATASETS = "plateauChiyoda";
   addSourceLifecycleButtons(
     view,
     b3dmFolder,
@@ -658,6 +672,7 @@ function addB3dmLayerFolder(view: ThreeView, pane: Pane) {
       applyB3dm();
     },
     () => gB3dmTarget,
+    () => TILES_3D_DATASETS[b3dmCredit],
   );
 
   // Source URL switch: each option is a PLATEAU 3D Tiles building tileset in a
@@ -677,7 +692,6 @@ function addB3dmLayerFolder(view: ThreeView, pane: Pane) {
     },
   };
   const b3dmSourceParams = { source: "Chiyoda" };
-  let b3dmCredit: keyof typeof TILES_3D_DATASETS = "plateauChiyoda";
   b3dmFolder
     .addBinding(b3dmSourceParams, "source", {
       label: "url",
@@ -774,6 +788,7 @@ function addPntsLayerFolder(view: ThreeView, pane: Pane) {
       },
     });
 
+  let pntsCredit: keyof typeof TILES_3D_DATASETS = "plateauKakegawaCastle";
   addSourceLifecycleButtons(
     view,
     pntsFolder,
@@ -784,6 +799,7 @@ function addPntsLayerFolder(view: ThreeView, pane: Pane) {
       applyPnts();
     },
     () => gPntsTarget,
+    () => TILES_3D_DATASETS[pntsCredit],
   );
 
   // Source URL switch between two PLATEAU point-cloud tilesets.
@@ -798,7 +814,6 @@ function addPntsLayerFolder(view: ThreeView, pane: Pane) {
     },
   };
   const pntsSourceParams = { source: "Kakegawa Castle" };
-  let pntsCredit: keyof typeof TILES_3D_DATASETS = "plateauKakegawaCastle";
   pntsFolder
     .addBinding(pntsSourceParams, "source", {
       label: "url",
@@ -898,6 +913,7 @@ function addMvtLayerFolder(view: ThreeView, pane: Pane) {
       applyMvt();
     },
     () => gMvtOption.target,
+    () => MVT_DATASETS.plateauTokyoFirePrevention,
   );
 
   // Source URL switch. Each PLATEAU MVT dataset stores its polygons under a

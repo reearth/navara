@@ -105,12 +105,8 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   const params = { ...DEFAULT_COLOR_GRADING_LUT_OPTIONS, show: true };
 
   // Credit only the active LUT (each LUT has its own author); kept in sync by the selector below.
-  const lutCreditFor = (url: string) => {
-    const d = Object.values(LUT_DATASETS).find((lut) => lut.url === url);
-    return d?.attribution
-      ? { attribution: d.attribution, attributionUrl: d.attributionUrl }
-      : undefined;
-  };
+  const lutCreditFor = (url: string) =>
+    Object.values(LUT_DATASETS).find((lut) => lut.url === url);
   let lutCredit = lutCreditFor(params.url);
 
   pane

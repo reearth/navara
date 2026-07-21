@@ -1,3 +1,5 @@
+import type { AttributionChild } from "@navaramap/three";
+
 /** A tile/asset data source used by the examples, with its attribution fields. */
 export type Dataset = {
   url: string;
@@ -17,7 +19,7 @@ export type Dataset = {
    */
   logoUrl?: string;
   /** Optional zoom-banded sub-credits, shown when the current zoom is within the band. */
-  children?: { attribution: string; minZoom?: number; maxZoom?: number }[];
+  children?: AttributionChild[];
 };
 
 /**
