@@ -148,6 +148,7 @@ const run = async () => {
 
   attribution?.add([
     TILE_DATASETS.openstreetmap,
+    TERRAIN_DATASETS.gsi,
     MVT_DATASETS.plateauWakayamaGen,
   ]);
 };

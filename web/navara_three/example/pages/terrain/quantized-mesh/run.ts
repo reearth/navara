@@ -97,7 +97,11 @@ export const run = async (
         terrain: { castShadow: true, receiveShadow: true },
       });
     }
-    attribution?.add([terrainDataset(type), TILE_DATASETS.eox]);
+    attribution?.add([
+      terrainDataset(type),
+      TILE_DATASETS.eox,
+      TILE_DATASETS.gsiSeamlessphoto,
+    ]);
   };
 
   // Delete the current terrain layer and its explicit source (if any) on the

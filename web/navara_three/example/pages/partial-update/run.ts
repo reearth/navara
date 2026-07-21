@@ -372,15 +372,21 @@ function addRasterTileFolder(view: ThreeView, pane: Pane) {
     "EOX Sentinel-2": "eox",
   } as const;
   const rasterUrlParams = { source: "openstreetmap" };
+  // Keep the credit in sync with the active base imagery.
+  const attribution = view.attribution;
+  let creditedRaster: keyof typeof TILE_DATASETS = "openstreetmap";
+  attribution?.add([TILE_DATASETS.openstreetmap]);
   rasterFolder
     .addBinding(rasterUrlParams, "source", {
       label: "url",
       options: rasterUrlOptions,
     })
     .on("change", (v) => {
-      updateTileSource({
-        url: TILE_DATASETS[v.value as keyof typeof TILE_DATASETS].url,
-      });
+      const next = v.value as keyof typeof TILE_DATASETS;
+      updateTileSource({ url: TILE_DATASETS[next].url });
+      attribution?.remove([TILE_DATASETS[creditedRaster]]);
+      attribution?.add([TILE_DATASETS[next]]);
+      creditedRaster = next;
     });
 
   rasterFolder
