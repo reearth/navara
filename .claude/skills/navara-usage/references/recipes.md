@@ -15,18 +15,15 @@ Proven combinations that get from zero to a high-quality scene. Prefer starting 
 | `DefaultPlugin` + `addDefaultPhotorealScene()` | Sky, stars, sun light, sky light probe, aerial perspective, lens flare (skipped on mobile), tone mapping, antialiasing — mobile-aware |
 | Re:Earth Terrain (`quantized-mesh` source) | Global terrain relief with vertex normals and water mask |
 | EOX Sentinel-2 cloudless (`raster-tile` source) | Global satellite imagery draped over the terrain |
-| `AttributionPlugin` | Required data credits for the above |
+| Built-in attribution UI (`view.attribution`) | Required data credits for the above |
 
 ```typescript
 import ThreeView from "@navaramap/three";
 import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
-import { AttributionPlugin } from "@navaramap/three_plugins";
 
 const view = new ThreeView<DefaultDescriptions>({ shadow: true });
 const defaultPlugin = new DefaultPlugin();
 view.addPlugin(defaultPlugin);
-const attribution = new AttributionPlugin();
-view.addPlugin(attribution);
 await view.init();
 
 defaultPlugin.addDefaultPhotorealScene();
@@ -56,7 +53,7 @@ const imagery = view.addSource({
 });
 view.addLayer({ type: "raster", source: imagery });
 
-attribution.show([
+view.attribution?.add([
   { attribution: "© Re:Earth Terrain", attributionUrl: "https://terrain.reearth.land/" },
   {
     attributionHtml:
