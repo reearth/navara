@@ -268,6 +268,14 @@ export const run = async (view: ThreeView<DefaultDescriptions>) => {
   createPnts(view);
   createMvt(view);
 
+  // Credit the non-base layers (B3DM / PNTS / MVT sources).
+  view.attribution?.add([
+    TILES_3D_DATASETS.plateauChiyoda,
+    TILES_3D_DATASETS.plateauKakegawaCastle,
+    MVT_DATASETS.plateauTokyoFirePrevention,
+    MVT_DATASETS.plateauTokyoHeightControl,
+  ]);
+
   const pane = new Pane({
     title: "Parameters",
     expanded: true,
@@ -383,6 +391,7 @@ function addRasterTileFolder(view: ThreeView, pane: Pane) {
     })
     .on("change", (v) => {
       const next = v.value as keyof typeof TILE_DATASETS;
+      if (next === creditedRaster) return;
       updateTileSource({ url: TILE_DATASETS[next].url });
       attribution?.remove([TILE_DATASETS[creditedRaster]]);
       attribution?.add([TILE_DATASETS[next]]);
@@ -668,6 +677,7 @@ function addB3dmLayerFolder(view: ThreeView, pane: Pane) {
     },
   };
   const b3dmSourceParams = { source: "Chiyoda" };
+  let b3dmCredit: keyof typeof TILES_3D_DATASETS = "plateauChiyoda";
   b3dmFolder
     .addBinding(b3dmSourceParams, "source", {
       label: "url",
@@ -675,10 +685,17 @@ function addB3dmLayerFolder(view: ThreeView, pane: Pane) {
     })
     .on("change", (v) => {
       const o = b3dmSources[v.value];
-      gB3dmUrl = TILES_3D_DATASETS[o.key as keyof typeof TILES_3D_DATASETS].url;
+      const key = o.key as keyof typeof TILES_3D_DATASETS;
+      gB3dmUrl = TILES_3D_DATASETS[key].url;
       gB3dmTarget = o.target;
       gB3dmSource.update({ type: "3d-tiles", url: gB3dmUrl });
       flyTo(view, gB3dmTarget);
+      // Keep the credit in sync with the active B3DM source.
+      if (key !== b3dmCredit) {
+        view.attribution?.remove([TILES_3D_DATASETS[b3dmCredit]]);
+        view.attribution?.add([TILES_3D_DATASETS[key]]);
+        b3dmCredit = key;
+      }
     });
 
   const modelFolder = b3dmFolder.addFolder({
@@ -781,6 +798,7 @@ function addPntsLayerFolder(view: ThreeView, pane: Pane) {
     },
   };
   const pntsSourceParams = { source: "Kakegawa Castle" };
+  let pntsCredit: keyof typeof TILES_3D_DATASETS = "plateauKakegawaCastle";
   pntsFolder
     .addBinding(pntsSourceParams, "source", {
       label: "url",
@@ -791,10 +809,17 @@ function addPntsLayerFolder(view: ThreeView, pane: Pane) {
     })
     .on("change", (v) => {
       const o = pntsSources[v.value];
-      gPntsUrl = TILES_3D_DATASETS[o.key as keyof typeof TILES_3D_DATASETS].url;
+      const key = o.key as keyof typeof TILES_3D_DATASETS;
+      gPntsUrl = TILES_3D_DATASETS[key].url;
       gPntsTarget = o.target;
       gPntsSource.update({ type: "3d-tiles", url: gPntsUrl });
       flyTo(view, gPntsTarget);
+      // Keep the credit in sync with the active PNTS source.
+      if (key !== pntsCredit) {
+        view.attribution?.remove([TILES_3D_DATASETS[pntsCredit]]);
+        view.attribution?.add([TILES_3D_DATASETS[key]]);
+        pntsCredit = key;
+      }
     });
 
   const modelFolder = pntsFolder.addFolder({

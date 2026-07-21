@@ -104,6 +104,15 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
 
   const params = { ...DEFAULT_COLOR_GRADING_LUT_OPTIONS, show: true };
 
+  // Credit only the active LUT (each LUT has its own author); kept in sync by the selector below.
+  const lutCreditFor = (url: string) => {
+    const d = Object.values(LUT_DATASETS).find((lut) => lut.url === url);
+    return d?.attribution
+      ? { attribution: d.attribution, attributionUrl: d.attributionUrl }
+      : undefined;
+  };
+  let lutCredit = lutCreditFor(params.url);
+
   pane
     .addBinding(params, "url", {
       options: {
@@ -122,9 +131,11 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       },
     })
     .on("change", (ev) => {
-      gColorGradingLUTLayer.update({
-        colorGradingLUT: { url: ev.value as string },
-      });
+      const url = ev.value as string;
+      gColorGradingLUTLayer.update({ colorGradingLUT: { url } });
+      if (lutCredit) attribution?.remove([lutCredit]);
+      lutCredit = lutCreditFor(url);
+      if (lutCredit) attribution?.add([lutCredit]);
     });
 
   pane
@@ -183,5 +194,10 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
 
   addDateControl(view, pane);
   addCameraControl(view, pane);
-  attribution?.add([TILE_DATASETS.gsiSeamlessphoto, TERRAIN_DATASETS.gsi]);
+  attribution?.add([
+    TILE_DATASETS.gsiSeamlessphoto,
+    TERRAIN_DATASETS.gsi,
+    TILES_3D_DATASETS.plateauChiyoda,
+    ...(lutCredit ? [lutCredit] : []),
+  ]);
 };
