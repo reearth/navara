@@ -68,6 +68,7 @@ export class TileTextureCache {
           "material",
           "texture-binding",
           "vector-revision",
+          "raster-revision",
           "hillshade",
         ]),
       };

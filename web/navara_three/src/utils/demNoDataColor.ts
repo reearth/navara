@@ -37,10 +37,12 @@ export function demNoDataColorBytes(
     rest -= v * s;
   }
 
-  // The shader flags |x - boundary| <= 1 as no-data: accept any decomposition
-  // that decodes strictly inside that band (the margin absorbs the GPU's
-  // float32 decode error), so a boundary that is merely not byte-exact — e.g.
-  // a fractional boundary with unit scalers — still gets an underlay instead
-  // of leaving uncovered regions to decode black as a valid height.
-  return Math.abs(rest) < 1 - 1e-3 ? rgb : null;
+  // The shader flags |x - boundary| <= 1 as no-data (dem_util.glsl,
+  // `epsilon_cmp`): accept exactly that band, boundary included — a color a
+  // full 1 away still classifies as no-data, so rejecting it would skip the
+  // underlay and let uncovered baked regions decode black as a valid height.
+  // No safety margin is subtracted: painting a band-edge color that float32
+  // drift pushes out of the band decodes as a near-boundary height, which is
+  // no worse than the black the skipped underlay would leave behind.
+  return Math.abs(rest) <= 1 ? rgb : null;
 }

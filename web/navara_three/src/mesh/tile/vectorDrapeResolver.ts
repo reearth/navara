@@ -201,7 +201,10 @@ export class VectorDrapeResolver implements DrapeResolver {
     const byLayer = new Map<string, VectorSlot>();
     const droppedLayers = new Set<string>();
     for (const state of states) {
+      // Read each wasm getter once — every access crosses the boundary and the
+      // uv getters allocate a fresh Float32Array.
       const layerId = state.layer_id;
+      const tileHandle = state.tile_handle;
       let slot = byLayer.get(layerId);
       if (!slot) {
         // Rust returns a state for every vector layer with a rendered tile, including
@@ -211,10 +214,8 @@ export class VectorDrapeResolver implements DrapeResolver {
         // genuinely-draped layers past the cap. A draped layer whose scene isn't ready yet
         // simply gets no slot this pass and is picked up once its scene exists.
         const hasScene =
-          this.host.texturizedScenes.findSceneByLayerId(
-            state.tile_handle,
-            layerId,
-          ) != null;
+          this.host.texturizedScenes.findSceneByLayerId(tileHandle, layerId) !=
+          null;
         if (!hasScene) {
           state.free();
           continue;
@@ -234,12 +235,10 @@ export class VectorDrapeResolver implements DrapeResolver {
         };
         byLayer.set(layerId, slot);
       }
-      // Read each wasm getter once — every access crosses the boundary and the
-      // uv getters allocate a fresh Float32Array.
       const uvOffset = state.uv_offset;
       const uvScale = state.uv_scale;
       slot.sources.push({
-        tileHandle: state.tile_handle,
+        tileHandle,
         uvOffset: [uvOffset[0] ?? 0, uvOffset[1] ?? 0],
         uvScale: [uvScale[0] ?? 1, uvScale[1] ?? 1],
       });

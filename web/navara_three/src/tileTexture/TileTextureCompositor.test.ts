@@ -258,3 +258,108 @@ describe("TileTextureCompositor.renderVectorScenes", () => {
     expect(renderer.clear).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("TileTextureCompositor.renderRasterTiles", () => {
+  const fakeRT = (): unknown => ({ texture: { needsUpdate: false } });
+  // A bake source texture: `configureRasterBakeSource` mutates these sampler
+  // fields in place, so a plain object stands in for a three.js Texture.
+  const fakeTex = (name: string): unknown => ({
+    name,
+    colorSpace: "",
+    minFilter: 0,
+    magFilter: 0,
+    generateMipmaps: false,
+    needsUpdate: false,
+  });
+  /** The texture bound to the bake quad at each render call, in draw order. */
+  const trackDrawnMaps = (renderer: ReturnType<typeof makeRenderer>) => {
+    const maps: unknown[] = [];
+    renderer.render.mockImplementation((scene) => {
+      const quad = (scene as { children: { material: { map: unknown } }[] })
+        .children[0];
+      maps.push(quad.material.map);
+    });
+    return maps;
+  };
+
+  it("paints the no-data underlay across a heatmap target before its sources", () => {
+    const { compositor, renderer } = setup();
+    const maps = trackDrawnMaps(renderer);
+    const src = fakeTex("dem");
+
+    compositor.renderRasterTiles(
+      [
+        {
+          isElevationHeatmap: true,
+          noDataColor: [1, 2, 3],
+          sources: [
+            { texture: src as never, uvOffset: [0, 0], uvScale: [1, 1] },
+          ],
+        },
+      ],
+      [fakeRT() as never],
+    );
+
+    // First draw: the 1×1 no-data texture (decoder boundary color, opaque
+    // alpha) spanning the whole target; the DEM source then overwrites the
+    // covered region, leaving uncovered regions decoding as no-data.
+    expect(maps).toHaveLength(2);
+    const underlay = maps[0] as { image: { data: Uint8Array } };
+    expect(Array.from(underlay.image.data)).toEqual([1, 2, 3, 255]);
+    expect(maps[1]).toBe(src);
+    // The underlay is framed over the full target (identity camera window).
+    const cam = renderer.render.mock.calls[0][1] as {
+      left: number;
+      right: number;
+      bottom: number;
+      top: number;
+    };
+    expect([cam.left, cam.right, cam.bottom, cam.top]).toEqual([-1, 1, -1, 1]);
+    // Cleared once: underlay and source accumulate into the same target.
+    expect(renderer.clear).toHaveBeenCalledTimes(1);
+  });
+
+  it("draws sources coarse-first so finer tiles overwrite the ancestor", () => {
+    const { compositor, renderer } = setup();
+    const maps = trackDrawnMaps(renderer);
+    // A finer-than-terrain tile (uvScale > 1) and a coarse ancestor fallback
+    // (uvScale < 1) covering the whole rect, listed fine-first: the bake must
+    // reorder by ascending uvScale or the ancestor buries the finer tile.
+    const fine = fakeTex("fine");
+    const coarse = fakeTex("coarse");
+
+    compositor.renderRasterTiles(
+      [
+        {
+          isElevationHeatmap: false,
+          sources: [
+            { texture: fine as never, uvOffset: [0, 0], uvScale: [2, 2] },
+            {
+              texture: coarse as never,
+              uvOffset: [0, 0],
+              uvScale: [0.5, 0.5],
+            },
+          ],
+        },
+      ],
+      [fakeRT() as never],
+    );
+
+    expect(maps).toEqual([coarse, fine]);
+    expect(renderer.clear).toHaveBeenCalledTimes(1);
+  });
+
+  it("skips a never-touched render target that has no slot (no GPU allocation)", () => {
+    const { compositor, renderer } = setup();
+
+    const rt = fakeRT();
+    compositor.renderRasterTiles([], [rt as never]);
+
+    // Render-targeting the RT would create its GL framebuffer; an empty slot
+    // whose target was never baked must not pay that cost (same invariant as
+    // the vector bake — both run through the shared bake loop).
+    expect(renderer.setRenderTarget).not.toHaveBeenCalledWith(rt);
+    expect(renderer.render).not.toHaveBeenCalled();
+    expect(renderer.clear).not.toHaveBeenCalled();
+  });
+});

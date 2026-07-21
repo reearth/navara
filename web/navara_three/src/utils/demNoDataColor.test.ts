@@ -32,6 +32,10 @@ describe("demNoDataColorBytes", () => {
     // 0.75 has no exact byte decomposition with unit scalers, but black
     // decodes to 0 and |0 - 0.75| <= 1, so the shader still flags it no-data.
     expect(demNoDataColorBytes({ x: 1, y: 1, z: 1 }, 0.75)).toEqual([0, 0, 0]);
+    // Band edge: the closest representable value is exactly 1 away
+    // ((1,0,0) decodes to 2, |2 - 3| == 1), which the shader's
+    // `abs(x - boundary) <= 1` check still classifies as no-data.
+    expect(demNoDataColorBytes({ x: 2, y: 0, z: 0 }, 3)).toEqual([1, 0, 0]);
   });
 
   it("returns null when no byte color decodes inside the no-data band", () => {
