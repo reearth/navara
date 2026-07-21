@@ -2605,7 +2605,7 @@ mod delete_layer_tests {
         let retained_handle = raster_qt.qt.zero().unwrap().handle();
         let revisited_handle = raster_qt.qt.leaf((0, 0, 1)).unwrap().handle();
 
-        let mut spawn_slots = |app: &mut App| -> Vec<Option<Entity>> {
+        let spawn_slots = |app: &mut App| -> Vec<Option<Entity>> {
             (0..3)
                 .map(|_| Some(app.world_mut().spawn_empty().id()))
                 .collect()
