@@ -36,12 +36,17 @@ function renderTargetBytes(target: WebGLRenderTarget): number {
     bytes += pixels * DEPTH_BYTES_PER_TEXEL;
   }
   if (target.samples > 0) {
-    // MSAA renderbuffers exist alongside the resolve textures.
-    bytes +=
-      target.samples *
-      pixels *
-      (bytesPerTexel(target.texture.type) +
-        (target.depthBuffer ? DEPTH_BYTES_PER_TEXEL : 0));
+    // MSAA renderbuffers exist alongside the resolve textures: one per color
+    // attachment, plus a depth renderbuffer whether depth is a plain buffer
+    // or a depth texture.
+    let msaaBytesPerPixel = 0;
+    for (const texture of target.textures) {
+      msaaBytesPerPixel += bytesPerTexel(texture.type);
+    }
+    if (target.depthBuffer || target.depthTexture) {
+      msaaBytesPerPixel += DEPTH_BYTES_PER_TEXEL;
+    }
+    bytes += target.samples * pixels * msaaBytesPerPixel;
   }
   return bytes;
 }

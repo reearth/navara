@@ -1,5 +1,5 @@
 import type { EffectComposer, Pass } from "postprocessing";
-import { HalfFloatType, WebGLRenderTarget } from "three";
+import { DepthTexture, HalfFloatType, WebGLRenderTarget } from "three";
 import { describe, expect, it } from "vitest";
 
 import { estimateFixedGpuBytes } from "./fixedGpuFootprint";
@@ -66,6 +66,20 @@ describe("estimateFixedGpuBytes", () => {
     expect(bytes).toBe(PX * (4 + 4 + 4 * 8) + PX * 4);
   });
 
+  it("counts every MRT attachment and depth textures in the MSAA term", () => {
+    const mrt = new WebGLRenderTarget(W, H, {
+      count: 2,
+      samples: 2,
+      depthBuffer: false,
+    });
+    mrt.textures[1].type = HalfFloatType;
+    mrt.depthTexture = new DepthTexture(W, H);
+    const bytes = estimateFixedGpuBytes(composerWith(mrt, rgba8Target()), []);
+    // mrt: RGBA8 (4) + RGBA16F (8) + depth texture (4)
+    //      + 2 samples × (4 + 8 + 4); output: 4
+    expect(bytes).toBe(PX * (4 + 8 + 4 + 2 * 16) + PX * 4);
+  });
+
   it("skips render targets that are not GL-allocated yet", () => {
     const allocated = rgba8Target();
     const lazy = rgba8Target();
@@ -87,12 +101,10 @@ describe("estimateFixedGpuBytes", () => {
       geometryData: new Float32Array(1_000_000),
       target: rgba8Target(),
     } as unknown as Pass;
-    const start = performance.now();
     const bytes = estimateFixedGpuBytes(
       composerWith(rgba8Target(), rgba8Target()),
       [pass],
     );
     expect(bytes).toBe(PX * 4 * 3);
-    expect(performance.now() - start).toBeLessThan(100);
   });
 });

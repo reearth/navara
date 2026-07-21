@@ -813,6 +813,7 @@ export default class ThreeView<
   private pixelRatioMatchedMedia?: MediaQueryList;
 
   private fixedGpuBytesReportScheduled = false;
+  private fixedGpuBytesResyncPending = false;
   private framesSinceFixedGpuBytesReport = 0;
   private lastReportedFixedGpuBytes = -1;
 
@@ -1685,22 +1686,31 @@ export default class ThreeView<
   };
 
   /**
-   * Re-reports the estimated fixed GPU footprint (the postprocessing
-   * render-target stack) into the memory ledger. Scheduled as a microtask so
-   * bursts of pass additions/removals — e.g. effect setup during init —
-   * coalesce into a single walk and report.
+   * Walks the fixed render-target stack and pushes the estimate into the
+   * memory ledger; the WASM call is skipped while the value is unchanged.
+   */
+  private _reportFixedGpuBytes(): void {
+    if (this._disposed || !this._core) return;
+    const bytes = this.renderPassOrchestrator.estimateFixedGpuBytes();
+    if (bytes === this.lastReportedFixedGpuBytes) return;
+    this.lastReportedFixedGpuBytes = bytes;
+    this._core.setFixedGpuBytes(bytes);
+  }
+
+  /**
+   * Re-reports the fixed GPU footprint for event-triggered changes (init,
+   * resize, pass add/remove). Scheduled as a microtask so bursts — e.g.
+   * effect setup during init — coalesce into a single walk, and marks a
+   * one-shot post-render resync because these events run before the GPU has
+   * lazily allocated the affected targets.
    */
   private _scheduleFixedGpuBytesReport(): void {
+    this.fixedGpuBytesResyncPending = true;
     if (this.fixedGpuBytesReportScheduled) return;
     this.fixedGpuBytesReportScheduled = true;
     queueMicrotask(() => {
       this.fixedGpuBytesReportScheduled = false;
-      if (this._disposed || !this._core) return;
-      this.framesSinceFixedGpuBytesReport = 0;
-      const bytes = this.renderPassOrchestrator.estimateFixedGpuBytes();
-      if (bytes === this.lastReportedFixedGpuBytes) return;
-      this.lastReportedFixedGpuBytes = bytes;
-      this._core.setFixedGpuBytes(bytes);
+      this._reportFixedGpuBytes();
     });
   }
 
@@ -1804,12 +1814,16 @@ export default class ThreeView<
     this.emit("postRender", updatedAt);
 
     // Render targets are GL-allocated lazily during rendering (and freed on
-    // resize), so a footprint taken at init/resize goes stale: re-estimate on
-    // the first frame after every report and then at a low cadence. The
-    // report itself skips the WASM call when the value is unchanged.
-    const frames = ++this.framesSinceFixedGpuBytesReport;
-    if (frames === 1 || frames >= 120) {
-      this._scheduleFixedGpuBytesReport();
+    // resize), so a footprint taken at init/resize/pass-change time goes
+    // stale: re-estimate once on the first frame after such an event, and
+    // otherwise at a low cadence. The report skips the WASM call when the
+    // value is unchanged.
+    if (this.fixedGpuBytesResyncPending) {
+      this.fixedGpuBytesResyncPending = false;
+      this._reportFixedGpuBytes();
+    } else if (++this.framesSinceFixedGpuBytesReport >= 120) {
+      this.framesSinceFixedGpuBytesReport = 0;
+      this._reportFixedGpuBytes();
     }
   }
 
