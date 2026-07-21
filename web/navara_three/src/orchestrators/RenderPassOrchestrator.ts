@@ -2,6 +2,8 @@ import { NamedIndexMap } from "@navaramap/core";
 import { EffectComposer, Pass as PostProcessingPass } from "postprocessing";
 import { HalfFloatType, Scene, WebGLRenderer, Group } from "three";
 
+import { estimateFixedGpuBytes } from "../utils/fixedGpuFootprint";
+
 export type RenderPassOrchestratorOptions = {
   halfFloat?: boolean;
   multisampling?: number;
@@ -34,6 +36,12 @@ export class RenderPassOrchestrator {
   };
   effectComposer: EffectComposer;
 
+  /**
+   * Invoked whenever the pass list changes (add/insert/remove/clear), so the
+   * owner can re-report the fixed GPU footprint to the memory ledger.
+   */
+  onPassesChanged?: () => void;
+
   private passMap = new NamedIndexMap<NamedPass>();
 
   constructor(renderer: WebGLRenderer, options: RenderPassOrchestratorOptions) {
@@ -60,6 +68,7 @@ export class RenderPassOrchestrator {
     const namedPass: NamedPass = { name, pass };
     this.passMap.add(namedPass);
     this.effectComposer.addPass(pass);
+    this.onPassesChanged?.();
   }
 
   /**
@@ -73,6 +82,7 @@ export class RenderPassOrchestrator {
     const namedPass: NamedPass = { name, pass };
     const targetIndex = this.passMap.insertBefore(targetName, namedPass);
     this.effectComposer.addPass(pass, targetIndex);
+    this.onPassesChanged?.();
   }
 
   /**
@@ -86,6 +96,7 @@ export class RenderPassOrchestrator {
     const namedPass: NamedPass = { name, pass };
     const targetIndex = this.passMap.insertAfter(targetName, namedPass);
     this.effectComposer.addPass(pass, targetIndex);
+    this.onPassesChanged?.();
   }
 
   /**
@@ -100,6 +111,7 @@ export class RenderPassOrchestrator {
     this.effectComposer.removePass(targetPass.pass);
     this.passMap.list = this.passMap.list.filter((p) => p.name !== name);
     this.rebuildIndexMap();
+    this.onPassesChanged?.();
   }
 
   /**
@@ -125,6 +137,19 @@ export class RenderPassOrchestrator {
     }
     this.passMap.list = [];
     this.passMap.indexMap = {};
+    this.onPassesChanged?.();
+  }
+
+  /**
+   * Estimates the resident GPU bytes of the fixed, screen-sized render-target
+   * stack (composer buffers + every target reachable from the passes), for
+   * reporting into the memory ledger's `fixed_gpu_bytes` term.
+   */
+  estimateFixedGpuBytes(): number {
+    return estimateFixedGpuBytes(
+      this.effectComposer,
+      this.passMap.list.map((p) => p.pass),
+    );
   }
 
   /**

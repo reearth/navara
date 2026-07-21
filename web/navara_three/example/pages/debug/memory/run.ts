@@ -148,6 +148,7 @@ export const run = async () => {
     jsBufMB: 0,
     attrMB: 0,
     gpuEstMB: 0,
+    fixedGpuMB: 0,
     reservedMB: 0,
     jsHeapMB: 0,
     uaMB: 0,
@@ -203,6 +204,14 @@ export const run = async () => {
     view: "graph",
     min: 0,
     max: 1024,
+  });
+  // Fixed screen-sized allocations (postprocessing render-target stack),
+  // reported from the JS side; tracks the drawing-buffer size, not tiles.
+  pane.addBinding(state, "fixedGpuMB", {
+    readonly: true,
+    view: "graph",
+    min: 0,
+    max: 512,
   });
   // Dispatch-time reservations for in-flight fetches (ReservedCost): closes the
   // load gate before in-flight decode/upload peaks land.
@@ -384,6 +393,7 @@ export const run = async () => {
       state.jsBufMB = stats.externalBufferBytes / MB;
       state.attrMB = stats.externalCpuBytes / MB;
       state.gpuEstMB = stats.gpuBytesEst / MB;
+      state.fixedGpuMB = stats.fixedGpuBytes / MB;
       state.reservedMB = stats.reservedBytes / MB;
       state.bufferCount = stats.bufferCount;
       state.retained = `v:${stats.retainedVector} t:${stats.retainedTerrain} r:${stats.retainedRaster} 3d:${stats.retainedTiles3d}`;

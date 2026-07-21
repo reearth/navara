@@ -222,6 +222,10 @@ export type MemoryStats = {
   gpuBytesEst: number;
   externalCpuBytes: number;
   reservedBytes: number;
+  /** Estimated GPU bytes of fixed screen-sized allocations (the
+   * postprocessing render-target stack), reported via
+   * `Core.setFixedGpuBytes` on init, resize, and pass-list changes. */
+  fixedGpuBytes: number;
   budgetBytes: number | undefined;
   evictedCount: number;
   sseMultiplier: number;
@@ -252,7 +256,10 @@ export type Options = {
   container?: HTMLElement;
   /** Canvas element for rendering. If not provided, a new canvas is created. */
   canvas?: HTMLCanvasElement | OffscreenCanvas;
-  /** Device pixel ratio override. Uses device default if not specified. */
+  /** Device pixel ratio override. When not specified, the device value is
+   * used, capped at 2 on mobile (1 with `mobileOptimization`) — screen-sized
+   * render targets grow quadratically with pixel ratio and dominate mobile
+   * GPU memory. An explicit value bypasses the caps. */
   pixelRatio?: number;
   /** Disables automatic resize handling on window resize events. */
   disableAutoResize?: boolean;
@@ -805,6 +812,10 @@ export default class ThreeView<
 
   private pixelRatioMatchedMedia?: MediaQueryList;
 
+  private fixedGpuBytesReportScheduled = false;
+  private framesSinceFixedGpuBytesReport = 0;
+  private lastReportedFixedGpuBytes = -1;
+
   /**
    * The built-in attribution (credit) UI. `undefined` when disabled via
    * `defaultAttribution: false`, or in a worker / no-DOM environment. Feed it
@@ -929,6 +940,8 @@ export default class ThreeView<
     });
 
     this.renderPassOrchestrator.setSize(width, height);
+    this.renderPassOrchestrator.onPassesChanged = () =>
+      this._scheduleFixedGpuBytesReport();
 
     // Background color
     const bgColor = options.backgroundColor
@@ -1245,6 +1258,7 @@ export default class ThreeView<
       gpuBytesEst: stats.gpuBytesEst,
       externalCpuBytes: stats.externalCpuBytes,
       reservedBytes: stats.reservedBytes,
+      fixedGpuBytes: stats.fixedGpuBytes,
       budgetBytes: stats.budgetBytes,
       evictedCount: stats.evictedCount,
       sseMultiplier: stats.sseMultiplier,
@@ -1369,6 +1383,10 @@ export default class ThreeView<
       costHints.atlasTileBytes,
       costHints.rasterTileBytes,
     );
+
+    // Passes added before `_core` existed could not be reported; sync the
+    // fixed render-target footprint now that the ledger is reachable.
+    this._scheduleFixedGpuBytesReport();
 
     // LOD fog: stronger distance-based degrade on low-memory devices.
     const lodFog = {
@@ -1661,9 +1679,30 @@ export default class ThreeView<
     this._pickHelper?.setSize(drawingBufferSize.x, drawingBufferSize.y);
 
     this._core?.resize(w, h, pixelRatio ?? 1);
+    this._scheduleFixedGpuBytesReport();
 
     this.emit("resize", w, h);
   };
+
+  /**
+   * Re-reports the estimated fixed GPU footprint (the postprocessing
+   * render-target stack) into the memory ledger. Scheduled as a microtask so
+   * bursts of pass additions/removals — e.g. effect setup during init —
+   * coalesce into a single walk and report.
+   */
+  private _scheduleFixedGpuBytesReport(): void {
+    if (this.fixedGpuBytesReportScheduled) return;
+    this.fixedGpuBytesReportScheduled = true;
+    queueMicrotask(() => {
+      this.fixedGpuBytesReportScheduled = false;
+      if (this._disposed || !this._core) return;
+      this.framesSinceFixedGpuBytesReport = 0;
+      const bytes = this.renderPassOrchestrator.estimateFixedGpuBytes();
+      if (bytes === this.lastReportedFixedGpuBytes) return;
+      this.lastReportedFixedGpuBytes = bytes;
+      this._core.setFixedGpuBytes(bytes);
+    });
+  }
 
   private _updateUniforms() {
     const viewport = this._getCanvasSize();
@@ -1763,6 +1802,15 @@ export default class ThreeView<
     this.shadowMapViewers.render(this._renderer);
 
     this.emit("postRender", updatedAt);
+
+    // Render targets are GL-allocated lazily during rendering (and freed on
+    // resize), so a footprint taken at init/resize goes stale: re-estimate on
+    // the first frame after every report and then at a low cadence. The
+    // report itself skips the WASM call when the value is unchanged.
+    const frames = ++this.framesSinceFixedGpuBytesReport;
+    if (frames === 1 || frames >= 120) {
+      this._scheduleFixedGpuBytesReport();
+    }
   }
 
   /**
@@ -2448,9 +2496,14 @@ export default class ThreeView<
     const { width, height } = this._getCanvasSize() ?? {};
     if (!width || !height) return;
 
+    // Route through getDevicePixelRatio so a devicePixelRatio change (zoom,
+    // monitor move) cannot bypass the mobile caps applied at init.
     const pixelRatio = isWorker()
       ? (this._options.pixelRatio ?? 1)
-      : window.devicePixelRatio;
+      : getDevicePixelRatio({
+          override: this._options.pixelRatio,
+          mobileOptimization: this._options.mobileOptimization,
+        });
     this.resize(width, height, pixelRatio);
   };
 

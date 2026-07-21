@@ -34,6 +34,9 @@ pub struct MemoryStatsData {
     /// (`ReservedCost`); folded into the gate/pressure usage until the tile
     /// lands or the request aborts.
     pub reserved_bytes: u64,
+    /// Estimated GPU bytes of fixed screen-sized allocations (the
+    /// postprocessing render-target stack), reported from the JS side.
+    pub fixed_gpu_bytes: u64,
     pub budget_bytes: Option<u64>,
     pub evicted_count: u64,
     pub sse_multiplier: f32,
@@ -257,6 +260,16 @@ impl App {
         }
     }
 
+    /// Sets the estimated GPU bytes of the fixed, screen-sized render-target
+    /// stack (postprocessing ping-pong buffers, gbuffer MRT, depth textures).
+    /// The JS side owns those allocations and re-reports on init, resize, and
+    /// pass-list changes; see [`MemoryLedger::fixed_gpu_bytes`].
+    pub fn set_fixed_gpu_bytes(&mut self, bytes: f64) {
+        if let Some(mut ledger) = self.app.world_mut().get_resource_mut::<MemoryLedger>() {
+            ledger.fixed_gpu_bytes = bytes as u64;
+        }
+    }
+
     pub fn memory_stats(&mut self) -> Option<MemoryStatsData> {
         let retained_vector: u32 = {
             let world = self.app.world_mut();
@@ -276,6 +289,7 @@ impl App {
             gpu_bytes_est: ledger.map(|l| l.gpu_bytes_est).unwrap_or(0),
             external_cpu_bytes: ledger.map(|l| l.external_cpu_bytes).unwrap_or(0),
             reserved_bytes: ledger.map(|l| l.reserved_bytes).unwrap_or(0),
+            fixed_gpu_bytes: ledger.map(|l| l.fixed_gpu_bytes).unwrap_or(0),
             budget_bytes: ledger.and_then(|l| l.budget_bytes),
             evicted_count: ledger.map(|l| l.evicted_count).unwrap_or(0),
             sse_multiplier: ledger.map(|l| l.sse_multiplier).unwrap_or(1.0),

@@ -126,6 +126,16 @@ pub struct MemoryLedger {
     /// killed.
     pub max_sse_multiplier: f32,
     pub cost_hints: CostHints,
+    /// Estimated GPU bytes of fixed, screen-sized allocations that exist for
+    /// the whole session regardless of tile streaming — chiefly the
+    /// postprocessing render-target stack (composer ping-pong buffers, gbuffer
+    /// MRT attachments, depth textures). Reported by the JS side (which owns
+    /// the Three.js render targets) at init, on resize, and when the pass list
+    /// changes. Folded into [`Self::usage`] (and thus [`Self::hard_usage`]) so
+    /// the tile budget binds against the memory that is actually left over:
+    /// unlike tiles this term is not evictable — it shrinks only when the
+    /// drawing buffer does.
+    pub fixed_gpu_bytes: u64,
     /// Cumulative number of tiles evicted by budget enforcement (stats).
     pub evicted_count: u64,
 }
@@ -144,6 +154,7 @@ impl Default for MemoryLedger {
             min_sse_multiplier: 1.0,
             max_sse_multiplier: MAX_SSE_MULTIPLIER,
             cost_hints: CostHints::default(),
+            fixed_gpu_bytes: 0,
             evicted_count: 0,
         }
     }
@@ -169,7 +180,8 @@ impl MemoryLedger {
     }
 
     /// Current total usage: exact `BufferStore` CPU bytes + externally
-    /// accounted CPU bytes (attribute tables) + estimated GPU bytes +
+    /// accounted CPU bytes (attribute tables) + estimated GPU bytes + fixed
+    /// screen-sized GPU allocations ([`Self::fixed_gpu_bytes`]) +
     /// dispatch-time reservations for in-flight fetches
     /// ([`ReservedCost`](crate::ReservedCost)). Including reservations here
     /// means both the load gate/pressure ([`Self::hard_usage`]) *and* eviction
@@ -177,7 +189,11 @@ impl MemoryLedger {
     /// in-flight peaks land, and reserving evicts old pooled tiles to make room
     /// for the incoming ones.
     pub fn usage(&self, cpu_total: u64) -> u64 {
-        (cpu_total + self.external_cpu_bytes + self.gpu_bytes_est + self.reserved_bytes)
+        (cpu_total
+            + self.external_cpu_bytes
+            + self.gpu_bytes_est
+            + self.fixed_gpu_bytes
+            + self.reserved_bytes)
             .saturating_sub(self.pending_evicted_gpu_bytes)
     }
 

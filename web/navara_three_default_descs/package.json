@@ -54,7 +54,7 @@
     "@navaramap/three": "workspace:*",
     "@navaramap/three_csm": "workspace:*",
     "@types/three": "0.185.1",
-    "postprocessing": "6.38.3",
+    "postprocessing": "6.39.3",
     "three": "0.185.1",
     "vite-plugin-glsl": "1.6.0"
   }
