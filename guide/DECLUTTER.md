@@ -388,7 +388,7 @@ Three material types carry the two config fields consumed by this pass —
 
 | Field | Type | Default | Meaning |
 | --- | --- | --- | --- |
-| `declutter` | `boolean` | `false` | opt this label/sprite into the shared placement pass |
+| `declutter` | `boolean` | `true` | participate in the shared placement pass; set `false` to draw this label/sprite unconditionally |
 | `declutterPriority` | `number` | `0` | layer-level priority; higher wins an overlap |
 
 ```ts

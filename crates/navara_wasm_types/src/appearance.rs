@@ -31,7 +31,8 @@ pub struct PointMaterial {
     pub transparent: Option<bool>,
     pub opacity: Option<f32>,
     /// Participate in screen-space decluttering: when labels/sprites overlap
-    /// on screen, lower-priority ones are hidden. Defaults to `false`.
+    /// on screen, lower-priority ones are hidden. Defaults to `true`; set to
+    /// `false` to draw every label unconditionally.
     pub declutter: Option<bool>,
     /// Placement priority for decluttering; higher wins. Only meaningful when
     /// `declutter` is enabled. Defaults to `0.0`.
@@ -162,7 +163,8 @@ pub struct BillboardMaterial {
     #[serde(rename = "alphaTest")]
     pub alpha_test: Option<f32>,
     /// Participate in screen-space decluttering: when labels/sprites overlap
-    /// on screen, lower-priority ones are hidden. Defaults to `false`.
+    /// on screen, lower-priority ones are hidden. Defaults to `true`; set to
+    /// `false` to draw every label unconditionally.
     pub declutter: Option<bool>,
     /// Placement priority for decluttering; higher wins. Only meaningful when
     /// `declutter` is enabled. Defaults to `0.0`.
@@ -372,7 +374,8 @@ pub struct TextMaterial {
     pub text_align: Option<String>,
 
     /// Participate in screen-space decluttering: when labels/sprites overlap
-    /// on screen, lower-priority ones are hidden. Defaults to `false`.
+    /// on screen, lower-priority ones are hidden. Defaults to `true`; set to
+    /// `false` to draw every label unconditionally.
     pub declutter: Option<bool>,
     /// Placement priority for decluttering; higher wins. Only meaningful when
     /// `declutter` is enabled. Defaults to `0.0`.

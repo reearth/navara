@@ -80,7 +80,8 @@ pub struct PointMaterial {
     pub transparent: bool,
     pub opacity: f32,
     /// Participate in screen-space decluttering: when labels/sprites overlap
-    /// on screen, lower-priority ones are hidden.
+    /// on screen, lower-priority ones are hidden. Enabled by default; set to
+    /// `false` to draw every label unconditionally.
     pub declutter: bool,
     /// Placement priority for decluttering; higher wins. Only meaningful when
     /// `declutter` is enabled.
@@ -105,7 +106,7 @@ impl Default for PointMaterial {
             offset_depth: true,
             transparent: true,
             opacity: 1.0,
-            declutter: false,
+            declutter: true,
             declutter_priority: 0.0,
             // post effect
             effect_ids: None,
@@ -141,7 +142,8 @@ pub struct BillboardMaterial {
     pub opacity: f32,
     pub alpha_test: f32,
     /// Participate in screen-space decluttering: when labels/sprites overlap
-    /// on screen, lower-priority ones are hidden.
+    /// on screen, lower-priority ones are hidden. Enabled by default; set to
+    /// `false` to draw every label unconditionally.
     pub declutter: bool,
     /// Placement priority for decluttering; higher wins. Only meaningful when
     /// `declutter` is enabled.
@@ -168,7 +170,7 @@ impl Default for BillboardMaterial {
             transparent: false,
             opacity: 1.0,
             alpha_test: 0.1,
-            declutter: false,
+            declutter: true,
             declutter_priority: 0.0,
             // post effect
             effect_ids: None,
@@ -237,7 +239,8 @@ pub struct TextMaterial {
     pub text_align: String,
 
     /// Participate in screen-space decluttering: when labels/sprites overlap
-    /// on screen, lower-priority ones are hidden.
+    /// on screen, lower-priority ones are hidden. Enabled by default; set to
+    /// `false` to draw every label unconditionally.
     pub declutter: bool,
     /// Placement priority for decluttering; higher wins. Only meaningful when
     /// `declutter` is enabled.
@@ -278,7 +281,7 @@ impl Default for TextMaterial {
             line_height: 1.0,
             text_align: "center".to_string(),
 
-            declutter: false,
+            declutter: true,
             declutter_priority: 0.0,
         }
     }

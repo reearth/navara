@@ -146,6 +146,7 @@ evaluate(
 | `width` | `number` | ライン幅（ピクセル、ポリライン地物用） |
 | `size` | `number` | ポイント/テキストサイズ（メートルまたはピクセル、ポイント/テキスト地物用） |
 | `opacity` | `number` | 地物の不透明度、範囲 0.0-1.0（ポリゴン/ポイント/ビルボード/モデル/テキスト用） |
+| `declutterPriority` | `number` | デクラッターの配置優先度。値が大きいほど重なりの競合に勝ちます（[`declutter`](../../../three/material/text-material/#declutter) が有効なポイント/ビルボード/テキスト用）。レイヤーの `declutterPriority` を上書きします |
 | `image` | `string \| null` | 画像の URL（ビルボード地物用）。個別の URL ごとに一度だけ読み込まれ、レイヤーのテクスチャアトラスにパックされます。`null` を返すと以前に設定した地物ごとの画像がクリアされ、ビルボードマテリアルのデフォルト `url` に戻ります |
 
 :::note

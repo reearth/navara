@@ -469,9 +469,6 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       offsetDepth: true,
       depthTest: true,
       maxWidth: params.maxWidth,
-      // Screen-overlapping labels are hidden by priority (set per feature
-      // from the admin tier in the evaluator below).
-      declutter: true,
     },
   });
 
@@ -592,7 +589,6 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       offsetDepth: true,
       highQuality: true,
       maxWidth: params.maxWidth,
-      declutter: true,
     },
   });
   {

@@ -118,7 +118,6 @@ const run = async () => {
         outlineColor: new Color().setStyle("#000000"),
         outlineWidth: 5,
         outlineOpacity: 0.5,
-        declutter: true,
       },
     });
 

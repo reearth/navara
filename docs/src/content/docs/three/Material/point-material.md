@@ -69,16 +69,16 @@ import { Color } from "@navaramap/three";
 
 **Type:** `boolean | undefined`
 
-**Description:** Participate in screen-space decluttering: when labels/sprites overlap on screen, lower-priority ones are hidden.
+**Description:** Participate in screen-space decluttering: when labels/sprites overlap on screen, lower-priority ones are hidden. Enabled by default; set to `false` to draw every label unconditionally.
 
-**Default:** `false`
+**Default:** `true`
 
 **Example:**
 
 ```typescript
 {
   point: {
-    declutter: true
+    declutter: false
   }
 }
 ```
