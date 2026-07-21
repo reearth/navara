@@ -1692,6 +1692,7 @@ export default class ThreeView<
   private _reportFixedGpuBytes(): void {
     if (this._disposed || !this._core) return;
     const bytes = this.renderPassOrchestrator.estimateFixedGpuBytes();
+    this.framesSinceFixedGpuBytesReport = 0;
     if (bytes === this.lastReportedFixedGpuBytes) return;
     this.lastReportedFixedGpuBytes = bytes;
     this._core.setFixedGpuBytes(bytes);
