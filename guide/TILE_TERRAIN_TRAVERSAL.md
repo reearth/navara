@@ -49,16 +49,18 @@ flowchart LR
   end
   CAM["Camera / frustum"] --> TT
   CAM --> RT
-  TT -->|"pulls textures by extent"| JOIN{{"resolve_raster_textures()"}}
+  TT -->|"pulls textures by extent"| JOIN{{"resolve_raster_texture()<br/>resolve_raster_tile_states()"}}
   RQT --> JOIN
   JOIN --> MAT["update_mesh_material()<br/>drape onto terrain mesh"]
 ```
 
 The terrain traversal owns the **render unit** (the mesh that actually gets
-drawn). The raster traversal only loads and tracks textures; the terrain tile
-**pulls** the matching raster textures (one tile when the schemes agree, the
-**set** of overlapping WebMercator tiles when they differ) as it builds its
-material.
+drawn). The raster traversal only loads and tracks textures; the terrain side
+**pulls** the matching raster textures as it builds its material. When the
+schemes agree the pull is a single identity tile bound straight to a material
+slot; when they differ, the **set** of overlapping WebMercator tiles is
+resolved by a separate per-terrain-tile query and baked into one render target
+per layer on the web side (see [the pull](#joining-the-two--the-pull)).
 
 ## The two tile types
 
@@ -241,68 +243,118 @@ separate `TerrainInformationQuadtree`.)
 ## Joining the two — the pull
 
 When `update_mesh_material` (`crates/navara_tile/src/tile/system.rs`) builds a
-terrain tile's material, it resolves each layer:
+terrain tile's material, it resolves each layer. Every branch emits **exactly
+one composite slot per layer** (`max_slots = sorted_layers.len()`):
 
 - **hillshade layers** → from the terrain tile's own `hillshade_entity_ids`
-  (with the terrain-side parent fallback), and
-- **regular raster layers** → **pulled** from the raster quadtree by
-  `resolve_raster_textures()` (`crates/navara_tile/src/raster/resolve.rs`).
+  (with the terrain-side parent fallback),
+- **regular raster layers on WebMercator terrain** → **pulled** from the raster
+  quadtree by `resolve_raster_texture()`
+  (`crates/navara_tile/src/raster/resolve.rs`). The drape is same-scheme, so it
+  is 1:1 by construction: the slot binds the terrain tile's own identity WM
+  tile, or its nearest loaded ancestor while that loads. Never reprojects.
+- **regular raster layers on Geographic terrain** (elevation heatmaps included)
+  → a **baked slot**: the material carries no fragment at all
+  (`layer_fragments = None`, identity UV, `layer_reproject = true`). The N:M
+  overlap is resolved by a separate per-terrain-tile pull
+  (`getRasterTileStates` → `resolve_raster_tile_states`) and the overlapping WM
+  tiles are baked into **one render target per layer** on the TypeScript side —
+  mirroring the texturized-vector drape
+  ([VECTOR_TILE_DRAPING.md](VECTOR_TILE_DRAPING.md)).
 
-A single raster layer no longer maps to a single slot. Because one terrain tile
-can overlap several WebMercator raster tiles (the N:M case), `resolve_raster_textures`
-returns a **`Vec<ResolvedRasterTexture>`** — one entry per overlapping source
-tile — and `update_mesh_material` pushes **one material slot per entry**. So the
-per-slot vectors (`shows`, `colors`, `layer_fragments`, `layer_uv_transforms`,
-`layer_reproject`, …) are generally **longer than the layer count**.
+### WebMercator terrain: the direct resolve
 
 ```mermaid
 sequenceDiagram
   participant UMM as update_mesh_material
-  participant RES as resolve_raster_textures
+  participant RES as resolve_raster_texture
   participant RQT as RasterTileQuadtree
   participant MAT as RasterTileInternalMaterial
-  UMM->>RES: wm_zoom_for_lng_span(extent) → target_z
-  UMM->>RES: resolve_raster_textures(extent, target_z, max_tiles, layer)
-  RES->>RES: web_mercator_overlapping_tiles(extent, z') within budget
-  loop each overlapping WM tile
-    RES->>RQT: nearest loaded tile (self or ancestor)
-    RQT-->>RES: (entity, coords)
-  end
-  RES-->>UMM: Vec{ entity, uv_transform, raster_extent }
-  UMM->>MAT: per-slot fragments + uv_transforms + layer_reproject + terrain_lat_range
+  UMM->>RES: wm_zoom_for_lng_span(extent) → target_z (the tile's own zoom)
+  RES->>RQT: nearest loaded tile (self or ancestor)
+  RQT-->>RES: (entity, coords)
+  RES-->>UMM: Option{ entity, uv_transform, raster_extent }
+  UMM->>MAT: one slot: fragment + uv_transform, layer_reproject = false
 ```
 
-Inside `resolve_raster_textures`:
+`wm_zoom_for_lng_span(lng_span, max_zoom)` picks the WM zoom whose tiles match
+the terrain tile's longitude span (`z ≈ round(log2(2π / span))`) — for
+WebMercator terrain that is the tile's own zoom, so this is the historical
+identity lookup. A tile whose own texture isn't loaded climbs to its nearest
+loaded ancestor, carrying a `uv_transform` sub-rect
+(`uv_rect_from_extents`, `navara_geometry::tile`). This ancestor fallback is
+why decoupling render-readiness from texture-readiness never produces a blank
+tile — there is almost always _some_ ancestor texture to show while the exact
+tile loads. `uv_rect_from_extents` is computed in geographic lng/lat, which is
+exact when both sides share the scheme, so `layer_reproject` is `false` and the
+composite shader's reprojection branch is skipped entirely.
 
-- **Pick the zoom.** `wm_zoom_for_lng_span(lng_span, max_zoom)` picks the WM zoom
-  whose tiles roughly match the terrain tile's longitude span (`z ≈
-  round(log2(2π / span))`). For WebMercator terrain this returns the tile's own
-  zoom, so the whole path degenerates to the old identity lookup.
-- **Find the overlapping set within budget.** `web_mercator_overlapping_tiles(extent, z)`
-  (`navara_core::tiles`) returns the WM tiles overlapping the terrain extent.
-  The resolver coarsens `z` (halving the grid each step) until the count fits
-  `max_tiles`, so the fan-out is bounded.
-- **Per tile, fall back to a ready ancestor.** For each overlapping tile whose
-  own texture isn't loaded, the resolver climbs to its nearest loaded ancestor
-  (de-duplicated — a shared ancestor is emitted once). Each entry carries a
-  `uv_transform` sub-rect (from `uv_rect_from_extents`, `navara_geometry::tile`)
-  plus the source tile's `raster_extent`. This ancestor fallback is why
-  decoupling render-readiness from texture-readiness never produces a blank tile
-  — there is almost always _some_ ancestor texture to show while the exact tile
-  loads.
+### Geographic terrain: the baked resolve
 
-`uv_rect_from_extents` is computed in geographic lng/lat, so its **longitude**
-(x) mapping is exact even across schemes, but the **latitude** (y) mapping is
-only affine — wrong for a WebMercator texture draped on equal-degree Geographic
-terrain. So when the terrain tile is Geographic the material also carries, per
-slot, `layer_reproject = true` and, once for the tile, `terrain_lat_range =
-[south, north]` (radians). The TypeScript composite shader uses these to
-reproject the latitude axis through Mercator per fragment — see
-[TILE_TEXTURE_COMPOSITING.md](TILE_TEXTURE_COMPOSITING.md). For WebMercator
-terrain `layer_reproject` is all `false` and `terrain_lat_range` is `None`.
+One Geographic terrain tile overlaps **several** WM raster tiles (N:M, growing
+toward the poles). Formerly each overlapping tile consumed one composite
+material slot, splitting a fixed slot budget across the draped layers — with
+3+ layers each coarsened to a single tile, and the per-tile slot count could
+still overflow the GPU sampler budget. Now the overlap never reaches the
+material: the web bakes every overlapping tile of a layer into that layer's
+**one** render target, so a layer costs one slot no matter its overlap, and the
+overlap budget (`RASTER_DRAPE_OVERLAP_BUDGET`, 5) is **per layer** rather than
+divided across layers.
 
-The resulting per-slot `(entity, uv_transform, reproject)` lists are handed to
-the material, and the TypeScript side bakes them into the tile's atlas —
+The pull is a second, revision-gated WASM boundary:
+
+```mermaid
+sequenceDiagram
+  participant TS as web (BakedRasterDrapeResolver)
+  participant ECS as get_raster_tiles (navara_ecs)
+  participant SNAP as RasterBakeSnapshot
+  participant RES as resolve_raster_tile_states
+  TS->>TS: rasterRevision() changed?
+  TS->>ECS: getRasterTileStates(terrain handle)
+  ECS->>SNAP: sorted baked layers + loaded-fragment set
+  ECS->>RES: resolve per layer (overlap, walk-up, dedup)
+  RES-->>TS: flat [{ layer_ordinal, fragment, mercator uv, reproject band }]
+```
+
+- **`resolve_raster_tile_states`** (`raster/resolve.rs`) is a pure function
+  over the quadtree (unit-testable without an `App`). Per baked layer it picks
+  `target_z = wm_zoom_for_lng_span(span, source max_zoom)`, enumerates
+  `overlapping_tiles_within_budget` (coarsening the zoom until the count fits
+  the per-layer budget), climbs each gap to its nearest loaded ancestor
+  (deduplicated — a shared ancestor is baked once), and emits one
+  `ResolvedRasterTileState` per source tile. The UV affine is **Mercator**
+  (`uv_rect_from_extents_mercator`) because it frames the offscreen **bake**
+  camera, not the composite paste.
+- **Ordinal pairing.** `layer_ordinal` is the layer's position among the baked
+  (non-hillshade) layers in sorted order. `update_mesh_material` emits its k-th
+  fragment-less baked slot from the same sorted, filtered layer list, so the
+  web pairs slot k with ordinal k without any id plumbing. The sort and filter
+  in `snapshot_raster_bake_inputs` MUST stay in lockstep with
+  `update_mesh_material`. An unloaded layer leaves a hole rather than shifting
+  the ordinals after it.
+- **`RasterResolveRevision`** (mirrors `VectorResolveRevision`) gates the
+  per-tile pull: it bumps on fragment load completions, bake-relevant layer
+  changes, raster tile destruction (cache prune / memory eviction), and globe
+  scheme flips — **not** on camera movement (an existing tile's resolve depends
+  only on the loaded-fragment set; bumping per traverse made every visible tile
+  re-resolve every frame, an FPS killer). Layer changes are filtered through a
+  **bake-config fingerprint** (hillshade/heatmap flags + source id, kept on
+  `RasterTileCacheManager`) so appearance-only mutations — e.g. a per-frame
+  opacity animation — don't bump. The web reads `rasterRevision()` once per
+  frame and skips `getRasterTileStates` while it is unchanged.
+- **`RasterBakeSnapshot`** caches the resolve inputs (the sorted baked-layer
+  list + the loaded-fragment set), refreshed by `snapshot_raster_bake_inputs`
+  only when the revision changed, registered at the end of the raster chain so
+  every same-frame bump (traverse, prune, eviction) is captured.
+  `get_raster_tiles` runs per visible terrain tile, so it must only read
+  resources and walk the quadtree — re-scanning fragments and re-sorting layers
+  per tile per frame was the cost this removes. The snapshot stays empty on
+  non-Geographic globes (nothing bakes there).
+
+A baked slot's identity UV plus `layer_reproject = true` and the tile-wide
+`terrain_lat_range = [south, north]` (radians) tell the composite shader to
+remap the latitude axis through Mercator per fragment — the baked render target
+spans the terrain tile's Mercator-projected extent. The bake and paste are
 continued in [TILE_TEXTURE_COMPOSITING.md](TILE_TEXTURE_COMPOSITING.md).
 
 ## Texture fragment ownership
@@ -324,40 +376,42 @@ tiles, so the queries are scoped precisely: the raster filter matches
 
 ## Scheme support
 
-The join is **extent-based**, so a single pull path covers both the same-scheme
-and the cross-scheme case — the WebMercator-on-WebMercator drape is just its
-degenerate (1:1) form:
+Both cases pick their zoom with `wm_zoom_for_lng_span` and fall back through
+the same ancestor walk-up, but they drape through different material paths:
 
 ```mermaid
 flowchart LR
-  subgraph Same["WebMercator terrain (1:1)"]
-    A["wm_zoom_for_lng_span → tile's own zoom<br/>overlap set = the single same-coords tile<br/>uv_transform = identity, no reprojection"]
+  subgraph Same["WebMercator terrain (1:1, direct)"]
+    A["resolve_raster_texture()<br/>single identity/ancestor tile<br/>fragment bound straight to its slot<br/>no reprojection"]
   end
-  subgraph Cross["Geographic terrain (N:M)"]
-    B["web_mercator_overlapping_tiles(extent, z)<br/>→ N WM tiles per terrain tile (budget-capped)"]
-    C["uv_rect_from_extents() → per-tile sub-rect"]
-    D["layer_reproject + terrain_lat_range<br/>→ shader reprojects latitude (Mercator)"]
+  subgraph Cross["Geographic terrain (N:M, baked)"]
+    B["resolve_raster_tile_states()<br/>→ N WM tiles per layer (per-layer budget)"]
+    C["web bakes them into ONE render target per layer<br/>(mercator affines frame the bake camera)"]
+    D["slot: identity UV + layer_reproject<br/>→ shader reprojects latitude (Mercator)"]
+    B --> C --> D
   end
-  A -.->|same code, generalized| B
 ```
 
 - **WebMercator terrain** (including WebMercator quantized-mesh) and
-  terrain-less raster maps resolve to a single overlapping tile at the terrain
-  tile's own coordinates — the historical identity lookup, with ancestor
-  fallback. `layer_reproject` is `false`, so the shader's reprojection branch is
-  skipped entirely.
+  terrain-less raster maps resolve to the single tile at the terrain tile's own
+  coordinates — the historical identity lookup, with ancestor fallback.
+  `layer_reproject` is `false`, so the shader's reprojection branch is skipped
+  entirely.
 - **Geographic terrain** (the quantized-mesh default) overlaps several
-  WebMercator raster tiles. The pull resolves the **set** (capped by
-  `RASTER_DRAPE_SLOT_BUDGET`), gives each a `uv_rect_from_extents` sub-rect for
-  longitude, and flags `layer_reproject` so the composite shader corrects the
-  latitude non-linearity per fragment. A Geographic terrain tile now drapes
-  imagery correctly — it is no longer skipped.
+  WebMercator raster tiles per layer. The resolved set (capped **per layer** by
+  `RASTER_DRAPE_OVERLAP_BUDGET`) is mosaicked into the layer's render target;
+  the composite shader corrects the latitude non-linearity per fragment. The
+  web picks the baked resolver once at tile-mesh creation from
+  `Globe.isGeographicTiling` — a runtime scheme flip drains and rebuilds every
+  tile, and bumps `RasterResolveRevision` so a stale snapshot cannot survive
+  the flip.
 
 > **Polar caps.** WebMercator imagery stops at ~±85.05° while Geographic terrain
 > reaches ±90°. `web_mercator_overlapping_tiles` clamps a polar extent onto the
-> band-edge tile row, and the composite shader stretches that edge tile's last
-> imagery row across the cap, so the surface near the poles is covered rather
-> than blank.
+> band-edge tile row, `uv_rect_from_extents_mercator` clamps the bake framing
+> onto the WM band (a fully-polar tile becomes a minimal sliver hugging the
+> edge), and the composite shader stretches the band-edge imagery row across
+> the cap, so the surface near the poles is covered rather than blank.
 
 ## Key files
 
@@ -372,7 +426,10 @@ flowchart LR
 | Terrain traversal | `crates/navara_tile/src/tile/traverse.rs` |
 | Raster traversal | `crates/navara_tile/src/raster/traverse.rs` |
 | Raster texture request | `crates/navara_tile/src/raster/request.rs` |
-| Pull / resolve | `crates/navara_tile/src/raster/resolve.rs` (`resolve_raster_textures`, `wm_zoom_for_lng_span`) |
-| Material drape / slot budget | `crates/navara_tile/src/tile/system.rs` (`update_mesh_material`, `RASTER_DRAPE_SLOT_BUDGET`) |
+| Pull / resolve | `crates/navara_tile/src/raster/resolve.rs` (`resolve_raster_texture`, `resolve_raster_tile_states`, `RASTER_DRAPE_OVERLAP_BUDGET`) |
+| Baked-resolve gate + snapshot | `crates/navara_tile/src/raster/mod.rs` / `raster/system.rs` (`RasterResolveRevision`, `RasterBakeSnapshot`, `snapshot_raster_bake_inputs`) |
+| Baked-resolve wasm boundary | `crates/navara_ecs/src/lib.rs` (`get_raster_tiles`, `raster_revision`), `crates/navara_wasm/src/raster_tile.rs` (`getRasterTileStates`, `rasterRevision`) |
+| Mercator bake-camera UV | `crates/navara_geometry/src/tile.rs` (`uv_rect_from_extents_mercator`) |
+| Material drape (one slot per layer) | `crates/navara_tile/src/tile/system.rs` (`update_mesh_material`) |
 | Hillshade request | `crates/navara_tile/src/texture_fragment/helpers.rs` |
 | Plugin / system order | `crates/navara_tile/src/lib.rs` |
