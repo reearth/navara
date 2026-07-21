@@ -35,10 +35,20 @@ import {
   Layer as NavaraLayer,
 } from "@navaramap/three";
 import { useViewContext, Layer } from "@navaramap/three_react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 
 export function Layers() {
   const { view } = useViewContext();
+
+  // Credit the data through the built-in attribution UI.
+  useEffect(() => {
+    view?.attribution?.add([
+      {
+        attribution: "Geospatial Information Authority of Japan (GSI)",
+        attributionUrl: "https://maps.gsi.go.jp/development/ichiran.html",
+      },
+    ]);
+  }, [view]);
 
   const baseTiles = useMemo<LayerDescription>(
     () => ({

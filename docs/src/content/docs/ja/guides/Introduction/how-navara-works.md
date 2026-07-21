@@ -2,7 +2,7 @@
 title: How Navara Works
 description: Navara のプラグインベースアーキテクチャとライブラリエコシステムの理解。
 sidebar:
-  order: 2
+  order: 3
 ---
 
 ## ヘッドレスアーキテクチャ
@@ -114,4 +114,4 @@ Navara は複数の npm パッケージに分かれています。一見複雑�
 
 ## 次のステップ
 
-Navara を実際に動かしてみましょう。[Getting Started](../getting-started/) に進んで、動くコード例とともに最初のプロジェクトをセットアップしてください。
+まだ最初の地球儀を作っていない場合は、[Getting Started](../getting-started/) に進んでください。Three.js レンダラーについてさらに深く知るには、[What is navara_three?](../../../three/introduction/what-is-navara-three/) に進みましょう。

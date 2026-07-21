@@ -2,7 +2,7 @@
 title: How Navara Works
 description: Understanding Navara's plugin-based architecture and library ecosystem.
 sidebar:
-  order: 2
+  order: 3
 ---
 
 ## Headless Architecture
@@ -114,4 +114,4 @@ The **guides** section (where you are now) contains this introduction, community
 
 ## Next Steps
 
-Ready to see Navara in action? Head to [Getting Started](../getting-started/) to set up your first project with a working code example.
+If you haven't built your first globe yet, head to [Getting Started](../getting-started/). To dive deeper into the Three.js renderer, continue with [What is navara_three?](../../../three/introduction/what-is-navara-three/).

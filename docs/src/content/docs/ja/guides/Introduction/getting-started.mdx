@@ -2,8 +2,10 @@
 title: Getting Started
 description: Navara で最初の 3D 地図アプリケーションを作成するクイックスタートガイド。
 sidebar:
-  order: 3
+  order: 2
 ---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
 
 ## クイックスタート
 
@@ -11,24 +13,43 @@ sidebar:
 
 ## 前提条件
 
-[Node.js](https://nodejs.org/)（v18 以降）と、npm や pnpm などのパッケージマネージャーがインストールされている必要があります。
+[Node.js](https://nodejs.org/)（v18 以降）と、npm・yarn・pnpm などのパッケージマネージャーがインストールされている必要があります。
 
-## プロジェクトの作成
+## パッケージのインストール
 
-最も手軽に始める方法は、スターターテンプレートを使うことです。
+Navara は npm の [`@navaramap`](https://www.npmjs.com/org/navaramap) スコープで公開されています。プロジェクト（バンドラーは何でも構いません。素の [Vite](https://vite.dev/) TypeScript プロジェクトで十分です）に、Three.js レンダラーの `@navaramap/three`、デフォルトプラグインの `@navaramap/three_default_plugin`、および peer dependencies の `three` と `postprocessing` をインストールします。
+
+<Tabs syncKey="pkg">
+
+<TabItem label="npm">
 
 ```bash
-npm create navara-three-starter my-navara-app
-cd my-navara-app
-npm install
-npm run dev
+npm install @navaramap/three @navaramap/three_default_plugin three postprocessing
 ```
 
-これにより、Navara と依存関係が事前に設定された最小限のプロジェクトが生成されます。
+</TabItem>
+
+<TabItem label="yarn">
+
+```bash
+yarn add @navaramap/three @navaramap/three_default_plugin three postprocessing
+```
+
+</TabItem>
+
+<TabItem label="pnpm">
+
+```bash
+pnpm add @navaramap/three @navaramap/three_default_plugin three postprocessing
+```
+
+</TabItem>
+
+</Tabs>
 
 ## 最小限の例
 
-3D 地球儀を作成し、衛星画像を表示し、フォトリアルな空と大気を有効にするコアコードは以下の通りです（[What is Navara?](../what-is-navara/) に掲載しているものと同じ例です）。
+3D 地球儀を作成し、衛星画像を表示し、フォトリアルな空と大気を有効にするコアコードは以下の通りです（[What is Navara?](../what-is-navara/) に掲載しているものと同じ例です）。プロジェクトのエントリーポイント（Vite プロジェクトであれば `src/main.ts` など）に追加し、開発サーバーを起動してください。
 
 ![Hero](@assets/hero.png)
 

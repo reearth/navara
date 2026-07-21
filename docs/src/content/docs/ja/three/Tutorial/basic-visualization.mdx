@@ -5,23 +5,47 @@ sidebar:
   order: 200
 ---
 
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
 このチュートリアルでは、navara_three を使って地図を表示する基本的な方法を説明します。
 
 ## セットアップ
 
-navara_three の新しいプロジェクトを作成し、必要なライブラリをインストールします：
+このチュートリアルは、[Vite](https://vite.dev/) などのバンドラーを使った TypeScript プロジェクトを前提としています。Navara のパッケージと peer dependencies をインストールします：
+
+<Tabs syncKey="pkg">
+
+<TabItem label="npm">
 
 ```bash
-npm create navara-three-starter my-navara-app
-cd my-navara-app
-npm install
+npm install @navaramap/three @navaramap/three_default_plugin three postprocessing
 ```
+
+</TabItem>
+
+<TabItem label="yarn">
+
+```bash
+yarn add @navaramap/three @navaramap/three_default_plugin three postprocessing
+```
+
+</TabItem>
+
+<TabItem label="pnpm">
+
+```bash
+pnpm add @navaramap/three @navaramap/three_default_plugin three postprocessing
+```
+
+</TabItem>
+
+</Tabs>
 
 ## 地図を表示する
 
 ### ラスタレイヤーを追加する
 
-`index.html` を開くと、以下のようになっています。
+プロジェクトルートに、以下の内容で `index.html` を作成します。
 
 ```html
 <!DOCTYPE html>
@@ -37,7 +61,7 @@ npm install
 </html>
 ```
 
-次に、`src/main.ts` を開くと、以下のようになっています。
+次に、以下の内容で `src/main.ts` を作成します。
 
 ```typescript
 import ThreeView from "@navaramap/three";

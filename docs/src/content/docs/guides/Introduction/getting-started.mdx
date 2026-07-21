@@ -2,8 +2,10 @@
 title: Getting Started
 description: Quick start guide to create your first Navara 3D globe application.
 sidebar:
-  order: 3
+  order: 2
 ---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
 
 ## Quick Start
 
@@ -11,24 +13,43 @@ This page walks you through the minimal code needed to display a 3D globe with N
 
 ## Prerequisites
 
-You need [Node.js](https://nodejs.org/) (v18 or later) and a package manager such as npm or pnpm installed on your machine.
+You need [Node.js](https://nodejs.org/) (v18 or later) and a package manager such as npm, yarn, or pnpm installed on your machine.
 
-## Create a Project
+## Install the Packages
 
-The fastest way to get started is with the starter template:
+Navara is published on npm under the [`@navaramap`](https://www.npmjs.com/org/navaramap) scope. In your project — any bundler setup works; a plain [Vite](https://vite.dev/) TypeScript project is enough — install the Three.js renderer `@navaramap/three`, the default plugin `@navaramap/three_default_plugin`, and the peer dependencies `three` and `postprocessing`:
+
+<Tabs syncKey="pkg">
+
+<TabItem label="npm">
 
 ```bash
-npm create navara-three-starter my-navara-app
-cd my-navara-app
-npm install
-npm run dev
+npm install @navaramap/three @navaramap/three_default_plugin three postprocessing
 ```
 
-This scaffolds a minimal project with Navara and its dependencies pre-configured.
+</TabItem>
+
+<TabItem label="yarn">
+
+```bash
+yarn add @navaramap/three @navaramap/three_default_plugin three postprocessing
+```
+
+</TabItem>
+
+<TabItem label="pnpm">
+
+```bash
+pnpm add @navaramap/three @navaramap/three_default_plugin three postprocessing
+```
+
+</TabItem>
+
+</Tabs>
 
 ## Minimal Example
 
-Here is the core code — the same example shown in [What is Navara?](../what-is-navara/) — that creates a 3D globe, displays satellite imagery, and enables the photorealistic sky and atmosphere:
+Here is the core code — the same example shown in [What is Navara?](../what-is-navara/) — that creates a 3D globe, displays satellite imagery, and enables the photorealistic sky and atmosphere. Add it to your project's entry point (for example `src/main.ts` in a Vite project) and start the dev server:
 
 ![Hero](@assets/hero.png)
 

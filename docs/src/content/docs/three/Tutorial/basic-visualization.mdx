@@ -5,23 +5,47 @@ sidebar:
   order: 200
 ---
 
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
 This tutorial explains the basic methods for displaying maps using navara_three.
 
 ## Setup
 
-Create a new navara_three project and install the required libraries:
+This tutorial assumes a TypeScript project with a bundler such as [Vite](https://vite.dev/). Install the Navara packages and their peer dependencies:
+
+<Tabs syncKey="pkg">
+
+<TabItem label="npm">
 
 ```bash
-npm create navara-three-starter my-navara-app
-cd my-navara-app
-npm install
+npm install @navaramap/three @navaramap/three_default_plugin three postprocessing
 ```
+
+</TabItem>
+
+<TabItem label="yarn">
+
+```bash
+yarn add @navaramap/three @navaramap/three_default_plugin three postprocessing
+```
+
+</TabItem>
+
+<TabItem label="pnpm">
+
+```bash
+pnpm add @navaramap/three @navaramap/three_default_plugin three postprocessing
+```
+
+</TabItem>
+
+</Tabs>
 
 ## Displaying a Map
 
 ### Adding a Raster Layer
 
-Open `index.html` and you will see the following:
+Create `index.html` at the project root with the following content:
 
 ```html
 <!DOCTYPE html>
@@ -37,7 +61,7 @@ Open `index.html` and you will see the following:
 </html>
 ```
 
-Next, open `src/main.ts` and you will see the following:
+Next, create `src/main.ts` with the following content:
 
 ```typescript
 import ThreeView from "@navaramap/three";

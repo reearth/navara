@@ -15,10 +15,10 @@ Navara is a 3D globe map engine: reusable GIS logic lives in a Rust/WASM core, a
 
 | Package | What it provides | When you need it |
 |---|---|---|
-| `@navaramap/three` | `ThreeView` (default export), `Color`, geodetic math utils, `MeshDesc`/`EffectDesc`/`LightDesc` base classes, handle types | Always |
+| `@navaramap/three` | `ThreeView` (default export), `Color`, geodetic math utils, `MeshDesc`/`EffectDesc`/`LightDesc` base classes, handle types, built-in attribution UI (`view.attribution`, on by default) | Always |
 | `@navaramap/three_default_plugin` | `DefaultPlugin`, `DefaultDescriptions` (registers ~40 built-in descriptors) | Almost always |
 | `@navaramap/three_default_descs` | Individual descriptor classes/types (`BoxMeshDesc`, `SSREffectDesc`, `SunLightDesc`, …) | Typed `addMesh<T>`/`addEffect<T>` calls, or manual registration without DefaultPlugin |
-| `@navaramap/three_plugins` | `AttributionPlugin`, `PersonViewPlugin`, `OverlayPlugin`, `CesiumIonPlugin` | Per feature |
+| `@navaramap/three_plugins` | `PersonViewPlugin`, `OverlayPlugin`, `CesiumIonPlugin`, `TileJsonPlugin` | Per feature |
 | `@navaramap/three_api` | Standalone GIS math (no view) | Pure geometry computation |
 
 Most apps need only the first two.
