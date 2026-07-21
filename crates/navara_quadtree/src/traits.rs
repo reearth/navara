@@ -91,10 +91,7 @@ where
         for i in 0..4 {
             let i = to_int::<usize, U>(i);
             let (x, y, z) = child_coords((x, y, z), i);
-            match self.leaf((x, y, z)) {
-                Some(v) => children.push(v),
-                None => return None,
-            }
+            children.push(self.leaf((x, y, z))?);
         }
         Some(children)
     }
