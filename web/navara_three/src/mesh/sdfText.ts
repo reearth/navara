@@ -346,7 +346,7 @@ export class SDFTextMesh
     // Decluttered labels start hidden and fade in once the placement pass
     // grants them space — otherwise dense tiles flash their full clutter for
     // a frame before the first pass runs.
-    this._declutter = material.declutter ?? false;
+    this._declutter = material.declutter ?? true;
     this._declutterPriority = material.declutterPriority ?? 0;
     if (this._declutter) {
       this._declutterHide = 1;
@@ -746,7 +746,7 @@ export class SDFTextMesh
 
     // Read before the visibility early-return: the declutter pass consults
     // these even while other style state is skipped for hidden labels.
-    const nextDeclutter = material.declutter ?? false;
+    const nextDeclutter = material.declutter ?? true;
     if (this._declutter && !nextDeclutter) {
       // Leaving declutter mode: clear any hide the pass applied — the mesh
       // stops producing candidates, so nothing else would ever re-show it.

@@ -211,7 +211,7 @@ export class InstancedSpriteMesh
   }
 
   private _cacheDeclutterState(m: NavaraPointMesh | NavaraBillboardMesh) {
-    const nextDeclutter = m.material.declutter ?? false;
+    const nextDeclutter = m.material.declutter ?? true;
     if (this._declutter && !nextDeclutter) {
       // Leaving declutter mode: clear hides the pass applied — the mesh stops
       // producing candidates, so nothing else would ever re-show them.
