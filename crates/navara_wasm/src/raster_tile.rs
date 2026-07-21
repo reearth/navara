@@ -21,6 +21,20 @@ pub struct RasterTileState {
     pub reproject_terrain_lat: Vec<f32>,
 }
 
+/// WebMercator northing `ln(tan(lat/2 + π/4))` for a latitude in radians,
+/// clamped to the valid WebMercator band (~±85.05°).
+///
+/// Exported so the web composite paste (`mutates.ts`) derives its per-slot
+/// reprojection constants from the same clamped math the Rust bake affine uses
+/// (`uv_rect_from_extents_mercator`) — the two sides must agree or the pasted
+/// latitude band drifts off the baked render target. A TS reimplementation
+/// also returned NaN for the unclamped polar band (±90° as f32), which
+/// silently disabled reprojection via the shader's span guard.
+#[wasm_bindgen(js_name = "mercatorY")]
+pub fn mercator_y(lat: f64) -> f64 {
+    navara_geometry::mercator_y(lat)
+}
+
 impl From<ResolvedRasterTileState> for RasterTileState {
     fn from(r: ResolvedRasterTileState) -> Self {
         Self {

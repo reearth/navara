@@ -121,6 +121,12 @@ export type TileHandler = {
     textureZoom: number,
     textureWidth: number,
   ) => number;
+  /** Rust's clamped WebMercator northing (`navara_geometry::mercator_y`).
+   * The composite paste derives its per-slot reprojection constants through
+   * this so paste and bake (`uv_rect_from_extents_mercator`) share one
+   * implementation — a drifting reimplementation misaligns the pasted
+   * latitude band (and NaNs on the unclamped polar band). */
+  mercatorY: (lat: number) => number;
 };
 
 /**

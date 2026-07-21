@@ -348,6 +348,9 @@ importers:
       '@types/geojson':
         specifier: 7946.0.16
         version: 7946.0.16
+      '@types/node':
+        specifier: 26.1.1
+        version: 26.1.1
       '@types/stats.js':
         specifier: 0.17.4
         version: 0.17.4
@@ -9154,7 +9157,7 @@ snapshots:
 
   '@types/sax@1.2.7':
     dependencies:
-      '@types/node': 24.13.3
+      '@types/node': 26.1.1
 
   '@types/stats.js@0.17.4': {}
 

@@ -359,8 +359,12 @@ impl TerrainTile {
         let tile_center = aabb.center;
 
         // Generate geometry directly in local RTC space
-        let (geometry, heights) =
-            upsampled_mesh.construct_geometry(ellipsoid, &self.extent, &tile_center);
+        let (geometry, heights) = upsampled_mesh.construct_geometry(
+            ellipsoid,
+            &self.extent,
+            &tile_center,
+            matches!(self.tiling_scheme, TilingScheme::WebMercator { .. }),
+        );
 
         Some(ReturnedConstructedTerrainMesh {
             geometry,

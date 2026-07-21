@@ -26,6 +26,11 @@ pub fn decode_height_from_dem(
 }
 
 /// Construct a terrain geometry with RTC translation.
+///
+/// `mercator_v` selects the vertex row distribution (see `tile_triangles`);
+/// raster-dem terrain is WebMercator, whose DEM image rows are uniform in
+/// Mercator northing — the Mercator-spaced grid keeps the linear `height`
+/// row lookup below exact.
 #[allow(clippy::too_many_arguments)]
 pub fn tile_triangles_with_terrain(
     ellipsoid: Ellipsoid<FloatType>,
@@ -37,6 +42,7 @@ pub fn tile_triangles_with_terrain(
     terrain_h: usize,
     decoder: &ElevationDecoder,
     parent_max_height: FloatType,
+    mercator_v: bool,
 ) -> ReturnedConstructedTerrainMesh {
     let mut max_height: f64 = 0.0;
     let mut min_height: f64 = 9999.0;
@@ -64,7 +70,14 @@ pub fn tile_triangles_with_terrain(
     let aabb = Aabb::from_extent_f64(*extent, 0., parent_max_height);
     let tile_center = aabb.center;
 
-    let geometry = tile_triangles(ellipsoid, extent, segments, &mut height, &tile_center);
+    let geometry = tile_triangles(
+        ellipsoid,
+        extent,
+        segments,
+        &mut height,
+        &tile_center,
+        mercator_v,
+    );
 
     ReturnedConstructedTerrainMesh {
         geometry,

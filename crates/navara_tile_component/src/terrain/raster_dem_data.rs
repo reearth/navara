@@ -2,11 +2,11 @@ use bevy_ecs::entity::Entity;
 use martini::Martini;
 use navara_buffer_store::{BufferStore, Handle};
 use navara_core::{
-    Aabb, ElevationDecoder, Ellipsoid, Extent, LLE, LngLat, Meters, Radians, TileRegion, XYZ,
+    Aabb, Angle, ElevationDecoder, Ellipsoid, Extent, LLE, LngLat, Meters, Radians, TileRegion, XYZ,
 };
 use navara_geometry::{
     Geometry, ReturnedConstructedTerrainMesh, UpsamplableTerrainGeometry, UpsampledTerrainGeometry,
-    decode_height_from_dem, tile_triangles_with_terrain,
+    decode_height_from_dem, mercator_y, mercator_y_to_lat, tile_triangles_with_terrain,
 };
 use navara_math::FloatType;
 
@@ -135,14 +135,23 @@ impl TerrainData for RasterDEMData {
         // 2. If the error is still large when you are close to the tile, upsampling might not work well.
         let max_error = (ctx.get_level_maximum_geometric_error(&ellipsoid, 65.) / 2.).min(1024.);
 
+        // Raster-dem tiles are WebMercator: the DEM pixel grid — and therefore
+        // martini's (u, v) mesh space — is uniform in Mercator northing, not
+        // latitude. Recover each vertex's latitude through the Mercator lerp so
+        // the (u, v)-fraction UVs line up with WM raster textures draped on the
+        // same mesh (a latitude lerp misplace them, worst at low zoom).
+        let merc_south = mercator_y(extent.south.val());
+        let merc_north = mercator_y(extent.north.val());
+
         let mut martini_tile = martini.create_terrain(&read_height);
         let (vertices, indices, uvs) =
             martini_tile.construct_mesh(martini, max_error, &mut |(u, v)| {
                 let dlng = (extent.east - extent.west) * u;
-                let dlat = (extent.north - extent.south) * v;
 
                 let lng = extent.west + dlng;
-                let lat = extent.south + dlat;
+                let lat = Angle::new(mercator_y_to_lat(
+                    merc_south + (merc_north - merc_south) * v,
+                ));
                 let x = (u * martini_size as FloatType) as usize;
                 let y = ((1. - v) * martini_size as FloatType) as usize;
                 let h = read_height(x, y);
@@ -177,6 +186,7 @@ impl TerrainData for RasterDEMData {
                 martini_size - 1,
                 &self.decoder,
                 ctx.max_height,
+                true,
             );
         }
 
@@ -235,13 +245,17 @@ fn compute_terrain_height_from_tile(
     let south = extent.south;
 
     let dist_ew = (east - west).val();
-    let dist_ns = (north - south).val();
+    // The DEM grid is a WebMercator tile image: rows are uniform in Mercator
+    // northing, so the row lookup uses the Mercator fraction, not the latitude
+    // fraction.
+    let merc_south = mercator_y(south.val());
+    let merc_ns = mercator_y(north.val()) - merc_south;
 
     let dist_wlng = (point.lng - west).val();
-    let dist_slat = (point.lat - south).val();
+    let merc_slat = mercator_y(point.lat.val()) - merc_south;
 
     let x = ((dist_wlng / dist_ew) * (width - 1) as FloatType).round() as usize;
-    let y = ((dist_slat / dist_ns) * (width - 1) as FloatType).round() as usize;
+    let y = ((merc_slat / merc_ns) * (width - 1) as FloatType).round() as usize;
 
     heights
         .get((x + y * width).min(length - 1))
