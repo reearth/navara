@@ -6,7 +6,7 @@ name: Release
 #
 # npm side setup (once per package, after its first publish):
 #   npmjs.com -> package -> Settings -> Trusted Publisher
-#   -> GitHub Actions: eukarya-inc/navara, workflow file "release.yml",
+#   -> GitHub Actions: reearth/navara, workflow file "release.yml",
 #      environment "npm-publish"
 
 on:
