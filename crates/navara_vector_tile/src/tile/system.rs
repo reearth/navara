@@ -602,7 +602,7 @@ pub fn clear_caches(
 
         // Clean up requested tiles that are no longer visited
         let mut removed_handles = vec![];
-        for (handle, _requested) in tc.requested_tile_caches.iter() {
+        for handle in tc.requested_tile_caches.keys() {
             let tile_handle = *handle;
 
             // A retained tile keeps its `requested_tile_caches` entry; its
