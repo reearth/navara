@@ -71,6 +71,7 @@
     "@tailwindcss/postcss": "4.3.3",
     "@tweakpane/core": "2.0.5",
     "@types/geojson": "7946.0.16",
+    "@types/node": "24.12.2",
     "@types/stats.js": "0.17.4",
     "@types/three": "0.185.1",
     "ajv": "8.20.0",

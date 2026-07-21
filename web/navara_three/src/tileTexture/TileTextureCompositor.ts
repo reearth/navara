@@ -77,6 +77,10 @@ export const defaultAtlasFactory =
 export type TileTextureCompositorOptions = {
   renderer: WebGLRenderer;
   texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates;
+  /** Rust's clamped WebMercator northing (`TileHandler.mercatorY`), handed to
+   * the core uniform mutates so the paste-side reprojection constants come
+   * from the same implementation as the Rust bake affine. */
+  mercatorY: (lat: number) => number;
   /** Atlas RT side length (defaults to 512). */
   size?: number;
   /** Test seam: replace MRT RT creation. */
@@ -142,6 +146,7 @@ export class TileTextureCompositor {
    * per-tile GPU byte cost it reports to the memory ledger. */
   readonly size: number;
   private readonly texturizedScenes: TexturizedSceneByTileCoordinates;
+  private readonly mercatorY: (lat: number) => number;
   // Single camera shared by every drape bake (vector and raster), re-framed
   // per source by `frameBakeCamera`. Ancestor fallback is resolved in Rust,
   // so no per-tile camera transform is needed.
@@ -189,6 +194,7 @@ export class TileTextureCompositor {
   constructor(opts: TileTextureCompositorOptions) {
     this.renderer = opts.renderer;
     this.texturizedScenes = opts.texturizedSceneByTileCoordinates;
+    this.mercatorY = opts.mercatorY;
     this.size = opts.size ?? 512;
     this.cache = new TileTextureCache({
       size: this.size,
@@ -560,7 +566,7 @@ export class TileTextureCompositor {
     // uniform ownership: each active enhancer attaches its own uniform refs and
     // contributes the matching GLSL, so a new expression touches only its module.
     const chain = createCompositeLayerEnhancers(features);
-    const core = createCoreUniformMutates();
+    const core = createCoreUniformMutates(this.mercatorY);
 
     const uniforms: CompositeUniformTarget = {};
     core.attachUniforms(uniforms, numTextures, placeholderTexture);

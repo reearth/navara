@@ -348,6 +348,9 @@ importers:
       '@types/geojson':
         specifier: 7946.0.16
         version: 7946.0.16
+      '@types/node':
+        specifier: 24.12.2
+        version: 24.12.2
       '@types/stats.js':
         specifier: 0.17.4
         version: 0.17.4

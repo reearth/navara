@@ -95,6 +95,7 @@ import {
   type WorkerTaskHandler,
 } from "./event";
 import { TEXTURE_LOADER } from "./event/loaders";
+import { createTileHandler } from "./event/tileHandler";
 import { InMemoryBufferStore } from "./inMemoryBufferStore";
 import { registerInputEvents } from "./input";
 import { Layer, type LayerEvent } from "./layer";
@@ -634,39 +635,11 @@ export default class ThreeView<
   private _vectorRevision = 0;
   // Per-frame snapshot of the WASM raster drape resolution revision, refreshed in `_render`.
   private _rasterRevision = 0;
-  private _tileHandler: TileHandler = {
-    getMartini: (id) => {
-      return this._core?.getMartini(id);
-    },
-    getTile: (handle) => {
-      return this._core?.getTile(handle);
-    },
-    getParentTile: (handle) => {
-      return this._core?.getParentTile(handle);
-    },
-    getTileElevationDecoder: (handle) => {
-      return this._core?.getTileElevationDecoder(handle);
-    },
-    getVectorTileStates: (handle) => {
-      return this._core?.getVectorTileStates(handle);
-    },
-    // Returns the per-frame cached revision (read once in `_render`), so per-tile
-    // `onBeforeRender` gating costs no WASM-boundary call.
-    vectorRevision: () => this._vectorRevision,
-    getRasterTileStates: (handle) => {
-      return this._core?.getRasterTileStates(handle);
-    },
-    rasterRevision: () => this._rasterRevision,
-    reportDrapeGpuBytes: (handle, bytes) => {
-      this._core?.reportTerrainDrapeGpuBytes(handle, bytes);
-    },
-    calcMetersPerTexel: (tileHandle, textureZoom, textureWidth) => {
-      return (
-        this._core?.calcMetersPerTexel(tileHandle, textureZoom, textureWidth) ??
-        1.0
-      );
-    },
-  };
+  private _tileHandler: TileHandler = createTileHandler({
+    getCore: () => this._core,
+    getVectorRevision: () => this._vectorRevision,
+    getRasterRevision: () => this._rasterRevision,
+  });
   private _globeHandler: GlobeHandler = {
     getTransparent: () => {
       return this._core?.getGlobeTransparent();
@@ -907,6 +880,7 @@ export default class ThreeView<
     this._tileTextureCompositor = new TileTextureCompositor({
       renderer: this._renderer,
       texturizedSceneByTileCoordinates: this._texturizedSceneByTileCoordinates,
+      mercatorY: this._tileHandler.mercatorY,
       size: getCompositeAtlasSize(this.isMobileOptimized()),
     });
 
