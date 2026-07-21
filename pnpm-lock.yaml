@@ -242,7 +242,7 @@ importers:
   web/navara_maplibre_style:
     dependencies:
       '@maplibre/maplibre-gl-style-spec':
-        specifier: ^26.1.0
+        specifier: 26.1.0
         version: 26.1.0
       '@navaramap/core':
         specifier: workspace:*
