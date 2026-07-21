@@ -183,8 +183,7 @@ export function getRowIndex(
   row: BatchTextureRowKey,
 ): number {
   const config = material.userData.batchTextureConfig as
-    | BatchTextureConfig
-    | undefined;
+    BatchTextureConfig | undefined;
   invariant(config);
 
   const rowIndex = config.rows.indexOf(row);
@@ -238,8 +237,7 @@ export function updateBatchAttribute(
   const data = texture.image.data as Float32Array;
   const texWidth = texture.image.width;
   const config = material.userData.batchTextureConfig as
-    | BatchTextureConfig
-    | undefined;
+    BatchTextureConfig | undefined;
   const rowCount = config?.rows.length ?? BATCH_TEXTURE_ROW.length;
 
   switch (attribute) {

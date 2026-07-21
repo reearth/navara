@@ -1127,7 +1127,7 @@ impl App {
         world.resource_scope(|world, mut qt: Mut<TerrainTileQuadtree>| {
             world.resource_scope(|world, mut buf: Mut<BufferStore>| {
                 let mut state: SystemState<TileTerrainDataRequesterQuery> = SystemState::new(world);
-                let query = state.get(world);
+                let query = state.get(world).ok()?;
 
                 compute_terrain_height_at_point(
                     &mut qt,

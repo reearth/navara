@@ -130,9 +130,7 @@ function polygonCoordsFromCzml(
   // 2) polygon.hierarchy.positions.cartographicDegrees
   const hier = polygon.hierarchy;
   const hierPos = hier?.positions as
-    | CzmlHolePositionsDegrees
-    | CzmlPositionDegrees
-    | undefined;
+    CzmlHolePositionsDegrees | CzmlPositionDegrees | undefined;
   if (
     hierPos &&
     "cartographicDegrees" in hierPos &&

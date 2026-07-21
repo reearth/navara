@@ -1,19 +1,12 @@
-import ThreeView, {
-  type Plugin,
-  type Options,
-  type Descriptions,
-  type EmptyDescriptions,
+import ThreeView from "@navaramap/three";
+import type {
+  Plugin,
+  Options,
+  Descriptions,
+  EmptyDescriptions,
 } from "@navaramap/three";
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-  type FC,
-  type PropsWithChildren,
-  type RefObject,
-} from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
+import type { FC, PropsWithChildren, RefObject } from "react";
 
 type ViewContextValues<D extends Descriptions = EmptyDescriptions> = {
   view?: ThreeView<D>;
@@ -48,8 +41,9 @@ export const ViewProvider: FC<PropsWithChildren<ViewProviderProps>> = ({
 }) => {
   const [view, setView] = useState<ThreeView | undefined>();
   const [isReady, setIsReady] = useState(false);
+  // The ref is written when the view is created in the effect below; syncing it
+  // during render is both redundant and disallowed by react-hooks/refs.
   const viewRef = useRef<ThreeView | undefined>(undefined);
-  viewRef.current = view;
 
   useEffect(() => {
     if (viewRef.current) {

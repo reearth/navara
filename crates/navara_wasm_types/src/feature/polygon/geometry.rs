@@ -54,7 +54,6 @@ impl ConstructedPolygonOutlineGeometry {
 
 #[wasm_bindgen]
 pub struct ConstructedPolygonGeometry {
-    #[wasm_bindgen(getter_with_clone)]
     geometry: PolygonGeometry,
     pub extent: Option<ExtentRadianF32>,
     /// RTC (Relative-To-Center) translation vector

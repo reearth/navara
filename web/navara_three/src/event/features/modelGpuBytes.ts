@@ -60,9 +60,7 @@ export function sumModelGpuBytes(obj: Object3D): number {
       }
     }
     const material = (node as Mesh | Points).material as
-      | Material
-      | Material[]
-      | undefined;
+      Material | Material[] | undefined;
     const materials = Array.isArray(material)
       ? material
       : material

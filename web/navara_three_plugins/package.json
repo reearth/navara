@@ -34,11 +34,10 @@
     "@navaramap/three_default_plugin": "workspace:*",
     "three": ">=0.183.0"
   },
-  "dependencies": {},
   "devDependencies": {
     "@navaramap/three": "workspace:*",
     "@navaramap/three_default_plugin": "workspace:*",
-    "@types/three": "0.184.0",
-    "three": "0.184.0"
+    "@types/three": "0.185.1",
+    "three": "0.185.1"
   }
 }

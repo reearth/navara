@@ -4,8 +4,12 @@ use num::PrimInt;
 
 use crate::{Coords, QuadLeafHandle, ancestor_coords, child_coords, parent_coords, utils::to_int};
 
+// Not a supertrait of `bevy_ecs::prelude::Resource`: since Bevy 0.19 that trait
+// requires `Component`, which is not dyn compatible and would prevent using
+// `dyn GeoSpacialQuadtree` as a trait object. `Send + Sync + 'static` keeps the
+// trait object usable inside Bevy resources.
 #[cfg(feature = "bevy")]
-pub trait Resource: bevy_ecs::prelude::Resource {}
+pub trait Resource: Send + Sync + 'static {}
 #[cfg(not(feature = "bevy"))]
 pub trait Resource {}
 

@@ -13,8 +13,7 @@ type PickMarker<Markers extends ShaderMarkers, Key extends keyof Markers> = {
 }[keyof Markers[Key]];
 
 type PickMarkers<Markers extends ShaderMarkers> =
-  | PickMarker<Markers, "vertex">
-  | PickMarker<Markers, "fragment">;
+  PickMarker<Markers, "vertex"> | PickMarker<Markers, "fragment">;
 
 /**
  * A type-safe shader string replacer that restricts operations to declared markers.

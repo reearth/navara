@@ -17,6 +17,17 @@
         "node"
       ],
       "enabled": false
+    },
+    {
+      "description": "postprocessing minor updates break our shader patching (material enhancers); allow patch updates only",
+      "matchPackageNames": [
+        "postprocessing"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "major"
+      ],
+      "enabled": false
     }
   ]
 }

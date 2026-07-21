@@ -10,9 +10,7 @@ import type { JsEvents, JsEventsKey } from "./EventManager";
 
 export const makeRenderableFeatures = <
   Ev extends
-    | RenderableFeatureAddedEvent
-    | RenderableFeatureChangedEvent
-    | EntityEvent,
+    RenderableFeatureAddedEvent | RenderableFeatureChangedEvent | EntityEvent,
 >(
   ind: number,
   gen: number,

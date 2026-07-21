@@ -24,7 +24,7 @@ Install the prerequisites and run the initial setup:
 ```console
 cargo install cargo-make
 cargo install cargo-watch
-cargo install wasm-bindgen-cli --version 0.2.118
+cargo install wasm-bindgen-cli --version 0.2.126
 cargo make prepare
 ```
 

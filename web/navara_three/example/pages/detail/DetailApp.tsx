@@ -1,15 +1,10 @@
 import { ArrowLeft, Check, Copy, ExternalLink, Moon, Sun } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createHighlighter, type Highlighter } from "shiki";
+import { createHighlighter } from "shiki";
+import type { Highlighter } from "shiki";
 
-import {
-  docsUrl,
-  localize,
-  SECTION_LABELS,
-  type ExampleMeta,
-  type Lang,
-  type Localized,
-} from "../examples/sections";
+import { docsUrl, localize, SECTION_LABELS } from "../examples/sections";
+import type { ExampleMeta, Lang, Localized } from "../examples/sections";
 
 import { useDarkMode } from "@/components/hooks/useDarkMode";
 import { useLang } from "@/components/hooks/useLang";
@@ -101,7 +96,7 @@ export const DetailApp = () => {
   const { isDark: dark, toggle: toggleTheme } = useDarkMode();
   const [copied, setCopied] = useState(false);
 
-  const path = useMemo(currentPath, []);
+  const path = useMemo(() => currentPath(), []);
   const meta = META[path];
   const code = CODE[path];
   const demoSrc = `/demo/${path}`;
@@ -110,8 +105,9 @@ export const DetailApp = () => {
   // highlighter loads or if highlighting fails.
   const [highlighted, setHighlighted] = useState<string | null>(null);
   useEffect(() => {
+    // `code` is derived from the page path and never changes at runtime, so
+    // there is no stale `highlighted` value to reset here.
     if (!code) {
-      setHighlighted(null);
       return;
     }
     let cancelled = false;

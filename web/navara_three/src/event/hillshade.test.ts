@@ -494,9 +494,8 @@ describe("hillshade normal map generation", () => {
     expect(loadedTexs.has(entityId)).toBe(true);
     const normalMap = loadedTexs.get(entityId);
     expect(normalMap).toBeInstanceOf(Texture);
-    if (normalMap) {
-      expect((normalMap.image as { width: number }).width).toBe(4); // Content size (no padding in normal map)
-    }
+    // Content size (no padding in normal map)
+    expect((normalMap?.image as { width: number } | undefined)?.width).toBe(4);
 
     // Verify temp DEM entry was stored for edge updates
     const tempDem = hillshadeContext.getTempDem(entityId);
@@ -584,16 +583,11 @@ describe("hillshade normal map generation", () => {
         target_entity_gen: 123,
       } as HillshadeBackfilledEvent);
 
-      if (direction < 3) {
-        // Not all edges received yet
-        expect(hillshadeContext.getTempDem(entityId)).toBeDefined();
-        expect(hillshadeContext.getTempDem(entityId)?.receivedEdges.size).toBe(
-          direction + 1,
-        );
-      } else {
-        // All 4 edges received, temp DEM should be cleaned up
-        expect(hillshadeContext.getTempDem(entityId)).toBeUndefined();
-      }
+      // The temp DEM tracks received edges until all 4 arrive, then it is
+      // cleaned up (so `getTempDem` returns undefined on the last iteration).
+      expect(hillshadeContext.getTempDem(entityId)?.receivedEdges.size).toBe(
+        direction < 3 ? direction + 1 : undefined,
+      );
     }
 
     // Verify texture still exists after cleanup

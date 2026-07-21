@@ -257,8 +257,7 @@ export function ControlPanel(props: ControlPanelProps) {
   // Derived helpers from provided buildingColorData
   const measuredConfig = React.useMemo(() => {
     return props.buildingColorData["bldg:measuredHeight"] as
-      | SequantialData
-      | undefined;
+      SequantialData | undefined;
   }, [props.buildingColorData]);
 
   const attributeTitles = React.useMemo(() => {

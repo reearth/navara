@@ -23,7 +23,7 @@ import { BatchedSdfTextMesh, Layer } from "..";
 import { disposeTexture } from "../loaders";
 import { getImageDataFromBlob } from "../tasks/getImageDataFromBlob";
 
-import { EventContext } from "./context";
+import { type EventContext } from "./context";
 import {
   checkFeatureParallel,
   processRenderableFeatureAdded,
@@ -463,12 +463,11 @@ async function processRequestedData(ctx: EventContext, req: DataRequestEvent) {
           return;
         }
 
-        let u8a: Uint8Array | null = new Uint8Array(data);
+        const u8a = new Uint8Array(data);
         buf.setU8(req.handle, req.bits, u8a);
 
         // Prevent memory leak
         u8a.set([]);
-        u8a = null;
 
         data.set([]);
       })

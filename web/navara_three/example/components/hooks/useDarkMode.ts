@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 type Theme = "light" | "dark" | "system";
 
@@ -7,6 +13,15 @@ const DEFAULT_STORAGE_KEY = "navara:theme";
 function getSystemPrefersDark(): boolean {
   if (typeof window === "undefined" || !("matchMedia" in window)) return false;
   return window.matchMedia("(prefers-color-scheme: dark)").matches;
+}
+
+function subscribeToSystemTheme(callback: () => void): () => void {
+  if (typeof window === "undefined" || !("matchMedia" in window)) {
+    return () => {};
+  }
+  const mql = window.matchMedia("(prefers-color-scheme: dark)");
+  mql.addEventListener("change", callback);
+  return () => mql.removeEventListener("change", callback);
 }
 
 function applyHtmlClass(isDark: boolean) {
@@ -39,8 +54,10 @@ export function useDarkMode(options?: {
   });
 
   // Track system preference to re-render on OS theme change.
-  const [systemDark, setSystemDark] = useState<boolean>(() =>
-    getSystemPrefersDark(),
+  const systemDark = useSyncExternalStore(
+    subscribeToSystemTheme,
+    getSystemPrefersDark,
+    () => false,
   );
 
   const resolvedDark = useMemo<boolean>(() => {
@@ -51,19 +68,6 @@ export function useDarkMode(options?: {
   useEffect(() => {
     applyHtmlClass(resolvedDark);
   }, [resolvedDark]);
-
-  // React to OS/browser theme changes when using system.
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const mql = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = (e: MediaQueryListEvent) => {
-      setSystemDark(e.matches);
-    };
-    // Initialize state in case something changed before mount.
-    setSystemDark(mql.matches);
-    mql.addEventListener("change", handler);
-    return () => mql.removeEventListener("change", handler);
-  }, []);
 
   const setTheme = useCallback(
     (next: Theme) => {

@@ -72,8 +72,7 @@ export class SmoothLine extends Object3D {
 
   // Store the original Line2 onBeforeRender to avoid nested callback chains
   private _originalLineOnBeforeRender:
-    | typeof Object3D.prototype.onBeforeRender
-    | null = null;
+    typeof Object3D.prototype.onBeforeRender | null = null;
 
   constructor(config: Partial<SmoothLineConfig>[] = []) {
     super();

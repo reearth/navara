@@ -30,16 +30,15 @@
     "access": "public"
   },
   "peerDependencies": {
-    "three": ">=0.183.0",
+    "@navaramap/three": "workspace:*",
     "react": ">=19",
-    "@navaramap/three": "workspace:*"
+    "three": ">=0.183.0"
   },
-  "dependencies": {},
   "devDependencies": {
-    "@types/react": "19.2.14",
+    "@navaramap/three": "workspace:*",
+    "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
-    "@types/three": "0.184.0",
-    "three": "0.184.0",
-    "@navaramap/three": "workspace:*"
+    "@types/three": "0.185.1",
+    "three": "0.185.1"
   }
 }

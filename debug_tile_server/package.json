@@ -4,12 +4,12 @@
   },
   "private": true,
   "dependencies": {
-    "@hono/node-server": "2.0.0",
+    "@hono/node-server": "2.0.11",
     "canvas": "3.2.3",
-    "hono": "4.12.12"
+    "hono": "4.12.31"
   },
   "devDependencies": {
-    "@types/node": "24.12.2",
-    "tsx": "4.21.0"
+    "@types/node": "26.1.1",
+    "tsx": "4.23.1"
   }
 }
