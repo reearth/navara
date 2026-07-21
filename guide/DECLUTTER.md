@@ -15,14 +15,25 @@ building's name and a POI icon's name might both want the same patch of
 pixels. Something has to decide, every frame, which labels actually get drawn
 and which get hidden.
 
-That "something" is the `DeclutterManager` — one shared instance per
-`ThreeView` (`web/navara_three/src/index.ts:447`). It is **entirely
-TypeScript**: there is no Rust-side collision algorithm. Rust only carries two
-config fields per label material — `declutter: bool` and
+That "something" is split in two. The **orchestration** — collecting
+candidates from the meshes, throttling, dirty tracking, and driving the fades —
+is the `DeclutterManager`, one shared TypeScript instance per `ThreeView`
+(`web/navara_three/src/index.ts:447`). The **numeric kernel** it calls each pass
+— projecting anchors to screen space, sorting, and the greedy grid placement —
+lives in Rust: `declutterPlace` in `crates/navara_wasm_api/src/declutter.rs`,
+exposed to TypeScript through the `@navaramap/engine-api` WASM bindings. Rust
+also carries the two per-material config fields — `declutter: bool` and
 `declutter_priority: f32` (`crates/navara_material/src/appearance.rs`) — through
-to the WASM bindings. Everything else — projecting labels to screen space,
-detecting overlaps, and deciding a winner — runs client-side, once per frame,
-right before rendering.
+to the bindings.
+
+The split follows the seam where the work changes character: everything that
+touches Three.js objects (meshes, the camera, the render loop) stays in
+TypeScript; the per-pass numeric compute — an `O(n log n)` sort plus a grid
+sweep over a few hundred labels — is handed to Rust as a single call over flat
+typed arrays. The manager packs candidates into a `Float64Array`, calls the
+kernel, and applies the returned `hidden` flags; it never sees a collision grid
+or a projection matrix multiply. This all still runs once per frame, right
+before rendering.
 
 Naively, you could sort labels by priority and hide whichever ones overlap a
 higher-priority label already placed. That works for a single frame, but as
@@ -57,24 +68,36 @@ flowchart TD
 5. **Fade** — the placement result becomes a fade *target*; visibility itself
    animates smoothly toward it. → [Fading, not popping](#5-fading-not-popping)
 
-The whole pass is throttled and only reruns when something actually changed —
-see [Running in the frame loop](#running-in-the-frame-loop).
-
-Source lives entirely under `web/navara_three/src/declutter/`:
+Steps 2–4 (project, sort, place) run inside the Rust kernel; steps 1 and 5
+(collect, fade) stay in TypeScript. The whole pass is throttled and only reruns
+when something actually changed — see
+[Running in the frame loop](#running-in-the-frame-loop).
 
 ```mermaid
 graph TD
-  DM["DeclutterManager.ts<br/>orchestrator + state machine"]
-  Grid["grid.ts<br/>ScreenCollisionGrid"]
-  Proj["projection.ts<br/>anchor → screen AABB, horizon test"]
-  Types["types.ts<br/>DeclutterCandidate / DeclutterParticipant"]
-
-  DM -->|"reads/writes boxes via"| Grid
-  DM -->|"calls per candidate"| Proj
-  DM -->|"candidate shape"| Types
+  subgraph ts["TypeScript · web/navara_three/src/declutter/"]
+    DM["DeclutterManager.ts<br/>orchestrator + state machine + fades"]
+    Kernel["kernel.ts<br/>DeclutterKernel interface (injected)"]
+    WasmK["wasmKernel.ts<br/>adapter → declutterPlace"]
+    Types["types.ts<br/>DeclutterCandidate / DeclutterParticipant"]
+    DM -->|"packs candidates, calls"| Kernel
+    DM -->|"candidate shape"| Types
+    WasmK -.implements.-> Kernel
+  end
+  subgraph rs["Rust · crates/navara_wasm_api/src/declutter.rs"]
+    Place["declutterPlace()<br/>project + horizon cull + sort + grid"]
+  end
+  WasmK -->|"@navaramap/engine-api (WASM)"| Place
   Text["Text batches<br/>(sdfText.ts)"] -->|"register() / collectDeclutterCandidates()"| DM
   Sprites["Instanced sprites"] -->|"register() / collectDeclutterCandidates()"| DM
 ```
+
+Injecting the kernel through the `DeclutterKernel` interface keeps the manager
+free of an import-time WASM dependency: production wires in `wasmDeclutterKernel`
+(the `declutterPlace` adapter), while the manager's own unit tests inject a stub
+and drive only the orchestration. Placement correctness — projection, the grid,
+hysteresis — is covered by Rust `#[cfg(test)]` tests in `declutter.rs`, where
+that logic now lives.
 
 ## 1. Candidates and participants
 
@@ -107,12 +130,23 @@ manager calls every pass:
 This keeps the manager itself geometry-agnostic — it never touches a
 `BufferGeometry` or a Three.js `Mesh` directly, only these three hooks.
 
+Once collected, each candidate is flattened into the kernel's packed input: a
+`Float64Array` with `CANDIDATE_STRIDE = 11` values per candidate
+(`declutter/kernel.ts`), in the field order the Rust side reads — anchor (3),
+`addHeight`, the four box edges, `sizeInMeters`, `priority`, `isShown`. Booleans
+become `0.0`/`1.0`. The buffer is reused across passes and grown only when the
+label count rises. The kernel returns a `Uint8Array` of `hidden` flags, one per
+candidate in input order, which the manager feeds straight back to
+`applyDeclutter`.
+
 ## 2. Projecting to screen space
 
-`projection.ts` computes each candidate's screen-pixel bounding box **on the
-CPU**, deliberately mirroring the vertex shaders (`sdfText.vert.glsl` /
-`instancedSprite.vert.glsl`) so the collision box matches what actually gets
-drawn:
+`project_candidate` in `crates/navara_wasm_api/src/declutter.rs` computes each
+candidate's screen-pixel bounding box, deliberately mirroring the vertex shaders
+(`sdfText.vert.glsl` / `instancedSprite.vert.glsl`) so the collision box matches
+what actually gets drawn. Because it mirrors GLSL, the constants (`WGS84_A`,
+`WGS84_B`) are duplicated as literals rather than pulled from `navara_core` —
+they must track the shader, not the engine's own ellipsoid:
 
 1. **Height offset** — `addHeight` is applied along the anchor's own
    direction from the ellipsoid center (a cheap stand-in for the true surface
@@ -122,7 +156,7 @@ drawn:
    helpers), because this runs every frame for every candidate and needs to
    stay allocation-free.
 3. **Near-plane clip** — `vz >= -near` (view space looks down -Z) means the
-   anchor is behind the camera; `projectCandidateInto` returns `false` and the
+   anchor is behind the camera; `project_candidate` returns `false` and the
    candidate is excluded rather than placed with garbage coordinates.
 4. **Pixel sizing** — when the material uses `sizeInMeters`, the local box is
    scaled by pixels-per-meter at the anchor's view depth
@@ -130,21 +164,21 @@ drawn:
    of distance, not true range — so the CPU box doesn't drift from the
    rendered quad toward the screen edges).
 
-Separately, `isBeyondHorizon` (`projection.ts:35-51`) mirrors
-`horizon_culling_pars_vertex.glsl`: a cheap ellipsoid test for whether the
-anchor is geometrically hidden behind the Earth from the camera's viewpoint.
-This matters because **a label the GPU will cull must not claim screen
-space** — otherwise a label on the far side of the planet could sit at the
-same projected pixel as a real, visible label and evict it.
+Separately, `is_beyond_horizon` mirrors `horizon_culling_pars_vertex.glsl`: a
+cheap ellipsoid test for whether the anchor is geometrically hidden behind the
+Earth from the camera's viewpoint. This matters because **a label the GPU will
+cull must not claim screen space** — otherwise a label on the far side of the
+planet could sit at the same projected pixel as a real, visible label and evict
+it.
 
-Both checks feed a `_placeable` flag per candidate (`DeclutterManager.ts:174-186`).
+Both checks feed a per-candidate `placeable` flag inside `declutterPlace`.
 Non-placeable candidates skip the grid entirely and are simply marked
 not-hidden, so they show immediately the moment they become visible again —
 they never get stuck hidden by a stale placement decision.
 
 ## 3. Sorting: priority and hysteresis
 
-Before placement, candidates are sorted (`DeclutterManager.ts:197-206`) by:
+Before placement, `declutterPlace` sorts the candidate indices by:
 
 1. **`priority` descending** — the layer's `declutterPriority` (or a
    per-feature override). Higher always wins an overlap.
@@ -164,7 +198,7 @@ Before placement, candidates are sorted (`DeclutterManager.ts:197-206`) by:
 
 Placement itself is the simplest part: walk the sorted list and greedily
 claim space, exactly like MapLibre's symbol placement. What makes it fast is
-`ScreenCollisionGrid` (`declutter/grid.ts`) — a **uniform grid over screen
+`ScreenCollisionGrid` (in `declutter.rs`) — a **uniform grid over screen
 space**, not an R-tree or quadtree:
 
 ```
@@ -182,13 +216,13 @@ Screen (CSS px), divided into 64px cells, plus a 128px margin ring:
  └╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┘
 ```
 
-- Each cell holds a list of indices into a flat `_boxes` array (4 numbers per
+- Each cell holds a list of indices into a flat `boxes` array (4 numbers per
   box: `minX, minY, maxX, maxY`).
-- `insertIfFree(minX, minY, maxX, maxY, testShrinkPx)` (`grid.ts:68-127`) is
-  the one operation the manager needs: test the box against every box already
-  registered in the cells it spans; if nothing overlaps, register it into
-  those same cells and return `true` (claimed); otherwise return `false`
-  (collision, don't claim) and leave the grid untouched.
+- `insert_if_free(minX, minY, maxX, maxY, testShrinkPx)` is the one operation
+  placement needs: test the box against every box already registered in the
+  cells it spans; if nothing overlaps, register it into those same cells and
+  return `true` (claimed); otherwise return `false` (collision, don't claim)
+  and leave the grid untouched.
 - Boxes are tested with **strict inequalities**, so two boxes that exactly
   touch edges do not count as colliding.
 - A box entirely outside `viewport ± margin` is reported free **without
@@ -201,8 +235,8 @@ Screen (CSS px), divided into 64px cells, plus a 128px margin ring:
   heads off before hysteresis even comes into play.
 
 Each candidate's box is padded by `PADDING_PX = 2` on every side before the
-test (`DeclutterManager.ts:225-230`), so two placed labels never end up
-sitting pixel-adjacent.
+test (the manager passes the constant into the kernel), so two placed labels
+never end up sitting pixel-adjacent.
 
 ## Hysteresis: why labels don't flicker
 
@@ -226,20 +260,21 @@ claim on the grid.
 **Rule 2 — a shown label's collision test shrinks.** This is the subtler
 half, and it's what actually damps flicker rather than just biasing a
 one-time tiebreak. `DeclutterManager.HYSTERESIS_PX = 6`
-(`DeclutterManager.ts:55`) is passed as `insertIfFree`'s `testShrinkPx` — but
-**only** for candidates where `c.isShown` is true (`DeclutterManager.ts:230`):
+(`DeclutterManager.ts:55`) is threaded through the kernel call and passed as
+`insert_if_free`'s `test_shrink_px` — but **only** for candidates where
+`isShown` is true:
 
-```ts
-const free = grid.insertIfFree(
-  this._boxes[o] - pad, this._boxes[o + 1] - pad,
-  this._boxes[o + 2] + pad, this._boxes[o + 3] + pad,
-  c.isShown ? DeclutterManager.HYSTERESIS_PX : 0,
+```rust
+let free = grid.insert_if_free(
+    boxes[o] - pad, boxes[o + 1] - pad,
+    boxes[o + 2] + pad, boxes[o + 3] + pad,
+    if is_shown { hysteresis_px } else { 0.0 },
 );
 ```
 
-Inside `insertIfFree` (`grid.ts:85-96`), that shrink applies **only to the box
-used for the overlap test** — the box actually registered into the grid (what
-future candidates collide against) is still the full, unshrunk box:
+Inside `insert_if_free`, that shrink applies **only to the box used for the
+overlap test** — the box actually registered into the grid (what future
+candidates collide against) is still the full, unshrunk box:
 
 ```
               full box (claimed into grid, still blocks others)
@@ -257,7 +292,7 @@ its padded box without losing its spot — the marginal overlap that camera
 drift causes literally cannot flip its own test result. But that same label's
 *full* box is still claimed against everyone else, so it doesn't start
 stealing extra space from its neighbors. A label that is currently **hidden**
-gets `testShrinkPx = 0` — it must clear its entire padded box before it's
+gets `test_shrink_px = 0` — it must clear its entire padded box before it's
 allowed to appear, which is the strict, "prove you deserve it" side of the
 asymmetry.
 
@@ -399,10 +434,11 @@ confidence-driven priority, at real-world label density).
 
 | File | Role |
 | --- | --- |
-| `web/navara_three/src/declutter/DeclutterManager.ts` | Orchestrator — collect, sort, place, fade, throttling/dirty state |
-| `web/navara_three/src/declutter/grid.ts` | `ScreenCollisionGrid` — uniform grid spatial index, `insertIfFree` |
-| `web/navara_three/src/declutter/projection.ts` | Anchor → screen-pixel AABB, horizon/near-plane culling (CPU mirror of the vertex shaders) |
+| `crates/navara_wasm_api/src/declutter.rs` | The numeric kernel — `declutterPlace`: projection, horizon cull, sort, `ScreenCollisionGrid`, greedy placement, plus its Rust unit tests |
+| `web/navara_three/src/declutter/DeclutterManager.ts` | Orchestrator — collect, pack candidates, call the kernel, apply results, fade, throttling/dirty state |
+| `web/navara_three/src/declutter/kernel.ts` | `DeclutterKernel` interface + `CANDIDATE_STRIDE` (the packed-input contract with the Rust side) |
+| `web/navara_three/src/declutter/wasmKernel.ts` | `wasmDeclutterKernel` — adapter binding the interface to `declutterPlace` from `@navaramap/engine-api` |
 | `web/navara_three/src/declutter/types.ts` | `DeclutterCandidate`, `DeclutterParticipant`, `DECLUTTER_FADE_MS` |
-| `web/navara_three/src/index.ts` | Registers the shared `DeclutterManager`, drives `update()` from `_render()`, `_scheduleDeclutterFrame` / `forceUpdate` scheduling |
+| `web/navara_three/src/index.ts` | Registers the shared `DeclutterManager` (wired with `wasmDeclutterKernel`), drives `update()` from `_render()`, `_scheduleDeclutterFrame` / `forceUpdate` scheduling |
 | `crates/navara_material/src/appearance.rs` | `declutter` / `declutter_priority` fields on `PointMaterial` / `BillboardMaterial` / `TextMaterial` |
 | `crates/navara_wasm_types/src/appearance.rs` | wasm-bindgen mirrors exposed to TypeScript |

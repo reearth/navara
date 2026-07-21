@@ -1,11 +1,6 @@
 import { Matrix4, type PerspectiveCamera } from "three";
 
-import { ScreenCollisionGrid } from "./grid";
-import {
-  isBeyondHorizon,
-  projectCandidateInto,
-  type ProjectionContext,
-} from "./projection";
+import { CANDIDATE_STRIDE, type DeclutterKernel } from "./kernel";
 import type { DeclutterCandidate, DeclutterParticipant } from "./types";
 
 export type DeclutterUpdateResult =
@@ -24,11 +19,12 @@ export type DeclutterUpdateResult =
  * Shared screen-space label decluttering.
  *
  * Text batches and sprite meshes register as participants; each placement
- * pass projects every candidate label's anchor to the screen, sorts by
- * priority, and greedily claims space in a {@link ScreenCollisionGrid} —
- * losers are hidden through the meshes' declutter channels (`uDeclutterHide`
- * uniform / `instanceDeclutterHide` attribute), which are separate from
- * user-driven `show` state and free to toggle every pass.
+ * pass packs every candidate label into a flat buffer and hands it to the
+ * Rust {@link DeclutterKernel}, which projects the anchors, sorts by priority,
+ * and greedily claims screen space — losers are hidden through the meshes'
+ * declutter channels (`uDeclutterHide` uniform / `instanceDeclutterHide`
+ * attribute), which are separate from user-driven `show` state and free to
+ * toggle every pass.
  *
  * Placement is hysteretic: currently-shown labels win equal-priority ties
  * and tolerate {@link DeclutterManager.HYSTERESIS_PX} of marginal overlap
@@ -65,12 +61,16 @@ export class DeclutterManager {
   private _lastStepAt = Number.NaN;
 
   // Reused per-pass scratch to keep steady-state allocations low.
-  private _grid = new ScreenCollisionGrid();
   private _candidates: DeclutterCandidate[] = [];
-  private _order: number[] = [];
-  private _boxes = new Float64Array(0);
-  private _placeable = new Uint8Array(0);
+  /** Packed candidate input for the kernel; grows as the label count does. */
+  private _input = new Float64Array(0);
   private _viewMatrix = new Matrix4();
+  private _view16 = new Float64Array(16);
+  private _proj16 = new Float64Array(16);
+
+  /** @param _kernel the placement kernel — the Rust-backed
+   *  `wasmDeclutterKernel` in production, a stub in unit tests. */
+  constructor(private readonly _kernel: DeclutterKernel) {}
 
   /** Milliseconds until the throttle window since the last placement pass
    *  elapses, clamped to `[0, MIN_INTERVAL_MS]`. Callers use this to schedule
@@ -159,88 +159,62 @@ export class DeclutterManager {
       p.collectDeclutterCandidates(candidates);
     }
     const n = candidates.length;
-    if (this._boxes.length < n * 4) {
-      this._boxes = new Float64Array(n * 4);
-      this._placeable = new Uint8Array(n);
+    if (n === 0) return;
+
+    // Pack candidates into the flat kernel input. The layout must match
+    // CANDIDATE_STRIDE / the field order the Rust kernel reads.
+    const stride = CANDIDATE_STRIDE;
+    if (this._input.length < n * stride) {
+      this._input = new Float64Array(n * stride);
+    }
+    const input = this._input;
+    for (let i = 0; i < n; i++) {
+      const c = candidates[i];
+      const o = i * stride;
+      input[o] = c.anchorX;
+      input[o + 1] = c.anchorY;
+      input[o + 2] = c.anchorZ;
+      input[o + 3] = c.addHeight;
+      input[o + 4] = c.minX;
+      input[o + 5] = c.maxX;
+      input[o + 6] = c.minY;
+      input[o + 7] = c.maxY;
+      input[o + 8] = c.sizeInMeters ? 1 : 0;
+      input[o + 9] = c.priority;
+      input[o + 10] = c.isShown ? 1 : 0;
     }
 
     // The pass may run before the renderer refreshed matrixWorldInverse, so
     // derive the view matrix from matrixWorld instead of trusting it.
     const view = this._viewMatrix.copy(camera.matrixWorld).invert();
     const cam = camera.matrixWorld.elements;
-    const ctx: ProjectionContext = {
-      viewMatrix: view,
-      projectionMatrix: camera.projectionMatrix,
-      cameraX: cam[12],
-      cameraY: cam[13],
-      cameraZ: cam[14],
-      near: camera.near,
+    // Three.js Matrix4.elements is a plain number[]; copy into f64 scratch so
+    // the typed-array boundary to WASM stays a single cheap copy per matrix.
+    this._view16.set(view.elements);
+    this._proj16.set(camera.projectionMatrix.elements);
+
+    const hidden = this._kernel.place(
+      input.subarray(0, n * stride),
+      this._view16,
+      this._proj16,
+      cam[12],
+      cam[13],
+      cam[14],
+      camera.near,
       widthPx,
       heightPx,
       // Plain math instead of @navara/three_api's degreeToRadian — that one
-      // is a WASM call, which the placement pass must not depend on.
-      fovRad: (camera.fov * Math.PI) / 180.0,
-    };
+      // is a WASM call whose result we'd only marshal straight back in.
+      (camera.fov * Math.PI) / 180.0,
+      DeclutterManager.PADDING_PX,
+      DeclutterManager.HYSTERESIS_PX,
+    );
 
+    // Apply results as fade targets. Order is irrelevant — applyDeclutter is
+    // idempotent per handle — so iterate in candidate order, not sorted order.
     for (let i = 0; i < n; i++) {
       const c = candidates[i];
-      const visible =
-        !isBeyondHorizon(
-          c.anchorX,
-          c.anchorY,
-          c.anchorZ,
-          ctx.cameraX,
-          ctx.cameraY,
-          ctx.cameraZ,
-        ) && projectCandidateInto(c, ctx, this._boxes, i * 4);
-      this._placeable[i] = visible ? 1 : 0;
-    }
-
-    // Priority order with hysteresis: among equal priorities, currently-shown
-    // labels place first (incumbents win ties — otherwise a competitor
-    // entering the viewport margin could displace a stable label mid-pan).
-    // The final camera-independent tiebreak (anchor position, then handle)
-    // keeps fresh ties deterministic — array order would reshuffle as tiles
-    // load and make labels flicker.
-    const order = this._order;
-    order.length = n;
-    for (let i = 0; i < n; i++) order[i] = i;
-    order.sort((a, b) => {
-      const ca = candidates[a];
-      const cb = candidates[b];
-      if (ca.priority !== cb.priority) return cb.priority - ca.priority;
-      if (ca.isShown !== cb.isShown) return ca.isShown ? -1 : 1;
-      if (ca.anchorX !== cb.anchorX) return ca.anchorX - cb.anchorX;
-      if (ca.anchorY !== cb.anchorY) return ca.anchorY - cb.anchorY;
-      if (ca.anchorZ !== cb.anchorZ) return ca.anchorZ - cb.anchorZ;
-      return a - b;
-    });
-
-    const grid = this._grid;
-    grid.reset(widthPx, heightPx);
-    const pad = DeclutterManager.PADDING_PX;
-    for (const i of order) {
-      const c = candidates[i];
-      if (this._placeable[i] === 0) {
-        // Behind the camera or beyond the horizon: the GPU hides it already.
-        // Leave it un-decluttered so it shows the moment it comes back, and
-        // claim no space for it.
-        c.owner.applyDeclutter(c.handle, false);
-        continue;
-      }
-      const o = i * 4;
-      // Shown labels get a shrunk collision test (sticky: marginal overlaps
-      // don't evict them); hidden labels need their full padded box free
-      // before they may appear. The asymmetry is what damps threshold
-      // oscillation during slow camera drift.
-      const free = grid.insertIfFree(
-        this._boxes[o] - pad,
-        this._boxes[o + 1] - pad,
-        this._boxes[o + 2] + pad,
-        this._boxes[o + 3] + pad,
-        c.isShown ? DeclutterManager.HYSTERESIS_PX : 0,
-      );
-      c.owner.applyDeclutter(c.handle, !free);
+      c.owner.applyDeclutter(c.handle, hidden[i] !== 0);
     }
 
     candidates.length = 0;

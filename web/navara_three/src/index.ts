@@ -70,7 +70,7 @@ import {
   type AnyMeshDesc,
 } from "./core/BaseHandle";
 import { Registries } from "./core/Registries";
-import { DeclutterManager } from "./declutter";
+import { DeclutterManager, wasmDeclutterKernel } from "./declutter";
 import {
   getCompositeAtlasSize,
   getDefaultDynamicSse,
@@ -444,7 +444,7 @@ export default class ThreeView<
     animation: false,
   };
   /** Shared screen-space label declutterer for text/sprite features. */
-  private _declutter = new DeclutterManager();
+  private _declutter = new DeclutterManager(wasmDeclutterKernel);
   /** Reusable Vector2 for the declutter pass's per-frame viewport query. */
   private _declutterSize = new Vector2();
   /** Pending follow-up frame for a throttled declutter pass or an active
