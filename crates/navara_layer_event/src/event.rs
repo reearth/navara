@@ -1,5 +1,6 @@
 use bevy_ecs::prelude::*;
 
+use navara_component::Order;
 use navara_layer::{
     DeleteB3dmLayerMarker, DeleteCesium3dTilesLayerMarker, DeleteGeoJsonLayerMarker,
     DeleteMvtLayerMarker, DeletePntsLayerMarker, DeleteRasterTileLayerMarker,
@@ -10,7 +11,15 @@ use navara_layer::{
 use navara_material::{Appearance, ElevationHeatmapConfig, HillshadeConfig, TerrainMaterial};
 
 #[derive(Debug, Clone, PartialEq, Message)]
-pub struct AddLayerEvent(pub LayerDescription);
+pub struct AddLayerEvent {
+    pub desc: LayerDescription,
+    /// ECS `Order` value to restore on the spawned layer entity. `Some` only on
+    /// a reset re-add ([`flush_layer_reloads`]): a source update must keep the
+    /// layer's z-position, so the order captured before teardown is re-applied
+    /// instead of letting `add_order_to_tiles_layer` assign a fresh topmost one.
+    /// `None` for user adds (fresh topmost order, the intended add behavior).
+    pub restore_order: Option<usize>,
+}
 
 #[derive(Debug, Clone, PartialEq, Message)]
 pub struct UpdateLayerEvent {
@@ -64,6 +73,11 @@ pub struct PendingReload {
     /// `get_layer_index` stays stable across a source update (teardown otherwise
     /// drops the index and the re-add would assign a fresh, higher one).
     pub order: Option<usize>,
+    /// The layer entity's ECS `Order` captured before teardown, restored on the
+    /// re-spawned entity so the render z-order also stays stable across a source
+    /// update — restoring only the desc-store index left the re-added layer
+    /// rendering topmost while `get_layer_index` reported the old position.
+    pub ecs_order: Option<usize>,
 }
 
 /// Queue of layers waiting to be re-added after teardown, drained by
@@ -75,12 +89,20 @@ pub struct LayerReloadQueue {
 
 pub fn process_add_events(mut commands: Commands, mut events: MessageReader<AddLayerEvent>) {
     for ev in events.read() {
-        let AddLayerEvent(desc) = ev;
+        let AddLayerEvent {
+            desc,
+            restore_order,
+        } = ev;
         // Tag every layer entity with a `LiveLayer` so `flush_layer_reloads` can
         // tell when a reset's old entity has been torn down.
         match desc {
             LayerDescription::Tiles(t) => {
-                commands.spawn((*t.clone(), LiveLayer(t.layer_id.clone())));
+                let mut entity = commands.spawn((*t.clone(), LiveLayer(t.layer_id.clone())));
+                // A reset re-add restores the captured z-order;
+                // `add_order_to_tiles_layer` only assigns to entities without one.
+                if let Some(order) = restore_order {
+                    entity.insert(Order(*order));
+                }
             }
             LayerDescription::Terrain(t) => {
                 commands.spawn((*t.clone(), LiveLayer(t.layer_id.clone())));
@@ -247,7 +269,7 @@ pub fn flush_layer_reloads(
     // Layer ids whose entity is currently alive.
     let alive: std::collections::HashSet<&str> = live.iter().map(|l| l.0.as_str()).collect();
 
-    let mut ready: Vec<(String, LayerDescription, Option<usize>)> = Vec::new();
+    let mut ready: Vec<PendingReload> = Vec::new();
     queue.pending.retain_mut(|reload| {
         if alive.contains(reload.layer_id.as_str()) {
             // Old entity still alive: teardown in flight (or not started). Wait.
@@ -255,7 +277,7 @@ pub fn flush_layer_reloads(
             true
         } else if reload.seen_alive {
             // Was alive, now gone: teardown complete, safe to re-add.
-            ready.push((reload.layer_id.clone(), reload.desc.clone(), reload.order));
+            ready.push(reload.clone());
             false
         } else {
             // Haven't seen the entity yet; wait for it to appear first.
@@ -263,12 +285,15 @@ pub fn flush_layer_reloads(
         }
     });
 
-    for (layer_id, desc, order) in ready {
+    for reload in ready {
         // `process_delete_events` removed the stored description (and its order)
         // on teardown, so re-register it before respawning the layer entity,
         // restoring the captured order so `get_layer_index` stays stable.
-        layer_desc_store.add_with_order(layer_id, desc.clone(), order);
-        add_events.write(AddLayerEvent(desc));
+        layer_desc_store.add_with_order(reload.layer_id, reload.desc.clone(), reload.order);
+        add_events.write(AddLayerEvent {
+            desc: reload.desc,
+            restore_order: reload.ecs_order,
+        });
     }
 }
 
@@ -306,7 +331,38 @@ mod tests {
                 desc: tiles_desc(layer_id),
                 seen_alive: false,
                 order: None,
+                ecs_order: None,
             });
+    }
+
+    /// A reset re-add must restore the captured ECS `Order` on the spawned
+    /// tiles-layer entity (a source update keeps the layer's z-position), while
+    /// a user add spawns without one so `add_order_to_tiles_layer` assigns a
+    /// fresh topmost order.
+    #[test]
+    fn process_add_events_restores_ecs_order_only_on_reset_re_add() {
+        let mut app = App::new();
+        app.add_message::<AddLayerEvent>();
+        app.add_systems(Update, process_add_events);
+
+        app.world_mut().write_message(AddLayerEvent {
+            desc: tiles_desc("reset"),
+            restore_order: Some(3),
+        });
+        app.world_mut().write_message(AddLayerEvent {
+            desc: tiles_desc("user-add"),
+            restore_order: None,
+        });
+        app.update();
+
+        let mut layers = app.world_mut().query::<(&TilesLayer, Option<&Order>)>();
+        for (layer, order) in layers.iter(app.world()) {
+            match layer.layer_id.as_str() {
+                "reset" => assert_eq!(order, Some(&Order(3)), "captured z-order restored"),
+                "user-add" => assert_eq!(order, None, "fresh order left for the assign system"),
+                other => panic!("unexpected layer {other}"),
+            }
+        }
     }
 
     #[test]

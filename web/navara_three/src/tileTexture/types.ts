@@ -16,6 +16,7 @@ export type DirtyReason =
   | "material"
   | "texture-binding"
   | "vector-revision"
+  | "raster-revision"
   | "hillshade";
 
 /**
@@ -121,6 +122,12 @@ export type HillshadeCompositeLayer = CompositeLayerBase & {
 export type ElevationHeatmapCompositeLayer = CompositeLayerBase & {
   kind: "elevationHeatmap";
   opacity: number;
+  /**
+   * Same Mercator latitude reprojection band as {@link RasterCompositeLayer}:
+   * the heatmap decode samples the reprojected per-slot UV, so a DEM draped on
+   * Geographic terrain (baked or direct) remaps identically to color imagery.
+   */
+  reproject?: [number, number];
 };
 
 export type CompositeLayer =

@@ -54,17 +54,6 @@ use navara_layer::{
     UpdateRasterTileLayerMarker, UpdateTerrainLayerMarker,
 };
 
-/// Raster texture slots a single terrain tile may fill with draped imagery,
-/// shared across all of its raster (non-hillshade) layers. Draping WebMercator
-/// raster onto a Geographic terrain tile is N:M — one terrain tile overlaps
-/// several WM tiles, growing toward the poles — so without a cap the per-tile
-/// texture count can exceed the GPU slots the composite shader binds. This
-/// mirrors the web renderer's `texturizedSceneIndexFrom` (half the GPU texture
-/// budget, typically 5); the web side clamps as a final safety net. Each layer
-/// gets an even share and coarsens its WM zoom to fit (see
-/// [`resolve_raster_textures`](crate::raster::resolve_raster_textures)).
-const RASTER_DRAPE_SLOT_BUDGET: usize = 5;
-
 /// System parameter that groups BufferStore and DataManager to reduce parameter count
 #[derive(SystemParam)]
 pub struct DataResources<'w> {
@@ -84,6 +73,7 @@ pub fn init_globe_tiling(
     mut qt: ResMut<TerrainTileQuadtree>,
     mut buf: ResMut<BufferStore>,
     source_store: Res<navara_source::SourceStore>,
+    mut raster_revision: ResMut<crate::raster::RasterResolveRevision>,
 ) {
     if let Some(layer) = terrain_layer.iter().next() {
         // A source-less (ellipsoid) terrain keeps the current globe scheme.
@@ -107,6 +97,13 @@ pub fn init_globe_tiling(
                 tile.destroy(&mut commands, &mut buf);
             }
             globe.tiling_scheme = scheme;
+            // The scheme gates whether raster layers drape via baked slots
+            // (`snapshot_raster_bake_inputs` snapshots nothing on non-Geographic
+            // globes): without a bump, a snapshot built under the old scheme
+            // would go stale and every raster/heatmap layer would resolve empty
+            // (fully transparent) until some unrelated bump. Runs before the
+            // snapshot system, so this is captured the same frame.
+            raster_revision.bump();
         }
     }
 
@@ -995,8 +992,21 @@ pub fn delete_layer(
 
     // Compact the same slot out of every live raster tile's texture array.
     // `active_handles` covers the visited tiles (including the ancestors that
-    // `resolve_raster_texture` can fall back to).
-    for handle in raster_tc.active_handles.iter() {
+    // `resolve_raster_texture` can fall back to); the retention pool must be
+    // compacted too — retained tiles keep their quadtree node and fragments
+    // alive for a cheap revisit, so a stale slot layout would resolve the
+    // deleted layer's texture for every layer after it once the camera
+    // returns (wrong layer order on revisited tiles). A revisited handle
+    // transiently sits in BOTH sets (until `enforce_memory_budget` purges its
+    // retained entry) and must be compacted exactly once, or the shift
+    // arithmetic removes a second, wrong slot.
+    let active_handles = &raster_tc.active_handles;
+    for handle in active_handles.iter().chain(
+        raster_tc
+            .retained
+            .keys()
+            .filter(|h| !active_handles.contains(h)),
+    ) {
         let Some(raster_tile) = raster_qt.qt.get_mut(*handle) else {
             continue;
         };
@@ -1110,6 +1120,7 @@ pub fn sync_terrain_layer_changes(
     layers: Query<(Entity, &TerrainLayer)>,
     mut rendered_tiles: Query<(Entity, &mut RenderedTile)>,
     meshes: Query<&Mesh, (With<TileMeshMarker>, Without<Deleted>)>,
+    mut raster_revision: ResMut<crate::raster::RasterResolveRevision>,
 ) {
     if deleted.is_empty() && added.is_empty() {
         return;
@@ -1153,6 +1164,10 @@ pub fn sync_terrain_layer_changes(
             }
             let _ = terrain_qt.qt.drain();
             globe.tiling_scheme = default_scheme;
+            // Falling back to WebMercator switches raster layers from baked to
+            // direct drape slots; bump so the web re-queries the (now empty)
+            // baked states and `snapshot_raster_bake_inputs` clears its snapshot.
+            raster_revision.bump();
         }
     }
 
@@ -1260,24 +1275,11 @@ pub fn update_mesh_material(
     // Sort the layer list once per run; the loop below runs per rendered tile.
     let sorted_layers: Vec<_> = tile_layers.iter().sort::<&Order>().collect();
 
-    // Split the raster slot budget evenly across the draped (non-hillshade) layers.
-    // Hillshade layers are terrain-side and contribute exactly one slot each, so
-    // they're subtracted from the budget rather than sharing the per-layer cap.
-    // Each draped layer then coarsens its WM zoom to stay within its share, keeping
-    // the per-tile texture count under the GPU slots the composite shader binds.
-    let num_hillshade_layers = sorted_layers
-        .iter()
-        .filter(|(l, _)| l.hillshade_config.is_some())
-        .count();
-    let num_draped_layers = sorted_layers.len() - num_hillshade_layers;
-    let max_tiles_per_layer = if num_draped_layers == 0 {
-        1
-    } else {
-        (RASTER_DRAPE_SLOT_BUDGET.saturating_sub(num_hillshade_layers) / num_draped_layers).max(1)
-    };
-    // Upper bound of composite slots a tile can emit: one per hillshade layer
-    // plus up to `max_tiles_per_layer` per draped layer.
-    let max_slots = num_hillshade_layers + num_draped_layers * max_tiles_per_layer;
+    // Every branch below emits exactly one composite slot per layer: hillshade
+    // is terrain-side, Geographic drapes bake their N overlapping WM tiles into
+    // one render target, and a WebMercator drape is a single identity/ancestor
+    // tile by construction.
+    let max_slots = sorted_layers.len();
 
     for (rendered_tile, _) in rendered_tiles.iter().sort::<&OrderByDistance>() {
         let Some(tile) = qt.qt.get(rendered_tile.tile_handle) else {
@@ -1301,12 +1303,10 @@ pub fn update_mesh_material(
             || tile_mesh_marker.ready_parent_tile_handle
                 != cached_rendered_tile.ready_parent_tile_handle;
 
-        // Per-composite-slot arrays. A hillshade layer contributes one slot
-        // (resolved terrain-side); a regular raster / elevation-heatmap layer
-        // contributes one slot per overlapping WebMercator tile (N:M for
-        // cross-scheme terrain, a single identity tile for WebMercator terrain).
-        // Layers are emitted in sorted order, so z-stacking is preserved; the N
-        // tiles within one layer are non-overlapping so their order is free.
+        // Per-composite-slot arrays, one slot per layer: hillshade resolves
+        // terrain-side, a Geographic drape binds its baked render target, and a
+        // WebMercator drape is a single identity (or ancestor-fallback) tile.
+        // Layers are emitted in sorted order, so z-stacking is preserved.
         let terrain_extent = tile.extent;
         // WebMercator raster draped on a Geographic terrain tile must be
         // reprojected (Mercator) on the latitude axis in the composite shader;
@@ -1380,7 +1380,41 @@ pub fn update_mesh_material(
                     hillshade_config = l.hillshade_config.clone();
                     hillshade_elevation_decoder = layer_decoder(l);
                 }
+            } else if terrain_is_geographic {
+                // Baked drape (non-hillshade raster on Geographic terrain, elevation
+                // heatmaps included): the N:M overlapping WM tiles are baked into ONE
+                // render target per layer on the web side (resolved by
+                // `get_raster_tiles` — mirroring the texturized-vector drape), so the
+                // layer costs exactly one composite slot instead of one per
+                // overlapping tile. The k-th baked slot emitted here pairs with
+                // `layer_ordinal == k` in the resolved states: both come from the same
+                // sorted layer list with the same non-hillshade filter.
+                //
+                // fragment None + identity UV: the web binds the baked render target
+                // (spanning the terrain tile's Mercator-projected extent) to this slot;
+                // `layer_reproject` with identity UV reprojects it by exactly the
+                // terrain `[south, north]` band, like a vector drape slot. Heatmap
+                // slots reproject the same way — the bake copies the encoded DEM
+                // texels raw (nearest, no color conversion), so the composite decode
+                // stays valid.
+                shows.push(a.show);
+                opacities.push(a.opacity.clamp(0., 1.));
+                colors.push(a.color);
+                is_elevation_heatmaps.push(is_heatmap);
+                is_hillshades.push(false);
+                layer_fragments.push(None);
+                layer_uv_transforms.push(None);
+                layer_reproject.push(true);
+
+                if is_heatmap && elevation_heatmap_config.is_none() {
+                    elevation_heatmap_config = l.elevation_heatmap_config.clone();
+                    heatmap_elevation_decoder = layer_decoder(l);
+                }
             } else {
+                // WebMercator terrain (the Geographic case is the baked branch
+                // above): the drape is same-scheme, so the resolve yields at
+                // most one tile — the terrain tile's identity WM tile, or its
+                // nearest loaded ancestor — and never reprojects.
                 let lng_span = (terrain_extent.east - terrain_extent.west).val();
                 // Max zoom now lives on the referenced source.
                 let max_zoom = l
@@ -1390,16 +1424,15 @@ pub fn update_mesh_material(
                     .map(|s| s.max_zoom())
                     .unwrap_or(20);
                 let target_z = navara_core::wm_zoom_for_lng_span(lng_span, max_zoom);
-                // The raster pull only returns fragments that have loaded.
-                let resolved = crate::raster::resolve_raster_textures(
+                // The raster pull only returns a fragment that has loaded.
+                let resolved = crate::raster::resolve_raster_texture(
                     &raster_qt,
                     &terrain_extent,
                     target_z,
-                    max_tiles_per_layer,
                     i,
                     &texture_fragment,
                 );
-                for r in resolved {
+                if let Some(r) = resolved {
                     shows.push(a.show);
                     opacities.push(a.opacity.clamp(0., 1.));
                     colors.push(a.color);
@@ -1407,7 +1440,7 @@ pub fn update_mesh_material(
                     is_hillshades.push(false);
                     layer_fragments.push(Some(r.entity));
                     layer_uv_transforms.push(Some(r.uv_transform));
-                    layer_reproject.push(terrain_is_geographic);
+                    layer_reproject.push(false);
                 }
 
                 if is_heatmap && elevation_heatmap_config.is_none() {
@@ -1509,9 +1542,13 @@ pub fn handle_tile_worker_task_completed(
     tc.is_updated_in_this_frame = true;
 }
 
+/// Assigns a fresh topmost `Order` to newly added tiles layers. A layer spawned
+/// WITH an `Order` already — the reset re-add restoring its pre-teardown
+/// z-position (see `AddLayerEvent::restore_order`) — is left untouched, so a
+/// source update does not move the layer to the top like a user add would.
 pub fn add_order_to_tiles_layer(
     mut commands: Commands,
-    tiles_layers: Query<Entity, Added<TilesLayer>>,
+    tiles_layers: Query<Entity, (Added<TilesLayer>, Without<Order>)>,
     existing_orders: Query<&Order, With<TilesLayer>>,
 ) {
     // Find the maximum existing order value
@@ -2519,6 +2556,117 @@ mod delete_layer_tests {
         assert_eq!(tex, &vec![Some(ea), Some(ec)]);
     }
 
+    /// A layer spawned with a pre-set `Order` (the reset re-add restoring its
+    /// pre-teardown z-position) must keep it; only order-less layers get the
+    /// fresh topmost value — which must also count the restored order in `max`.
+    #[test]
+    fn add_order_skips_layers_with_restored_order() {
+        let mut app = App::new();
+        // A reset re-add restoring Order(5) plus a plain user add, same frame.
+        let restored = app
+            .world_mut()
+            .spawn((raster_layer("reset"), Order(5)))
+            .id();
+        let added = app.world_mut().spawn(raster_layer("user-add")).id();
+
+        app.add_systems(Update, add_order_to_tiles_layer);
+        app.update();
+
+        assert_eq!(
+            app.world().get::<Order>(restored),
+            Some(&Order(5)),
+            "restored z-order must survive the assign system"
+        );
+        assert_eq!(
+            app.world().get::<Order>(added),
+            Some(&Order(6)),
+            "fresh order goes on top of the restored one"
+        );
+    }
+
+    /// Deleting a middle layer must also compact raster tiles in the retention
+    /// pool: they keep their quadtree node and fragments alive for a revisit, so
+    /// a stale slot layout would resolve the deleted layer's texture for every
+    /// layer after it once the camera returns. A revisited handle transiently
+    /// sits in BOTH `active_handles` and `retained` (until
+    /// `enforce_memory_budget` purges the retained entry) and must be compacted
+    /// exactly once.
+    #[test]
+    fn delete_layer_compacts_retained_raster_tiles_exactly_once() {
+        let mut app = App::new();
+        app.insert_resource(TerrainTileQuadtree::new_with_linear_qt());
+
+        // Root = retained-only tile; child (0,0,1) = revisited tile living in
+        // both sets. Each carries one texture entity per layer [A, B, C].
+        let init = |(x, y, z): (usize, usize, usize)| RasterTile::new(TileXYZ { x, y, z }, 0., 0.);
+        let mut raster_qt = RasterTileQuadtree::new_with_linear_qt();
+        raster_qt.qt.initialize_zero(&init);
+        raster_qt.qt.initialize_children((0, 0, 0), &init);
+        let retained_handle = raster_qt.qt.zero().unwrap().handle();
+        let revisited_handle = raster_qt.qt.leaf((0, 0, 1)).unwrap().handle();
+
+        let spawn_slots = |app: &mut App| -> Vec<Option<Entity>> {
+            (0..3)
+                .map(|_| Some(app.world_mut().spawn_empty().id()))
+                .collect()
+        };
+        let retained_slots = spawn_slots(&mut app);
+        let revisited_slots = spawn_slots(&mut app);
+        raster_qt
+            .qt
+            .get_mut(retained_handle)
+            .unwrap()
+            .texture_fragment_entity_ids = Some(retained_slots.clone());
+        raster_qt
+            .qt
+            .get_mut(revisited_handle)
+            .unwrap()
+            .texture_fragment_entity_ids = Some(revisited_slots.clone());
+        app.insert_resource(raster_qt);
+
+        let mut raster_tc = RasterTileCacheManager::default();
+        raster_tc.active_handles.insert(revisited_handle);
+        for handle in [retained_handle, revisited_handle] {
+            raster_tc.retained.insert(
+                handle,
+                RetainedEntry {
+                    retained_at: 0,
+                    cost: TileCost::default(),
+                },
+            );
+        }
+        app.insert_resource(raster_tc);
+
+        // Layers A(0), B(1), C(2); delete the middle one (B).
+        app.world_mut().spawn((raster_layer("A"), Order(0)));
+        app.world_mut().spawn((raster_layer("B"), Order(1)));
+        app.world_mut().spawn((raster_layer("C"), Order(2)));
+        app.world_mut()
+            .spawn(DeleteRasterTileLayerMarker("B".to_string()));
+
+        app.add_systems(Update, delete_layer);
+        app.update();
+
+        let raster_qt = app.world().resource::<RasterTileQuadtree>();
+        for (name, handle, slots) in [
+            ("retained", retained_handle, &retained_slots),
+            ("revisited", revisited_handle, &revisited_slots),
+        ] {
+            let tex = raster_qt
+                .qt
+                .get(handle)
+                .unwrap()
+                .texture_fragment_entity_ids
+                .as_ref()
+                .unwrap();
+            assert_eq!(
+                tex,
+                &vec![slots[0], slots[2]],
+                "{name} tile: middle slot removed exactly once"
+            );
+        }
+    }
+
     /// Two delete markers for the *same* layer in one frame must compact exactly
     /// one slot. Without sort+dedup of the index list, the duplicate index makes
     /// `idx - removed_idx` over-remove a slot (and underflow `usize` when the
@@ -2586,6 +2734,7 @@ mod delete_layer_tests {
 
         let mut app = App::new();
         app.insert_resource(BufferStore::default());
+        app.init_resource::<crate::raster::RasterResolveRevision>();
         // Default (WebMercator) globe: deleting an ellipsoid terrain keeps the
         // scheme, so the scheme-fallback path does not drain the tiling here.
         app.insert_resource(navara_globe::Globe::default());
@@ -2685,6 +2834,7 @@ mod delete_layer_tests {
 
         let mut app = App::new();
         app.insert_resource(BufferStore::default());
+        app.init_resource::<crate::raster::RasterResolveRevision>();
         // An add keeps the scheme (fallback only fires on the last delete).
         app.insert_resource(navara_globe::Globe::default());
 
@@ -2765,6 +2915,7 @@ mod delete_layer_tests {
 
         let mut app = App::new();
         app.insert_resource(BufferStore::default());
+        app.init_resource::<crate::raster::RasterResolveRevision>();
         // Globe starts at the default WebMercator scheme.
         app.insert_resource(navara_globe::Globe::default());
 
@@ -2820,6 +2971,15 @@ mod delete_layer_tests {
         assert!(qt.qt.leaf((1, 0, 0)).is_some());
         // ...and the stale subdivided WebMercator tile was drained.
         assert!(qt.qt.leaf((0, 0, 1)).is_none());
+        // The flip switches raster layers to baked drape slots, so the resolve
+        // revision must bump or `snapshot_raster_bake_inputs` keeps the stale
+        // (empty) pre-flip snapshot and every raster layer resolves transparent.
+        assert_ne!(
+            app.world()
+                .resource::<crate::raster::RasterResolveRevision>()
+                .0,
+            0,
+        );
     }
 
     /// Seeds a geographic globe + tile and a terrain layer (added a frame earlier),
@@ -2830,6 +2990,7 @@ mod delete_layer_tests {
 
         let mut app = App::new();
         app.insert_resource(BufferStore::default());
+        app.init_resource::<crate::raster::RasterResolveRevision>();
 
         let globe = navara_globe::Globe {
             tiling_scheme: TilingScheme::Geographic { tms: true },
@@ -2887,6 +3048,14 @@ mod delete_layer_tests {
         let qt = app.world().resource::<TerrainTileQuadtree>();
         assert!(qt.qt.leaf((0, 0, 0)).is_none(), "geographic tiling drained");
         assert!(app.world().resource::<TileCacheManager>().force_update);
+        // Raster layers switch from baked back to direct drape slots on the
+        // scheme fallback; the resolve revision must reflect that.
+        assert_ne!(
+            app.world()
+                .resource::<crate::raster::RasterResolveRevision>()
+                .0,
+            0,
+        );
     }
 
     /// A source switch's delete half (marker `reset: true`) must NOT fall back to

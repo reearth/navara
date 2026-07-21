@@ -34,8 +34,8 @@ use navara_math::{FloatType, Transform, Vec3};
 use navara_source::{Source, SourceStore};
 use navara_texture_fragment::{TextureFragmentLoadedEvent, TextureFragmentStatus};
 use navara_tile_component::{
-    MartiniComponent, TerrainHeightObserver, TerrainTile, TerrainTileQuadtree, TileHandle,
-    TileTerrainDataRequesterQuery, VectorTileQuadtree, compute_terrain_height_at_point,
+    MartiniComponent, RasterTileQuadtree, TerrainHeightObserver, TerrainTile, TerrainTileQuadtree,
+    TileHandle, TileTerrainDataRequesterQuery, VectorTileQuadtree, compute_terrain_height_at_point,
 };
 use navara_vector_tile::{LayerResources, VectorResolveRevision, resolve_vector_tile_states};
 use navara_window::{Window, WindowResizeEvent};
@@ -50,6 +50,7 @@ mod memory;
 
 pub use batch_property::*;
 pub use memory::*;
+pub use navara_tile::raster::ResolvedRasterTileState;
 pub use navara_vector_tile::ResolvedVectorTileState;
 
 pub struct App {
@@ -350,7 +351,10 @@ impl App {
 
         self.app
             .world_mut()
-            .write_message(navara_layer_event::AddLayerEvent(desc));
+            .write_message(navara_layer_event::AddLayerEvent {
+                desc,
+                restore_order: None,
+            });
     }
 
     pub fn get_layer_index(&self, layer_id: &str) -> Option<usize> {
@@ -595,6 +599,19 @@ impl App {
             .get_resource::<LayerDescStore>()
             .and_then(|store| store.get_order(layer_id).copied());
 
+        // Also capture the layer entity's ECS `Order` (the render z-order) so the
+        // re-spawned entity keeps its position: a reset must be transparent, not
+        // move the layer to the top like a user re-add. Only `TilesLayer` carries
+        // an ECS `Order`; other layer types yield `None` here.
+        let ecs_order = {
+            let world = self.app.world_mut();
+            let mut query = world.query::<(&navara_layer::TilesLayer, &navara_component::Order)>();
+            query
+                .iter(world)
+                .find(|(l, _)| l.layer_id == layer_id)
+                .map(|(_, o)| o.0)
+        };
+
         self.app
             .world_mut()
             .write_message(navara_layer_event::DeleteLayerEvent {
@@ -624,6 +641,7 @@ impl App {
                     desc,
                     seen_alive: false,
                     order,
+                    ecs_order,
                 });
             }
         }
@@ -760,6 +778,61 @@ impl App {
         self.app
             .world()
             .get_resource::<VectorResolveRevision>()
+            .map(|r| r.0)
+            .unwrap_or(0)
+    }
+
+    /// Resolve the WebMercator raster tiles to bake into per-layer drape render targets
+    /// for a terrain tile, flattened across the baked (non-hillshade, elevation
+    /// heatmaps included) layers for the wasm boundary. Only Geographic terrain bakes —
+    /// WebMercator terrain drapes 1:1 through the per-slot material path (and keeps the
+    /// snapshot empty) — so this returns empty there. Reads the per-revision
+    /// [`RasterBakeSnapshot`](navara_tile::raster::RasterBakeSnapshot) (sorted baked
+    /// layers + loaded fragment set — this runs per visible terrain tile, so it must
+    /// not rebuild them) and delegates the N:M overlap + per-layer budget logic to
+    /// [`resolve_raster_tile_states`](navara_tile::raster::resolve_raster_tile_states).
+    pub fn get_raster_tiles(&mut self, handle: TileHandle) -> Vec<ResolvedRasterTileState> {
+        let world = self.app.world();
+
+        let Some(snapshot) = world.get_resource::<navara_tile::raster::RasterBakeSnapshot>() else {
+            return vec![];
+        };
+        if snapshot.layers.is_empty() {
+            return vec![];
+        }
+
+        let Some((terrain_extent, terrain_is_geographic)) = world
+            .get_resource::<TerrainTileQuadtree>()
+            .and_then(|qt| qt.qt.get(handle))
+            .map(|tile| (tile.extent, tile.tiling_scheme.is_geographic()))
+        else {
+            return vec![];
+        };
+        if !terrain_is_geographic {
+            return vec![];
+        }
+
+        let Some(raster_qt) = world.get_resource::<RasterTileQuadtree>() else {
+            return vec![];
+        };
+
+        navara_tile::raster::resolve_raster_tile_states(
+            raster_qt,
+            &terrain_extent,
+            terrain_is_geographic,
+            &snapshot.layers,
+            &|e| snapshot.loaded.contains(&e),
+        )
+    }
+
+    /// Monotonic counter that changes only when the raster drape resolution could have
+    /// changed (a raster traverse ran — fragment loads and layer/terrain changes are
+    /// inputs of its change gate). The web side reads this once per frame and skips the
+    /// per-terrain-tile `get_raster_tiles` calls while it is unchanged.
+    pub fn raster_revision(&self) -> u32 {
+        self.app
+            .world()
+            .get_resource::<navara_tile::raster::RasterResolveRevision>()
             .map(|r| r.0)
             .unwrap_or(0)
     }

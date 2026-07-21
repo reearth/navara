@@ -41,9 +41,15 @@
     );
   }
 
-  // Sample elevation with bilinear interpolation in decoded height space
-  // texSize: actual texture size obtained via textureSize(demTexture, 0)
-  float sampleElevationBilinear(sampler2D demTexture, vec2 uv, ivec2 texSize) {
+  // Sample elevation with bilinear interpolation in decoded height space.
+  // texSize: actual texture size obtained via textureSize(demTexture, 0).
+  // `valid` reports whether the sample decoded to an actual elevation: no-data
+  // (boundary) texels — including a baked drape target's uncovered regions,
+  // which the bake paints with the boundary color — must render transparent
+  // instead of being colormapped as the fallback 0.0. The DEM's alpha channel
+  // is deliberately never read here: it stays reserved for future RGBA height
+  // encodings.
+  float sampleElevationBilinear(sampler2D demTexture, vec2 uv, ivec2 texSize, out bool valid) {
     // Prepare bilinear sampling data (pixel coordinates and interpolation weights)
     DEMBilinearData data = prepareDEMBilinear(texSize, uv);
 
@@ -60,7 +66,8 @@
       h = interpolateDEMHeights(h00, h10, h01, h11, data.frac);
     }
 
-    if (!isValidHeight(h)) {
+    valid = isValidHeight(h);
+    if (!valid) {
       return 0.0;
     }
 

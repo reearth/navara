@@ -53,6 +53,15 @@ never misses. Vector renders exactly one level per region, so the resolve must
 find that level whether it sits above or below the requested zoom (see
 [Resolve](#resolve-covering-the-terrain-tile)).
 
+Since the quantized-mesh multi-tile fix, the raster imagery drape on
+Geographic terrain reuses this same baked mechanism — one render target per
+layer, N:M mosaic bake, per-layer overlap budget, a `RasterResolveRevision`
+gate mirroring the vector one (see
+[TILE_TERRAIN_TRAVERSAL.md](TILE_TERRAIN_TRAVERSAL.md)). What stays
+vector-specific is the up-**or-down** resolve above and the offscreen scene
+rendering; on the web both live behind the shared `DrapeResolver` interface
+(`mesh/tile/drapeResolver.ts`).
+
 ## The pipeline
 
 ```mermaid
@@ -73,10 +82,11 @@ flowchart LR
   end
 ```
 
-Per terrain tile, every rendered frame, `TileMesh.refreshVectorSlots`
-(`mesh/tile.ts`) pulls the Rust-resolved sources, groups them by layer, bakes the
-backing feature scenes into a per-layer render target, and the composite pass
-pastes each RT onto the terrain tile (with reprojection on Geographic terrain).
+Per terrain tile, every rendered frame, the tile's `VectorDrapeResolver`
+(`mesh/tile/vectorDrapeResolver.ts`, driven from `TileMesh._onBeforeRender`)
+pulls the Rust-resolved sources, groups them by layer, bakes the backing
+feature scenes into a per-layer render target, and the composite pass pastes
+each RT onto the terrain tile (with reprojection on Geographic terrain).
 
 ## Rust side: the traverse and the drape source
 
@@ -176,7 +186,7 @@ feature meshes. It is a **per-feature** cache:
 - **`markDirty`** on material/visibility changes bumps the scene revision so the
   consuming `TileMesh` re-bakes.
 
-`TileMesh.renderVectorScenes` → `TileTextureCompositor.renderVectorScenes`
+`VectorDrapeResolver.update` → `TileTextureCompositor.renderVectorScenes`
 (`tileTexture/TileTextureCompositor.ts`) clears each per-layer render target once
 and draws every resolved source's scene into it. Each source is framed by a
 **single fixed** `[-1, 1]` orthographic camera reframed to the source's Rust-supplied
@@ -186,9 +196,9 @@ baked into those affines. The sources accumulate additively, so the RT ends up
 spanning the terrain tile's extent. The composite pass then pastes it like a raster
 layer (identity UV in longitude, latitude reprojected).
 
-`TileMesh.bindVectorSlots` then points the slot's texture at its RT and copies a
+`VectorDrapeResolver.bindSlots` then points the slot's texture at its RT and copies a
 **representative** source mesh's enhancer state (water/specular/emissive/effect id, …)
-into the main shader's per-slot uniforms via `copyVectorMeshAttrs`. Any source mesh
+into the main shader's per-slot uniforms via `copyMeshAttrs`. Any source mesh
 of a layer works as the representative because these attributes are uniform across a
 clamp-to-ground layer's tiles. See
 [TILE_TEXTURE_COMPOSITING.md](TILE_TEXTURE_COMPOSITING.md) for how the bake and paste
@@ -196,11 +206,11 @@ consume this.
 
 ### Avoiding per-frame cost
 
-`refreshVectorSlots` runs per terrain tile per rendered frame, so the
+The resolver's `update()` runs per terrain tile per rendered frame, so the
 WASM-boundary resolve is gated by a **revision counter**: Rust bumps
 `VectorResolveRevision` (`crates/navara_vector_tile/src/lib.rs`) whenever a
 traverse runs; JS reads `vectorRevision()` once per frame and re-fetches a tile's
-slots only when it changed (`tile.ts` `_lastVectorRevision`).
+slots only when it changed (`vectorDrapeResolver.ts` `lastRevision`).
 
 ## Scheme cases
 
@@ -243,6 +253,7 @@ without this sort the composite would stack them in arbitrary ECS query order.
 | `crates/navara_core/src/terrain/geometric_error.rs` | scheme-aware level-zero geometric error (keeps drape zoom consistent across schemes) |
 | `web/navara_three/src/scene.ts` | `TexturizedSceneByTileCoordinates` — per-feature scene cache |
 | `web/navara_three/src/event/feature.ts` | draped feature lifecycle: insert on create, `removeMesh`, `markDirty` |
-| `web/navara_three/src/mesh/tile.ts` | `refreshVectorSlots`, `vectorSignature` re-bake gate, `bindVectorSlots` (identity UV + representative mesh attrs), bake driver |
+| `web/navara_three/src/mesh/tile/vectorDrapeResolver.ts` | `VectorDrapeResolver` — `refreshSlots`, `signature` re-bake gate, `bindSlots` (identity UV + representative mesh attrs), bake driver |
+| `web/navara_three/src/mesh/tile/drapeResolver.ts` | `DrapeResolver` interface shared with the raster drape resolvers |
 | `web/navara_three/src/tileTexture/TileTextureCompositor.ts` | `renderVectorScenes` offscreen bake |
 | `material/enhancer/tileComposite/tileCompositeBaseEnhancer/` | composite paste + WM→Geographic reproject (shared with raster) |

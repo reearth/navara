@@ -40,6 +40,15 @@ pub struct Globe {
     /// Flattened RGB array: [r0,g0,b0, r1,g1,b1, ...].
     #[wasm_bindgen(js_name = elevationColormap, getter_with_clone)]
     pub elevation_colormap: Vec<f32>,
+
+    /// Whether the globe tiles with the Geographic scheme (quantized-mesh
+    /// terrain) rather than the default WebMercator. Engine-set output — the
+    /// web renderer selects its raster drape pipeline (baked vs direct) from
+    /// it at tile-mesh creation; ignored on input (the scheme is dictated by
+    /// the terrain source, not configurable).
+    #[wasm_bindgen(js_name = isGeographicTiling)]
+    #[serde(default)]
+    pub is_geographic_tiling: bool,
 }
 
 #[wasm_bindgen]
@@ -67,6 +76,7 @@ impl Globe {
             opacity,
             wireframe,
             elevation_colormap,
+            is_geographic_tiling: false,
         }
     }
 }
@@ -83,6 +93,7 @@ impl From<&navara_globe::Globe> for Globe {
             opacity: val.opacity,
             wireframe: val.wireframe,
             elevation_colormap: val.elevation_colormap.clone(),
+            is_geographic_tiling: val.tiling_scheme.is_geographic(),
         }
     }
 }
