@@ -123,8 +123,7 @@ export class InstancedSpriteMesh
     if (!this.visible || !this._declutter || !this._anchors) return;
     const enhancer = this._enhancedMaterial;
     const params = this.geometry?.getAttribute("instanceParams") as
-      | InstancedBufferAttribute
-      | undefined;
+      InstancedBufferAttribute | undefined;
     if (!enhancer || !params) return;
 
     const state = enhancer.states();
@@ -135,8 +134,7 @@ export class InstancedSpriteMesh
     // material-wide "aspect" state to read.
     const uvRect = state.billboard
       ? (this.geometry?.getAttribute("instanceUvRect") as
-          | InstancedBufferAttribute
-          | undefined)
+          InstancedBufferAttribute | undefined)
       : undefined;
     const anchors = this._anchors;
     const overrides = this._declutterPriorityOverrides;
@@ -181,8 +179,7 @@ export class InstancedSpriteMesh
   stepDeclutterFade(deltaMs: number): boolean {
     if (!this._declutterAnimating) return false;
     const attr = this.geometry?.getAttribute("instanceDeclutterHide") as
-      | InstancedBufferAttribute
-      | undefined;
+      InstancedBufferAttribute | undefined;
     const targets = this._declutterTargets;
     if (!attr || !targets) {
       this._declutterAnimating = false;
