@@ -1,18 +1,32 @@
 import ThreeView, { Color } from "@navaramap/three";
+import {
+  DefaultPlugin,
+  type DefaultDescriptions,
+} from "@navaramap/three_default_plugin";
 
-import { TILE_DATASETS } from "../../helpers/constants";
+import { TERRAIN_DATASETS, TILE_DATASETS } from "../../helpers/constants";
 import { addCtrlPanel } from "../../helpers/panel";
 
-export const run = async (view: ThreeView) => {
+export const run = async (view: ThreeView<DefaultDescriptions>) => {
   const attribution = view.attribution;
+
+  view.addPlugin(new DefaultPlugin());
 
   await view.init();
 
-  view.globe.useNormal = false;
+  view.addLight({ ambient: {} });
 
+  const terrainSource = view.addSource({
+    type: "quantized-mesh",
+    url: TERRAIN_DATASETS.reearthQuantizedMesh.url,
+    maxZoom: 18,
+    requestVertexNormals: true,
+    requestWaterMask: true,
+  });
   view.addLayer({
     type: "terrain",
-    ellipsoid: {},
+    source: terrainSource,
+    terrain: { castShadow: true, receiveShadow: true },
   });
 
   addCtrlPanel(

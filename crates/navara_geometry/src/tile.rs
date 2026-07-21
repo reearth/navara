@@ -478,7 +478,7 @@ mod tests {
         assert!(tf.scale.y.is_finite());
         // North cap → sliver hugs the top edge of the source tile, framed in [0, 1].
         assert!(tf.offset.y >= 0.0);
-        assert!(tf.offset.y as f64 + tf.scale.y as f64 <= 1.0 + 1e-9);
-        assert!(tf.offset.y as f64 >= 1.0 - 1e-3 - 1e-9);
+        assert!(tf.offset.y + tf.scale.y <= 1.0 + 1e-9);
+        assert!(tf.offset.y >= 1.0 - 1e-3 - 1e-9);
     }
 }

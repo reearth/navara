@@ -7,7 +7,8 @@ import type {
 import { Layer } from "@navaramap/three_react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { czmlToGeoJSON, type GeoJSONFC } from "./czml";
+import { czmlToGeoJSON } from "./czml";
+import type { GeoJSONFC } from "./czml";
 
 export type FloodLayerProps = {
   url: string;
@@ -98,10 +99,9 @@ export function FloodLayer({
     return currentDate.toISOString();
   }, [fc, progressPercent]);
 
-  currentTimeRef.current = currentTime;
-
-  // Keep an up-to-date ref for evaluator closure
+  // Keep an up-to-date ref for evaluator closure (outside render).
   useEffect(() => {
+    currentTimeRef.current = currentTime;
     // Notify parent of current date change
     if (currentTime && onCurrentDateChange) {
       onCurrentDateChange(new Date(currentTime));
@@ -119,8 +119,7 @@ export function FloodLayer({
 
           // Check if feature is available at current time
           const availabilities = properties?.["availabilities"] as
-            | Record<"start" | "end", string>[]
-            | undefined;
+            Record<"start" | "end", string>[] | undefined;
 
           // If no availabilities specified, feature is always shown
           if (!availabilities || availabilities.length === 0) {

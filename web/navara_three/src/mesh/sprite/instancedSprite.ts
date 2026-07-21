@@ -876,8 +876,7 @@ export class InstancedSpriteMesh
     if (instanceId === undefined) return;
 
     const rectAttr = this.geometry.getAttribute("instanceUvRect") as
-      | InstancedBufferAttribute
-      | undefined;
+      InstancedBufferAttribute | undefined;
     if (!rectAttr) return;
 
     if (url == null) {

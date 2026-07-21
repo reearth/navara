@@ -23,15 +23,15 @@
   "license": "MIT OR Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/eukarya-inc/navara.git",
+    "url": "git+https://github.com/reearth/navara.git",
     "directory": "web/navara_worker"
   },
   "publishConfig": {
     "access": "public"
   },
   "dependencies": {
-    "workerpool": "10.0.1",
     "@navaramap/core": "workspace:*",
-    "@navaramap/engine-worker": "workspace:*"
+    "@navaramap/engine-worker": "workspace:*",
+    "workerpool": "10.0.3"
   }
 }

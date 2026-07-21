@@ -119,11 +119,9 @@ fn process_geometry(
                     accumulate_polyline(builder, geometry);
                 }
             }
-            Appearance::Polygon(p) => {
-                // Skip clamped/tiled polygons - they go through the tiled rendering pipeline
-                if !p.clamp_to_ground && !p.tiled {
-                    accumulate_polygon(builder, geometry);
-                }
+            // Skip clamped/tiled polygons - they go through the tiled rendering pipeline
+            Appearance::Polygon(p) if !p.clamp_to_ground && !p.tiled => {
+                accumulate_polygon(builder, geometry);
             }
             _ => {}
         }

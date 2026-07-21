@@ -91,7 +91,7 @@ impl App {
                 else {
                     return;
                 };
-                // Preserve cpu; re-inserting TileCost fires on_replace (subtract old)
+                // Preserve cpu; re-inserting TileCost fires on_discard (subtract old)
                 // then on_insert (add new), so the ledger auto-corrects.
                 let cpu = world.get::<TileCost>(rendered).map(|t| t.cpu).unwrap_or(0);
                 world.entity_mut(rendered).insert(TileCost {
@@ -152,7 +152,7 @@ impl App {
             .copied()
             .unwrap_or_default();
         cost.drape = gpu_bytes;
-        // Re-inserting TileCost fires on_replace (subtract old) then on_insert
+        // Re-inserting TileCost fires on_discard (subtract old) then on_insert
         // (add new), so the ledger auto-corrects.
         world.entity_mut(entity).insert((
             cost,

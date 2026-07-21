@@ -34,18 +34,18 @@
   "license": "MIT OR Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/eukarya-inc/navara.git",
+    "url": "git+https://github.com/reearth/navara.git",
     "directory": "web/navara_font"
   },
   "publishConfig": {
     "access": "public"
   },
   "dependencies": {
-    "three": "0.184.0",
     "@navaramap/engine-font-worker": "workspace:*",
-    "@navaramap/worker": "workspace:*"
+    "@navaramap/worker": "workspace:*",
+    "three": "0.185.1"
   },
   "devDependencies": {
-    "@types/three": "0.184.0"
+    "@types/three": "0.185.1"
   }
 }

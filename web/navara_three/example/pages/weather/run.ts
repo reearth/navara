@@ -317,9 +317,7 @@ const addWeatherControl = (
   };
 
   let selectedLayer:
-    | MeshHandle<RainMeshDesc>
-    | MeshHandle<SnowMeshDesc>
-    | null = null;
+    MeshHandle<RainMeshDesc> | MeshHandle<SnowMeshDesc> | null = null;
 
   const folderFields: FolderFields<typeof PARAMS> = [
     {

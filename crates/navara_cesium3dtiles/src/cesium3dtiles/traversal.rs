@@ -954,7 +954,7 @@ mod prune_tests {
         )> = SystemState::new(app.world_mut());
         {
             let (mut commands, mut buf, mut nested_map, requesters, mut rendered_tiles) =
-                state.get_mut(app.world_mut());
+                state.get_mut(app.world_mut()).unwrap();
             let mut count = 0;
             mark_rendered_tiles(
                 &mut commands,

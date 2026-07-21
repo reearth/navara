@@ -29,8 +29,8 @@ cargo build --features debug  --target wasm32-unknown-unknown -p navara_wasm -p 
 ''']
 
 # Generate JS bindings for each WASM module
-# Note: wasm-bindgen-cli version must match the wasm-bindgen dependency version (0.2.102)
-# Install with: cargo install wasm-bindgen-cli --version 0.2.102
+# Note: wasm-bindgen-cli version must match the wasm-bindgen dependency version (0.2.126)
+# Install with: cargo install wasm-bindgen-cli --version 0.2.126
 # Optional: Install binaryen for wasm-opt optimization: https://github.com/WebAssembly/binaryen
 [tasks.bindgen-rust]
 script = ['''

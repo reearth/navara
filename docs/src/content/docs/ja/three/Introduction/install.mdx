@@ -1,0 +1,40 @@
+---
+title: Install
+description: "@navaramap/three のインストールガイド"
+sidebar:
+  order: 120
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+## パッケージのインストール
+
+Navara のパッケージは npm の [`@navaramap`](https://www.npmjs.com/org/navaramap) スコープで公開されています。`@navaramap/three` を、peer dependencies である `three`・`postprocessing` と一緒にインストールします。多くのアプリでは、ビルトインのメッシュ・エフェクト・ライト Descriptor を登録する `@navaramap/three_default_plugin` も併せてインストールするとよいでしょう。
+
+<Tabs syncKey="pkg">
+
+<TabItem label="npm">
+
+```bash
+npm install @navaramap/three @navaramap/three_default_plugin three postprocessing
+```
+
+</TabItem>
+
+<TabItem label="yarn">
+
+```bash
+yarn add @navaramap/three @navaramap/three_default_plugin three postprocessing
+```
+
+</TabItem>
+
+<TabItem label="pnpm">
+
+```bash
+pnpm add @navaramap/three @navaramap/three_default_plugin three postprocessing
+```
+
+</TabItem>
+
+</Tabs>

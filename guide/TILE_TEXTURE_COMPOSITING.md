@@ -58,7 +58,7 @@ Those stages map onto two code areas: the **orchestration + data model** under
 
 ```mermaid
 graph TD
-  TileMesh["TileMesh<br/>(mesh/tile.ts)"]
+  TileMesh["TileMesh + drape resolvers<br/>(mesh/tile/)"]
 
   subgraph tt["tileTexture/ — stages 2–4 orchestration"]
     Planner["SlotPlanner · planSlots()"]
@@ -91,16 +91,38 @@ Before anything can be composited, every source has to be a plain texture bound
 to a slot. What each source is, and how much prep it needs:
 
 - **Raster tiles** — ordinary RGBA imagery. Sampled straight and tinted by the
-  slot's color / opacity. No prep.
+  slot's color / opacity. On WebMercator terrain the fetched texture binds
+  directly to its slot (no prep); on Geographic terrain the layer's overlapping
+  WM tiles are first mosaicked into one render target (see
+  [Baked raster mosaics](#baked-raster-mosaics-geographic-terrain)).
 - **Hillshade DEM** — a tangent-space normal map. Contributes no color, only a
   surface normal; decoded during the bake (see [Hillshade](#hillshade-a-worked-example)).
   No prep as an input.
 - **Elevation DEM** — encoded heights. Decoded and mapped through the shared
-  colormap during the bake by the elevation heatmap enhancer. No prep as an input.
+  colormap during the bake by the elevation heatmap enhancer. On Geographic
+  terrain it runs through the same raster mosaic first, copied
+  value-preserving so the encoded texels survive.
 - **Watermask** — a single-channel land/water mask (quantized-mesh). A tile-wide
   *global*, not a per-slot layer; see [Quantized-mesh](#quantized-mesh-and-watermask).
-- **Vector tiles** — the exception. These are Three.js scenes, not textures, so
-  they must be rendered off-screen first; the rest of this section covers that.
+- **Vector tiles** — Three.js scenes, not textures, so they are always rendered
+  off-screen first; the next subsection covers that.
+
+Which prep path a slot family takes is owned by the tile's two **drape
+resolvers** (`mesh/tile/drapeResolver.ts`), created per `TileMesh`:
+
+- **`VectorDrapeResolver`** — clamp-to-ground vector layers. Always the baked
+  path on every tiling scheme (WebMercator terrain is the degenerate
+  single-source identity case of the Geographic N:M mosaic).
+- **`DirectRasterDrapeResolver`** — raster layers on WebMercator terrain.
+  Every hook is a no-op: the fetched texture binds straight to its slot.
+- **`BakedRasterDrapeResolver`** — raster layers on Geographic (quantized-mesh)
+  terrain, chosen at tile-mesh creation from `Globe.isGeographicTiling` (a
+  runtime scheme flip rebuilds every tile, so the choice never changes
+  mid-life).
+
+Each resolver refreshes its Rust-resolved slots when its resolve revision
+(`vectorRevision()` / `rasterRevision()`) moved, and re-bakes when its
+slot/content signature changed.
 
 Vector tiles are draped meshes (`PolygonMesh` / `PolylineMesh`, themselves
 Material-Enhancer materials). Each tile reserves a block of **vector-region**
@@ -109,10 +131,11 @@ slot:
 
 - `numTexturizedVector = floor(maxTextures / 2) − additionalTextures`, so the
   region begins at `texturizedSceneIndexFrom = maxTextures − numTexturizedVector`.
-- One `WebGLRenderTarget` (512×512) per vector slot, kept in
-  `texturizedSceneRenderTargets[]`. Each RT's `.texture` is bound to
-  `userData.textures[texturizedSceneIndexFrom + i]` — always present, even when
-  empty, because GLSL requires every declared sampler-array entry to be valid.
+- One `WebGLRenderTarget` (512×512) per vector slot, kept in the
+  `VectorDrapeResolver`'s render-target pool (lazily sized to the draped-layer
+  count). `userData.textures[texturizedSceneIndexFrom + i]` is bound to the
+  RT's `.texture`, or to a shared 1×1 empty texture while the slot has no RT —
+  GLSL requires every declared sampler-array entry to be valid.
 
 `TexturizedSceneByTileCoordinates` (`scene.ts`) holds a `SceneGroup` of per-layer
 `TileScene`s per handle — one `TileScene` per `(tileHandle, layerId)`, each with a
@@ -121,20 +144,21 @@ decision no longer lives here: Rust resolves it (see
 [VECTOR_TILE_DRAPING.md](VECTOR_TILE_DRAPING.md)) and hands each terrain tile a slot
 per layer, where a slot carries the set of WebMercator source tiles covering it (one
 on WM terrain, **several** on Geographic — N:M) each with a mercator affine
-`uvOffset`/`uvScale`. `TileMesh.refreshVectorSlots` pulls those (gated by the vector
-revision) into `vectorSlots`; `renderVectorScenes()` then bakes each layer's sources
-into that layer's render target:
+`uvOffset`/`uvScale`. `VectorDrapeResolver.refreshSlots`
+(`mesh/tile/vectorDrapeResolver.ts`) pulls those (gated by the vector revision)
+into `vectorSlots`; `renderVectorScenes()` then bakes each layer's sources into
+that layer's render target:
 
 ```mermaid
 flowchart TD
-  RES["Rust-resolved slots<br/>1 per layer · N WM sources each<br/>(refreshVectorSlots)"] --> LOOP{"for each layer's RT i"}
+  RES["Rust-resolved slots<br/>1 per layer · N WM sources each<br/>(refreshSlots)"] --> LOOP{"for each layer's RT i"}
   LOOP --> CLR["clear RT[i] once<br/>(autoClear off → accumulate)"]
   CLR --> SRC{"for each source"}
   SRC -->|"scene not in cache yet"| SKIP["skip → sub-rect stays transparent"]
   SRC -->|"scene ready"| DRAW["render via one fixed [-1,1] camera<br/>reframed to the source's<br/>uvOffset/uvScale sub-rect"]
   DRAW --> RT["RenderTarget[i].texture<br/>(spans the terrain tile's extent)"]
   SKIP --> RT
-  RT --> BIND["bindVectorSlots():<br/>textures[boundary+i], identity UV,<br/>copy representative mesh attrs"]
+  RT --> BIND["bindSlots():<br/>textures[boundary+i], identity UV,<br/>copy representative mesh attrs"]
 ```
 
 The **LOD fallback** (rendered self / finer descendants / coarser ancestor) that
@@ -150,14 +174,13 @@ the RT ends up spanning the terrain tile's extent, so the composite paste sample
 with **identity UV** (the WM→Geographic latitude reproject happens in the paste, not
 here).
 
-Re-baking is gated per tile by `vectorSignature()` — a string folding each slot's
-sources plus each backing scene's `revision` and child count — not by a scene
-`needsUpdate` flag; when it changes, the driver re-renders the RTs and marks the
-atlas dirty with `vector-revision`.
+Re-baking is gated per tile by the resolver's `signature()` — a string folding
+each slot's sources plus each backing scene's `revision` and child count — not
+by a scene `needsUpdate` flag; when it changes, the resolver re-renders the RTs
+and marks the atlas dirty with `vector-revision`.
 
-After the RTs are baked, `bindVectorSlots()` (which replaced the old
-`updateTexturizedSceneTextureVisibility`) points each vector slot's texture at its
-RT, sets identity UV, sets `shows`, and — via `copyVectorMeshAttrs` — copies a
+After the RTs are baked, `bindSlots()` points each vector slot's texture at its
+RT, sets identity UV, sets `shows`, and — via `copyMeshAttrs` — copies a
 **representative** source mesh's enhancer state (reflectivity, roughness, water,
 shininess, emissive, effect id, …) into the **main** shader's per-slot uniform
 arrays. Any source mesh of a layer is a faithful representative because these
@@ -166,8 +189,62 @@ mind for the rest of the pipeline: **the composite pass only ever bakes a layer'
 color plus a few flags; precision-sensitive material attributes stay in per-slot
 uniforms** and are looked up later by the main shader.
 
-With that, every slot — raster, DEM, or vector RT — is just a texture, and the
-pipeline treats them uniformly from here.
+### Baked raster mosaics (Geographic terrain)
+
+On Geographic (quantized-mesh) terrain a raster layer needs the same prep as
+vector: one terrain tile overlaps several WebMercator tiles (N:M), and Rust
+emits one **fragment-less** material slot per baked layer instead of one slot
+per overlapping tile (see
+[TILE_TERRAIN_TRAVERSAL.md](TILE_TERRAIN_TRAVERSAL.md)). The
+`BakedRasterDrapeResolver` (`mesh/tile/rasterDrapeResolver.ts`):
+
+- pairs the material's k-th fragment-less non-hillshade slot with
+  `layer_ordinal == k` from `getRasterTileStates` — both sides derive k from
+  the same sorted layer list;
+- keeps one render target per baked layer (lazily allocated per active
+  ordinal, disposed when the layer vanishes or flips kind);
+- refreshes on a `rasterRevision()` bump and re-bakes on a slot+texture
+  signature change — which also catches a texture landing in `loadedTexs`
+  after the resolve (decode is async). Once every resolved texture is baked,
+  the per-frame signature hashing is skipped (`signatureSettled`) until the
+  next refresh; a vanished texture always comes with a Rust-side destroy bump.
+
+`TileTextureCompositor.renderRasterTiles` then mosaics each layer's loaded
+source textures into its render target through the same shared bake loop and
+windowing camera as the vector bake (`bakeSlotTargets` / `frameBakeCamera`),
+with two raster-specific rules:
+
+- **Coarse-first painter's order.** Sources are drawn by ascending `uvScale`:
+  an ancestor fallback spans the whole terrain rect, so it must be painted
+  first and let the finer tiles overwrite it.
+- **Value-preserving copy.** The bake quad renders with `toneMapped: false`,
+  `transparent: true` + `NoBlending` (straight-alpha replace — an opaque
+  material's `OPAQUE` define would force alpha to 1) and per-kind color
+  spaces: color imagery is declared sRGB end to end so the composite decodes
+  the same linear values as the direct path; **heatmap DEM** uses
+  `NoColorSpace` + nearest filtering everywhere so the encoded texels survive
+  bit-faithfully and the composite's decode-then-interpolate keeps working.
+  This is also why a heatmap and a color layer cannot share a pooled render
+  target: the color space is fixed at GL allocation.
+
+**Heatmap no-data.** Before its sources, a baked heatmap target is painted with
+the decoder's **no-data (boundary) color** (`demNoDataColorBytes`,
+`utils/demNoDataColor.ts` — solves `dot(rgb, scaler) == boundary` for RGB
+bytes), so regions no source covers decode as "no elevation" instead of
+decoding the cleared black as a height. The composite's elevation sampler
+reports validity (`sampleElevationBilinear`'s `out bool valid`,
+`shaders/glsl/chunks/elevation_pars_fragment.glsl`) and the heatmap enhancer
+sets the texel's alpha to 0 on no-data, rendering it transparent. The DEM
+texel's **alpha channel is never used for coverage** — it is not part of any
+elevation encoding and stays reserved for future RGBA ones; the no-data story
+lives entirely in the encoded-elevation domain. The underlay is drawn as a 1×1
+texture through the same value-preserving pipeline rather than as a clear
+color, which would pass through the renderer's color management and could land
+one byte off — fatal for positional encodings where the high byte weighs 65536
+in the decoded value.
+
+With that, every slot — raster (direct or baked), DEM, or vector RT — is just a
+texture, and the pipeline treats them uniformly from here.
 
 ## 2. Snapshotting the tile
 
@@ -179,9 +256,11 @@ that is **shown AND bound to a texture**:
 - **`CompositeLayer`** — a discriminated union: `raster` (a raster tile *or* a
   texturized vector scene), `hillshade`, or `elevationHeatmap`. Each carries its
   `absSlot`, `region` (`raster` | `vector`), `texture`, and UV transform; raster
-  layers also carry color / opacity / water, and — for a WebMercator raster
-  draped on Geographic terrain — a `reproject` `[south, north]` latitude range
-  (see [N:M draping](#nm-draping-stitching-and-mercator-reprojection)).
+  layers also carry color / opacity / water. On Geographic terrain, `raster`
+  **and** `elevationHeatmap` layers carry a `reproject` `[south, north]`
+  latitude range, supplied by the slot's drape resolver (`slotReproject`) —
+  hillshade is terrain-side and never reprojects (see
+  [N:M draping](#nm-draping-stitching-and-mercator-reprojection)).
 - **`CompositeGlobals`** — tile-wide, non-per-slot inputs: watermask, colormap +
   elevation decoder params, hillshade exaggeration.
 
@@ -348,12 +427,12 @@ sequenceDiagram
   participant C as TileTextureCompositor
   participant Cache as TileTextureCache
 
-  TM->>TM: vectorRevision() changed? → refreshVectorSlots()
-  TM->>TM: vectorSignature() changed?
-  alt slots/scenes changed
-    TM->>C: renderVectorScenes() → per-layer RTs
-    TM->>TM: bindVectorSlots() (textures, UV, mesh attrs)
-    TM->>Cache: markDirty("vector-revision")
+  TM->>TM: vectorDrape.update(): vectorRevision() changed? → refreshSlots()
+  TM->>TM: rasterDrape.update(): rasterRevision() changed? → refreshSlots()
+  alt a resolver's slot/content signature changed
+    TM->>C: renderVectorScenes() / renderRasterTiles() → per-layer RTs
+    TM->>TM: bindSlots() (textures, UV, mesh attrs)
+    TM->>Cache: markDirty("vector-revision" / "raster-revision")
   end
   TM->>Cache: isDirty(handle)?
   alt dirty
@@ -367,7 +446,7 @@ sequenceDiagram
 ```
 
 Dirty reasons are coalesced per tile (`DirtyReason`: `material`,
-`texture-binding`, `vector-revision`, `hillshade`) so one bake services many
+`texture-binding`, `vector-revision`, `raster-revision`, `hillshade`) so one bake services many
 changes, and the atlas Textures persist across passes — only `needsUpdate` flips
 when a new bake overwrites them.
 
@@ -397,38 +476,45 @@ zeroed params.
 When the raster and terrain schemes differ — a WebMercator imagery layer draped
 on a **Geographic** quantized-mesh tile — one terrain tile is covered by
 **several** source tiles, and each source tile's latitude axis is non-linear
-relative to the terrain tile's equal-degree grid. The composite pass handles
-both, and neither one needed a change to `planSlots()` or the atlas.
+relative to the terrain tile's equal-degree grid. The offscreen mosaic bake
+handles the first, the composite paste the second — and neither one needed a
+change to `planSlots()` or the atlas.
 
-**Stitching is done upstream, not in `planSlots()`.** The Rust pull
-(`resolve_raster_textures`, see
-[TILE_TERRAIN_TRAVERSAL.md](TILE_TERRAIN_TRAVERSAL.md)) already resolves the
-**set** of overlapping WebMercator tiles and hands `update_mesh_material` one
-material slot per tile. So a single logical layer arrives at the compositor as
-**several independent `RasterCompositeLayer`s**, each with its own `texture` and
-`uvOffset`/`uvScale` sub-rect. `buildCompositeLayers()` and `planSlots()` treat
-them like any other slot — one `CompositeLayer` is still exactly one slot. (This
-is why the earlier "expand a layer into consecutive `SlotBinding`s" idea was
-unnecessary: the fan-out happens before the snapshot.) The count is capped on
-the Rust side by `RASTER_DRAPE_SLOT_BUDGET`; the TS overflow guard in
-`TileMesh.bindUniforms` (`textureFragmentsLen > texturizedSceneIndexFrom`) is the
-final safety net.
+**Stitching is done in the offscreen bake, not in `planSlots()`.** The Rust
+pull (`resolve_raster_tile_states`, see
+[TILE_TERRAIN_TRAVERSAL.md](TILE_TERRAIN_TRAVERSAL.md)) resolves the **set** of
+overlapping WebMercator tiles per layer, and the `BakedRasterDrapeResolver`
+mosaics them into that layer's one render target (see
+[Baked raster mosaics](#baked-raster-mosaics-geographic-terrain)). So a logical
+layer arrives at the compositor as exactly **one** `CompositeLayer` bound to
+its baked RT with identity UV — `buildCompositeLayers()` and `planSlots()`
+treat it like any other slot. (An earlier design instead emitted one composite
+slot per overlapping tile; with 3+ draped layers that either coarsened every
+layer to a single tile or overflowed the GPU slot budget, which is why the
+fan-out was moved into the bake.) The overlap is capped on the Rust side **per
+layer** by `RASTER_DRAPE_OVERLAP_BUDGET`; the TS overflow guard in
+`TileMesh.bindUniforms` (`textureFragmentsLen > texturizedSceneIndexFrom`)
+remains the final safety net for an oversized layer count.
 
-**Latitude is reprojected per fragment.** The affine `uvOffset`/`uvScale` maps
-**longitude** exactly but stretches **latitude** (WebMercator is non-linear in
-latitude; Geographic is equal-degree). The base enhancer
-(`tileCompositeBaseEnhancer`) carries three extra per-slot uniforms for this:
+**Latitude is reprojected per fragment.** The baked render target spans the
+terrain tile's **Mercator-projected** extent, so pasting it with a plain affine
+would stretch **latitude** (WebMercator is non-linear in latitude; Geographic
+is equal-degree). The base enhancer (`tileCompositeBaseEnhancer`) carries three
+extra per-slot uniforms for this, applied to raster **and** elevation-heatmap
+slots alike (the UV is warped before either sampler runs; hillshade is
+terrain-side and never reprojects):
 
 | Uniform | Source | Meaning |
 | --- | --- | --- |
-| `uReproject[k]` | `RasterCompositeLayer.reproject != null` | `1` = reproject this slot's latitude |
+| `uReproject[k]` | `layer.reproject != null` (raster / elevationHeatmap, via the drape resolver's `slotReproject`) | `1` = reproject this slot's latitude |
 | `uReprojectTerrainLat[k]` | `reproject` `[south, north]` | terrain tile latitude band (radians) |
-| `uReprojectMerc[k]` | precomputed in `bindSlot` | `(mRs, mDen, clampTop, clampBottom)` — source tile's Mercator band start + span, plus polar-cap clamp flags |
+| `uReprojectMerc[k]` | precomputed in `bindSlot` | `(mRs, mDen, clampTop, clampBottom)` — source band's Mercator start + span, plus polar-cap clamp flags |
 
-`bindSlot` recovers the source tile's latitude band from the affine y mapping and
-precomputes its Mercator-space start/span (`log(tan(π/4 + lat/2))`) on the CPU, so
-the per-fragment shader does **one** transcendental — `gReprojMLat`, the
-fragment's own latitude in Mercator space — and reuses it across every
+`bindSlot` recovers the source's latitude band from the affine y mapping (a
+baked slot has identity UV, so the recovered band is exactly the terrain band)
+and precomputes its Mercator-space start/span (`log(tan(π/4 + lat/2))`) on the
+CPU, so the per-fragment shader does **one** transcendental — `gReprojMLat`,
+the fragment's own latitude in Mercator space — and reuses it across every
 reprojecting slot (the terrain band is tile-wide):
 
 ```mermaid
@@ -442,19 +528,21 @@ flowchart TD
 
 Two subtleties:
 
-- **Sub-rect confinement.** With N:M draping each source tile covers only part of
-  the terrain tile. Outside its `[0,1]` UV range the sampler would smear the edge
-  texel, so `inBounds` (a `step` test) folds into the slot's `alpha` and drops it
-  there. Reprojection is the only path that pushes UV outside `[0,1]`, so both the
-  transcendental math and the bounds test live behind the `uReproject` branch —
-  same-scheme slots pay neither cost.
-- **Polar caps.** WebMercator imagery stops at ~±85.05°. When a slot is the
-  band-edge tile (`clampTop`/`clampBottom`), its last imagery row is clamped
-  across the polar overshoot instead of being dropped, so the cap is covered.
+- **Bounds confinement.** Outside a slot's `[0,1]` UV range the sampler would
+  smear the edge texel, so `inBounds` (a `step` test) folds into the slot's
+  `alpha` and drops fragments there. Reprojection is the only path that pushes
+  UV outside `[0,1]` (with baked mosaics the slot's rect is the whole terrain
+  tile, so this mainly bites near the polar caps), so both the transcendental
+  math and the bounds test live behind the `uReproject` branch — same-scheme
+  slots pay neither cost.
+- **Polar caps.** WebMercator imagery stops at ~±85.05°. When a slot's band
+  edge sits on the WM latitude limit (`clampTop`/`clampBottom`), its last
+  imagery row is clamped across the polar overshoot instead of being dropped,
+  so the cap is covered.
 
 The atlas, the main shader's atlas sampling, and the slot plan are all unchanged
-— the entire N:M mechanism lives in the pull (Rust) and the base composite
-enhancer's per-slot reprojection.
+— the entire N:M mechanism lives in the pull (Rust), the offscreen mosaic bake,
+and the base composite enhancer's per-slot reprojection.
 
 > [!NOTE]
 > **Clamp-to-ground vector layers reuse this exact path.** Their features are
@@ -468,9 +556,13 @@ enhancer's per-slot reprojection.
 
 | File | Stage | Role |
 | --- | --- | --- |
-| `mesh/tile.ts` | 1–2, 5 | `TileMesh` — vector RTs, layer snapshot, drives the pass, main shader |
+| `mesh/tile/index.ts` | 1–2, 5 | `TileMesh` — layer snapshot, drives the pass, main shader |
+| `mesh/tile/drapeResolver.ts` | 1 | `DrapeResolver` interface — per-family slot ownership + revision/signature gates |
+| `mesh/tile/vectorDrapeResolver.ts` | 1 | vector slot refresh / signature / bake driver + RT pool |
+| `mesh/tile/rasterDrapeResolver.ts` | 1 | `DirectRasterDrapeResolver` (WM, no-op) + `BakedRasterDrapeResolver` (Geographic mosaic) |
+| `utils/demNoDataColor.ts` | 1 | decoder boundary → no-data underlay color for baked heatmaps |
 | `tileTexture/SlotPlanner.ts` | 3 | `planSlots()` — compact slot layout + quantization |
-| `tileTexture/TileTextureCompositor.ts` | 1, 4 | vector-scene render, material cache, MRT bake |
+| `tileTexture/TileTextureCompositor.ts` | 1, 4 | vector-scene + raster-mosaic bakes, material cache, MRT bake |
 | `tileTexture/TileTextureCache.ts` | 4 | per-tile atlas lifecycle + dirty tracking |
 | `tileTexture/types.ts` | 2 | `CompositeLayer`, `CompositeGlobals` domain model |
 | `material/enhancer/tileComposite/tileCompositeBaseEnhancer/` | 4 | shader skeleton + core uniforms + N:M Mercator reprojection |

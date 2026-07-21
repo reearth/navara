@@ -16,8 +16,7 @@ import {
 import type { ViewContext } from "./ViewContext";
 
 type EffectInstance =
-  | PostProcessingPass
-  | Pass<PostProcessingPass, PostProcessingEffect>;
+  PostProcessingPass | Pass<PostProcessingPass, PostProcessingEffect>;
 
 export type EffectConfig = {
   type?: "effect";
@@ -183,8 +182,7 @@ export abstract class EffectDesc<
   Config extends EffectConfig = EffectConfig,
   UpdateConfig extends EffectUpdate = EffectUpdate,
   InstanceObj extends EffectInstance | { raw: EffectInstance } =
-    | EffectInstance
-    | { raw: EffectInstance },
+    EffectInstance | { raw: EffectInstance },
   Instance extends EffectBaseInstance<InstanceObj> =
     EffectBaseInstance<InstanceObj>,
 > extends BaseDesc<Config, UpdateConfig, Instance> {

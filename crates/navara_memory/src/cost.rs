@@ -17,7 +17,7 @@ use crate::MemoryLedger;
 /// removal, or entity despawn subtracts it — every destroy path stays
 /// accounted without manual bookkeeping.
 #[derive(Clone, Copy, Default, Debug, Component)]
-#[component(on_insert = on_tile_cost_insert, on_replace = on_tile_cost_replace)]
+#[component(on_insert = on_tile_cost_insert, on_discard = on_tile_cost_discard)]
 pub struct TileCost {
     pub cpu: u64,
     pub gpu_est: u64,
@@ -38,7 +38,7 @@ fn on_tile_cost_insert(mut world: DeferredWorld, ctx: HookContext) {
     }
 }
 
-fn on_tile_cost_replace(mut world: DeferredWorld, ctx: HookContext) {
+fn on_tile_cost_discard(mut world: DeferredWorld, ctx: HookContext) {
     let Some(cost) = world.get::<TileCost>(ctx.entity).copied() else {
         return;
     };

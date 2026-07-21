@@ -20,12 +20,18 @@ async function autogenSections() {
     .filter((x) => x.isDirectory() && !localeDirectories.has(x.name))
     .map((x) => x.name);
   return sections.map((x) => {
+    // Starlight v0.39 removed `label` + `autogenerate` shorthand; autogenerate
+    // config now goes inside an `items` array.
     return {
       label: x,
-      autogenerate: {
-        directory: x,
-        collapsed: false,
-      },
+      items: [
+        {
+          autogenerate: {
+            directory: x,
+            collapsed: false,
+          },
+        },
+      ],
     };
   });
 }

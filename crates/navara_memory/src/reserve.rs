@@ -26,22 +26,22 @@ use crate::{
 /// [`ReservedCost::for_key`] and the hook computes
 /// `ReserveEstimates::estimate(key, MemoryLedger::reserve_seed(key))` at apply
 /// time, so the dispatch systems don't each duplicate the estimate/seed dance
-/// (the resolved amount is stored on the component so `on_replace` releases
+/// (the resolved amount is stored on the component so `on_discard` releases
 /// exactly what was added). [`ReservedCost::fixed`] bypasses the estimator for
 /// callers that already know the amount (tests, no-layer fallbacks).
 ///
 /// Component hooks keep [`MemoryLedger::reserved_bytes`] leak-free across every
-/// exit path: `on_insert` adds the estimate, `on_replace` subtracts it. Bevy
-/// fires `on_replace` on replace, remove, AND despawn, so this single hook
+/// exit path: `on_insert` adds the estimate, `on_discard` subtracts it. Bevy
+/// fires `on_discard` on replace, remove, AND despawn, so this single hook
 /// covers all three — an aborted request (requester despawned while still
 /// `Pending`) releases its reservation automatically. Registering `on_remove`
-/// too would double-subtract on every removal/despawn (Bevy fires `on_replace`
+/// too would double-subtract on every removal/despawn (Bevy fires `on_discard`
 /// then `on_remove`). The `release_landed_reservations` system removes the
 /// component the frame the fetch resolves (status leaves `Pending`), *before*
 /// the actual `TileCost` lands a frame later, so a reservation and its measured
 /// cost never systematically double-count.
 #[derive(Clone, Copy, Default, Debug, Component)]
-#[component(on_insert = on_reserved_cost_insert, on_replace = on_reserved_cost_remove)]
+#[component(on_insert = on_reserved_cost_insert, on_discard = on_reserved_cost_remove)]
 pub struct ReservedCost {
     /// `Some` until the `on_insert` hook resolves it into `bytes`.
     key: Option<ReserveKey>,
@@ -84,7 +84,7 @@ fn on_reserved_cost_insert(mut world: DeferredWorld, ctx: HookContext) {
             let bytes = world
                 .get_resource::<ReserveEstimates>()
                 .map_or(seed, |estimates| estimates.estimate(key, seed));
-            // Store the resolved amount so `on_replace` releases exactly what
+            // Store the resolved amount so `on_discard` releases exactly what
             // was added (the EMA may have moved by then). Plain mutation — no
             // hook re-fires.
             if let Some(mut reserved) = world.get_mut::<ReservedCost>(ctx.entity) {
@@ -217,7 +217,7 @@ mod hook_tests {
         let e = world.spawn(ReservedCost::fixed(500)).id();
         assert_eq!(world.resource::<MemoryLedger>().reserved_bytes, 500);
 
-        // Replacing accounts the delta (on_replace subtract + on_insert add).
+        // Replacing accounts the delta (on_discard subtract + on_insert add).
         world.entity_mut(e).insert(ReservedCost::fixed(200));
         assert_eq!(world.resource::<MemoryLedger>().reserved_bytes, 200);
 
@@ -226,7 +226,7 @@ mod hook_tests {
         assert_eq!(world.resource::<MemoryLedger>().reserved_bytes, 0);
 
         // Hold TWO live reservations and release one: the released bytes must be
-        // subtracted EXACTLY once. Bevy fires `on_replace` then `on_remove` on
+        // subtracted EXACTLY once. Bevy fires `on_discard` then `on_remove` on
         // every removal/despawn, so a stray `on_remove` registration would
         // subtract twice here — leaving 700 - 500 = 200 instead of 700. A single
         // live reservation saturates at 0 and cannot catch this.

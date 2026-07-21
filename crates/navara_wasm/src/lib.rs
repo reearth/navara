@@ -6,6 +6,7 @@ mod event;
 mod geometry;
 mod input;
 mod property_value;
+mod raster_tile;
 mod source_types;
 mod types;
 mod vector_tile;
@@ -30,6 +31,7 @@ pub use event::*;
 pub use input::*;
 pub use navara_wasm_transferable::*;
 pub use navara_wasm_types::*;
+pub use raster_tile::*;
 pub use source_types::*;
 pub use types::*;
 pub use vector_tile::*;
@@ -667,6 +669,26 @@ impl Core {
     #[wasm_bindgen(js_name = vectorRevision)]
     pub fn vector_revision(&self) -> u32 {
         self.app.vector_revision()
+    }
+
+    /// The WebMercator raster tiles to bake into per-layer drape render targets for a
+    /// terrain tile (baked layers only; empty on WebMercator terrain, which drapes 1:1
+    /// through the per-slot material path).
+    #[wasm_bindgen(js_name = getRasterTileStates)]
+    pub fn get_raster_tile_states(&mut self, handle: TileHandle) -> Vec<RasterTileState> {
+        self.app
+            .get_raster_tiles(handle)
+            .into_iter()
+            .map(RasterTileState::from)
+            .collect()
+    }
+
+    /// Monotonic revision that changes only when the raster drape resolution could have
+    /// changed. The web renderer reads it once per frame and skips the per-terrain-tile
+    /// `getRasterTileStates` calls while it is unchanged.
+    #[wasm_bindgen(js_name = rasterRevision)]
+    pub fn raster_revision(&self) -> u32 {
+        self.app.raster_revision()
     }
 
     #[wasm_bindgen(js_name = getTileElevationDecoder)]

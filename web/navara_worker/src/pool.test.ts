@@ -64,24 +64,15 @@ it("should increment and decrement concurrency when the promise is resolved", as
 it("should increment and decrement concurrency when the promise is rejected", async () => {
   workPoolExecStates.states.reject = true;
 
-  const promise = queueTask("test" as any);
-  try {
-    await promise;
-    expect.fail("Expect that this case throws an error");
-  } catch {
-    expect(incrementFnMock).toHaveBeenCalledOnce();
-    expect(manager.actives()).toBe(0);
-  }
+  await expect(queueTask("test" as any)).rejects.toBeUndefined();
+  expect(incrementFnMock).toHaveBeenCalledOnce();
+  expect(manager.actives()).toBe(0);
 });
 
 it("should increment and decrement concurrency when the function throws an error before returning the promise", async () => {
   workPoolExecStates.states.rejectBeforePromise = true;
 
-  try {
-    queueTask("test" as any);
-    expect.fail("Expect that this case throws an error");
-  } catch {
-    expect(incrementFnMock).toHaveBeenCalledOnce();
-    expect(manager.actives()).toBe(0);
-  }
+  expect(() => queueTask("test" as any)).toThrow();
+  expect(incrementFnMock).toHaveBeenCalledOnce();
+  expect(manager.actives()).toBe(0);
 });

@@ -46,6 +46,7 @@ describe("TileTextureCache.acquire", () => {
     expect(reasons?.has("material")).toBe(true);
     expect(reasons?.has("texture-binding")).toBe(true);
     expect(reasons?.has("vector-revision")).toBe(true);
+    expect(reasons?.has("raster-revision")).toBe(true);
     expect(reasons?.has("hillshade")).toBe(true);
   });
 });
@@ -108,6 +109,7 @@ describe("TileTextureCache atlas pooling", () => {
     expect(reasons?.has("material")).toBe(true);
     expect(reasons?.has("texture-binding")).toBe(true);
     expect(reasons?.has("vector-revision")).toBe(true);
+    expect(reasons?.has("raster-revision")).toBe(true);
     expect(reasons?.has("hillshade")).toBe(true);
   });
 

@@ -16,16 +16,16 @@
   },
   "license": "MIT OR Apache-2.0",
   "dependencies": {
-    "@navaramap/three": "workspace:*",
-    "@navaramap/three_react": "workspace:*",
     "@navaramap/engine": "workspace:*",
     "@navaramap/engine-api": "workspace:*",
     "@navaramap/engine-worker": "workspace:*",
-    "@navaramap/three_default_plugin": "workspace:*",
+    "@navaramap/three": "workspace:*",
     "@navaramap/three_default_descs": "workspace:*",
-    "three": "0.184.0"
+    "@navaramap/three_default_plugin": "workspace:*",
+    "@navaramap/three_react": "workspace:*",
+    "three": "0.185.1"
   },
   "devDependencies": {
-    "@types/three": "0.184.0"
+    "@types/three": "0.185.1"
   }
 }

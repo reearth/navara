@@ -29,33 +29,33 @@
   "license": "MIT OR Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/eukarya-inc/navara.git",
+    "url": "git+https://github.com/reearth/navara.git",
     "directory": "web/navara_three_default_descs"
   },
   "publishConfig": {
     "access": "public"
   },
   "peerDependencies": {
-    "three": ">=0.183.0",
+    "@navaramap/three": "workspace:*",
     "postprocessing": ">=6.38.0",
-    "@navaramap/three": "workspace:*"
+    "three": ">=0.183.0"
   },
   "dependencies": {
-    "@sparkjsdev/spark": "2.0.0",
+    "@sparkjsdev/spark": "2.1.0",
     "@takram/three-atmosphere": "0.19.1",
     "@takram/three-clouds": "0.7.6",
     "@takram/three-geospatial": "0.9.1",
     "@takram/three-geospatial-effects": "0.6.4",
-    "n8ao": "1.10.1",
+    "n8ao": "2.0.0",
     "tiny-invariant": "1.3.3"
   },
   "devDependencies": {
     "@navaramap/core": "workspace:*",
     "@navaramap/three": "workspace:*",
     "@navaramap/three_csm": "workspace:*",
-    "@types/three": "0.184.0",
+    "@types/three": "0.185.1",
     "postprocessing": "6.38.3",
-    "three": "0.184.0",
+    "three": "0.185.1",
     "vite-plugin-glsl": "1.6.0"
   }
 }

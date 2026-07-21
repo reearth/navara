@@ -104,6 +104,27 @@ pub fn init_raster_tiling(tiles: Query<(&TilesLayer, &Order)>, mut qt: ResMut<Ra
     }
 }
 
+/// Groups the raster resolve revision with its layer-change trigger query (bevy
+/// caps systems at 16 parameters; `update_raster_tiles` is at the limit).
+#[derive(bevy_ecs::system::SystemParam)]
+pub struct RasterRevisionParams<'w, 's> {
+    revision: ResMut<'w, super::RasterResolveRevision>,
+    changed_layers: Query<'w, 's, (), Changed<TilesLayer>>,
+}
+
+/// The bake-relevant slice of a layer's config: whether it bakes at all
+/// (hillshade excluded), how it pairs with the baked-slot ordinals and what the
+/// resolve reads (the source's max zoom). A `Changed<TilesLayer>` event that
+/// leaves these untouched — an appearance-only mutation — must not bump the
+/// resolve revision.
+fn bake_config_entry(layer: &TilesLayer) -> (bool, bool, Option<&str>) {
+    (
+        layer.hillshade_config.is_some(),
+        layer.elevation_heatmap_config.is_some(),
+        layer.source_id.as_deref(),
+    )
+}
+
 /// Drives raster tile traversal: select the LOD tiles by screen-space error and
 /// request their textures. The resolved textures are later pulled into terrain
 /// tiles by extent (see `update_mesh_material`).
@@ -127,16 +148,49 @@ pub fn update_raster_tiles(
     )>,
     occluder: Query<Ref<EllipsoidalOccluder>>,
     pressure: Res<SsePressure>,
+    mut revision_params: RasterRevisionParams,
 ) {
     let tiles_len = tiles.iter().len();
     let has_raster_layers = tiles.iter().any(|(t, _)| t.hillshade_config.is_none());
     if !has_raster_layers {
         tc.prev_layers_len = tiles_len;
+        // The fingerprint must not outlive the last raster layer: a later
+        // re-add with an identical bake config would match the stale entry,
+        // never re-trigger the traversal or bump the revision, and render
+        // nothing until the camera happens to move. Bump so draped tiles also
+        // drop the removed layer's slots.
+        if !tc.bake_config_fingerprint.is_empty() {
+            tc.bake_config_fingerprint.clear();
+            tc.pending_layers_changed = false;
+            revision_params.revision.bump();
+        }
         return;
     }
 
     let is_texture_fragment_changed = !changed_texture_fragment.is_empty();
     let is_layers_len_changed = tiles_len != tc.prev_layers_len;
+    // In-place layer mutations too (`updateLayer` toggling hillshade/heatmap config):
+    // they change which layers bake and therefore the baked-slot ordinal pairing.
+    // `Changed` includes `Added`, so this also covers new layers. `Changed` also
+    // fires on appearance-only mutations (opacity/show/color), which cannot affect
+    // the resolve — the fingerprint comparison filters those out, or a per-frame
+    // opacity animation would re-resolve every visible tile's drape every frame
+    // (the FPS killer the revision gate exists to avoid).
+    let is_layers_changed = (is_layers_len_changed
+        || tc.pending_layers_changed
+        || !revision_params.changed_layers.is_empty())
+        && (tiles_len != tc.bake_config_fingerprint.len()
+            || !tiles
+                .iter()
+                .sort::<&Order>()
+                .zip(tc.bake_config_fingerprint.iter())
+                .all(|((l, _), (hillshade, heatmap, source_id))| {
+                    bake_config_entry(l) == (*hillshade, *heatmap, source_id.as_deref())
+                }));
+    // `Changed` fires only once, but the returns below (no occluder/camera yet)
+    // can cut this run short before the change is committed — carry it so the
+    // fingerprint mismatch is re-examined until the commit block runs.
+    tc.pending_layers_changed = is_layers_changed;
 
     let occluder = match occluder.iter().next() {
         Some(o) => o,
@@ -166,7 +220,7 @@ pub fn update_raster_tiles(
         || camera.is_changed()
         || frustum.is_changed()
         || occluder.is_changed()
-        || is_layers_len_changed
+        || is_layers_changed
         || is_fog_changed
         || pressure.is_changed();
     if !needs_update {
@@ -176,6 +230,32 @@ pub fn update_raster_tiles(
     tc.last_rendered_frame = frame.rendered_frame();
     tc.prev_layers_len = tiles_len;
     tc.is_updated_in_this_frame = true;
+    tc.pending_layers_changed = false;
+    if is_layers_changed {
+        tc.bake_config_fingerprint = tiles
+            .iter()
+            .sort::<&Order>()
+            .map(|(l, _)| {
+                let (hillshade, heatmap, source_id) = bake_config_entry(l);
+                (hillshade, heatmap, source_id.map(str::to_owned))
+            })
+            .collect();
+    }
+    // Only fragment LOAD COMPLETIONS and layer changes can alter an existing terrain
+    // tile's baked-drape resolution — the resolve walks loaded fragments only, so a
+    // request being spawned (`Added`, which fires every frame while the camera pans
+    // into unloaded area) or failing changes nothing. Camera movement alone must not
+    // bump either: forcing every visible tile to re-resolve per frame was an FPS
+    // killer. Layer changes include in-place mutations (hillshade/heatmap toggles),
+    // which re-pair the baked-slot ordinals. Tile destruction bumps separately (see
+    // `destroy_raster_tile` callers); brand-new terrain tiles fetch on their first
+    // frame regardless.
+    let any_fragment_loaded = changed_texture_fragment
+        .iter()
+        .any(|(_, f)| f.is_succeeded());
+    if any_fragment_loaded || is_layers_changed {
+        revision_params.revision.bump();
+    }
 
     // Memory-pressure LOD degrade, shared shape with the terrain traversal so
     // raster texture depth stays aligned with terrain subdivision.
@@ -228,6 +308,65 @@ pub fn update_raster_tiles(
     }
 }
 
+/// Snapshot the baked-drape resolve inputs (sorted baked layer list + loaded
+/// fragment set) into [`RasterBakeSnapshot`](super::RasterBakeSnapshot) whenever the
+/// raster resolve revision changed. `get_raster_tiles` (per visible terrain tile) then
+/// only reads resources and walks the quadtree — re-scanning every fragment and
+/// re-sorting the layers per tile per frame was an FPS killer during camera motion.
+/// Runs at the end of the raster chain so same-frame bumps (traverse, prune,
+/// eviction) are all captured.
+#[allow(clippy::type_complexity)]
+pub fn snapshot_raster_bake_inputs(
+    revision: Res<super::RasterResolveRevision>,
+    globe: Res<navara_globe::Globe>,
+    source_store: Res<navara_source::SourceStore>,
+    tiles: Query<(&TilesLayer, &Order)>,
+    fragments: Query<
+        (Entity, &TextureFragment),
+        (With<TileTextureFragmentMarker>, Without<Deleted>),
+    >,
+    mut snapshot: ResMut<super::RasterBakeSnapshot>,
+) {
+    if !revision.is_changed() {
+        return;
+    }
+
+    snapshot.layers.clear();
+    snapshot.loaded.clear();
+
+    // Only Geographic terrain bakes; keep the snapshot empty otherwise so
+    // `get_raster_tiles` resolves nothing without scanning.
+    if !globe.tiling_scheme.is_geographic() {
+        return;
+    }
+
+    // The sort and the non-hillshade filter MUST match `update_mesh_material`,
+    // which emits the k-th baked composite slot from the same list — the web
+    // pairs slots and states by that ordinal.
+    for (layer_index, (l, _)) in tiles.iter().sort::<&Order>().enumerate() {
+        if l.hillshade_config.is_some() {
+            continue;
+        }
+        snapshot.layers.push(super::RasterBakeLayer {
+            layer_index,
+            // Max zoom lives on the referenced source; the fallback mirrors
+            // `update_mesh_material`.
+            max_zoom: l
+                .source_id
+                .as_deref()
+                .and_then(|id| source_store.get(id))
+                .map(|s| s.max_zoom())
+                .unwrap_or(20),
+        });
+    }
+
+    for (entity, fragment) in fragments.iter() {
+        if fragment.is_succeeded() {
+            snapshot.loaded.insert(entity);
+        }
+    }
+}
+
 /// Attaches a [`TileCost`] to newly spawned texture fragments so the memory
 /// ledger tracks the JS-side texture they will hold. Fragment dimensions are
 /// only known on the JS side, so the per-fragment hint is used.
@@ -272,7 +411,9 @@ pub fn clear_raster_caches(
     ledger: Res<MemoryLedger>,
     mut qt: ResMut<RasterTileQuadtree>,
     mut tc: ResMut<RasterTileCacheManager>,
+    mut revision: ResMut<super::RasterResolveRevision>,
 ) {
+    let mut destroyed_any = false;
     // If the budget was disabled at runtime (`setCacheBytes(undefined)`),
     // retained tiles would otherwise leak forever: the loop below only scans
     // `active_handles`, and `enforce_memory_budget` returns early with no
@@ -284,10 +425,15 @@ pub fn clear_raster_caches(
         let retained: Vec<TileHandle> = tc.retained.keys().copied().collect();
         for handle in retained {
             destroy_raster_tile(&mut commands, &mut qt, &mut tc, handle);
+            destroyed_any = true;
         }
     }
 
     if !tc.is_updated_in_this_frame {
+        // A destroyed tile may have backed a terrain tile's baked drape.
+        if destroyed_any {
+            revision.bump();
+        }
         return;
     }
     tc.is_updated_in_this_frame = false;
@@ -330,11 +476,19 @@ pub fn clear_raster_caches(
         }
 
         destroy_raster_tile(&mut commands, &mut qt, &mut tc, handle);
+        destroyed_any = true;
+    }
+
+    // A destroyed tile may have backed a terrain tile's baked drape; retention-pool
+    // moves keep the quadtree node + fragments alive, so they need no bump.
+    if destroyed_any {
+        revision.bump();
     }
 }
 
 /// Evicts retained raster tiles, oldest-visited first, until usage drops to
 /// the hysteresis target. Runs right after `clear_raster_caches`.
+#[allow(clippy::too_many_arguments)]
 pub fn enforce_memory_budget(
     mut commands: Commands,
     mut ledger: ResMut<MemoryLedger>,
@@ -343,6 +497,7 @@ pub fn enforce_memory_budget(
     frame: Res<FrameManager>,
     mut qt: ResMut<RasterTileQuadtree>,
     mut tc: ResMut<RasterTileCacheManager>,
+    mut revision: ResMut<super::RasterResolveRevision>,
 ) {
     // Purge entries that were revisited (traversal moved them back to
     // `active_handles`) or whose tile no longer exists.
@@ -382,6 +537,7 @@ pub fn enforce_memory_budget(
     candidates.sort_by(|a, b| navara_memory::eviction::order((a.1, 0.0), (b.1, 0.0)));
 
     let mut budget = navara_memory::eviction::EvictBudget::new(usage_est, ledger.evict_target());
+    let mut destroyed_any = false;
     for (handle, _, gpu_est) in candidates {
         if !budget.over_target() {
             break;
@@ -392,12 +548,18 @@ pub fn enforce_memory_budget(
         // upload), so only the GPU estimate is credited here; the exact
         // `BufferStore` total re-reads next frame.
         destroy_raster_tile(&mut commands, &mut qt, &mut tc, handle);
+        destroyed_any = true;
         budget.credit(gpu_est, 0);
         // Credit the ledger so the other pipelines' enforce systems this frame
         // exclude this eviction (their `EvictBudget` is stack-local); the
         // fragment despawn subtracting `gpu_est` from `gpu_bytes_est` is deferred.
         ledger.credit_pending_eviction(gpu_est);
         ledger.evicted_count += 1;
+    }
+
+    // An evicted tile may have backed a terrain tile's baked drape.
+    if destroyed_any {
+        revision.bump();
     }
 }
 
@@ -413,6 +575,7 @@ mod memory_budget_tests {
         let mut app = App::new();
         app.add_plugins(FramePlugin);
         app.init_resource::<BufferStore>();
+        app.init_resource::<crate::raster::RasterResolveRevision>();
         app.init_resource::<navara_memory::SsePressure>();
         app.insert_resource(MemoryLedger {
             budget_bytes,

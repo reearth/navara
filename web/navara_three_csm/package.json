@@ -22,7 +22,7 @@
   "license": "MIT OR Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/eukarya-inc/navara.git",
+    "url": "git+https://github.com/reearth/navara.git",
     "directory": "web/navara_three_csm"
   },
   "publishConfig": {
@@ -31,9 +31,8 @@
   "peerDependencies": {
     "three": ">=0.183.0"
   },
-  "dependencies": {},
   "devDependencies": {
-    "@types/three": "0.184.0",
-    "three": "0.184.0"
+    "@types/three": "0.185.1",
+    "three": "0.185.1"
   }
 }

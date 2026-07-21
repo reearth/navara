@@ -104,8 +104,13 @@ export function createCoreUniformMutates(): CoreUniformMutates {
         refs.uLayerUvScale.value[k].set(1, 1);
       }
 
+      // Reproject applies to color rasters and elevation heatmaps alike — the
+      // shader warps the per-slot UV before either sampler runs; hillshade is
+      // terrain-side and never reprojects.
       const reproject =
-        layer && layer.kind === "raster" ? layer.reproject : undefined;
+        layer && (layer.kind === "raster" || layer.kind === "elevationHeatmap")
+          ? layer.reproject
+          : undefined;
       if (reproject && layer) {
         const [Ts, Tn] = reproject;
         // Recover the source tile's latitude band [Rs, Rn] from the affine y

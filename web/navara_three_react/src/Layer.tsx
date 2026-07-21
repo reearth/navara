@@ -4,7 +4,7 @@ import {
   type MeshDesc as MeshDescClass,
   type LightDesc as LightDescClass,
   type EffectDesc as EffectDescClass,
-  Layer as NavaraLayer,
+  type Layer as NavaraLayer,
   type LayerDescription,
   type MeshConfig,
   type LightConfig,
@@ -29,7 +29,12 @@ export function Layer({ config, onReady }: PropsWithChildren<LayerProps>) {
   const configRef = useRef(config);
   const onReadyRef = useRef(onReady);
 
-  configRef.current = config;
+  // Sync the latest-value refs outside render (react-hooks/refs). This effect
+  // is declared first so it runs before the mount effect below re-runs.
+  useEffect(() => {
+    configRef.current = config;
+    onReadyRef.current = onReady;
+  }, [config, onReady]);
 
   useEffect(() => {
     const handle = view.addLayer(configRef.current);
@@ -68,9 +73,13 @@ function useDeclarationLayer<L extends BaseDesc>(
   const configRef = useRef(config);
   const onReadyRef = useRef(onReady);
 
-  addFnRef.current = addFn;
-  configRef.current = config;
-  onReadyRef.current = onReady;
+  // Sync the latest-value refs outside render (react-hooks/refs). This effect
+  // is declared first so it runs before the mount effect below re-runs.
+  useEffect(() => {
+    addFnRef.current = addFn;
+    configRef.current = config;
+    onReadyRef.current = onReady;
+  }, [addFn, config, onReady]);
 
   useEffect(() => {
     const handle = addFnRef.current(configRef.current);

@@ -99,7 +99,7 @@ side (which owns the actual Three.js allocations) reports corrections:
 
 | Tile kind | Rust-side seed | JS correction |
 | --- | --- | --- |
-| Terrain mesh | mesh buffer byte lengths + one composite-atlas cost (`CostHints::atlas_tile_bytes` — every `TileMesh` acquires an atlas eagerly), attached by `attach_terrain_mesh_cost` | `reportTerrainDrapeGpuBytes` replaces the drape term with the measured render-target footprint (clamp-to-ground vector drapes allocate one target per layer per tile) |
+| Terrain mesh | mesh buffer byte lengths + one composite-atlas cost (`CostHints::atlas_tile_bytes` — every `TileMesh` acquires an atlas eagerly), attached by `attach_terrain_mesh_cost` | `reportTerrainDrapeGpuBytes` replaces the drape term with the measured render-target footprint (clamp-to-ground vector drapes — and, on Geographic terrain, baked raster drapes — allocate one target per layer per tile) |
 | Raster texture | `CostHints::raster_tile_bytes` (w×h×4 + ~33% mipmaps) per fragment, attached eagerly by `attach_texture_fragment_cost` | — (dimensions are known) |
 | Vector (MVT) geometry | geometry buffer bytes at mesh transfer | — |
 | Billboard image atlas | — (allocated lazily on the JS side as billboard images load) | `reportFeatureGpuBytes` folds the measured atlas footprint (CPU pixel buffer + equal-sized GPU texture — the CPU copy stays resident for growth re-blits) into the owning vector tile's `VectorTileGpuCost` next to the geometry term, re-reporting on every atlas growth and clearing with `0` when the mesh is disposed; non-tiled (e.g. GeoJSON-layer) billboards have no owning tile and are not charged |

@@ -5,21 +5,20 @@ import { useEffect, useState } from "react";
 import { FLOOD_RANK_COLOR_MAP } from "../../../helpers/colors";
 import { atZoneTime } from "../../../helpers/control";
 
-import { AttributionPanel, type Attribution } from "./AttributionPanel";
+import { AttributionPanel } from "./AttributionPanel";
+import type { Attribution } from "./AttributionPanel";
 import type { BuildingColorAttribute } from "./BuildingLayer";
 import { MEASURED_HEIGHT_GRADIENT, FIREPROOF_COLOR_MAP } from "./BuildingLayer";
-import {
-  ControlPanel,
-  type SequantialData,
-  type DiscreteData,
-} from "./ControlPanel";
+import { ControlPanel } from "./ControlPanel";
+import type { SequantialData, DiscreteData } from "./ControlPanel";
 import {
   UC_PHOTOREALISTIC_ATTRIBUTION_DATASETS,
   UC_PHOTOREALISTIC_DATASETS,
   BUILDING_DATASETS,
 } from "./datasets";
 import { FloodLayer } from "./FloodLayer";
-import { useI18n, type LanguageDictionary } from "./i18n";
+import { useI18n } from "./i18n";
+import type { LanguageDictionary } from "./i18n";
 import { Layers } from "./Layers";
 import type { QualityFlags } from "./quality";
 import { ShelterLayer } from "./ShelterLayer";
@@ -116,6 +115,9 @@ export const PhotorealisticScene = ({
   }, [view, autoRotate]);
 
   // Sync sceneTime slider with Navara atmosphere date (similar to addDateControl)
+  // Mutating the imperative ThreeView engine object inside an effect is
+  // intentional interop, not a render-phase mutation.
+  // eslint-disable-next-line react-hooks/immutability
   useEffect(() => {
     if (!view) return;
     const t = sceneTime[0] ?? 12; // hours in [0, 24], step 0.5
@@ -123,6 +125,7 @@ export const PhotorealisticScene = ({
     const minutes = Math.round((t - hours) * 60);
 
     // Use current date; only adjust hours/minutes like addDateControl does
+    // eslint-disable-next-line react-hooks/immutability
     view.atmosphere.date = atZoneTime(
       new Date(view.atmosphere.date ?? Date.now()),
       hours,
@@ -147,12 +150,16 @@ export const PhotorealisticScene = ({
 
     // Update atmosphere date to match flood simulation date
     const newDate = new Date(floodCurrentDate);
+    // eslint-disable-next-line react-hooks/immutability
     view.atmosphere.date = newDate;
 
     // Also update sceneTime to reflect the new hours/minutes
     const hours = newDate.getHours();
     const minutes = newDate.getMinutes();
     const timeValue = hours + minutes / 60;
+    // Mirror the flood simulation time into the slider state; this runs only
+    // when the flood date actually changes, so it cannot cascade.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSceneTime([timeValue]);
   }, [floodSyncWithAtmosphere, view, floodCurrentDate]);
 

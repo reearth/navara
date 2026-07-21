@@ -1,7 +1,6 @@
 import ThreeView, {
   EventHandler,
   Color,
-  JAPAN_GSI_ELEVATION_DECODER,
   type LayerDescription,
   MeshHandle,
   LightHandle,
@@ -92,30 +91,17 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     },
   });
 
+  const terrainSource = view.addSource({
+    type: "quantized-mesh",
+    url: TERRAIN_DATASETS.reearthQuantizedMesh.url,
+    maxZoom: 18,
+    requestVertexNormals: true,
+    requestWaterMask: true,
+  });
   view.addLayer({
     type: "terrain",
-    data: {
-      url: TERRAIN_DATASETS.gsi.url,
-    },
-    rasterTerrain: {
-      maxZoom: 15,
-      minZoom: 6,
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-      castShadow: true,
-      receiveShadow: true,
-    },
-  });
-
-  view.addLayer({
-    type: "tiles",
-    data: { url: TERRAIN_DATASETS.gsi.url },
-    rasterTile: {
-      maxZoom: 15,
-      minZoom: 6,
-    },
-    hillshade: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
+    source: terrainSource,
+    terrain: { castShadow: true, receiveShadow: true },
   });
 
   view.addLayer({

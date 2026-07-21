@@ -37,8 +37,7 @@ export class FogLight extends PassWrapper<
   constructor(camera: Camera, options?: FogLightOptions) {
     const mergedOptions = { ...DEFAULT_FOG_LIGHT_OPTIONS, ...options };
     const perspectiveOrOrthoCamera = camera as
-      | PerspectiveCamera
-      | OrthographicCamera;
+      PerspectiveCamera | OrthographicCamera;
 
     const { downsample, ...effectOptions } = mergedOptions;
     const effect = new FogLightEffect(

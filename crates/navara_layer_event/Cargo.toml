@@ -8,6 +8,7 @@ license.workspace = true
 bevy_app.workspace = true
 bevy_ecs.workspace = true
 bevy_log.workspace = true
+navara_component.workspace = true
 navara_layer.workspace = true
 navara_feature.workspace = true
 navara_material.workspace = true
