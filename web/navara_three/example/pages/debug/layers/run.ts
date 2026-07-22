@@ -660,6 +660,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     GEOJSON_DATASETS.calderdaleDefibrillators,
     TILES_3D_DATASETS.plateauChiyoda,
     TILES_3D_DATASETS.plateauChuo,
+    TILES_3D_DATASETS.plateauChiyodaB3DM,
     MVT_DATASETS.plateauWakayamaGen,
     MVT_DATASETS.plateauGifuTran,
     MVT_DATASETS.plateauTokyoHeightControl,

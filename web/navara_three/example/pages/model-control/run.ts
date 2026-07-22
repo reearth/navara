@@ -133,7 +133,6 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     TILE_DATASETS.openstreetmap,
     TERRAIN_DATASETS.gsi,
     TILES_3D_DATASETS.plateauChiyoda,
-    LOCAL_DATASETS.soldierGLTF,
   ]);
 
   const startLLE = [35.69127684, 139.75865163, 7];

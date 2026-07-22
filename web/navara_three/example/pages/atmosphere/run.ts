@@ -164,7 +164,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   addEffectsControl(view, pane, defaultEffects);
 
   attribution?.add([
-    TERRAIN_DATASETS.gsi,
+    TERRAIN_DATASETS.reearthQuantizedMesh,
     TILE_DATASETS.gsiSeamlessphoto,
     TILES_3D_DATASETS.plateauChiyoda,
     TILES_3D_DATASETS.plateauChuo,
