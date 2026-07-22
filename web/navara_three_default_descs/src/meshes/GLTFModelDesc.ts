@@ -266,7 +266,6 @@ export class GLTFModelDesc extends MeshDesc<
       );
     }
 
-    let setRteCbk = false;
     const IDENTITY_MATRIX = new Matrix4();
 
     // Setup shadows and CSM
@@ -280,18 +279,18 @@ export class GLTFModelDesc extends MeshDesc<
 
         this.initDepthMaterial(child);
 
-        // Set RTE callback only once for the first mesh (shared RTE uniforms)
-        if (!setRteCbk) {
-          const rteCallback = setupRTEBeforeRender(
-            child,
-            this.rteUserData,
-            IDENTITY_MATRIX,
-          );
-          if (rteCallback) {
-            child.onBeforeRender = rteCallback;
-            child.onBeforeShadow = rteCallback;
-          }
-          setRteCbk = true;
+        // Refresh the shared RTE uniforms on every child draw. With the
+        // callback on a single host mesh, children sorted earlier in the
+        // render list would be drawn with the previous frame's camera and
+        // visibly lag behind during camera movement.
+        const rteCallback = setupRTEBeforeRender(
+          child,
+          this.rteUserData,
+          IDENTITY_MATRIX,
+        );
+        if (rteCallback) {
+          child.onBeforeRender = rteCallback;
+          child.onBeforeShadow = rteCallback;
         }
 
         // Setup CSM for materials if shadows are enabled
@@ -453,6 +452,12 @@ export class GLTFModelDesc extends MeshDesc<
 
   private modifyMaterialForRTE(materials: Material[]): void {
     materials.forEach((material) => {
+      // A material shared by multiple child meshes must be patched only once;
+      // a second wrapper would re-run the replacements on the already-patched
+      // shader and throw.
+      if (material.userData.nvrRteApplied) return;
+      material.userData.nvrRteApplied = true;
+
       // Store original onBeforeCompile if it exists
       const originalOnBeforeCompile = material.onBeforeCompile;
 
