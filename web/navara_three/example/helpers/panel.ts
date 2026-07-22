@@ -502,8 +502,7 @@ function createParamCtrl(
   // its property values (including `string`/`source`), so narrow it to a loose
   // material record here — matching the `Record<string, any>` paneParams.
   const material = layer[paneParams.material as keyof typeof layer] as
-    | Record<string, any>
-    | undefined;
+    Record<string, any> | undefined;
   if (material) {
     const f = pane.addFolder({
       title: "",

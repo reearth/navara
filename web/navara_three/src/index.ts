@@ -70,6 +70,7 @@ import {
   type AnyMeshDesc,
 } from "./core/BaseHandle";
 import { Registries } from "./core/Registries";
+import { DeclutterManager, wasmDeclutterKernel } from "./declutter";
 import {
   getCompositeAtlasSize,
   getDefaultDynamicSse,
@@ -95,6 +96,7 @@ import {
   type WorkerTaskHandler,
 } from "./event";
 import { TEXTURE_LOADER } from "./event/loaders";
+import { createTileHandler } from "./event/tileHandler";
 import { InMemoryBufferStore } from "./inMemoryBufferStore";
 import { registerInputEvents } from "./input";
 import { Layer, type LayerEvent } from "./layer";
@@ -222,6 +224,10 @@ export type MemoryStats = {
   gpuBytesEst: number;
   externalCpuBytes: number;
   reservedBytes: number;
+  /** Estimated GPU bytes of fixed screen-sized allocations (the
+   * postprocessing render-target stack), reported via
+   * `Core.setFixedGpuBytes` on init, resize, and pass-list changes. */
+  fixedGpuBytes: number;
   budgetBytes: number | undefined;
   evictedCount: number;
   sseMultiplier: number;
@@ -252,7 +258,10 @@ export type Options = {
   container?: HTMLElement;
   /** Canvas element for rendering. If not provided, a new canvas is created. */
   canvas?: HTMLCanvasElement | OffscreenCanvas;
-  /** Device pixel ratio override. Uses device default if not specified. */
+  /** Device pixel ratio override. When not specified, the device value is
+   * used, capped at 2 on mobile (1 with `mobileOptimization`) — screen-sized
+   * render targets grow quadratically with pixel ratio and dominate mobile
+   * GPU memory. An explicit value bypasses the caps. */
   pixelRatio?: number;
   /** Disables automatic resize handling on window resize events. */
   disableAutoResize?: boolean;
@@ -442,6 +451,14 @@ export default class ThreeView<
     forceUpdate: false,
     animation: false,
   };
+  /** Shared screen-space label declutterer for text/sprite features. */
+  private _declutter = new DeclutterManager(wasmDeclutterKernel);
+  /** Reusable Vector2 for the declutter pass's per-frame viewport query. */
+  private _declutterSize = new Vector2();
+  /** Pending follow-up frame for a throttled declutter pass or an active
+   *  fade, with the delay it was scheduled at (so a shorter need preempts). */
+  private _declutterRetry: ReturnType<typeof setTimeout> | undefined;
+  private _declutterRetryDelay = 0;
   private _isIdle = false;
   private _uniforms: CommonUniforms;
 
@@ -634,39 +651,11 @@ export default class ThreeView<
   private _vectorRevision = 0;
   // Per-frame snapshot of the WASM raster drape resolution revision, refreshed in `_render`.
   private _rasterRevision = 0;
-  private _tileHandler: TileHandler = {
-    getMartini: (id) => {
-      return this._core?.getMartini(id);
-    },
-    getTile: (handle) => {
-      return this._core?.getTile(handle);
-    },
-    getParentTile: (handle) => {
-      return this._core?.getParentTile(handle);
-    },
-    getTileElevationDecoder: (handle) => {
-      return this._core?.getTileElevationDecoder(handle);
-    },
-    getVectorTileStates: (handle) => {
-      return this._core?.getVectorTileStates(handle);
-    },
-    // Returns the per-frame cached revision (read once in `_render`), so per-tile
-    // `onBeforeRender` gating costs no WASM-boundary call.
-    vectorRevision: () => this._vectorRevision,
-    getRasterTileStates: (handle) => {
-      return this._core?.getRasterTileStates(handle);
-    },
-    rasterRevision: () => this._rasterRevision,
-    reportDrapeGpuBytes: (handle, bytes) => {
-      this._core?.reportTerrainDrapeGpuBytes(handle, bytes);
-    },
-    calcMetersPerTexel: (tileHandle, textureZoom, textureWidth) => {
-      return (
-        this._core?.calcMetersPerTexel(tileHandle, textureZoom, textureWidth) ??
-        1.0
-      );
-    },
-  };
+  private _tileHandler: TileHandler = createTileHandler({
+    getCore: () => this._core,
+    getVectorRevision: () => this._vectorRevision,
+    getRasterRevision: () => this._rasterRevision,
+  });
   private _globeHandler: GlobeHandler = {
     getTransparent: () => {
       return this._core?.getGlobeTransparent();
@@ -805,6 +794,11 @@ export default class ThreeView<
 
   private pixelRatioMatchedMedia?: MediaQueryList;
 
+  private fixedGpuBytesReportScheduled = false;
+  private fixedGpuBytesResyncPending = false;
+  private framesSinceFixedGpuBytesReport = 0;
+  private lastReportedFixedGpuBytes = -1;
+
   /**
    * The built-in attribution (credit) UI. `undefined` when disabled via
    * `defaultAttribution: false`, or in a worker / no-DOM environment. Feed it
@@ -907,6 +901,7 @@ export default class ThreeView<
     this._tileTextureCompositor = new TileTextureCompositor({
       renderer: this._renderer,
       texturizedSceneByTileCoordinates: this._texturizedSceneByTileCoordinates,
+      mercatorY: this._tileHandler.mercatorY,
       size: getCompositeAtlasSize(this.isMobileOptimized()),
     });
 
@@ -929,6 +924,8 @@ export default class ThreeView<
     });
 
     this.renderPassOrchestrator.setSize(width, height);
+    this.renderPassOrchestrator.onPassesChanged = () =>
+      this._scheduleFixedGpuBytesReport();
 
     // Background color
     const bgColor = options.backgroundColor
@@ -1245,6 +1242,7 @@ export default class ThreeView<
       gpuBytesEst: stats.gpuBytesEst,
       externalCpuBytes: stats.externalCpuBytes,
       reservedBytes: stats.reservedBytes,
+      fixedGpuBytes: stats.fixedGpuBytes,
       budgetBytes: stats.budgetBytes,
       evictedCount: stats.evictedCount,
       sseMultiplier: stats.sseMultiplier,
@@ -1370,6 +1368,10 @@ export default class ThreeView<
       costHints.rasterTileBytes,
     );
 
+    // Passes added before `_core` existed could not be reported; sync the
+    // fixed render-target footprint now that the ledger is reachable.
+    this._scheduleFixedGpuBytesReport();
+
     // LOD fog: stronger distance-based degrade on low-memory devices.
     const lodFog = {
       ...getDefaultLodFog({ isMobile: mobileOptimized }),
@@ -1440,6 +1442,7 @@ export default class ThreeView<
       textureFragmentIndex: this._textureFragmentIndex,
       tileMeshToFragmentIds: this._tileMeshToFragmentIds,
       hillshadeContext: this._hillshadeContext,
+      declutter: this._declutter,
     });
 
     // Register built-in descriptors
@@ -1544,6 +1547,10 @@ export default class ThreeView<
   dispose() {
     this._disposed = true;
     this._initialized = false;
+    if (this._declutterRetry !== undefined) {
+      clearTimeout(this._declutterRetry);
+      this._declutterRetry = undefined;
+    }
     // Dispose the view-owned attribution plugin (other plugins are the caller's).
     this._attribution?.dispose();
     this._attribution = undefined;
@@ -1592,6 +1599,10 @@ export default class ThreeView<
 
     // Cleanup hillshade context (temp DEMs, generator, etc.)
     this._hillshadeContext.dispose();
+
+    // Drop declutter participants so the manager doesn't retain removed
+    // meshes' GPU/font resources past this view's lifetime.
+    this._declutter.dispose();
 
     // Clear caches and maps
     this._meshes.clear();
@@ -1661,9 +1672,40 @@ export default class ThreeView<
     this._pickHelper?.setSize(drawingBufferSize.x, drawingBufferSize.y);
 
     this._core?.resize(w, h, pixelRatio ?? 1);
+    this._scheduleFixedGpuBytesReport();
 
     this.emit("resize", w, h);
   };
+
+  /**
+   * Walks the fixed render-target stack and pushes the estimate into the
+   * memory ledger; the WASM call is skipped while the value is unchanged.
+   */
+  private _reportFixedGpuBytes(): void {
+    if (this._disposed || !this._core) return;
+    const bytes = this.renderPassOrchestrator.estimateFixedGpuBytes();
+    this.framesSinceFixedGpuBytesReport = 0;
+    if (bytes === this.lastReportedFixedGpuBytes) return;
+    this.lastReportedFixedGpuBytes = bytes;
+    this._core.setFixedGpuBytes(bytes);
+  }
+
+  /**
+   * Re-reports the fixed GPU footprint for event-triggered changes (init,
+   * resize, pass add/remove). Scheduled as a microtask so bursts — e.g.
+   * effect setup during init — coalesce into a single walk, and marks a
+   * one-shot post-render resync because these events run before the GPU has
+   * lazily allocated the affected targets.
+   */
+  private _scheduleFixedGpuBytesReport(): void {
+    this.fixedGpuBytesResyncPending = true;
+    if (this.fixedGpuBytesReportScheduled) return;
+    this.fixedGpuBytesReportScheduled = true;
+    queueMicrotask(() => {
+      this.fixedGpuBytesReportScheduled = false;
+      this._reportFixedGpuBytes();
+    });
+  }
 
   private _updateUniforms() {
     const viewport = this._getCanvasSize();
@@ -1744,6 +1786,25 @@ export default class ThreeView<
     }
   }
 
+  /**
+   * Ask for a future frame on behalf of the declutter pass. Runs through a
+   * timer because the main loop clears `forceUpdate` right after `_render` —
+   * a flag set synchronously here would be wiped before the next tick reads
+   * it. A pending longer timer is preempted when a shorter delay is needed
+   * (a fade must not wait out a throttle window).
+   */
+  private _scheduleDeclutterFrame(delayMs: number) {
+    if (this._declutterRetry !== undefined) {
+      if (delayMs >= this._declutterRetryDelay) return;
+      clearTimeout(this._declutterRetry);
+    }
+    this._declutterRetryDelay = delayMs;
+    this._declutterRetry = setTimeout(() => {
+      this._declutterRetry = undefined;
+      this._renderFlag.forceUpdate = true;
+    }, delayMs);
+  }
+
   private _render(updatedAt: number) {
     // Read the vector/raster resolution revisions once per frame so each terrain
     // tile's `onBeforeRender` can gate its slot re-fetch against them without its
@@ -1755,6 +1816,29 @@ export default class ThreeView<
 
     this._atmosphere._update();
 
+    // Screen-space label decluttering runs before the render passes so
+    // placement changes land in this frame. Throttled passes and active
+    // fades both need future frames, requested via _scheduleDeclutterFrame.
+    {
+      const size = this._renderer.getDrawingBufferSize(this._declutterSize);
+      const pixelRatio = this._renderer.getPixelRatio();
+      const result = this._declutter.update(
+        this._camera.raw,
+        size.x / pixelRatio,
+        size.y / pixelRatio,
+        updatedAt,
+      );
+      if (result === "throttled") {
+        this._scheduleDeclutterFrame(
+          this._declutter.remainingThrottleMs(updatedAt),
+        );
+      } else if (result === "animating") {
+        // Keep frames coming at fade cadence until every label reaches its
+        // placement target.
+        this._scheduleDeclutterFrame(16);
+      }
+    }
+
     this.emit("preRender", updatedAt);
 
     this.renderPassOrchestrator.render();
@@ -1763,6 +1847,19 @@ export default class ThreeView<
     this.shadowMapViewers.render(this._renderer);
 
     this.emit("postRender", updatedAt);
+
+    // Render targets are GL-allocated lazily during rendering (and freed on
+    // resize), so a footprint taken at init/resize/pass-change time goes
+    // stale: re-estimate once on the first frame after such an event, and
+    // otherwise at a low cadence. The report skips the WASM call when the
+    // value is unchanged.
+    if (this.fixedGpuBytesResyncPending) {
+      this.fixedGpuBytesResyncPending = false;
+      this._reportFixedGpuBytes();
+    } else if (++this.framesSinceFixedGpuBytesReport >= 120) {
+      this.framesSinceFixedGpuBytesReport = 0;
+      this._reportFixedGpuBytes();
+    }
   }
 
   /**
@@ -2448,9 +2545,14 @@ export default class ThreeView<
     const { width, height } = this._getCanvasSize() ?? {};
     if (!width || !height) return;
 
+    // Route through getDevicePixelRatio so a devicePixelRatio change (zoom,
+    // monitor move) cannot bypass the mobile caps applied at init.
     const pixelRatio = isWorker()
       ? (this._options.pixelRatio ?? 1)
-      : window.devicePixelRatio;
+      : getDevicePixelRatio({
+          override: this._options.pixelRatio,
+          mobileOptimization: this._options.mobileOptimization,
+        });
     this.resize(width, height, pixelRatio);
   };
 

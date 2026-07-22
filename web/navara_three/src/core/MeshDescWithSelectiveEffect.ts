@@ -26,8 +26,7 @@ export abstract class MeshDescWithSelectiveEffect<
   UpdateConfig extends MeshUpdateWithSelectiveEffect =
     MeshUpdateWithSelectiveEffect,
   InstanceObj extends Object3D | { raw: Object3D } =
-    | Object3D
-    | { raw: Object3D },
+    Object3D | { raw: Object3D },
   CustomEvent extends BaseEventMap = BaseEventMap,
   Instance extends MeshBaseInstance<InstanceObj> =
     MeshBaseInstance<InstanceObj>,

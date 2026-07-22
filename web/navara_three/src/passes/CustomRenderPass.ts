@@ -2,11 +2,13 @@ import { Globe } from "@navaramap/core";
 import { DepthCopyPass } from "postprocessing";
 import {
   Color,
+  DepthStencilFormat,
   DepthTexture,
   HalfFloatType,
   NearestFilter,
   RGBADepthPacking,
   Scene,
+  UnsignedInt248Type,
   WebGLRenderTarget,
   type PerspectiveCamera,
   type WebGLRenderer,
@@ -90,7 +92,20 @@ export class CustomRenderPass extends RenderPass {
     emissiveTexture.type = HalfFloatType;
     this.gbufferRenderTarget.textures.push(emissiveTexture);
 
+    // The gbuffer owns its depth texture instead of sharing the composer's one
+    // (postprocessing >= 6.39 no longer exposes a writable shared depth
+    // texture). Depth is propagated to the composer's input buffer explicitly
+    // by the copy pass below. Stencil is required for draped-mesh rendering.
+    const gbufferDepthTexture = new DepthTexture(
+      this.gbufferRenderTarget.width,
+      this.gbufferRenderTarget.height,
+      UnsignedInt248Type,
+    );
+    gbufferDepthTexture.format = DepthStencilFormat;
+    this.gbufferRenderTarget.depthTexture = gbufferDepthTexture;
+
     this.copyPass = new RenderTargetCopyPass(this.gbufferRenderTarget);
+    this.copyPass.setDepthTexture(gbufferDepthTexture);
 
     this.globeDepthCopyPass = new DepthCopyPass({
       depthPacking: RGBADepthPacking,
@@ -240,11 +255,12 @@ export class CustomRenderPass extends RenderPass {
     this.allDepthCopyPass.render(renderer, null, null);
   }
 
-  setDepthTexture(depthTexture: DepthTexture): void {
-    this.gbufferRenderTarget.depthTexture = depthTexture;
-    this.globeDepthCopyPass.setDepthTexture(depthTexture.clone());
-    this.copyPass.setDepthTexture(depthTexture);
-  }
+  // The composer-provided depth texture is intentionally ignored: the gbuffer
+  // owns its depth texture and depth is copied into the input buffer by the
+  // copy pass. `needsDepthTexture` stays true so the composer still attaches a
+  // depth texture to the input buffer, which `allDepthCopyPass` reads after
+  // the opaque scene has been rendered.
+  setDepthTexture(): void {}
 
   setSize(width: number, height: number) {
     this.gbufferRenderTarget.setSize(width, height);

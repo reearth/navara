@@ -55,6 +55,9 @@ export type EvaluatableMaterialProperty = {
   size: AvailableMaterialProperty["size"];
   /** Opacity expression from layer configuration (for polygons/points/text where supported). */
   opacity: AvailableMaterialProperty["opacity"];
+  /** Per-feature declutter placement priority (for points/billboards/text);
+   *  higher wins an overlap. Overrides the layer's `declutterPriority`. */
+  declutterPriority: AvailableMaterialProperty["declutterPriority"];
   /** Image URL for billboards; packed into a shared per-mesh texture atlas. */
   image: string;
 };
@@ -70,6 +73,7 @@ type EvaluatedMaterialProperty = {
   width: number;
   size: number;
   opacity: number;
+  declutterPriority: number;
   image: string | null;
 };
 
@@ -308,6 +312,8 @@ export class FeatureEvaluator {
    * - `width` - Line width in pixels (for polylines)
    * - `size` - Feature size in pixels (for points/text)
    * - `opacity` - Feature opacity 0-1
+   * - `declutterPriority` - Placement priority for decluttering; higher wins
+   *   an overlap (for points/billboards/text with `declutter` enabled)
    * - `image` - Image URL (for billboards); loaded once per distinct URL and
    *   packed into the layer's texture atlas. Return `null` to clear a
    *   previous per-feature image and revert to the material's default `url`;
@@ -387,6 +393,12 @@ export class FeatureEvaluator {
       if (evaluated.opacity != null) {
         obj.setFeatureOpacityByBatchId(batchId, evaluated.opacity);
       }
+      if (evaluated.declutterPriority != null) {
+        obj.setFeatureDeclutterPriorityByBatchId(
+          batchId,
+          evaluated.declutterPriority,
+        );
+      }
       if ("image" in evaluated) {
         // Async by nature (the image may need fetching); the atlas dedupes
         // loads by URL so evaluating many features costs one fetch per image.
@@ -414,6 +426,15 @@ export class FeatureEvaluator {
       }
       if (evaluated.opacity != null && obj instanceof BatchedSdfTextMesh) {
         obj.setFeatureOpacityByBatchIndex(batchIndex, evaluated.opacity);
+      }
+      if (
+        evaluated.declutterPriority != null &&
+        obj instanceof BatchedSdfTextMesh
+      ) {
+        obj.setFeatureDeclutterPriorityByBatchIndex(
+          batchIndex,
+          evaluated.declutterPriority,
+        );
       }
       return;
     }

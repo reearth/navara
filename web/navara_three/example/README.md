@@ -80,9 +80,7 @@ const run = async () => {
   // Add your layers here
   const layer = view.addLayer({
     type: "geojson",
-    data: {
-      /* your data */
-    },
+    data: {/* your data */},
     polygon: {
       color: new Color().setStyle("#00aaff"),
       // ... other properties

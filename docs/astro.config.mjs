@@ -20,12 +20,18 @@ async function autogenSections() {
     .filter((x) => x.isDirectory() && !localeDirectories.has(x.name))
     .map((x) => x.name);
   return sections.map((x) => {
+    // Starlight v0.39 removed `label` + `autogenerate` shorthand; autogenerate
+    // config now goes inside an `items` array.
     return {
       label: x,
-      autogenerate: {
-        directory: x,
-        collapsed: false,
-      },
+      items: [
+        {
+          autogenerate: {
+            directory: x,
+            collapsed: false,
+          },
+        },
+      ],
     };
   });
 }
@@ -34,6 +40,12 @@ const sidebar = await autogenSections();
 
 // https://astro.build/config
 export default defineConfig({
+  // Until release the docs top pages live at / and /<locale>/ while the
+  // landing page is parked at /lp and /<locale>/lp. At release, swap back:
+  // git mv src/pages/lp.astro src/pages/index.astro (and the ja variant),
+  // git mv src/content/docs/index.mdx src/content/docs/home.mdx (and ja),
+  // then point lp.json's docs/roadmap links at /home/ and restore lpPathOf
+  // in LandingPage.astro to locale roots.
   markdown: {
     rehypePlugins: [[rehypeMermaid, { strategy: "inline-svg" }]],
   },

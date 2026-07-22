@@ -68,6 +68,8 @@ pub struct MemoryStats {
     pub external_cpu_bytes: f64,
     #[wasm_bindgen(js_name = reservedBytes, readonly)]
     pub reserved_bytes: f64,
+    #[wasm_bindgen(js_name = fixedGpuBytes, readonly)]
+    pub fixed_gpu_bytes: f64,
     #[wasm_bindgen(js_name = budgetBytes, readonly)]
     pub budget_bytes: Option<f64>,
     #[wasm_bindgen(js_name = evictedCount, readonly)]
@@ -1084,6 +1086,15 @@ impl Core {
             .set_memory_cost_hints(atlas_tile_bytes, raster_tile_bytes);
     }
 
+    /// Reports the estimated GPU bytes of fixed, screen-sized allocations
+    /// (the postprocessing render-target stack). Counted in the ledger's
+    /// usage so the tile budget binds against the remaining memory. The JS
+    /// side re-reports on init, resize, and pass-list changes.
+    #[wasm_bindgen(js_name = setFixedGpuBytes)]
+    pub fn set_fixed_gpu_bytes(&mut self, bytes: f64) {
+        self.app.set_fixed_gpu_bytes(bytes);
+    }
+
     #[wasm_bindgen(js_name = getMemoryStats)]
     pub fn get_memory_stats(&mut self) -> Option<MemoryStats> {
         self.app.memory_stats().map(|s| MemoryStats {
@@ -1093,6 +1104,7 @@ impl Core {
             gpu_bytes_est: s.gpu_bytes_est as f64,
             external_cpu_bytes: s.external_cpu_bytes as f64,
             reserved_bytes: s.reserved_bytes as f64,
+            fixed_gpu_bytes: s.fixed_gpu_bytes as f64,
             budget_bytes: s.budget_bytes.map(|b| b as f64),
             evicted_count: s.evicted_count as f64,
             sse_multiplier: s.sse_multiplier,

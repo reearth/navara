@@ -2,7 +2,7 @@ use bevy_ecs::prelude::*;
 use bevy_ecs::system::SystemParam;
 use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, Order, OrderByDistance, Priority, Rendered};
-use navara_core::{Aabb, TileXYZ, WGS84_64, vec3_to_xyz};
+use navara_core::{Aabb, TileXYZ, TilingScheme, WGS84_64, vec3_to_xyz};
 use navara_data_requester::{DataManager, DataRequester, DataRequesterStatus};
 use navara_fog::{DynamicSse, Fog};
 use navara_frame::FrameManager;
@@ -582,6 +582,7 @@ pub fn transfer_mesh(
                 &extent,
                 if is_root { 65 } else { globe.segments },
                 0.,
+                matches!(globe.tiling_scheme, TilingScheme::WebMercator { .. }),
             );
 
             // Render the skirt as well if the terrain layer is also used.

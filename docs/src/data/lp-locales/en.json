@@ -1,0 +1,111 @@
+{
+  "label": "English",
+  "short": "EN",
+  "htmlLang": "en",
+  "meta": {
+    "title": "Navara — an open-source 3D globe map engine",
+    "description": "Navara is a highly extensible, general-purpose 3D globe map engine. It streams real-world geospatial data — satellite imagery, terrain, 3D city models, and vector data — onto an interactive globe and lets you style it for any use case."
+  },
+  "nav": {
+    "docs": "Docs",
+    "examples": "Examples",
+    "github": "GitHub",
+    "getStarted": "Get started"
+  },
+  "intro": {
+    "h1Html": "The beautiful globe,<br /><span>without the complexity.</span>",
+    "h1Sub": null,
+    "copyHtml": "Navara is a <b>highly extensible, general-purpose 3D globe map engine</b>. It streams real-world geospatial data — satellite imagery, terrain, 3D city models, and vector data — onto an interactive globe, and lets you style it for any use case. From a simple basemap to photoreal scenes with atmosphere, sunlight, and shadows — the geospatial math runs in a Rust / WASM GIS engine distributed across Web Workers, so everything stays responsive even with large datasets.",
+    "ctaShowcase": "Try the showcase",
+    "ctaDocs": "Read the docs",
+    "gettingStarted": "Getting Started guide"
+  },
+  "why": {
+    "eyebrow": "WHY NAVARA",
+    "h2Html": "Hard things made simple —<br />and <mark>beautiful</mark>.",
+    "values": [
+      { "title": "Beautiful, instantly", "desc": "A photoreal scene comes up in a few lines of code." },
+      { "title": "Yours to control", "desc": "Tune atmosphere, clouds, water, and effects down to the last detail." },
+      {
+        "title": "Layered, not complicated",
+        "desc": "Combine the declarative API, plugins, and the low-level API in the same view."
+      },
+      { "title": "A foundation you keep", "desc": "A renderer-agnostic Rust core — ready for WebGPU and native." }
+    ],
+    "apiTitle": "4 layers of API, 1 engine",
+    "apiRange": "HIGH-LEVEL → LOW-LEVEL",
+    "apiSegments": [
+      { "num": "01", "name": "Declarative API", "desc": "Layers as config objects" },
+      { "num": "02", "name": "Plugins", "desc": "Purpose-built features in one line" },
+      { "num": "03", "name": "Low-level API", "desc": "Per-feature evaluation and picking" },
+      { "num": "04", "name": "Custom Descriptors", "desc": "Full access to Three.js" }
+    ],
+    "apiNote": "Start declaratively, and drop down a layer only when you need to. Same engine, same data — no rewrites."
+  },
+  "arch": {
+    "eyebrow": "ARCHITECTURE",
+    "h2": "A headless GIS core, independent of the renderer.",
+    "sub": "On Three.js today. In any environment tomorrow.",
+    "coreLabel": "HEADLESS GIS CORE — RUST / WASM + BEVY ECS",
+    "coreDesc": "Tile management · LOD · coordinate transforms · spatial indexing · ellipsoid geometry",
+    "midHtml": "Rendering-ready Output <span>(heavy work runs in Web Workers)</span>",
+    "targetNow": { "name": "@navaramap/three", "sub": "Three.js — today" },
+    "targetsFuture": [
+      { "name": "WebGPU / other engines", "sub": "Future" },
+      { "name": "Native", "sub": "Future" }
+    ]
+  },
+  "gallery": {
+    "eyebrow": "GALLERY",
+    "h2": "GIS that stands as a picture.",
+    "tutorial": {
+      "label": "TUTORIALS",
+      "link": "See more"
+    },
+    "example": {
+      "label": "EXAMPLES",
+      "link": "See more"
+    }
+  },
+  "maplibre": {
+    "eyebrow": "OPEN SOURCE — MAPLIBRE FAMILY",
+    "h2": "Your styles and tiles, straight to 3D.",
+    "copy": "MapLibre, together with its open-source community, shaped modern web mapping. Navara is open source too (MIT / Apache-2.0) — and extends it into 3D.",
+    "items": [
+      "Supports the MapLibre Style Spec: layers and expressions in the JSON you already know (MapLibre Style Plugin, in development)",
+      "Extends the expression system to 3D-native concepts such as terrain, atmosphere, and height",
+      "Standard support planned for MapLibre Tiles (MLT), the next-generation format"
+    ],
+    "roadmap": "See the roadmap"
+  },
+  "users": {
+    "eyebrow": "WHO'S BUILDING WITH NAVARA",
+    "h2": "Real products set the quality bar.",
+    "sub": "Developed with real products and public-data use cases on the roadmap.",
+    "items": [
+      {
+        "slot": "users-1",
+        "name": "Re:Earth",
+        "desc": "An open-source GIS platform developed by Eukarya. Navara is planned to be integrated as its 3D map engine."
+      },
+      {
+        "slot": "users-2",
+        "name": "PLATEAU",
+        "desc": "Japan's open 3D city model project led by MLIT. City-scale rendering with PLATEAU's 3D Tiles is on the roadmap."
+      },
+      {
+        "slot": "users-3",
+        "name": "Hiroshima Archive",
+        "desc": "A digital archive by the Hidenori Watanave Laboratory. The plan is to reimplement its Cesium version with Navara / Three.js for higher visual quality."
+      }
+    ]
+  },
+  "footer": {
+    "h2": "Get started",
+    "cta": "Read the Getting Started guide",
+    "docs": "Docs",
+    "github": "GitHub",
+    "discord": "Discord",
+    "credit": "Navara · MIT / Apache-2.0"
+  }
+}

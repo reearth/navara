@@ -79,6 +79,13 @@ pub struct PointMaterial {
     // Allow transparency and anti-aliasing.
     pub transparent: bool,
     pub opacity: f32,
+    /// Participate in screen-space decluttering: when labels/sprites overlap
+    /// on screen, lower-priority ones are hidden. Enabled by default; set to
+    /// `false` to draw every label unconditionally.
+    pub declutter: bool,
+    /// Placement priority for decluttering; higher wins. Only meaningful when
+    /// `declutter` is enabled.
+    pub declutter_priority: f32,
     // post effect
     pub effect_ids: Option<Vec<String>>,
     pub emissive_intensity: Option<f32>,
@@ -99,6 +106,8 @@ impl Default for PointMaterial {
             offset_depth: true,
             transparent: true,
             opacity: 1.0,
+            declutter: true,
+            declutter_priority: 0.0,
             // post effect
             effect_ids: None,
             emissive_intensity: None,
@@ -132,6 +141,13 @@ pub struct BillboardMaterial {
     pub transparent: bool,
     pub opacity: f32,
     pub alpha_test: f32,
+    /// Participate in screen-space decluttering: when labels/sprites overlap
+    /// on screen, lower-priority ones are hidden. Enabled by default; set to
+    /// `false` to draw every label unconditionally.
+    pub declutter: bool,
+    /// Placement priority for decluttering; higher wins. Only meaningful when
+    /// `declutter` is enabled.
+    pub declutter_priority: f32,
     // post effect
     pub effect_ids: Option<Vec<String>>,
     pub emissive_intensity: Option<f32>,
@@ -154,6 +170,8 @@ impl Default for BillboardMaterial {
             transparent: false,
             opacity: 1.0,
             alpha_test: 0.1,
+            declutter: true,
+            declutter_priority: 0.0,
             // post effect
             effect_ids: None,
             emissive_intensity: None,
@@ -219,6 +237,14 @@ pub struct TextMaterial {
     /// Horizontal alignment of lines within a multi-line block:
     /// `"left"`, `"center"` (default), or `"right"`.
     pub text_align: String,
+
+    /// Participate in screen-space decluttering: when labels/sprites overlap
+    /// on screen, lower-priority ones are hidden. Enabled by default; set to
+    /// `false` to draw every label unconditionally.
+    pub declutter: bool,
+    /// Placement priority for decluttering; higher wins. Only meaningful when
+    /// `declutter` is enabled.
+    pub declutter_priority: f32,
 }
 
 impl Default for TextMaterial {
@@ -254,6 +280,9 @@ impl Default for TextMaterial {
             max_width: 0.0,
             line_height: 1.0,
             text_align: "center".to_string(),
+
+            declutter: true,
+            declutter_priority: 0.0,
         }
     }
 }

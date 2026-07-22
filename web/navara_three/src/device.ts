@@ -50,6 +50,16 @@ export function isMobileDevice(): boolean {
 /** Maximum pixel ratio for mobile devices to balance quality vs performance */
 const MOBILE_MAX_PIXEL_RATIO = 1.0;
 
+/**
+ * Default pixel-ratio cap applied on every mobile device (without opting into
+ * `mobileOptimization`). The fixed screen-sized render-target stack (composer
+ * buffers, gbuffer MRT, depth textures — ~100 B/px, counted by the ledger as
+ * `fixed_gpu_bytes`) grows quadratically with the drawing-buffer size: at
+ * DPR 3 it alone can exceed a mobile tile-cache budget and permanently close
+ * the load gate. Above DPR 2 the sharpness gain is marginal on phone screens.
+ */
+const MOBILE_DEFAULT_MAX_PIXEL_RATIO = 2.0;
+
 export type DevicePixelRatioOptions = {
   /** User-specified pixel ratio override (takes precedence over all other settings) */
   override?: number;
@@ -389,7 +399,9 @@ export function getDefaultDynamicSse(): DynamicSseSettings {
 
 /**
  * Gets an appropriate pixel ratio for the current device.
- * Caps the ratio on mobile devices only when mobileOptimization is enabled.
+ * Mobile devices are capped at 2 by default (see
+ * {@link MOBILE_DEFAULT_MAX_PIXEL_RATIO}), and at 1 when mobileOptimization
+ * is enabled; an explicit `override` (the `pixelRatio` option) bypasses both.
  *
  * @param options - Configuration options for pixel ratio
  * @returns Pixel ratio appropriate for the device
@@ -405,9 +417,11 @@ export function getDevicePixelRatio(options?: DevicePixelRatioOptions): number {
 
   const deviceRatio = window.devicePixelRatio ?? 1;
 
-  // Only cap pixel ratio on mobile when mobileOptimization is enabled
-  if (options?.mobileOptimization && isMobileDevice()) {
-    return Math.min(deviceRatio, MOBILE_MAX_PIXEL_RATIO);
+  if (isMobileDevice()) {
+    const cap = options?.mobileOptimization
+      ? MOBILE_MAX_PIXEL_RATIO
+      : MOBILE_DEFAULT_MAX_PIXEL_RATIO;
+    return Math.min(deviceRatio, cap);
   }
 
   return deviceRatio;

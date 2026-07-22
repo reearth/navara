@@ -49,6 +49,8 @@ impl MouseScrollInput {
             x: self.x,
             y: self.y,
             window: win,
+            // Bevy sets `TouchPhase::Moved` for all mouse-originated wheel events.
+            phase: bevy_input::touch::TouchPhase::Moved,
         }
     }
 }

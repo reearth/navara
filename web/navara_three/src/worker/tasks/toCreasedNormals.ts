@@ -1,15 +1,10 @@
 // Ref: https://github.com/takram-design-engineering/geovanni/blob/ee91f675ba2558ee3099f635dfa30bbe3adfe103/libs/3d-tiles/src/toCreasedNormalsAsync.ts
 
-/* eslint-env worker */
-
 import { transfer } from "@navaramap/worker";
 import { toCreasedNormals as toCreasedNormalsImpl } from "three-stdlib";
 
-import {
-  fromBufferGeometryLike,
-  toBufferGeometryLike,
-  type BufferGeometryLike,
-} from "../../utils";
+import { fromBufferGeometryLike, toBufferGeometryLike } from "../../utils";
+import type { BufferGeometryLike } from "../../utils";
 
 export function toCreasedNormals(
   input: BufferGeometryLike,

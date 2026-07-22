@@ -2,7 +2,7 @@ use bevy_ecs::entity::Entity;
 use navara_core::{
     Extent, Radians, TileXYZ, TilingScheme, overlapping_tiles_within_budget, wm_zoom_for_lng_span,
 };
-use navara_geometry::{TileUvTransform, uv_rect_from_extents, uv_rect_from_extents_mercator};
+use navara_geometry::{TileUvTransform, uv_rect_from_extents_mercator};
 use navara_math::FloatType;
 use navara_tile_component::{RasterTileQuadtree, TileTextureFragmentQuery};
 use rustc_hash::FxHashSet;
@@ -48,7 +48,10 @@ pub fn resolve_raster_texture(
     let raster_extent = TilingScheme::WebMercator { tms: false }.tile_extent(resolved);
     Some(ResolvedRasterTexture {
         entity,
-        uv_transform: uv_rect_from_extents(*terrain_extent, raster_extent),
+        // WM terrain meshes carry Mercator-fraction UVs and the raster texture's
+        // v axis is Mercator-linear, so an ancestor's sub-rect is framed by its
+        // Mercator fraction (identity for the tile's own texture either way).
+        uv_transform: uv_rect_from_extents_mercator(*terrain_extent, raster_extent),
         raster_extent,
     })
 }

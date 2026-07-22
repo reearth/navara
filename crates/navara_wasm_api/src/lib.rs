@@ -1,11 +1,13 @@
 use navara_wasm_utils::set_panic_hook;
 use wasm_bindgen::prelude::*;
 
+mod declutter;
 mod ellipsoid;
 mod intersection;
 mod rte;
 mod transform;
 
+pub use declutter::*;
 pub use ellipsoid::*;
 pub use intersection::*;
 pub use rte::*;

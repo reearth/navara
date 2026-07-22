@@ -10,14 +10,22 @@ import {
   Object3D,
   ShaderMaterial,
   BufferAttribute,
+  type BufferGeometry,
   Color,
+  type Material,
   PerspectiveCamera,
   Vector2,
 } from "three";
 import invariant from "tiny-invariant";
 
+import {
+  DECLUTTER_FADE_MS,
+  type DeclutterCandidate,
+  type DeclutterParticipant,
+} from "../../declutter/types";
 import type { EventContext } from "../../event/context";
 import { createInstancedSpriteMaterialEnhancer } from "../../material/enhancer";
+import type { CustomObject3DEventMap } from "../../object3DEvent";
 import { PickableMesh } from "../pickableMesh";
 
 import { BillboardAtlas, type AtlasRect } from "./billboardAtlas";
@@ -46,7 +54,10 @@ type PositionsInfo = {
 const _tmpSize = new Vector2();
 
 // Coupled with crates/navara_feature/src/geometry/point.rs::pixel_to_world
-export class InstancedSpriteMesh extends Mesh implements PickableMesh {
+export class InstancedSpriteMesh
+  extends Mesh<BufferGeometry, Material | Material[], CustomObject3DEventMap>
+  implements PickableMesh, DeclutterParticipant
+{
   private _batchIdToInstance = new Map<number, number>();
   private _initialColor: Color = new Color(0xffffff);
   private _initialHeight = 0.0;
@@ -72,15 +83,182 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   private _enhancedMaterial?: ReturnType<
     typeof createInstancedSpriteMaterialEnhancer
   >;
+  /** Per-instance world anchors in ECEF meters (f64, 3 per instance), kept in
+   *  sync with the position attributes for the declutter pass. */
+  private _anchors: Float64Array | null = null;
+  /** Whether this mesh's instances participate in screen-space decluttering. */
+  private _declutter = false;
+  /** Layer-level placement priority from the material. */
+  private _declutterPriority = 0;
+  /** Per-instance priorities set through the evaluator (NaN = no override,
+   *  fall back to the layer value). Lazily allocated on first use. */
+  private _declutterPriorityOverrides: Float32Array | null = null;
+  /** Per-instance fade targets for `instanceDeclutterHide` (0 = shown,
+   *  1 = hidden); the attribute animates toward these in stepDeclutterFade. */
+  private _declutterTargets: Float32Array | null = null;
+  /** True while any instance's hide factor may differ from its target. */
+  private _declutterAnimating = false;
+
   constructor(options: InstancedSpriteOptions) {
     super();
     this.renderOrder = options.renderOrder ?? this.renderOrder;
     this.ctx = options.ctx;
+    this.ctx.declutter?.register(this);
+    // `processObjectRemoved` dispatches this for every removed mesh; it is the
+    // reliable teardown signal (this class's dispose() is not called there).
+    this.addEventListener("removedFromWorld", () => {
+      this.ctx.declutter?.unregister(this);
+    });
   }
 
   setActive(active: boolean) {
     this._active = active;
     this.updateVisibility();
+    this.ctx.declutter?.markDirty();
+  }
+
+  // --- DeclutterParticipant ---
+
+  collectDeclutterCandidates(out: DeclutterCandidate[]): void {
+    if (!this.visible || !this._declutter || !this._anchors) return;
+    const enhancer = this._enhancedMaterial;
+    const params = this.geometry?.getAttribute("instanceParams") as
+      InstancedBufferAttribute | undefined;
+    if (!enhancer || !params) return;
+
+    const state = enhancer.states();
+    const cx = Math.min(Math.max(state.center[0], -0.5), 0.5);
+    const cy = Math.min(Math.max(state.center[1], -0.5), 0.5);
+    // Mirror of instancedSprite.vert.glsl:100-104 — aspect is per-instance
+    // (from the atlas rect), not a material-level uniform; there is no
+    // material-wide "aspect" state to read.
+    const uvRect = state.billboard
+      ? (this.geometry?.getAttribute("instanceUvRect") as
+          InstancedBufferAttribute | undefined)
+      : undefined;
+    const anchors = this._anchors;
+    const overrides = this._declutterPriorityOverrides;
+    const targets = this._declutterTargets;
+    const count = Math.min(params.count, anchors.length / 3);
+
+    for (let i = 0; i < count; i++) {
+      if (params.getZ(i) <= 0.5) continue; // hidden by user `show`
+      const instanceSize = params.getY(i);
+      const size = instanceSize >= 0.0 ? instanceSize : state.scale;
+      if (size <= 0.0) continue;
+
+      const override = overrides ? overrides[i] : Number.NaN;
+      const rectH = uvRect ? uvRect.getW(i) : 0;
+      const aspect = uvRect && rectH > 0.0 ? uvRect.getZ(i) / rectH : 1.0;
+
+      // Mirror of instancedSprite.vert.glsl:95-97 — the quad spans
+      // (position.xy - center) * vec2(aspect, 1) * size around the anchor.
+      out.push({
+        anchorX: anchors[i * 3],
+        anchorY: anchors[i * 3 + 1],
+        anchorZ: anchors[i * 3 + 2],
+        addHeight: params.getX(i),
+        minX: (-0.5 - cx) * aspect * size,
+        maxX: (0.5 - cx) * aspect * size,
+        minY: (-0.5 - cy) * size,
+        maxY: (0.5 - cy) * size,
+        sizeInMeters: state.sizeInMeters,
+        // NaN-safe: an unset override falls back to the layer priority.
+        priority: Number.isNaN(override) ? this._declutterPriority : override,
+        isShown: targets ? targets[i] === 0 : true,
+        owner: this,
+        handle: i,
+      });
+    }
+  }
+
+  applyDeclutter(handle: number, hidden: boolean): void {
+    this.setDeclutterHiddenByInstance(handle, hidden);
+  }
+
+  stepDeclutterFade(deltaMs: number): boolean {
+    if (!this._declutterAnimating) return false;
+    const attr = this.geometry?.getAttribute("instanceDeclutterHide") as
+      InstancedBufferAttribute | undefined;
+    const targets = this._declutterTargets;
+    if (!attr || !targets) {
+      this._declutterAnimating = false;
+      return false;
+    }
+
+    const step = deltaMs / DECLUTTER_FADE_MS;
+    const count = Math.min(attr.count, targets.length);
+    let stillAnimating = false;
+    let changed = false;
+    for (let i = 0; i < count; i++) {
+      let value = attr.getX(i);
+      const target = targets[i];
+      if (value === target) continue;
+      value =
+        value < target
+          ? Math.min(value + step, target)
+          : Math.max(value - step, target);
+      attr.setX(i, value);
+      changed = true;
+      if (value !== target) stillAnimating = true;
+    }
+    if (changed) attr.needsUpdate = true;
+    this._declutterAnimating = stillAnimating;
+    return stillAnimating;
+  }
+
+  private _cacheDeclutterState(m: NavaraPointMesh | NavaraBillboardMesh) {
+    const nextDeclutter = m.material.declutter ?? true;
+    if (this._declutter && !nextDeclutter) {
+      // Leaving declutter mode: clear hides the pass applied — the mesh stops
+      // producing candidates, so nothing else would ever re-show them.
+      this._clearDeclutterHidden();
+    }
+    this._declutter = nextDeclutter;
+    this._declutterPriority = m.material.declutterPriority ?? 0;
+  }
+
+  private _clearDeclutterHidden(): void {
+    const targets = this._declutterTargets;
+    if (!targets) return;
+    targets.fill(0.0);
+    // Everything fades back in from wherever its hide factor currently is.
+    this._declutterAnimating = true;
+  }
+
+  /** Reconstruct absolute ECEF anchors from the same arrays the position
+   *  attributes receive (RTE high+low split, or RTC-relative + center). */
+  private _cacheAnchors(
+    positionsInfo: PositionsInfo,
+    transform: { tx: number; ty: number; tz: number },
+  ): void {
+    const { nPositions, positionSize, RTE } = positionsInfo;
+    const anchors =
+      this._anchors && this._anchors.length === nPositions * 3
+        ? this._anchors
+        : new Float64Array(nPositions * 3);
+
+    if (RTE) {
+      const pos = positionsInfo.position as {
+        high: Float32Array<ArrayBufferLike>;
+        low: Float32Array<ArrayBufferLike>;
+      };
+      for (let i = 0; i < nPositions; i++) {
+        const s = i * positionSize;
+        anchors[i * 3] = pos.high[s] + pos.low[s];
+        anchors[i * 3 + 1] = pos.high[s + 1] + pos.low[s + 1];
+        anchors[i * 3 + 2] = (pos.high[s + 2] ?? 0.0) + (pos.low[s + 2] ?? 0.0);
+      }
+    } else {
+      const pos = positionsInfo.position as Float32Array<ArrayBufferLike>;
+      for (let i = 0; i < nPositions; i++) {
+        const s = i * positionSize;
+        anchors[i * 3] = pos[s] + transform.tx;
+        anchors[i * 3 + 1] = pos[s + 1] + transform.ty;
+        anchors[i * 3 + 2] = (pos[s + 2] ?? 0.0) + transform.tz;
+      }
+    }
+    this._anchors = anchors;
   }
 
   async _init(m: NavaraPointMesh | NavaraBillboardMesh) {
@@ -90,6 +268,9 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       return;
     }
 
+    this._cacheDeclutterState(m);
+    this._cacheAnchors(positionsInfo, m.transform);
+
     // Create Geometry
     this.geometry = this._initGeometry(positionsInfo, m);
 
@@ -97,11 +278,14 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     this.material = await this._initMaterial(positionsInfo, m);
 
     this.frustumCulled = false; // Disable since bounding box doesn't account for instance positions
+    this.ctx.declutter?.markDirty();
   }
 
   async _update(m: NavaraPointMesh | NavaraBillboardMesh) {
     const enhancer = this.getEnhancer();
     const material = this.material as ShaderMaterial;
+
+    this._cacheDeclutterState(m);
 
     if (material.visible !== m.material.show) {
       material.visible = m.material.show ?? true;
@@ -162,6 +346,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       const positionsInfo = this.extractPositions(m);
 
       if (positionsInfo) {
+        this._cacheAnchors(positionsInfo, m.transform);
         if (positionsInfo.RTE) {
           const pos = positionsInfo.position as {
             high: Float32Array<ArrayBufferLike>;
@@ -198,6 +383,8 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
         await this._setDefaultImage(m.material.url);
       }
     }
+
+    this.ctx.declutter?.markDirty();
   }
 
   private _initGeometry(
@@ -306,6 +493,16 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     instancedGeometry.setAttribute(
       "instanceColor",
       new InstancedBufferAttribute(colorBuffer, 3),
+    );
+    // Declutter hide factors (0 = shown … 1 = hidden). Decluttered instances
+    // start hidden and fade in once the placement pass grants them space, so
+    // dense tiles don't flash their full clutter before the first pass runs.
+    const initialHide = this._declutter ? 1.0 : 0.0;
+    const declutterBuffer = new Float32Array(instanceCount).fill(initialHide);
+    this._declutterTargets = new Float32Array(instanceCount).fill(initialHide);
+    instancedGeometry.setAttribute(
+      "instanceDeclutterHide",
+      new InstancedBufferAttribute(declutterBuffer, 1),
     );
     instancedGeometry.setAttribute(
       "instanceBatchID",
@@ -572,6 +769,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     ) as InstancedBufferAttribute;
     paramsAttr.setZ(instanceId, rawVisible ? 1.0 : 0.0);
     paramsAttr.needsUpdate = true;
+    this.ctx.declutter?.markDirty();
   }
 
   setFeatureOpacityByBatchId(batchId: number, opacity: number) {
@@ -599,6 +797,46 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     const sanitizedHeight = Number.isFinite(height) ? height : 0.0;
     paramsAttr.setX(instanceId, sanitizedHeight);
     paramsAttr.needsUpdate = true;
+    this.ctx.declutter?.markDirty();
+  }
+
+  /**
+   * Set one instance's declutter fade target; the attribute animates toward
+   * it in {@link stepDeclutterFade}. Deliberately separate from the `show`
+   * component of `instanceParams` so user-driven visibility and declutter
+   * results compose instead of clobbering each other.
+   */
+  setDeclutterHiddenByInstance(instanceIndex: number, hidden: boolean) {
+    const targets = this._declutterTargets;
+    if (!targets || instanceIndex < 0 || instanceIndex >= targets.length) {
+      return;
+    }
+    targets[instanceIndex] = hidden ? 1.0 : 0.0;
+    // Cheap over-approximation; stepDeclutterFade clears it when everything
+    // has reached its target.
+    this._declutterAnimating = true;
+  }
+
+  /**
+   * Set a per-feature placement priority (higher wins), overriding the
+   * layer-level `declutterPriority` for this instance. Driven by the feature
+   * evaluator.
+   */
+  setFeatureDeclutterPriorityByBatchId(batchId: number, priority: number) {
+    const instanceId = this._batchIdToInstance.get(batchId);
+    if (instanceId === undefined) return;
+
+    if (!this._declutterPriorityOverrides) {
+      const count = this._anchors ? this._anchors.length / 3 : 0;
+      if (count === 0) return;
+      this._declutterPriorityOverrides = new Float32Array(count).fill(
+        Number.NaN,
+      );
+    }
+    if (instanceId >= this._declutterPriorityOverrides.length) return;
+    if (this._declutterPriorityOverrides[instanceId] === priority) return;
+    this._declutterPriorityOverrides[instanceId] = priority;
+    this.ctx.declutter?.markDirty();
   }
 
   setFeatureSizeByBatchId(batchId: number, size: number) {
@@ -616,6 +854,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       : -1.0;
     paramsAttr.setY(instanceId, sanitizedSize);
     paramsAttr.needsUpdate = true;
+    this.ctx.declutter?.markDirty();
   }
 
   /**
@@ -634,8 +873,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     if (instanceId === undefined) return;
 
     const rectAttr = this.geometry.getAttribute("instanceUvRect") as
-      | InstancedBufferAttribute
-      | undefined;
+      InstancedBufferAttribute | undefined;
     if (!rectAttr) return;
 
     if (url == null) {
@@ -669,6 +907,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   }
 
   dispose(): void {
+    this.ctx.declutter?.unregister(this);
     this.geometry?.dispose();
 
     // The material's uTexture points at the atlas texture; the atlas owns it.
@@ -688,6 +927,9 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
 
     // Clear internal collections to release references
     this._batchIdToInstance.clear();
+    this._anchors = null;
+    this._declutterTargets = null;
+    this._declutterPriorityOverrides = null;
     this._imageOverrides.clear();
     this._requestedImageUrls.clear();
   }

@@ -8,7 +8,7 @@ use radians::{Angle, Radians};
 
 use navara_core::{Ellipsoid, Extent, LLE, Meters, TileRegion, lerp};
 
-use crate::Geometry;
+use crate::{Geometry, mercator_y, mercator_y_to_lat};
 
 use navara_math::{FloatType, Vec3};
 
@@ -79,11 +79,17 @@ impl UpsampledTerrainGeometry {
 
     /// Construct geometry with optional RTC translation.
     /// You can run this function only once.
+    ///
+    /// `mercator_v` matches the parent mesh's UV semantics (see
+    /// `tile_triangles`): WebMercator tiles carry Mercator-fraction UVs, so the
+    /// child vertex latitude is recovered through the Mercator lerp; Geographic
+    /// tiles lerp latitude directly.
     pub fn construct_geometry(
         &mut self,
         ellipsoid: Ellipsoid<FloatType>,
         extent: &Extent<FloatType, Radians>,
         center: &Vec3,
+        mercator_v: bool,
     ) -> (Geometry, Vec<f32>) {
         let mut vertices = vec![];
         let mut uvs = vec![];
@@ -100,12 +106,20 @@ impl UpsampledTerrainGeometry {
 
         let heights = self.heights.take().unwrap();
 
+        let merc_south = mercator_y(extent.south.val());
+        let merc_north = mercator_y(extent.north.val());
+
         for (i, uv) in self.uvs.take().unwrap().chunks(2).enumerate() {
             let u = clamp_uv(uv[0], min_u, max_u, offset_u);
             let v = clamp_uv(uv[1], min_v, max_v, offset_v);
+            let lat = if mercator_v {
+                mercator_y_to_lat(lerp(merc_south, merc_north, v))
+            } else {
+                lerp(extent.south.val(), extent.north.val(), v)
+            };
             let lle = LLE {
                 lng: Angle::new(lerp(extent.west.val(), extent.east.val(), u)),
-                lat: Angle::new(lerp(extent.south.val(), extent.north.val(), v)),
+                lat: Angle::new(lat),
                 height: Meters::new(heights[i] as f64),
             };
             let xyz = lle.to_xyz(ellipsoid);
@@ -623,7 +637,7 @@ mod test {
             },
         ]);
         let (child_geom, child_heights) =
-            child.construct_geometry(WGS84_64, &child_extent, &Vec3::ZERO);
+            child.construct_geometry(WGS84_64, &child_extent, &Vec3::ZERO, false);
 
         // Second upsample: child → NE grandchild
         let grandchild = UpsampledTerrainGeometry::new(

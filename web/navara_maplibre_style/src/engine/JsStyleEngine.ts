@@ -9,6 +9,7 @@ import {
   validateStyleMin,
 } from "@maplibre/maplibre-gl-style-spec";
 import type {
+  FilterSpecification,
   StyleSpecification,
   StylePropertySpecification,
 } from "@maplibre/maplibre-gl-style-spec";
@@ -47,7 +48,9 @@ export class JsStyleEngine implements StyleEngine {
     _layerType: LayerType,
     geometryType: string,
   ): (feature: FeatureContext) => boolean {
-    const { filter } = featureFilter(expr);
+    // Since v21 `featureFilter` requires a `rootKey` locating the expression in
+    // the style JSON; it is only used to prefix runtime warnings.
+    const { filter } = featureFilter(expr as FilterSpecification, "filter");
 
     return (ctx: FeatureContext) => {
       // Construct a valid GeoJSON Feature for MapLibre's filter evaluator.
@@ -73,7 +76,13 @@ export class JsStyleEngine implements StyleEngine {
     spec: PropertySpec,
     geometryType = "Point",
   ): (ctx: EvaluationContext) => T {
-    const result = createExpression(expr, spec as StylePropertySpecification);
+    // Since v21 `createExpression` requires a `rootKey` locating the expression
+    // in the style JSON; it is only used to prefix runtime warnings.
+    const result = createExpression(
+      expr,
+      "paint",
+      spec as StylePropertySpecification,
+    );
 
     if (result.result === "error") {
       const errorMsg = result.value

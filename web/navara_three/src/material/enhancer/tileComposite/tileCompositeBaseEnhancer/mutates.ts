@@ -26,7 +26,11 @@ export type CoreUniformMutates = {
   bindSlot: (compactSlot: number, layer: CompositeLayer | undefined) => void;
 };
 
-export function createCoreUniformMutates(): CoreUniformMutates {
+/** `mercatorY` is Rust's clamped WebMercator northing, injected through the
+ * event context (`TileHandler.mercatorY`) like every other engine call. */
+export function createCoreUniformMutates(
+  mercatorY: (lat: number) => number,
+): CoreUniformMutates {
   const refs = {
     uShows: new Uniform<number[]>([]),
     uOpacities: new Uniform<number[]>([]),
@@ -120,8 +124,14 @@ export function createCoreUniformMutates(): CoreUniformMutates {
         const span = (Tn - Ts) / layer.uvScale.y;
         const Rs = Ts - layer.uvOffset.y * span;
         const Rn = Rs + span;
-        const mRs = Math.log(Math.tan(Math.PI * 0.25 + Rs * 0.5));
-        const mRn = Math.log(Math.tan(Math.PI * 0.25 + Rn * 0.5));
+        // Rust's clamped Mercator northing — the same function the bake affine
+        // uses (`uv_rect_from_extents_mercator`), so the pasted band stays
+        // aligned with the baked render target. The clamp matters: a polar
+        // tile's band reaches ±90° (as f32, slightly past it), where unclamped
+        // log(tan(...)) returns NaN — and a NaN span fails the shader's
+        // `abs(mDen)` guard, silently disabling reprojection for the tile.
+        const mRs = mercatorY(Rs);
+        const mRn = mercatorY(Rn);
         // Polar cap: clamp the overshoot onto the band-edge texel when this tile's
         // north/south edge sits on the WebMercator latitude limit.
         const clampTop = Rn >= WM_MAX_LAT - 1e-4 ? 1 : 0;

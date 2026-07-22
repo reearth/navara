@@ -26,6 +26,11 @@ import {
   Vector2,
 } from "three";
 
+import {
+  DECLUTTER_FADE_MS,
+  type DeclutterCandidate,
+  type DeclutterParticipant,
+} from "../declutter/types";
 import type { MaterialEnhancer } from "../material/enhancer/MaterialEnhancer";
 import {
   createSdfTextMaterialEnhancer,
@@ -219,6 +224,27 @@ export class SDFTextMesh
   private _requestRender?: () => void;
   // The COLRv1 color atlas is always FontManager-owned; no local field needed.
 
+  /** World-space anchor in ECEF meters (f64), kept in sync with the position
+   *  uniforms so the declutter pass can project it without touching WASM. */
+  private _worldAnchor = new Float64Array(3);
+  /** Whether this label participates in screen-space decluttering. */
+  private _declutter = false;
+  /** Layer-level placement priority from the material. */
+  private _declutterPriority = 0;
+  /** Per-feature priority set through the evaluator; overrides the layer
+   *  value when defined. */
+  private _declutterPriorityOverride: number | undefined;
+  /** Current animated hide factor (mirrors the uDeclutterHide uniform) and
+   *  the placement target it is fading toward. */
+  private _declutterHide = 0;
+  private _declutterTarget = 0;
+  /** Text block dimensions in em units, mirroring the uTextWidth/uTextHeight/
+   *  uBgYBounds uniforms; 0 width means "no collision box" (empty text). */
+  private _labelWidthEm = 0;
+  private _labelHeightEm = 0;
+  private _labelMinYEm = 0;
+  private _labelMaxYEm = 0;
+
   private _enhancer: MaterialEnhancer<
     ShaderMaterial,
     { base?: SdfTextBaseProps },
@@ -311,6 +337,22 @@ export class SDFTextMesh
       transform.ty,
       transform.tz,
     ]);
+    this._cacheWorldAnchor(position, RTE, [
+      transform.tx,
+      transform.ty,
+      transform.tz,
+    ]);
+
+    // Decluttered labels start hidden and fade in once the placement pass
+    // grants them space — otherwise dense tiles flash their full clutter for
+    // a frame before the first pass runs.
+    this._declutter = material.declutter ?? true;
+    this._declutterPriority = material.declutterPriority ?? 0;
+    if (this._declutter) {
+      this._declutterHide = 1;
+      this._declutterTarget = 1;
+      mutates.setDeclutterHide(1);
+    }
 
     // Register shader hook
     mat.onBeforeCompile = this._enhancer.transformShader;
@@ -446,6 +488,7 @@ export class SDFTextMesh
 
     if (!text) {
       this.geometry.instanceCount = 0;
+      this._labelWidthEm = 0;
       this._setGlyphKeys([]);
       return;
     }
@@ -457,6 +500,7 @@ export class SDFTextMesh
     );
     if (!shapeResult) {
       this.geometry.instanceCount = 0;
+      this._labelWidthEm = 0;
       this._setGlyphKeys([]);
       return;
     }
@@ -546,6 +590,36 @@ export class SDFTextMesh
     this._enhancer.update({ base: { opacity: clampedOpacity } });
   }
 
+  /**
+   * Set this label's declutter fade target; the actual hide factor animates
+   * toward it in {@link stepDeclutterFade}. Deliberately separate from
+   * `visible`/`show`: it neither churns scene-graph membership nor releases
+   * glyph atlas retains, so the declutter pass can retarget it every
+   * placement run at no cost.
+   */
+  setDeclutterHidden(hidden: boolean): void {
+    this._declutterTarget = hidden ? 1 : 0;
+  }
+
+  /**
+   * Advance the hide factor toward its target by `deltaMs / DECLUTTER_FADE_MS`
+   * and push it to the uniform. Returns true while still mid-fade.
+   */
+  stepDeclutterFade(deltaMs: number): boolean {
+    const target = this._declutterTarget;
+    let value = this._declutterHide;
+    if (value === target) return false;
+
+    const step = deltaMs / DECLUTTER_FADE_MS;
+    value =
+      value < target
+        ? Math.min(value + step, target)
+        : Math.max(value - step, target);
+    this._declutterHide = value;
+    this._enhancer.mutates().setDeclutterHide(value);
+    return value !== target;
+  }
+
   _setFeatureWidth(_width: number): void {
     // Width is not applicable to text meshes.
     // This method is intentionally a no-op to satisfy the FeatureMesh guard.
@@ -565,6 +639,80 @@ export class SDFTextMesh
     this._enhancer
       .mutates()
       .setPosition(position, RTE, [transform.tx, transform.ty, transform.tz]);
+    this._cacheWorldAnchor(position, RTE, [
+      transform.tx,
+      transform.ty,
+      transform.tz,
+    ]);
+  }
+
+  /** Reconstruct the absolute ECEF anchor from the same inputs the position
+   *  uniforms receive (RTE high+low split, or RTC-relative + center). */
+  private _cacheWorldAnchor(
+    position: Float32Array | { high: Float32Array; low: Float32Array },
+    RTE: boolean,
+    rtcCenter: [number, number, number],
+  ): void {
+    const anchor = this._worldAnchor;
+    if (RTE) {
+      const p = position as { high: Float32Array; low: Float32Array };
+      anchor[0] = p.high[0] + p.low[0];
+      anchor[1] = p.high[1] + p.low[1];
+      anchor[2] = (p.high[2] ?? 0.0) + (p.low[2] ?? 0.0);
+    } else {
+      const p = position as Float32Array;
+      anchor[0] = p[0] + rtcCenter[0];
+      anchor[1] = p[1] + rtcCenter[1];
+      anchor[2] = (p[2] ?? 0.0) + rtcCenter[2];
+    }
+  }
+
+  /**
+   * Build this label's collision candidate for the shared declutter pass, or
+   * null when it doesn't participate (declutter disabled, hidden, or empty).
+   * The local box mirrors the vertex shader's layout: glyphs span
+   * [0, textWidth] × [bgMinY, bgMaxY] in em units, shifted by the `center`
+   * anchor and scaled by the font size (sdfText.vert.glsl:111-115).
+   */
+  getDeclutterCandidate(
+    owner: DeclutterParticipant,
+    handle: number,
+  ): DeclutterCandidate | null {
+    if (!this._declutter || !this.visible || this._labelWidthEm <= 0) {
+      return null;
+    }
+    const state = this._enhancer.states();
+    const size = state.fontSize;
+    if (size <= 0) return null;
+
+    const cx = Math.min(Math.max(state.center[0], -0.5), 0.5);
+    const cy = Math.min(Math.max(state.center[1], -0.5), 0.5);
+    const w = this._labelWidthEm;
+    const h = this._labelHeightEm;
+    return {
+      anchorX: this._worldAnchor[0],
+      anchorY: this._worldAnchor[1],
+      anchorZ: this._worldAnchor[2],
+      addHeight: state.addHeight,
+      minX: (0 - cx * w) * size,
+      maxX: (w - cx * w) * size,
+      minY: (this._labelMinYEm - cy * h) * size,
+      maxY: (this._labelMaxYEm - cy * h) * size,
+      sizeInMeters: state.sizeInMeters,
+      priority: this._declutterPriorityOverride ?? this._declutterPriority,
+      isShown: this._declutterTarget === 0,
+      owner,
+      handle,
+    };
+  }
+
+  /**
+   * Set a per-feature placement priority (higher wins), overriding the
+   * layer-level `declutterPriority` for this label. Pass `undefined` to fall
+   * back to the layer value. Driven by the feature evaluator.
+   */
+  setDeclutterPriority(priority: number | undefined): void {
+    this._declutterPriorityOverride = priority;
   }
 
   /**
@@ -595,6 +743,17 @@ export class SDFTextMesh
       // Font or layout changed — re-render existing text with the new settings
       this.setText(this._text, true);
     }
+
+    // Read before the visibility early-return: the declutter pass consults
+    // these even while other style state is skipped for hidden labels.
+    const nextDeclutter = material.declutter ?? true;
+    if (this._declutter && !nextDeclutter) {
+      // Leaving declutter mode: clear any hide the pass applied — the mesh
+      // stops producing candidates, so nothing else would ever re-show it.
+      this.setDeclutterHidden(false);
+    }
+    this._declutter = nextDeclutter;
+    this._declutterPriority = material.declutterPriority ?? 0;
 
     this.visible = (material.show ?? true) && !!this._text;
     this._syncGlyphRefs();
@@ -921,6 +1080,7 @@ export class SDFTextMesh
     const count = renderable.length;
     if (count === 0) {
       this.geometry.instanceCount = 0;
+      this._labelWidthEm = 0;
       return;
     }
 
@@ -976,14 +1136,19 @@ export class SDFTextMesh
 
     this.geometry.instanceCount = count + 1;
 
-    // Update text dimension uniforms via mutates
+    // Update text dimension uniforms via mutates, mirroring them CPU-side for
+    // the declutter pass's collision box.
+    this._labelWidthEm = textWidth / SDF_PX_SIZE;
+    this._labelHeightEm = textHeight / SDF_PX_SIZE;
+    this._labelMinYEm = bgMinY === Infinity ? 0.0 : bgMinY;
+    this._labelMaxYEm = bgMaxY === -Infinity ? 1.0 : bgMaxY;
     this._enhancer
       .mutates()
       .updateTextDimensions(
-        textWidth / SDF_PX_SIZE,
-        textHeight / SDF_PX_SIZE,
-        bgMinY === Infinity ? 0.0 : bgMinY,
-        bgMaxY === -Infinity ? 1.0 : bgMaxY,
+        this._labelWidthEm,
+        this._labelHeightEm,
+        this._labelMinYEm,
+        this._labelMaxYEm,
       );
   }
 

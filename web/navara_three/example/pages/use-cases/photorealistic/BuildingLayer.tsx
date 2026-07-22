@@ -76,8 +76,11 @@ export function BuildingTilesLayer({
   const layerRef = useRef<NavaraLayer | null>(null);
   const paramsRef = useRef({ colorBy, heightDomain });
 
-  paramsRef.current.colorBy = colorBy;
-  paramsRef.current.heightDomain = heightDomain;
+  // Keep the ref in sync outside render; it is only read from event callbacks.
+  useEffect(() => {
+    paramsRef.current.colorBy = colorBy;
+    paramsRef.current.heightDomain = heightDomain;
+  }, [colorBy, heightDomain]);
 
   const layerDesc = useMemo((): LayerDescription | null => {
     if (!visible) return null;

@@ -2,6 +2,7 @@ import { Mesh, BoxGeometry, MeshBasicMaterial } from "three";
 import { describe, expect, it, vi } from "vitest";
 
 import { TexturizedSceneByTileCoordinates } from "../scene";
+import { createTestTileHandler } from "../test-utils/engine";
 
 import { TileTextureCompositor } from "./TileTextureCompositor";
 import type { AtlasFactory, CompositeAtlas } from "./types";
@@ -47,6 +48,7 @@ function setup() {
       typeof TileTextureCompositor
     >[0]["renderer"],
     texturizedSceneByTileCoordinates: texturizedScenes,
+    mercatorY: createTestTileHandler().mercatorY,
     atlasFactory: fakeFactory,
   });
   return { compositor, renderer, texturizedScenes };

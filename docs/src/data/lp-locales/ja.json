@@ -1,0 +1,120 @@
+{
+  "label": "日本語",
+  "short": "JA",
+  "htmlLang": "ja",
+  "meta": {
+    "title": "Navara — オープンソースの 3D 地球儀地図エンジン",
+    "description": "Navara は、拡張性の高い汎用 3D 地図エンジンです。衛星画像・地形・3D 都市モデル・ベクターデータといった地理空間データをインタラクティブな地球儀にストリーミングし、用途に合わせて表現できます。"
+  },
+  "nav": {
+    "docs": "Docs",
+    "examples": "Examples",
+    "github": "GitHub",
+    "getStarted": "Get started"
+  },
+  "intro": {
+    "h1Html": "The beautiful globe,<br /><span>without the complexity.</span>",
+    "h1Sub": "複雑さなしに、美しい地球を。",
+    "copyHtml": "Navara は、<b>拡張性の高い汎用 3D 地図エンジン</b>です。衛星画像・地形・3D 都市モデル・ベクターデータといった現実世界の地理空間データをインタラクティブな地球儀にストリーミングし、用途に合わせて表現できます。シンプルなベースマップから、大気・太陽光・影を備えたフォトリアルなシーンまで幅広く対応。地理空間計算は Web Worker に分散された Rust / WASM 製の GIS エンジンが担うため、大規模なデータでもレスポンシブに動き続けます。",
+    "ctaShowcase": "Try the showcase",
+    "ctaDocs": "Read the docs",
+    "gettingStarted": "Getting Started ガイド"
+  },
+  "why": {
+    "eyebrow": "WHY NAVARA",
+    "h2Html": "難しいことを簡単に、<br />そして<mark>美しく</mark>。",
+    "values": [
+      {
+        "title": "すぐに、美しく",
+        "desc": "ほんの数行のコードで、フォトリアルなシーンが立ち上がります。"
+      },
+      {
+        "title": "思いのままに",
+        "desc": "大気・雲・水面・エフェクトを、細部まで自在に調整できます。"
+      },
+      {
+        "title": "重ねても、複雑にしない",
+        "desc": "宣言的 API・プラグイン・低レベル API を、同じビューの中で組み合わせられます。"
+      },
+      {
+        "title": "書き直さない土台",
+        "desc": "レンダラーに依存しない Rust 製コア。WebGPU やネイティブへの展開も見据えています。"
+      }
+    ],
+    "apiTitle": "4 層の API、1 つのエンジン",
+    "apiRange": "HIGH-LEVEL → LOW-LEVEL",
+    "apiSegments": [
+      { "num": "01", "name": "宣言的 API", "desc": "レイヤーを設定オブジェクトで宣言" },
+      { "num": "02", "name": "プラグイン", "desc": "目的別の機能を 1 行で追加" },
+      { "num": "03", "name": "低レベル API", "desc": "フィーチャー単位の評価とピッキング" },
+      { "num": "04", "name": "カスタム Descriptor", "desc": "Three.js へのフルアクセス" }
+    ],
+    "apiNote": "宣言的に書き始めて、必要になったときだけ下の層へ。エンジンもデータもそのままに、書き直す必要はありません。"
+  },
+  "arch": {
+    "eyebrow": "ARCHITECTURE",
+    "h2": "レンダラーから独立した、ヘッドレスな GIS コア。",
+    "sub": "現在は Three.js の上で。将来は、あらゆる環境で。",
+    "coreLabel": "HEADLESS GIS CORE — RUST / WASM + BEVY ECS",
+    "coreDesc": "タイル管理 · LOD · 座標変換 · 空間インデックス · 楕円体ジオメトリ",
+    "midHtml": "Rendering-ready Output <span>（重い処理は Web Worker へ）</span>",
+    "targetNow": { "name": "@navaramap/three", "sub": "Three.js — 現在" },
+    "targetsFuture": [
+      { "name": "WebGPU / 他エンジン", "sub": "Future" },
+      { "name": "Native", "sub": "Future" }
+    ]
+  },
+  "gallery": {
+    "eyebrow": "GALLERY",
+    "h2": "一枚の絵として成立する GIS。",
+    "tutorial": {
+      "label": "TUTORIALS",
+      "link": "もっと見る"
+    },
+    "example": {
+      "label": "EXAMPLES",
+      "link": "もっと見る"
+    }
+  },
+  "maplibre": {
+    "eyebrow": "OPEN SOURCE — MAPLIBRE FAMILY",
+    "h2": "スタイルもタイルも、そのまま 3D へ。",
+    "copy": "MapLibre はオープンソースコミュニティとともに、現代の Web 地図のかたちを築いてきました。Navara も同じオープンソース（MIT / Apache-2.0）として、その世界を 3D へ広げていきます。",
+    "items": [
+      "MapLibre Style Spec に対応。レイヤーも式も、使い慣れた JSON のまま扱えます（MapLibre Style Plugin として開発中）",
+      "式システムを拡張し、地形・大気・高さといった 3D ならではの表現にも対応",
+      "次世代フォーマット MapLibre Tiles (MLT) にも標準対応予定"
+    ],
+    "roadmap": "Roadmap を見る"
+  },
+  "users": {
+    "eyebrow": "WHO'S BUILDING WITH NAVARA",
+    "h2": "実プロダクトの要求を、品質基準に。",
+    "sub": "自社の GIS プロダクトや、研究・自治体のユースケースへの展開を見据えて開発を進めています。",
+    "items": [
+      {
+        "slot": "users-1",
+        "name": "Re:Earth",
+        "desc": "Eukarya が開発するオープンソースの GIS プラットフォーム。その 3D 地図エンジンとして、Navara の統合を予定しています。"
+      },
+      {
+        "slot": "users-2",
+        "name": "PLATEAU",
+        "desc": "国土交通省が主導する 3D 都市モデルのオープンデータプロジェクト。PLATEAU の 3D Tiles を活かした都市スケールの表現を検証していく予定です。"
+      },
+      {
+        "slot": "users-3",
+        "name": "Hiroshima Archive",
+        "desc": "渡邉英徳研究室によるデジタルアーカイブ。Cesium 版を Navara / Three.js で再実装し、より高品質なビジュアル表現を目指す計画です。"
+      }
+    ]
+  },
+  "footer": {
+    "h2": "Get started",
+    "cta": "Getting Started ガイドを読む",
+    "docs": "Docs",
+    "github": "GitHub",
+    "discord": "Discord",
+    "credit": "Navara · MIT / Apache-2.0"
+  }
+}

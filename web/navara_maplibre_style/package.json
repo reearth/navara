@@ -33,7 +33,7 @@
     "@navaramap/three": "workspace:*"
   },
   "dependencies": {
-    "@maplibre/maplibre-gl-style-spec": "^20.3.1",
+    "@maplibre/maplibre-gl-style-spec": "26.1.0",
     "@navaramap/core": "workspace:*",
     "@navaramap/engine": "workspace:*",
     "@types/geojson": "7946.0.16"

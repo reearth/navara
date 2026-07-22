@@ -37,6 +37,13 @@ const ALLOWED_ANNO_CTG = [
   661, // Shrine
 ];
 
+// Per-feature declutter priority: bigger settlements win overlaps.
+const DECLUTTER_PRIORITY: Record<number, number> = {
+  51301: 3, // Population 1M+
+  51302: 2, // Population 500K-1M
+  51303: 1, // Population <500K
+};
+
 const run = async () => {
   const view = new ThreeView({
     debug: true,
@@ -95,7 +102,7 @@ const run = async () => {
   // Track updated features to prevent duplicate evaluations
   let updatedFeatures = new Set<bigint>();
 
-  const params = { size: 20 };
+  const params = { size: 20, declutter: true };
 
   // MVT text layer: Symbols from GSI vector tiles
   const addMvtLayer = () => {
@@ -114,6 +121,8 @@ const run = async () => {
         center: { x: 0.5, y: 0.0 },
         outlineColor: new Color().setStyle("#000000"),
         outlineWidth: 2,
+        // Hide labels whose screen boxes overlap a higher-priority one
+        declutter: params.declutter,
       },
       vectorTile: {
         maxZoom: 16,
@@ -152,6 +161,7 @@ const run = async () => {
           return {
             text,
             show: !!text,
+            declutterPriority: DECLUTTER_PRIORITY[ftCode] ?? 0,
           };
         },
         { filters: ["knj", "name", "ftCode", "annoCtg"] },
@@ -185,6 +195,10 @@ const run = async () => {
     .on("change", ({ value }) => {
       layer?.update({ text: { size: value } });
     });
+
+  pane.addBinding(params, "declutter").on("change", ({ value }) => {
+    layer?.update({ text: { declutter: value } });
+  });
 
   attribution?.add([
     TILE_DATASETS.openstreetmap,

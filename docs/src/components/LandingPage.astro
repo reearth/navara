@@ -1,0 +1,1715 @@
+---
+// Landing page for Navara. Design reference: design_handoff_navara_landing_page.
+// Theme colors, image slots, and external links are managed in src/data/lp.json;
+// all copy lives in src/data/lp-locales/<locale>.json. To add a locale, create
+// its strings file there and a page that renders <LandingPage locale="..." />.
+// Image `src` values are repo-root-relative paths pointing into docs/src/assets
+// or web/navara_three/example/public/screenshots.
+import type { ImageMetadata } from "astro";
+import { ArrowUpRight, ChevronDown, Globe } from "@lucide/astro";
+import lp from "../data/lp.json";
+import githubIcon from "../assets/lp/github-invertocat.svg?raw";
+
+interface Props {
+  locale: string;
+}
+
+// The root locale is served at "/" without a path prefix (matches Starlight).
+const ROOT_LOCALE = "en";
+
+const localeModules = import.meta.glob<{ default: any }>("../data/lp-locales/*.json", {
+  eager: true,
+});
+const locales: Record<string, any> = {};
+for (const [path, mod] of Object.entries(localeModules)) {
+  const code = path.match(/([\w-]+)\.json$/)?.[1];
+  if (code) locales[code] = mod.default;
+}
+
+const { locale } = Astro.props;
+const t = locales[locale];
+if (!t) throw new Error(`LP locale strings not found: ${locale}`);
+
+// Prefix internal links with the locale path segment (root locale has none).
+function localizeHref(href: string): string {
+  if (!href.startsWith("/") || locale === ROOT_LOCALE) return href;
+  return `/${locale}${href}`;
+}
+// Pre-release the LP is parked under /lp (the docs top pages own the locale
+// roots); at release this returns to the locale roots — see astro.config.mjs.
+const lpPathOf = (code: string): string => (code === ROOT_LOCALE ? "/lp/" : `/${code}/lp/`);
+
+const imageModules = import.meta.glob<{ default: ImageMetadata }>(
+  [
+    "../assets/**/*.{png,jpg,jpeg,gif,webp,avif,svg}",
+    "../../../web/navara_three/example/public/screenshots/**/*.{png,jpg,jpeg,gif,webp,avif}",
+  ],
+  { eager: true },
+);
+
+interface ImageSlot {
+  src: string | null;
+  alt: string;
+  href?: string;
+}
+
+// Resolve a repo-root-relative path from lp.json to a bundled asset URL.
+function resolveImage(imageSlot: ImageSlot): string | null {
+  if (!imageSlot.src) return null;
+  const key = imageSlot.src.startsWith("docs/src/")
+    ? imageSlot.src.replace("docs/src/", "../")
+    : `../../../${imageSlot.src}`;
+  const mod = imageModules[key];
+  if (!mod) throw new Error(`LP image not found: ${imageSlot.src}`);
+  return mod.default.src;
+}
+
+const images = lp.images as Record<string, ImageSlot>;
+const slot = (id: string): ImageSlot => {
+  const s = images[id];
+  if (!s) throw new Error(`LP image slot not defined in lp.json: ${id}`);
+  return s;
+};
+const src = (id: string): string | null => resolveImage(slot(id));
+
+const { colors, links } = lp;
+const rootStyle = `--pri:${colors.primary};--acc:${colors.accent};--sub:${colors.sub};--ml:${colors.maplibre}`;
+---
+
+<html lang={t.htmlLang} style={rootStyle}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{t.meta.title}</title>
+    <meta name="description" content={t.meta.description} />
+    {/* TODO: Remove when Navara is released. */}
+    <meta name="robots" content="noindex,nofollow" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Arsenal:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="lp">
+      <!-- Transparent header over hero -->
+      <header class="lp-header">
+        <span class="lp-wordmark">NAVARA</span>
+        <nav class="lp-nav">
+          <a href={localizeHref(links.docs)}>{t.nav.docs}</a>
+          <a href={links.examples}>{t.nav.examples}</a>
+          <a
+            class="lp-nav-github"
+            href={links.github}
+            aria-label={t.nav.github}
+            set:html={githubIcon}
+          />
+          <label class="lp-lang">
+            <Globe size={16} stroke-width={1.8} aria-hidden="true" />
+            <select aria-label="Language" data-lp-lang>
+              {
+                Object.entries(locales).map(([code, strings]: [string, any]) => (
+                  <option value={lpPathOf(code)} selected={code === locale} lang={strings.htmlLang}>
+                    {strings.short}
+                  </option>
+                ))
+              }
+            </select>
+            <ChevronDown class="lp-lang-chevron" size={14} stroke-width={2} aria-hidden="true" />
+          </label>
+          <a class="lp-nav-cta" href="#get-started">{t.nav.getStarted}</a>
+        </nav>
+      </header>
+
+      <!-- Hero stage: the hero image stays pinned while the transparent
+           catch-copy section slides up over it; once that section is fully
+           visible the page scrolls normally again. -->
+      <div class="lp-hero-stage">
+        <div class="lp-hero">
+          {src("hero") && <img src={src("hero")} alt={slot("hero").alt} />}
+        </div>
+        <!-- Catch copy + intro -->
+        <section class="lp-intro">
+        <div class="lp-container lp-intro-grid">
+          <div>
+            <h1 class="lp-h1" set:html={t.intro.h1Html} />
+            {t.intro.h1Sub && <p class="lp-h1-sub">{t.intro.h1Sub}</p>}
+          </div>
+          <div class="lp-intro-right">
+            <p class="lp-intro-copy" set:html={t.intro.copyHtml} />
+            <div class="lp-cta-row">
+              <a class="lp-btn-primary" href={links.examples}>{t.intro.ctaShowcase}</a>
+              <a class="lp-btn-outline" href={localizeHref(links.docs)}>{t.intro.ctaDocs}</a>
+            </div>
+            <p class="lp-getting-started">
+              <a href={localizeHref(links.gettingStarted)}
+                >{t.intro.gettingStarted}<ArrowUpRight class="lp-link-icon" size={15} /></a
+              >
+            </p>
+          </div>
+        </div>
+        </section>
+      </div>
+
+      <div class="lp-main">
+      <!-- Why Navara -->
+      <section class="lp-why">
+        <div class="lp-container">
+          <p class="lp-eyebrow lp-eyebrow-center" data-reveal>{t.why.eyebrow}</p>
+          <h2 class="lp-why-h2" data-reveal style="--rd:1" set:html={t.why.h2Html} />
+          <div class="lp-values" data-reveal-group>
+            {
+              t.why.values.map((value: any) => (
+                <div>
+                  <h3>{value.title}</h3>
+                  <p>{value.desc}</p>
+                </div>
+              ))
+            }
+          </div>
+          <div class="lp-api-band" data-reveal-group>
+            <div class="lp-api-head">
+              <h3>{t.why.apiTitle}</h3>
+              <span>{t.why.apiRange}</span>
+            </div>
+            <div class="lp-api-grid" data-reveal-group style="--rd-base:2">
+              {
+                t.why.apiSegments.map((seg: any, i: number) => (
+                  <div class={`lp-api-seg lp-api-seg-${i + 1}`}>
+                    <div class="lp-api-num">{seg.num}</div>
+                    <b>{seg.name}</b>
+                    <p>{seg.desc}</p>
+                  </div>
+                ))
+              }
+            </div>
+            <p class="lp-api-note">{t.why.apiNote}</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Architecture (dark) -->
+      <section class="lp-arch">
+        <div class="lp-container">
+          <p class="lp-eyebrow lp-eyebrow-acc" data-reveal>{t.arch.eyebrow}</p>
+          <h2 class="lp-h2" data-reveal style="--rd:1">{t.arch.h2}</h2>
+          <p class="lp-arch-sub" data-reveal style="--rd:2">{t.arch.sub}</p>
+          <!-- Reveal order tells the story: the headless core first, then the
+               diagram builds upward toward the render targets. -->
+          <div class="lp-arch-flow" data-reveal-group>
+            <div class="lp-arch-targets" style="--rd:4">
+              <div class="lp-arch-target-now">
+                <div class="lp-arch-target-name">{t.arch.targetNow.name}</div>
+                <div class="lp-arch-target-now-sub">{t.arch.targetNow.sub}</div>
+              </div>
+              {
+                t.arch.targetsFuture.map((target: any) => (
+                  <div class="lp-arch-target-future">
+                    <div class="lp-arch-target-name">{target.name}</div>
+                    <div class="lp-arch-target-sub">{target.sub}</div>
+                  </div>
+                ))
+              }
+            </div>
+            <div class="lp-arch-connector" data-motion="grow" style="--rd:3"></div>
+            <div class="lp-arch-mid" style="--rd:2" set:html={t.arch.midHtml} />
+            <div class="lp-arch-connector" data-motion="grow" style="--rd:1"></div>
+            <div class="lp-arch-core" style="--rd:0">
+              <div class="lp-arch-core-label">{t.arch.coreLabel}</div>
+              <div class="lp-arch-core-desc">{t.arch.coreDesc}</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Gallery — Tutorial & Example -->
+      <section class="lp-gallery">
+        <div class="lp-container lp-gallery-head" data-reveal-group>
+          <p class="lp-eyebrow">{t.gallery.eyebrow}</p>
+          <h2 class="lp-h2">{t.gallery.h2}</h2>
+        </div>
+        <div class="lp-gallery-strip">
+          <aside class="lp-gallery-side">
+            <div class="lp-gallery-side-inner">
+              <div class="lp-gallery-side-set lp-set-active" data-gallery-set="tutorial">
+                <p class="lp-gallery-label">{t.gallery.tutorial.label}</p>
+                <p class="lp-gallery-link">
+                  <a href={localizeHref(links.tutorial)}
+                    >{t.gallery.tutorial.link}<ArrowUpRight class="lp-link-icon" size={15} /></a
+                  >
+                </p>
+              </div>
+              <div class="lp-gallery-side-set" data-gallery-set="example">
+                <p class="lp-gallery-label">{t.gallery.example.label}</p>
+                <p class="lp-gallery-link">
+                  <a href={links.examples}
+                    >{t.gallery.example.link}<ArrowUpRight class="lp-link-icon" size={15} /></a
+                  >
+                </p>
+              </div>
+            </div>
+          </aside>
+          <!-- On phones this wrapper scrolls horizontally so the grids keep
+               their desktop composition; the label overlay stays outside the
+               scroller, pinned to the viewport edge. -->
+          <div class="lp-gallery-scroll">
+          <div class="lp-tutorial-grid">
+            <a
+              class="lp-tile lp-tile-wide"
+              data-reveal
+              data-motion="img"
+              href={localizeHref(slot("tutorial-wide").href ?? links.tutorial)}
+            >
+              {src("tutorial-wide") && <img src={src("tutorial-wide")} alt={slot("tutorial-wide").alt} />}
+            </a>
+            <a
+              class="lp-tile lp-tile-half"
+              data-reveal
+              data-motion="img"
+              href={localizeHref(slot("tutorial-left").href ?? links.tutorial)}
+            >
+              {src("tutorial-left") && <img src={src("tutorial-left")} alt={slot("tutorial-left").alt} />}
+            </a>
+            <a
+              class="lp-tile lp-tile-half"
+              data-reveal
+              data-motion="img"
+              style="--rd:1"
+              href={localizeHref(slot("tutorial-right").href ?? links.tutorial)}
+            >
+              {src("tutorial-right") && <img src={src("tutorial-right")} alt={slot("tutorial-right").alt} />}
+            </a>
+          </div>
+          <div class="lp-example-grid">
+          <!-- Row 1 — 3:2 -->
+          <div class="lp-tile lp-span-9" data-reveal data-motion="img">
+            {src("example-row1-left") && <img src={src("example-row1-left")} alt={slot("example-row1-left").alt} />}
+          </div>
+          <div class="lp-tile lp-span-6" data-reveal data-motion="img" style="--rd:1">
+            {src("example-row1-right") && <img src={src("example-row1-right")} alt={slot("example-row1-right").alt} />}
+          </div>
+          <!-- Row 2 — 1:1:1 -->
+          <div class="lp-tile lp-span-5" data-reveal data-motion="img">
+            {src("example-row2-left") && <img src={src("example-row2-left")} alt={slot("example-row2-left").alt} />}
+          </div>
+          <div class="lp-tile lp-span-5" data-reveal data-motion="img" style="--rd:1">
+            {src("example-row2-center") && <img src={src("example-row2-center")} alt={slot("example-row2-center").alt} />}
+          </div>
+          <div class="lp-tile lp-span-5" data-reveal data-motion="img" style="--rd:2">
+            {src("example-row2-right") && <img src={src("example-row2-right")} alt={slot("example-row2-right").alt} />}
+          </div>
+          <!-- Row 3 — 2:3 -->
+          <div class="lp-tile lp-span-6" data-reveal data-motion="img">
+            {src("example-row3-left") && <img src={src("example-row3-left")} alt={slot("example-row3-left").alt} />}
+          </div>
+          <div class="lp-tile lp-span-9" data-reveal data-motion="img" style="--rd:1">
+            {src("example-row3-right") && <img src={src("example-row3-right")} alt={slot("example-row3-right").alt} />}
+          </div>
+          </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- MapLibre family -->
+      <section class="lp-maplibre">
+        <div class="lp-container lp-maplibre-grid">
+          <div data-reveal-group>
+            <div class="lp-maplibre-brand">
+              {
+                src("maplibre-logo") ? (
+                  <img
+                    class="lp-maplibre-logo"
+                    src={src("maplibre-logo")}
+                    alt={slot("maplibre-logo").alt}
+                  />
+                ) : (
+                  <div class="lp-maplibre-logo lp-maplibre-logo-placeholder" />
+                )
+              }
+              <p class="lp-eyebrow lp-eyebrow-ml">{t.maplibre.eyebrow}</p>
+            </div>
+            <h2 class="lp-maplibre-h2">{t.maplibre.h2}</h2>
+            <p class="lp-maplibre-copy">{t.maplibre.copy}</p>
+            <ul class="lp-maplibre-list">
+              {
+                t.maplibre.items.map((item: string) => (
+                  <li>
+                    <span>—</span>
+                    {item}
+                  </li>
+                ))
+              }
+            </ul>
+            <p class="lp-maplibre-roadmap">
+              <a href={localizeHref(links.roadmap)}
+                >{t.maplibre.roadmap}<ArrowUpRight class="lp-link-icon" size={15} /></a
+              >
+            </p>
+          </div>
+          <div class="lp-maplibre-visual" data-reveal data-motion="img">
+            {src("maplibre-visual") && <img src={src("maplibre-visual")} alt={slot("maplibre-visual").alt} />}
+          </div>
+        </div>
+      </section>
+
+      <!-- Who's building with Navara -->
+      <section class="lp-users">
+        <div class="lp-container">
+          <p class="lp-eyebrow" data-reveal>{t.users.eyebrow}</p>
+          <h2 class="lp-h2" data-reveal style="--rd:1">{t.users.h2}</h2>
+          <p class="lp-users-sub" data-reveal style="--rd:2">{t.users.sub}</p>
+          <div class="lp-users-grid" data-reveal-group>
+            {
+              t.users.items.map((item: any) => (
+                <div>
+                  <div class="lp-user-visual">
+                    {src(item.slot) && <img src={src(item.slot)} alt={slot(item.slot).alt} />}
+                  </div>
+                  <b>{item.name}</b>
+                  <p>{item.desc}</p>
+                </div>
+              ))
+            }
+          </div>
+        </div>
+      </section>
+
+      <!-- Get started (footer) -->
+      <footer id="get-started" class="lp-footer" data-reveal-group>
+        <h2>{t.footer.h2}</h2>
+        <a class="lp-footer-cta" href={localizeHref(links.gettingStarted)}>{t.footer.cta}</a>
+        <div class="lp-footer-links">
+          <a href={localizeHref(links.docs)}>{t.footer.docs}</a>
+          <a href={links.github}>{t.footer.github}</a>
+          <a href={links.discord}>{t.footer.discord}</a>
+        </div>
+        <p class="lp-footer-credit">{t.footer.credit}</p>
+      </footer>
+      </div>
+    </div>
+
+    <script>
+      // Navigate to the selected locale's landing page.
+      document.querySelectorAll<HTMLSelectElement>("select[data-lp-lang]").forEach((el) => {
+        el.addEventListener("change", () => {
+          location.href = el.value;
+        });
+      });
+
+      // Measure the catch-copy height so its sticky pin line sits exactly at
+      // "fully revealed" (see .lp-intro's top calc).
+      const stage = document.querySelector<HTMLElement>(".lp-hero-stage");
+      const intro = document.querySelector<HTMLElement>(".lp-intro");
+      if (stage && intro) {
+        const setIntroHeight = () =>
+          stage.style.setProperty("--lp-intro-h", `${intro.offsetHeight}px`);
+        setIntroHeight();
+        window.addEventListener("resize", setIntroHeight);
+      }
+
+      // Give the fixed header a dark backdrop once the hero has scrolled away.
+      const header = document.querySelector(".lp-header");
+      const hero = document.querySelector(".lp-hero");
+      if (header && hero) {
+        const headerObserver = new IntersectionObserver(([entry]) => {
+          header.classList.toggle("lp-header-solid", !entry.isIntersecting);
+        });
+        headerObserver.observe(hero);
+      }
+
+      // Crossfade the gallery overlay label when it crosses into the example
+      // grid (and back, when scrolling up).
+      const exampleGrid = document.querySelector(".lp-example-grid");
+      const gallerySets = document.querySelectorAll<HTMLElement>(".lp-gallery-side-set");
+      if (exampleGrid && gallerySets.length) {
+        const galleryObserver = new IntersectionObserver(
+          ([entry]) => {
+            const active = entry.isIntersecting ? "example" : "tutorial";
+            gallerySets.forEach((set) => {
+              set.classList.toggle("lp-set-active", set.dataset.gallerySet === active);
+            });
+          },
+          // Shrink the viewport bottom to roughly the overlay label position,
+          // so the swap happens as the label meets the example images.
+          { rootMargin: "0px 0px -140px 0px" },
+        );
+        galleryObserver.observe(exampleGrid);
+      }
+
+      // Adaptive gallery label ink: sample the luminance of the tile image
+      // behind the sticky label and switch between white and the theme ink,
+      // picking whichever has the higher WCAG contrast. This also covers
+      // mid-gray backdrops, where neither pure inversion nor a fixed color
+      // works well — the better of the two candidates always wins.
+      const gallerySide = document.querySelector<HTMLElement>(".lp-gallery-side");
+      const gallerySideInner = document.querySelector<HTMLElement>(".lp-gallery-side-inner");
+      if (gallerySide && gallerySideInner) {
+        // Linearize an sRGB channel (0-255) for relative-luminance math.
+        const linear = (c: number): number => {
+          const s = c / 255;
+          return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+        };
+        const contrast = (a: number, b: number): number =>
+          (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+        // Luminance of the theme ink (--pri, always #rrggbb from lp.json).
+        const priHex = getComputedStyle(document.documentElement)
+          .getPropertyValue("--pri")
+          .trim();
+        const priLum =
+          0.2126 * linear(parseInt(priHex.slice(1, 3), 16)) +
+          0.7152 * linear(parseInt(priHex.slice(3, 5), 16)) +
+          0.0722 * linear(parseInt(priHex.slice(5, 7), 16));
+
+        // Average luminance of the left quarter of the image's VISIBLE crop —
+        // tiles render with object-fit: cover, so the displayed region must be
+        // derived from the tile's aspect ratio before sampling. Sampled once
+        // per image on a small canvas.
+        const lumCache = new WeakMap<HTMLImageElement, number>();
+        const luminanceOf = (img: HTMLImageElement): number | null => {
+          const cached = lumCache.get(img);
+          if (cached !== undefined) return cached;
+          if (!img.complete || !img.naturalWidth) return null;
+          const canvas = document.createElement("canvas");
+          canvas.width = 12;
+          canvas.height = 24;
+          const ctx = canvas.getContext("2d", { willReadFrequently: true });
+          if (!ctx) return null;
+          // Source rect actually shown by object-fit: cover (centered crop).
+          const scale = Math.max(
+            img.clientWidth / img.naturalWidth,
+            img.clientHeight / img.naturalHeight,
+          );
+          const visW = img.clientWidth / scale || img.naturalWidth;
+          const visH = img.clientHeight / scale || img.naturalHeight;
+          const sx = (img.naturalWidth - visW) / 2;
+          const sy = (img.naturalHeight - visH) / 2;
+          ctx.drawImage(img, sx, sy, visW / 4, visH, 0, 0, 12, 24);
+          const data = ctx.getImageData(0, 0, 12, 24).data;
+          let sum = 0;
+          for (let i = 0; i < data.length; i += 4) {
+            sum +=
+              0.2126 * linear(data[i]) +
+              0.7152 * linear(data[i + 1]) +
+              0.0722 * linear(data[i + 2]);
+          }
+          const lum = sum / (data.length / 4);
+          lumCache.set(img, lum);
+          return lum;
+        };
+
+        let sideTicking = false;
+        const updateSideInk = () => {
+          sideTicking = false;
+          const rect = gallerySideInner.getBoundingClientRect();
+          if (rect.bottom < 0 || rect.top > window.innerHeight) return;
+          const x = Math.max(1, Math.min(rect.left + rect.width / 2, window.innerWidth - 1));
+          const y = Math.max(1, Math.min(rect.top + rect.height * 0.55, window.innerHeight - 1));
+          const tile = document
+            .elementsFromPoint(x, y)
+            .find((el) => el.closest(".lp-tile"))
+            ?.closest(".lp-tile");
+          const img = tile?.querySelector("img");
+          if (!img) return;
+          const bg = luminanceOf(img);
+          if (bg === null) return;
+          gallerySide.classList.toggle("lp-side-dark", contrast(priLum, bg) > contrast(1, bg));
+        };
+        const requestSideInk = () => {
+          if (!sideTicking) {
+            sideTicking = true;
+            requestAnimationFrame(updateSideInk);
+          }
+        };
+        window.addEventListener("scroll", requestSideInk, { passive: true });
+        window.addEventListener("resize", requestSideInk);
+        // The phone gallery scrolls horizontally inside its own container.
+        document
+          .querySelector(".lp-gallery-scroll")
+          ?.addEventListener("scroll", requestSideInk, { passive: true });
+        requestSideInk();
+      }
+
+      // Resolves once every <img> inside the element is loaded and decoded
+      // (errors resolve too, so a broken image can never block an entrance).
+      // Elements without images resolve immediately.
+      const imagesReady = (el: Element): Promise<unknown> =>
+        Promise.all(
+          Array.from(el.querySelectorAll("img"), (img) => img.decode().catch(() => {})),
+        );
+
+      // Longest entrance: max stagger delay (0.75s) + slowest transition
+      // (2.8s photo settle), rounded up. will-change promotion is released
+      // after this so entrances never compete with each other for layers.
+      const REVEAL_MS = 4000;
+
+      // Promote everything an entrance animates onto its own compositor
+      // layer for the duration of the transition, so a busy main thread
+      // (image decode, layout) cannot freeze it mid-flight. The promotion
+      // is temporary: keeping dozens of full-bleed layers alive would cost
+      // more than it saves.
+      const playReveal = (el: Element): void => {
+        const layered = [el, ...el.children, ...el.querySelectorAll("img")] as HTMLElement[];
+        layered.forEach((t) => (t.style.willChange = "opacity, transform"));
+        // Two frames so the promotion is committed before the transition starts.
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => el.classList.add("lp-revealed")),
+        );
+        setTimeout(() => layered.forEach((t) => (t.style.willChange = "")), REVEAL_MS);
+      };
+
+      // Reveal-on-scroll: elements marked data-reveal (observed individually)
+      // and data-reveal-group containers (which gate their staggered children)
+      // play their entrance once they cross the lower edge of the viewport and
+      // every image inside them is ready, so nothing fades in half-rendered.
+      // Hidden states only exist under prefers-reduced-motion: no-preference,
+      // so for reduced motion the class toggle is a no-op.
+      const revealEls = document.querySelectorAll("[data-reveal], [data-reveal-group]");
+      const revealObserver = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (entry.isIntersecting) {
+              const el = entry.target;
+              imagesReady(el).then(() => playReveal(el));
+              revealObserver.unobserve(el);
+            }
+          }
+        },
+        { rootMargin: "0px 0px -10% 0px" },
+      );
+      revealEls.forEach((el) => revealObserver.observe(el));
+
+      // Decode every landing-page image during idle time right after load, so
+      // large decodes are spread out instead of bursting exactly when a
+      // reveal (or a running entrance nearby) needs the main thread.
+      const predecode = () =>
+        document
+          .querySelectorAll<HTMLImageElement>(".lp img")
+          .forEach((img) => img.decode().catch(() => {}));
+      "requestIdleCallback" in window
+        ? requestIdleCallback(predecode, { timeout: 2000 })
+        : setTimeout(predecode, 300);
+
+      // The hero opening also waits for its image, fading it in only once it
+      // can be painted in full.
+      const heroImg = document.querySelector<HTMLImageElement>(".lp-hero img");
+      if (heroImg) {
+        heroImg
+          .decode()
+          .catch(() => {})
+          .then(() => {
+            heroImg.style.willChange = "opacity, transform";
+            heroImg.classList.add("lp-loaded");
+            heroImg.addEventListener(
+              "animationend",
+              () => (heroImg.style.willChange = ""),
+              { once: true },
+            );
+          });
+      }
+    </script>
+    <noscript>
+      <style>
+        [data-reveal],
+        [data-reveal-group] > * {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+        [data-motion="img"] img {
+          transform: none !important;
+        }
+        .lp-hero img {
+          opacity: 1 !important;
+        }
+      </style>
+    </noscript>
+
+    <style is:global>
+      :root {
+        --ink: color-mix(in oklab, var(--pri), black 20%);
+        --ink-soft: color-mix(in oklab, var(--pri), white 35%);
+        --on-dark: color-mix(in oklab, var(--pri), white 88%);
+        --on-dark-soft: color-mix(in oklab, var(--pri), white 60%);
+        --line: color-mix(in oklab, var(--pri), white 85%);
+        --line-dark: color-mix(in oklab, var(--pri), white 14%);
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        margin: 0;
+        background: #fff;
+        color: var(--ink);
+        font-family: "Arsenal", "Zen Kaku Gothic New", sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      .lp a {
+        color: color-mix(in oklab, var(--acc), black 25%);
+        text-decoration: none;
+      }
+      .lp a:hover {
+        color: var(--acc);
+      }
+      /* Zero-specificity reset so per-section margin rules always win. */
+      :where(.lp h1, .lp h2, .lp h3, .lp p) {
+        margin: 0;
+      }
+      .lp img {
+        display: block;
+      }
+      .lp-container {
+        max-width: 1080px;
+        margin: 0 auto;
+      }
+
+      /* Motion system — scroll-driven reveals.
+         data-reveal: observed individually; data-reveal-group: the container
+         is observed and its direct children stagger in DOM order. --rd is the
+         stagger step (x 90ms), --rd-base shifts a whole group; both can be
+         overridden inline for custom orders (e.g. the architecture diagram).
+         data-motion variants: "img" = photo settle (frame fades, image scales
+         down into place), "grow" = connectors growing upward. Everything is
+         disabled under prefers-reduced-motion and, via <noscript>, without JS. */
+      @media (prefers-reduced-motion: no-preference) {
+        /* Page-load opening: the hero settles in, then the header drops in.
+           The hero hides until JS marks its image as loaded (lp-loaded), so
+           the fade always plays over the finished picture. The keyframes spell
+           out the "to" state because the base state here is the hidden one. */
+        @keyframes nv-hero-in {
+          from {
+            opacity: 0;
+            transform: scale(1.045);
+          }
+          to {
+            opacity: 1;
+            transform: none;
+          }
+        }
+        .lp-hero img {
+          opacity: 0;
+        }
+        .lp-hero img.lp-loaded {
+          animation: nv-hero-in 3s cubic-bezier(0.3, 0.5, 0.2, 1) both;
+        }
+        @keyframes nv-header-in {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+        }
+        .lp-header {
+          animation: nv-header-in 1.6s 0.8s cubic-bezier(0.3, 0.5, 0.2, 1) both;
+        }
+
+        [data-reveal],
+        [data-reveal-group] > * {
+          opacity: 0;
+          transform: translateY(22px);
+          /* Soft, airy feel: a long fade on a gentle ease-out, with an even
+             longer drift so elements seem to breathe into place. */
+          transition:
+            opacity 1.4s cubic-bezier(0.3, 0.5, 0.2, 1),
+            transform 1.8s cubic-bezier(0.3, 0.5, 0.2, 1);
+          transition-delay: calc((var(--rd-base, 0) + var(--rd, 0)) * 150ms);
+        }
+        /* DOM-order stagger inside groups. :nth-child(1) is explicit so a
+           nested group's first child does not inherit its parent's --rd. */
+        [data-reveal-group] > :nth-child(1) {
+          --rd: 0;
+        }
+        [data-reveal-group] > :nth-child(2) {
+          --rd: 1;
+        }
+        [data-reveal-group] > :nth-child(3) {
+          --rd: 2;
+        }
+        [data-reveal-group] > :nth-child(4) {
+          --rd: 3;
+        }
+        [data-reveal-group] > :nth-child(5) {
+          --rd: 4;
+        }
+        [data-reveal-group] > :nth-child(6) {
+          --rd: 5;
+        }
+        /* Photo settle: the frame only fades while the image scales down into
+           place (tiles clip the overshoot via overflow: hidden). */
+        [data-motion="img"] {
+          transform: none;
+        }
+        .lp [data-motion="img"] img {
+          transform: scale(1.05);
+          transition:
+            transform 2.8s cubic-bezier(0.3, 0.5, 0.2, 1),
+            filter 0.35s ease;
+          transition-delay: calc((var(--rd-base, 0) + var(--rd, 0)) * 150ms), 0s;
+        }
+        /* Connectors grow upward, matching the core-first build order. */
+        [data-motion="grow"] {
+          transform: scaleY(0);
+          transform-origin: bottom;
+        }
+        /* Revealed states last, so they win the equal-specificity ties. */
+        [data-reveal].lp-revealed,
+        .lp-revealed[data-reveal-group] > * {
+          opacity: 1;
+          transform: none;
+        }
+        .lp-revealed[data-motion="img"] img,
+        .lp-revealed[data-reveal-group] > [data-motion="img"] img {
+          transform: none;
+        }
+      }
+
+      /* Header: always fixed; gains a dark backdrop once the hero is gone
+         so the light sections keep it readable. */
+      .lp-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 48px;
+        background: linear-gradient(
+          color-mix(in srgb, var(--pri) 45%, transparent),
+          transparent
+        );
+        transition: background 0.3s ease;
+      }
+      .lp-header.lp-header-solid {
+        background: color-mix(in srgb, var(--pri) 88%, transparent);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+      }
+      .lp-wordmark {
+        font: 700 22px "Arsenal", "Zen Kaku Gothic New", sans-serif;
+        letter-spacing: 0.04em;
+        color: var(--on-dark);
+      }
+      .lp-nav {
+        display: flex;
+        align-items: center;
+        gap: 28px;
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .lp .lp-nav a {
+        color: var(--on-dark);
+      }
+      .lp .lp-nav a:hover {
+        color: var(--acc);
+      }
+      .lp-nav-github svg {
+        display: block;
+        width: 20px;
+        height: 20px;
+      }
+      .lp-nav-github svg path {
+        fill: currentColor;
+      }
+      .lp-lang {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        color: var(--on-dark);
+        cursor: pointer;
+      }
+      .lp-lang:hover {
+        color: var(--acc);
+      }
+      .lp-lang svg {
+        display: block;
+        flex: none;
+      }
+      .lp-lang select {
+        appearance: none;
+        background: transparent;
+        border: none;
+        color: inherit;
+        /* Tall enough that Latin descenders are not clipped by the select box. */
+        font: 500 13px/18px "Arsenal", "Zen Kaku Gothic New", sans-serif;
+        height: 18px;
+        padding: 0 16px 0 0;
+        cursor: pointer;
+      }
+      /* Draw the focus ring around the whole switcher (icon + label + arrow). */
+      .lp-lang select:focus-visible {
+        outline: none;
+      }
+      .lp-lang:has(select:focus-visible) {
+        outline: 1px solid var(--acc);
+        outline-offset: 5px;
+        border-radius: 2px;
+      }
+      /* Native dropdown list opens on a light background. */
+      .lp-lang select option {
+        color: var(--pri);
+      }
+      .lp-lang .lp-lang-chevron {
+        position: absolute;
+        right: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        pointer-events: none;
+      }
+      /* Inline arrow icons sit on the text baseline row of their link. */
+      .lp .lp-getting-started a,
+      .lp .lp-gallery-link a,
+      .lp .lp-maplibre-roadmap a {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+      }
+      .lp-link-icon {
+        flex: none;
+        /* Arsenal / Zen Kaku glyphs sit low in the em box; drop the icon to
+           its optical center. */
+        transform: translateY(1.5px);
+      }
+      .lp .lp-nav a.lp-nav-cta {
+        color: var(--pri);
+        background: var(--on-dark);
+        padding: 8px 18px;
+        border-radius: 6px;
+        font-weight: 700;
+      }
+      .lp .lp-nav a.lp-nav-cta:hover {
+        background: var(--acc);
+        color: var(--pri);
+      }
+
+      /* Hero */
+      .lp-hero-stage {
+        position: relative;
+      }
+      /* Invisible scroll budget: while it is consumed, the hero and the
+         fully revealed catch copy stay pinned, so the page appears to pause.
+         Never shown as blank space — the pinned hero covers the viewport. */
+      .lp-hero-stage::after {
+        content: "";
+        display: block;
+        height: 40vh;
+      }
+      .lp-hero {
+        /* Fill the first screen and stay pinned while the catch copy slides
+           over it; the sticky range is bounded by .lp-hero-stage, so normal
+           scrolling resumes once the catch copy is fully visible. */
+        position: sticky;
+        top: 0;
+        /* svh keeps the pinned hero stable under mobile dynamic toolbars. */
+        height: 100vh;
+        height: 100svh;
+        min-height: 480px;
+        background: var(--pri);
+      }
+      .lp-hero img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .lp-main {
+        position: relative;
+        z-index: 1;
+        background: #fff;
+      }
+
+      /* Catch copy + intro: transparent, overlaid on the hero image. Pins
+         via sticky exactly when fully revealed (top = viewport height minus
+         its own height, measured by script) and stays pinned until the
+         stage's scroll budget is used up. */
+      .lp-intro {
+        position: sticky;
+        top: calc(100vh - var(--lp-intro-h, 200vh));
+        top: calc(100svh - var(--lp-intro-h, 200svh));
+        z-index: 1;
+        padding: 72px 48px 64px;
+        /* Frosted-glass panel over the hero image. */
+        background: color-mix(in srgb, var(--pri) 40%, transparent);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+      }
+      .lp-intro-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 11fr) minmax(0, 9fr);
+        gap: 56px;
+        align-items: start;
+      }
+      .lp-h1 {
+        font: 700 52px/1.12 "Arsenal", "Zen Kaku Gothic New", sans-serif;
+        letter-spacing: -0.01em;
+        color: var(--on-dark);
+      }
+      .lp-h1 span {
+        color: var(--acc);
+      }
+      .lp-h1-sub {
+        margin-top: 20px;
+        font-size: 15px;
+        color: var(--on-dark-soft);
+      }
+      .lp-intro-right {
+        padding-top: 8px;
+      }
+      .lp-intro-copy {
+        font-size: 14.5px;
+        line-height: 2;
+        text-wrap: pretty;
+        color: var(--on-dark);
+      }
+      .lp-cta-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 26px;
+        flex-wrap: wrap;
+      }
+      .lp a.lp-btn-primary {
+        background: var(--on-dark);
+        color: var(--pri);
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 14px;
+      }
+      .lp a.lp-btn-primary:hover {
+        background: var(--acc);
+        color: var(--pri);
+      }
+      .lp a.lp-btn-outline {
+        border: 1.5px solid color-mix(in oklab, var(--pri), white 45%);
+        color: var(--on-dark);
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 14px;
+      }
+      .lp a.lp-btn-outline:hover {
+        border-color: var(--acc);
+        color: var(--acc);
+      }
+      .lp-getting-started {
+        margin-top: 18px;
+        font-size: 13.5px;
+        font-weight: 700;
+      }
+      .lp .lp-getting-started a {
+        color: var(--acc);
+      }
+      .lp .lp-getting-started a:hover {
+        color: var(--on-dark);
+      }
+
+      /* Eyebrow labels */
+      .lp-eyebrow {
+        font: 500 13px "IBM Plex Mono", monospace;
+        color: color-mix(in oklab, var(--acc), black 25%);
+        letter-spacing: 0.12em;
+      }
+      .lp-eyebrow-center {
+        text-align: center;
+      }
+      .lp-eyebrow-acc {
+        color: var(--acc);
+      }
+      .lp-eyebrow-ml {
+        color: color-mix(in oklab, var(--ml), white 65%);
+      }
+      .lp-h2 {
+        margin: 10px 0 8px;
+        font: 700 34px "Arsenal", "Zen Kaku Gothic New", sans-serif;
+      }
+
+      /* Why Navara */
+      .lp-why {
+        padding: 100px 48px;
+        background: var(--sub);
+      }
+      .lp-why-h2 {
+        margin: 16px auto 0;
+        font: 700 44px/1.35 "Arsenal", "Zen Kaku Gothic New", sans-serif;
+        text-align: center;
+      }
+      .lp-why-h2 mark {
+        color: inherit;
+        background: linear-gradient(
+          transparent 62%,
+          color-mix(in srgb, var(--acc) 45%, transparent) 62%
+        );
+      }
+      .lp-values {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0;
+        margin-top: 72px;
+      }
+      .lp-values > div {
+        padding: 0 28px;
+        border-left: 1px solid color-mix(in oklab, var(--pri), white 78%);
+      }
+      .lp-values h3 {
+        font-size: 16.5px;
+      }
+      .lp-values p {
+        margin-top: 10px;
+        font-size: 13px;
+        line-height: 1.95;
+        color: var(--ink-soft);
+      }
+      .lp-api-band {
+        margin-top: 80px;
+        background: var(--pri);
+        color: var(--on-dark);
+        border-radius: 16px;
+        padding: 36px 40px;
+      }
+      .lp-api-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 26px;
+      }
+      .lp-api-head h3 {
+        font-size: 18px;
+      }
+      .lp-api-head span {
+        font: 400 11px "IBM Plex Mono", monospace;
+        color: var(--on-dark-soft);
+      }
+      .lp-api-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 2px;
+        border-radius: 10px;
+        overflow: hidden;
+      }
+      .lp-api-seg {
+        padding: 20px 22px;
+      }
+      .lp-api-seg-1 {
+        background: color-mix(in oklab, var(--acc), var(--pri) 48%);
+      }
+      .lp-api-seg-2 {
+        background: color-mix(in oklab, var(--acc), var(--pri) 62%);
+      }
+      .lp-api-seg-3 {
+        background: color-mix(in oklab, var(--acc), var(--pri) 74%);
+      }
+      .lp-api-seg-4 {
+        background: color-mix(in oklab, var(--acc), var(--pri) 86%);
+      }
+      .lp-api-num {
+        font: 700 12px "Arsenal", "Zen Kaku Gothic New", sans-serif;
+        opacity: 0.85;
+      }
+      .lp-api-seg-4 .lp-api-num {
+        color: var(--acc);
+        opacity: 1;
+      }
+      .lp-api-seg b {
+        display: block;
+        margin-top: 6px;
+        font-size: 15px;
+      }
+      .lp-api-seg p {
+        margin-top: 5px;
+        font-size: 12px;
+        line-height: 1.8;
+        opacity: 0.85;
+      }
+      .lp-api-note {
+        margin-top: 20px;
+        font-size: 13px;
+        line-height: 1.9;
+        color: var(--on-dark-soft);
+        text-align: center;
+      }
+
+      /* Architecture */
+      .lp-arch {
+        padding: 80px 48px;
+        background: var(--pri);
+        color: var(--on-dark);
+      }
+      .lp-arch-sub {
+        margin-bottom: 44px;
+        font-size: 15px;
+        color: var(--on-dark-soft);
+      }
+      .lp-arch-flow {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .lp-arch-core {
+        width: min(760px, 100%);
+        box-sizing: border-box;
+        background: color-mix(in oklab, var(--acc), var(--pri) 86%);
+        border: 1px solid color-mix(in oklab, var(--acc), var(--pri) 40%);
+        border-radius: 14px;
+        padding: 22px 28px;
+        text-align: center;
+      }
+      .lp-arch-core-label {
+        font: 500 12px "IBM Plex Mono", monospace;
+        color: var(--acc);
+        letter-spacing: 0.08em;
+      }
+      .lp-arch-core-desc {
+        margin-top: 8px;
+        font-size: 14px;
+        color: var(--on-dark);
+      }
+      .lp-arch-connector {
+        width: 2px;
+        height: 26px;
+        background: color-mix(in oklab, var(--pri), white 32%);
+      }
+      .lp-arch-mid {
+        width: min(680px, 100%);
+        box-sizing: border-box;
+        border: 1px dashed color-mix(in oklab, var(--pri), white 34%);
+        border-radius: 10px;
+        padding: 10px;
+        text-align: center;
+        font-size: 13px;
+        color: var(--on-dark);
+      }
+      .lp-arch-mid span {
+        font: 400 11.5px "IBM Plex Mono", monospace;
+      }
+      .lp-arch-targets {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 14px;
+        width: min(760px, 100%);
+      }
+      .lp-arch-target-now {
+        background: color-mix(in oklab, var(--acc), var(--pri) 68%);
+        border: 1px solid color-mix(in oklab, var(--acc), var(--pri) 25%);
+        border-radius: 12px;
+        padding: 16px;
+        text-align: center;
+      }
+      .lp-arch-target-future {
+        border: 1px dashed color-mix(in oklab, var(--pri), white 34%);
+        border-radius: 12px;
+        padding: 16px;
+        text-align: center;
+        color: color-mix(in oklab, var(--pri), white 72%);
+      }
+      .lp-arch-target-name {
+        font-weight: 700;
+        font-size: 15px;
+      }
+      .lp-arch-target-now-sub {
+        margin-top: 4px;
+        font-size: 12px;
+        color: var(--acc);
+      }
+      .lp-arch-target-sub {
+        margin-top: 4px;
+        font-size: 12px;
+      }
+
+      /* Gallery */
+      .lp-gallery {
+        background: var(--sub);
+        /* Match the 2px seam between images at the section boundary. */
+        padding-bottom: 2px;
+      }
+      .lp-gallery-head {
+        padding: 80px 48px 48px;
+      }
+      /* Full-bleed image strip with a single overlay label spanning both the
+         tutorial and example grids. */
+      .lp-gallery-strip {
+        position: relative;
+        max-width: 1680px;
+        margin: 0 auto;
+      }
+      /* The label ink adapts to the tile behind it: a script samples the
+         backdrop image's luminance and toggles lp-side-dark to whichever of
+         white / theme ink has the higher WCAG contrast (difference blending
+         was dropped — it produces mid-gray on mid-gray backdrops). */
+      .lp-gallery-side {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        pointer-events: none;
+      }
+      .lp-gallery-side-inner {
+        position: sticky;
+        bottom: 28px;
+        margin: 28px 0 28px 40px;
+        display: grid;
+      }
+      /* Both label sets are stacked in the same cell and crossfade when the
+         overlay crosses into the example grid. */
+      .lp-gallery-side-set {
+        grid-area: 1 / 1;
+        opacity: 0;
+        transition: opacity 0.35s ease;
+        pointer-events: none;
+      }
+      .lp-gallery-side-set.lp-set-active {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .lp-gallery-label {
+        font: 700 16px "IBM Plex Mono", monospace;
+        letter-spacing: 0.34em;
+        writing-mode: vertical-rl;
+        color: #fff;
+        transition: color 0.4s ease;
+      }
+      .lp-gallery-side.lp-side-dark .lp-gallery-label {
+        color: var(--pri);
+      }
+      .lp-gallery-link {
+        margin-top: 26px;
+        font-size: 14px;
+        font-weight: 700;
+      }
+      .lp .lp-gallery-link a {
+        color: #fff;
+        transition: color 0.4s ease;
+      }
+      .lp .lp-gallery-side.lp-side-dark .lp-gallery-link a {
+        color: var(--pri);
+      }
+      .lp .lp-gallery-link a:hover {
+        text-decoration: underline;
+      }
+      .lp-tutorial-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2px;
+        background: var(--sub);
+      }
+      .lp-tile {
+        position: relative;
+        display: block;
+        overflow: hidden;
+      }
+      .lp-tile img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      /* Hover lift on linked tiles (the reveal transition keeps transform,
+         so hover only touches filter to stay snappy). */
+      a.lp-tile img {
+        transition: filter 0.35s ease;
+      }
+      a.lp-tile:hover img {
+        filter: brightness(1.08);
+      }
+      .lp-tile-wide {
+        grid-column: span 2;
+        height: min(44vw, 704px);
+      }
+      .lp-tile-half {
+        height: min(30vw, 480px);
+      }
+      /* 15-column grid so rows can mix 3:2 (9+6), 1:1:1 (5+5+5), and
+         2:3 (6+9). */
+      .lp-example-grid {
+        display: grid;
+        grid-template-columns: repeat(15, 1fr);
+        grid-auto-rows: min(32vw, 512px);
+        gap: 2px;
+        margin-top: 2px;
+        background: var(--sub);
+      }
+      .lp-span-5 {
+        grid-column: span 5;
+      }
+      .lp-span-6 {
+        grid-column: span 6;
+      }
+      .lp-span-9 {
+        grid-column: span 9;
+      }
+
+      /* MapLibre family */
+      .lp-maplibre {
+        padding: 80px 48px;
+        background: var(--ml);
+        color: #fff;
+      }
+      .lp-maplibre-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+        gap: 48px;
+        align-items: center;
+      }
+      .lp-maplibre-brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .lp-maplibre-logo {
+        width: 40px;
+        height: 40px;
+        flex: none;
+      }
+      .lp-maplibre-logo-placeholder {
+        border: 1px dashed color-mix(in oklab, var(--ml), white 40%);
+        border-radius: 8px;
+        box-sizing: border-box;
+      }
+      .lp-maplibre-h2 {
+        margin: 10px 0 16px;
+        font: 700 34px "Arsenal", "Zen Kaku Gothic New", sans-serif;
+      }
+      .lp-maplibre-copy {
+        margin-bottom: 24px;
+        font-size: 15px;
+        line-height: 2;
+        color: color-mix(in oklab, var(--ml), white 80%);
+        text-wrap: pretty;
+      }
+      .lp-maplibre-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        font-size: 14px;
+      }
+      .lp-maplibre-list li {
+        display: flex;
+        gap: 10px;
+      }
+      .lp-maplibre-list li span {
+        color: color-mix(in oklab, var(--ml), white 60%);
+      }
+      .lp-maplibre-roadmap {
+        margin-top: 22px;
+        font-size: 13px;
+      }
+      .lp .lp-maplibre-roadmap a {
+        color: #fff;
+        text-decoration: underline;
+      }
+      .lp .lp-maplibre-roadmap a:hover {
+        color: color-mix(in oklab, var(--ml), white 70%);
+      }
+      .lp-maplibre-visual {
+        position: relative;
+        min-height: 320px;
+        /* Clip the reveal scale-settle to the rounded frame. */
+        overflow: hidden;
+        border-radius: 14px;
+      }
+      .lp-maplibre-visual img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 14px;
+      }
+
+      /* Who's building with Navara */
+      .lp-users {
+        padding: 80px 48px;
+        background: var(--sub);
+      }
+      .lp-users-sub {
+        margin-bottom: 36px;
+        font-size: 15px;
+        color: var(--ink-soft);
+      }
+      .lp-users-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 40px;
+      }
+      .lp-user-visual {
+        position: relative;
+        height: 190px;
+      }
+      .lp-user-visual img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .lp-users-grid b {
+        display: block;
+        margin-top: 18px;
+        font-size: 16px;
+      }
+      .lp-users-grid > div > p {
+        margin-top: 8px;
+        font-size: 13px;
+        line-height: 1.9;
+        color: var(--ink-soft);
+      }
+
+      /* Get started (footer) */
+      .lp-footer {
+        padding: 88px 48px 56px;
+        background: var(--pri);
+        color: var(--on-dark);
+        text-align: center;
+      }
+      .lp-footer h2 {
+        font: 700 40px "Arsenal", "Zen Kaku Gothic New", sans-serif;
+      }
+      .lp a.lp-footer-cta {
+        margin-top: 26px;
+        display: inline-block;
+        background: var(--on-dark);
+        color: var(--pri);
+        padding: 12px 26px;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 14px;
+      }
+      .lp a.lp-footer-cta:hover {
+        background: var(--acc);
+        color: var(--pri);
+      }
+      .lp-footer-links {
+        display: flex;
+        justify-content: center;
+        gap: 26px;
+        margin-top: 30px;
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .lp .lp-footer-links a {
+        color: var(--on-dark);
+      }
+      .lp .lp-footer-links a:hover {
+        color: var(--acc);
+      }
+      .lp-footer-credit {
+        margin-top: 44px;
+        font-size: 12px;
+        color: var(--on-dark-soft);
+      }
+
+      /* Responsive — the desktop composition is the reference; tablets tighten
+         spacing and stack the widest grids, phones stack everything and turn
+         the gallery into a horizontal scroller that preserves the desktop
+         layout at a fixed 900px composition width. */
+      @media (max-width: 960px) {
+        .lp-header {
+          padding: 18px 28px;
+        }
+        .lp-intro {
+          padding: 64px 32px 56px;
+        }
+        .lp-intro-grid {
+          grid-template-columns: 1fr;
+          gap: 36px;
+        }
+        .lp-intro-right {
+          padding-top: 0;
+        }
+        .lp-why {
+          padding: 80px 32px;
+        }
+        .lp-values {
+          grid-template-columns: 1fr 1fr;
+          row-gap: 36px;
+        }
+        .lp-api-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+        .lp-arch {
+          padding: 64px 32px;
+        }
+        .lp-gallery-head {
+          padding: 64px 32px 40px;
+        }
+        .lp-maplibre {
+          padding: 64px 32px;
+        }
+        .lp-maplibre-grid {
+          grid-template-columns: 1fr;
+          gap: 36px;
+        }
+        .lp-users {
+          padding: 64px 32px;
+        }
+        .lp-users-grid {
+          grid-template-columns: 1fr;
+          gap: 36px;
+        }
+        .lp-user-visual {
+          height: min(48vw, 320px);
+        }
+        .lp-footer {
+          padding: 72px 32px 48px;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .lp-header {
+          padding: 14px 20px;
+        }
+        .lp-nav {
+          gap: 18px;
+        }
+        /* Docs/Examples text links don't fit; both stay reachable from the
+           footer. */
+        .lp-nav > a:not([class]) {
+          display: none;
+        }
+        .lp-wordmark {
+          font-size: 19px;
+        }
+        .lp .lp-nav a.lp-nav-cta {
+          padding: 7px 14px;
+          font-size: 13px;
+        }
+
+        .lp-intro {
+          padding: 48px 20px 44px;
+        }
+        .lp-h1 {
+          font-size: 34px;
+        }
+        .lp-h1-sub {
+          margin-top: 14px;
+          font-size: 14px;
+        }
+
+        .lp-why {
+          padding: 64px 20px;
+        }
+        .lp-why-h2 {
+          margin-top: 12px;
+          font-size: 27px;
+          line-height: 1.45;
+        }
+        .lp-values {
+          grid-template-columns: 1fr;
+          gap: 28px;
+          margin-top: 48px;
+        }
+        .lp-values > div {
+          padding: 0 0 0 18px;
+        }
+        .lp-api-band {
+          margin-top: 56px;
+          padding: 26px 20px;
+          border-radius: 12px;
+        }
+        .lp-api-head {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 6px;
+          margin-bottom: 20px;
+        }
+        .lp-api-grid {
+          grid-template-columns: 1fr;
+        }
+        .lp-api-note {
+          text-align: left;
+        }
+
+        .lp-arch {
+          padding: 64px 20px;
+        }
+        .lp-h2 {
+          font-size: 24px;
+        }
+        .lp-arch-sub {
+          margin-bottom: 32px;
+        }
+        .lp-arch-targets {
+          grid-template-columns: 1fr;
+          gap: 10px;
+        }
+
+        .lp-gallery-head {
+          padding: 56px 20px 28px;
+        }
+        /* The grids keep their desktop composition at 900px and the overflow
+           scrolls sideways; the label overlay lives outside the scroller, so
+           it stays pinned to the viewport edge while images pass under it. */
+        .lp-gallery-scroll {
+          overflow-x: auto;
+          scrollbar-width: none;
+        }
+        .lp-gallery-scroll::-webkit-scrollbar {
+          display: none;
+        }
+        .lp-tutorial-grid,
+        .lp-example-grid {
+          width: 900px;
+        }
+        .lp-tile-wide {
+          height: 396px;
+        }
+        .lp-tile-half {
+          height: 270px;
+        }
+        .lp-example-grid {
+          grid-auto-rows: 288px;
+        }
+        .lp-gallery-side-inner {
+          margin: 20px 0 20px 16px;
+          bottom: 20px;
+        }
+        .lp-gallery-label {
+          font-size: 13px;
+          letter-spacing: 0.3em;
+        }
+        .lp-gallery-link {
+          margin-top: 18px;
+          font-size: 13px;
+        }
+
+        .lp-maplibre {
+          padding: 64px 20px;
+        }
+        .lp-maplibre-h2 {
+          font-size: 24px;
+        }
+        .lp-maplibre-visual {
+          min-height: 220px;
+        }
+
+        .lp-users {
+          padding: 64px 20px;
+        }
+        .lp-users-sub {
+          margin-bottom: 28px;
+        }
+
+        .lp-footer {
+          padding: 64px 20px 44px;
+        }
+        .lp-footer h2 {
+          font-size: 28px;
+        }
+        .lp-footer-links {
+          flex-wrap: wrap;
+          gap: 18px 22px;
+        }
+      }
+    </style>
+  </body>
+</html>

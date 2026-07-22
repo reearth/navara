@@ -177,27 +177,38 @@ export const PMTILES_DATASETS = {
     attributionUrl: "https://protomaps.com",
   },
   // Overture Maps publishes a worldwide PMTiles archive per theme with every
-  // release, served over HTTP range requests from S3. Each theme is a single
-  // global `.pmtiles` file (no `{z}/{x}/{y}`), so it resolves through a
-  // PmtilesSource exactly like the Protomaps sample above.
+  // release, served over HTTP range requests. Each theme is a single global
+  // `.pmtiles` file (no `{z}/{x}/{y}`, and ~200 GB for `base`), so it resolves
+  // through a PmtilesSource exactly like the Protomaps sample above — only the
+  // header directory plus the visible tiles are ever fetched.
   // Ref: https://docs.overturemaps.org/examples/overture-tiles/
+  //
+  // `tiles.overturemaps.org` is Overture's canonical CloudFront endpoint in
+  // front of the release S3 bucket (edge-cached, HTTP/2 — same bytes, lower
+  // latency than hitting the us-west-2 origin directly).
+  //
+  // NOTE: releases have a 60-day retention window, so a dated path 404s ~2
+  // months after its release date (e.g. `2026-06-17.0` expires 2026-08-17).
+  // When the fetches start failing, bump the date below to a live release —
+  // list them at:
+  //   https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/?list-type=2&prefix=tiles/&delimiter=/
   overtureBase: {
-    url: "https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-05-20.0/base.pmtiles",
+    url: "https://tiles.overturemaps.org/2026-06-17.0/base.pmtiles",
     attribution: "© OpenStreetMap contributors, © Overture Maps Foundation",
     attributionUrl: "https://overturemaps.org",
   },
   overtureDivisions: {
-    url: "https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-05-20.0/divisions.pmtiles",
+    url: "https://tiles.overturemaps.org/2026-06-17.0/divisions.pmtiles",
     attribution: "© OpenStreetMap contributors, © Overture Maps Foundation",
     attributionUrl: "https://overturemaps.org",
   },
   overtureBuildings: {
-    url: "https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-05-20.0/buildings.pmtiles",
+    url: "https://tiles.overturemaps.org/2026-06-17.0/buildings.pmtiles",
     attribution: "© OpenStreetMap contributors, © Overture Maps Foundation",
     attributionUrl: "https://overturemaps.org",
   },
   overturePlaces: {
-    url: "https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-05-20.0/places.pmtiles",
+    url: "https://tiles.overturemaps.org/2026-06-17.0/places.pmtiles",
     attribution: "© Overture Maps Foundation",
     attributionUrl: "https://overturemaps.org",
   },

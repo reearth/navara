@@ -8,9 +8,9 @@ import { TransactionManager } from "./TransactionManager";
 // `take_<key>()` method (reading a getter would deep-clone the array and every
 // element). Stack keys and value types are derived from those methods.
 export type JsEvents = {
-  [K in keyof Events as K extends `take_${infer P}`
-    ? P
-    : never]: Events[K] extends (...args: never[]) => infer R ? R : never;
+  [
+    K in keyof Events as K extends `take_${infer P}` ? P : never
+  ]: Events[K] extends (...args: never[]) => infer R ? R : never;
 };
 export type JsEventsKey = keyof JsEvents;
 

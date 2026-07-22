@@ -103,6 +103,10 @@ export type SdfTextBaseRefs = {
   uTextWidth: UniformValue<number>;
   uTextHeight: UniformValue<number>;
   uBgYBounds: UniformValue<Vector2>;
+  /** Screen-space declutter hide factor (0 = shown … 1 = hidden), animated
+   *  by the declutter fade. Driven by the declutter pass, not by material
+   *  style updates. */
+  uDeclutterHide: UniformValue<number>;
   uRTCCenter: UniformValue<Vector3>;
   uRTCCenterView: UniformValue<Vector3>;
   uEyeRTELow: UniformValue<Vector3>;
@@ -180,5 +184,12 @@ export type SdfTextBaseMutates = Mutates<
      * Set the batch ID uniform (immutable after mount, but needed for batch creation).
      */
     setBatchId: (batchId: number) => void;
+    /**
+     * Set the declutter hide factor (0 = shown … 1 = hidden); the fragment
+     * shader scales opacity by `1 - value` and the vertex shader hard-culls
+     * at 1. Kept separate from `show`/`opacity` so user-driven visibility and
+     * declutter results compose instead of clobbering each other.
+     */
+    setDeclutterHide: (value: number) => void;
   }
 >;

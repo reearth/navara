@@ -39,6 +39,10 @@ uniform float uAddHeight;
 // Instance 0 is reserved for the background quad.
 uniform vec2 uBgYBounds; // (minY, maxY) of actual glyph bounding box in normalized text space
 uniform bool uShowBackground;
+// Animated hide factor from the screen-space declutter pass: the fragment
+// shader multiplies opacity by (1.0 - uDeclutterHide); the label is only
+// hard-culled here once the fade completes.
+uniform float uDeclutterHide;
 
 // Varyings
 varying vec2 vAtlasUv;
@@ -48,6 +52,11 @@ flat varying float vBackGroundRatio;
 flat varying int vIsColor; // Per-instance flag: glyph is sampled from the color atlas
 
 void main() {
+    if (uDeclutterHide >= 0.999) {
+        gl_Position = vec4(2.0, 2.0, 2.0, 1.0); // Cull the vertex by moving it outside of the clip space
+        return;
+    }
+
 #ifdef USE_RTE
     vec3 absTransformed = uRTEPositionHIGH + uRTEPositionLOW;
 #else

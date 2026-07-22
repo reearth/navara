@@ -41,10 +41,16 @@ uniform float uFarPlane;
 uniform vec3 uBackgroundColor;
 uniform float uBackgroundOutlineWidth;
 uniform vec3 uBackgroundOutlineColor;
+// Animated hide factor from the screen-space declutter pass (0 = shown,
+// 1 = hidden); fades scale the label's opacity through it.
+uniform float uDeclutterHide;
 
 void main() {
     // Horizon culling discard
     if (vHorizonCulled == 1) discard;
+
+    // Effective opacity: style opacity scaled by the declutter fade.
+    float opacity = uOpacity * (1.0 - uDeclutterHide);
 
     // Logarithmic depth buffer
     // When offsetDepth is enabled, multiply input by 0.8 to shift depth slightly
@@ -63,9 +69,9 @@ void main() {
 
         if ((p.x > (0.5 - uBackgroundOutlineWidth / vBackGroundRatio)) ||
             (p.y > (0.5 - uBackgroundOutlineWidth))) {
-            gl_FragColor = vec4(uBackgroundOutlineColor, uOpacity);
+            gl_FragColor = vec4(uBackgroundOutlineColor, opacity);
         } else {
-            gl_FragColor = vec4(uBackgroundColor, uOpacity);
+            gl_FragColor = vec4(uBackgroundColor, opacity);
         }
 
         return;
@@ -77,7 +83,7 @@ void main() {
     if (vIsColor == 1) {
         vec4 c = texture2D(uColorAtlas, vAtlasUv);
         if (c.a <= 0.0) discard;
-        c.a *= uOpacity; // Apply text opacity
+        c.a *= opacity; // Apply text opacity (incl. declutter fade)
         gl_FragColor = c;
 
         #ifndef USE_SHADOWMAP_DEPTH
@@ -143,7 +149,7 @@ void main() {
 
         // Blend: fill on top of outline
         vec3 color = mix(uOutlineColor, uColor, fillAlpha);
-        float alpha = mix(outlineAlpha * uOutlineOpacity, 1.0, fillAlpha) * uOpacity; // Apply text opacity
+        float alpha = mix(outlineAlpha * uOutlineOpacity, 1.0, fillAlpha) * opacity; // Apply text opacity (incl. declutter fade)
         // Pull the FILL toward the camera (SMALLER depth = nearer). Outline pixels
         // (fillAlpha≈0) get no pull and stay at the base label depth — coplanar with
         // the background quad. Net effect, with depthWrite enabled:
@@ -157,7 +163,7 @@ void main() {
     } else {
         float alpha = smoothstep(uSdfThreshold - edgeWidth,
                                  uSdfThreshold + edgeWidth,
-                                 dist) * uOpacity; // Apply text opacity
+                                 dist) * opacity; // Apply text opacity (incl. declutter fade)
         if (alpha <= 0.0) discard;
         gl_FragColor = vec4(uColor, alpha);
         gl_FragDepth = clamp(gl_FragDepth - 0.0001, 0.0, 1.0);

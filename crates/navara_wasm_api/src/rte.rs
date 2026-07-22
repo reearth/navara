@@ -34,7 +34,7 @@ mod tests {
         let camera = encode_position(6371000.0, 0.0, 0.0);
 
         // Verify the encoding preserves the value
-        let reconstructed_x = camera.high.x as f64 + camera.low.x as f64;
+        let reconstructed_x = camera.high.x + camera.low.x;
         assert!((reconstructed_x - 6371000.0).abs() < 1.0);
     }
 
@@ -43,9 +43,9 @@ mod tests {
         let camera = encode_position(6371000.0, 6371000.0, 6371000.0);
 
         // Verify all axes are encoded
-        let reconstructed_x = camera.high.x as f64 + camera.low.x as f64;
-        let reconstructed_y = camera.high.y as f64 + camera.low.y as f64;
-        let reconstructed_z = camera.high.z as f64 + camera.low.z as f64;
+        let reconstructed_x = camera.high.x + camera.low.x;
+        let reconstructed_y = camera.high.y + camera.low.y;
+        let reconstructed_z = camera.high.z + camera.low.z;
 
         assert!((reconstructed_x - 6371000.0).abs() < 1.0);
         assert!((reconstructed_y - 6371000.0).abs() < 1.0);

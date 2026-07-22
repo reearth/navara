@@ -1,6 +1,7 @@
 import PostProcessingCommon from "@shaders/glsl/postprocessingCommon.vert.glsl";
 import { Pass } from "postprocessing";
 import {
+  AlwaysDepth,
   NoBlending,
   ShaderMaterial,
   Texture,
@@ -10,13 +11,18 @@ import {
 
 const fragmentShader = `
 uniform sampler2D color;
+
+#ifdef COPY_DEPTH
 uniform sampler2D depth;
+#endif
 
 varying vec2 vUv;
 
 void main() {
   gl_FragColor = texture2D(color, vUv);
-  gl_FragDepth = texture2D(color, vUv).r;
+  #ifdef COPY_DEPTH
+  gl_FragDepth = texture2D(depth, vUv).r;
+  #endif
 }
 `;
 
@@ -71,8 +77,24 @@ export class RenderTargetCopyPass extends Pass {
     this._material.uniforms.color.value = texture;
   }
 
-  setDepthTexture(texture: Texture): void {
+  /**
+   * When a depth texture is set, the pass copies its depth into the target's
+   * depth buffer via gl_FragDepth. Depth test must be enabled (with AlwaysDepth)
+   * because GL discards depth writes while the depth test is disabled.
+   */
+  setDepthTexture(texture: Texture | null): void {
     this._material.uniforms.depth.value = texture;
+    const copyDepth = texture !== null;
+    if ("COPY_DEPTH" in this._material.defines === copyDepth) return;
+    if (copyDepth) {
+      this._material.defines.COPY_DEPTH = "";
+    } else {
+      delete this._material.defines.COPY_DEPTH;
+    }
+    this._material.depthWrite = copyDepth;
+    this._material.depthTest = copyDepth;
+    this._material.depthFunc = AlwaysDepth;
+    this._material.needsUpdate = true;
   }
 
   render(

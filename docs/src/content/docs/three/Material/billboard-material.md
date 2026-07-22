@@ -83,6 +83,43 @@ import { Color } from "@navaramap/three";
 }
 ```
 
+### declutter
+
+**Type:** `boolean | undefined`
+
+**Description:** Participate in screen-space decluttering: when labels/sprites overlap on screen, lower-priority ones are hidden. Enabled by default; set to `false` to draw every label unconditionally.
+
+**Default:** `true`
+
+**Example:**
+
+```typescript
+{
+  billboard: {
+    declutter: false
+  }
+}
+```
+
+### declutterPriority
+
+**Type:** `number | undefined`
+
+**Description:** Placement priority for decluttering; higher wins. Only meaningful when [`declutter`](#declutter) is enabled. Can be overridden per feature via [`FeatureEvaluator.evaluate()`](../../api/feature-evaluator/#evaluate).
+
+**Default:** `0.0`
+
+**Example:**
+
+```typescript
+{
+  billboard: {
+    declutter: true,
+    declutterPriority: 1
+  }
+}
+```
+
 ### depthTest
 
 **Type:** `boolean`

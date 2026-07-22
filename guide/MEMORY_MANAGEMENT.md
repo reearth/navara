@@ -48,9 +48,10 @@ flowchart TD
     CPU["cpu_bytes<br/>(BufferStore, exact)"]
     EXT["external_cpu_bytes<br/>(BatchTable attributes)"]
     GPU["gpu_bytes_est<br/>(TileCost hooks)"]
+    FIXED["fixed_gpu_bytes<br/>(render-target stack, JS-reported)"]
     RES["reserved_bytes<br/>(in-flight ReservedCost)"]
   end
-  Accounting --> USAGE["usage = cpu + external + gpu + reserved"]
+  Accounting --> USAGE["usage = cpu + external + gpu + fixed + reserved"]
   USAGE -->|"− retained (evictable pool)"| HARD["hard_usage (resident)"]
   USAGE -->|"usage > budget"| EVICT["Eviction<br/>(oldest pooled tiles →<br/>hysteresis target = 85%)"]
   HARD -->|"hard_usage ≥ budget"| GATE["Load gate closes<br/>(no new fetches)"]
@@ -70,6 +71,7 @@ per-tile estimates that are corrected by JS-side measurements:
 | `cpu_bytes` | `BufferStore::total_bytes()` — every tile payload, geometry, and DEM buffer in the WASM heap | exact, incrementally maintained (`navara_buffer_store`), verified against a full recount every 256 frames in debug builds |
 | `external_cpu_bytes` | CPU bytes the store can't see — chiefly the MVT feature-attribute tables in `BatchTable`, synced each frame by `sync_batch_table_bytes` (`navara_feature`) | exact; for attribute-rich data (e.g. Overture) this term *dominates*, so counting it is what makes the budget bind |
 | `gpu_bytes_est` | sum of per-tile `TileCost::gpu_est` components | estimated, JS-corrected (below) |
+| `fixed_gpu_bytes` | the fixed, screen-sized render-target stack (postprocessing ping-pong buffers, gbuffer MRT attachments, depth textures) — estimated by walking the composer/pass render targets on the JS side (`estimateFixedGpuBytes`, `web/navara_three`) and reported via `Core.setFixedGpuBytes` on init, resize, pass-list changes, and a ~120-frame resync (GL allocates targets lazily during rendering) | estimated (nominal texture-format byte sizes); only GL-allocated targets are counted — never-exercised targets (e.g. a render-to-screen `CopyPass`'s internal buffer) hold no memory. Unlike tiles it is not evictable — it shrinks only with the drawing buffer |
 | `reserved_bytes` | sum of live `ReservedCost` components (in-flight fetches) | estimated (EMA of past landed costs) |
 
 `TileCost { cpu, gpu_est }` is a component with **lifecycle hooks**: inserting
@@ -81,9 +83,11 @@ automatically.
 
 Two derived views drive different consumers:
 
-- **`usage`** = `cpu + external + gpu_est + reserved` — what **eviction** caps
-  at the budget. Reservations are included, so dispatching new fetches
-  proactively evicts old pooled tiles to make room ("evict old to load new").
+- **`usage`** = `cpu + external + gpu_est + fixed_gpu + reserved` — what
+  **eviction** caps at the budget. Reservations are included, so dispatching
+  new fetches proactively evicts old pooled tiles to make room ("evict old to
+  load new"); the fixed render-target stack is included so the tile budget
+  binds against the memory that is actually left over.
 - **`hard_usage`** = `usage − retained_evictable_bytes` — the *resident*
   footprint that cannot be freed without touching visible/protected/in-flight
   tiles. The **load gate** and the **pressure controller** key off this:
@@ -359,12 +363,22 @@ pending requests, SSE range, and fog, but the 512 MB cache tier — modern
 iPhones have 4–8 GB, and starving exactly the devices the budget matters most
 for would defeat it.)
 
+Independent of the memory tiers, the device pixel ratio is capped at **2** on
+every mobile device (**1** with `mobileOptimization`; an explicit `pixelRatio`
+option bypasses both — `getDevicePixelRatio`, `device.ts`). The fixed
+render-target stack counted as `fixed_gpu_bytes` scales quadratically with
+pixel ratio (~100 B/px), so an uncapped DPR-3 phone would spend more of its
+budget on framebuffers than on tiles.
+
 `Core.setMemoryCostHints` passes the atlas (512² × RGBA × 3 MRT attachments
 ≈ 3 MB/tile) and raster (256² × RGBA × 1.33 ≈ 349 KB) costs.
+`Core.setFixedGpuBytes` reports the fixed render-target stack (estimated by
+`RenderPassOrchestrator.estimateFixedGpuBytes`); `ThreeView` re-reports it on
+init, resize, and whenever effects add or remove passes.
 `Core.getMemoryStats` exposes the full ledger — buffer bytes/count, JS-side
-external buffer bytes, GPU estimate, external CPU bytes, reserved bytes,
-budget, eviction count, current SSE multiplier, and per-pipeline
-retained-tile counts — for the debug overlay and tests.
+external buffer bytes, GPU estimate, fixed GPU bytes, external CPU bytes,
+reserved bytes, budget, eviction count, current SSE multiplier, and
+per-pipeline retained-tile counts — for the debug overlay and tests.
 
 All of this surfaces on `ThreeView` as public API: the `cacheBytes`, `lodFog`,
 and `dynamicSse` constructor options double as runtime properties,

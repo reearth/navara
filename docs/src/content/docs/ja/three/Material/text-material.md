@@ -123,6 +123,43 @@ import { Color } from "@navaramap/three";
 }
 ```
 
+### declutter
+
+**Type:** `boolean | undefined`
+
+**Description:** 画面空間でのデクラッター（重なり除去）に参加します。ラベルやスプライトが画面上で重なった場合、優先度の低いものが非表示になります。デフォルトで有効です。すべてのラベルを無条件に描画するには `false` を設定します。
+
+**Default:** `true`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    declutter: false
+  }
+}
+```
+
+### declutterPriority
+
+**Type:** `number | undefined`
+
+**Description:** デクラッターの配置優先度です。値が大きいほど重なりの競合に勝ちます。[`declutter`](#declutter) が有効な場合にのみ意味を持ちます。[`FeatureEvaluator.evaluate()`](../../api/feature-evaluator/#evaluate) で地物ごとに上書きできます。
+
+**Default:** `0.0`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    declutter: true,
+    declutterPriority: 1
+  }
+}
+```
+
 ### depthTest
 
 **Type:** `boolean | undefined`

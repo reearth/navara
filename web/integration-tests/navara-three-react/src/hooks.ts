@@ -1,4 +1,4 @@
-import ThreeView from "@navaramap/three";
+import type ThreeView from "@navaramap/three";
 import type { DefaultPlugin } from "@navaramap/three_default_plugin";
 import { useEffect, useRef, useState } from "react";
 
@@ -13,9 +13,13 @@ export function useDefaultLayers(
     null,
   );
 
+  // Mutating the imperative ThreeView engine object inside an effect is
+  // intentional interop, not a render-phase mutation.
+  // eslint-disable-next-line react-hooks/immutability
   useEffect(() => {
     if (!view || !plugin || initialized.current) return;
     initialized.current = true;
+    // eslint-disable-next-line react-hooks/immutability
     view.toneMappingExposure = 10;
     const layers = plugin.addDefaultPhotorealScene();
     layers.sun.update({ sun: { castShadow: true } });

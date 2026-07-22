@@ -13,10 +13,9 @@ use crate::{linear_quadtree::LinearQuadtree, traits::GeoSpacialQuadtree};
 ///
 /// let qt: Quadtree<u32, Tile> = Quadtree::new_with_linear_qt();
 /// ```
-#[cfg_attr(
-    feature = "bevy",
-    derive(bevy_ecs::prelude::Resource, bevy_ecs::prelude::Component)
-)]
+// `derive(Resource)` also implements `Component` since Bevy 0.19 (resources as
+// entities), so deriving `Component` here would conflict.
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Resource))]
 pub struct Quadtree<U, V>
 where
     U: PrimInt + Default + Sync + Send + 'static,

@@ -229,10 +229,7 @@ export type DefaultDescriptions = {
 };
 
 export type DefaultLightDescription =
-  | SunLightConfig
-  | SkyLightProbeConfig
-  | AmbientLightConfig
-  | LightProbeConfig;
+  SunLightConfig | SkyLightProbeConfig | AmbientLightConfig | LightProbeConfig;
 
 export type DefaultEffectDescription =
   | AerialPerspectiveConfig

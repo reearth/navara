@@ -1,0 +1,86 @@
+{
+  "colors": {
+    "primary": "#10141B",
+    "accent": "#4FB3C6",
+    "sub": "#F4F3EF",
+    "maplibre": "#285DAA"
+  },
+  "links": {
+    "docs": "/",
+    "gettingStarted": "/guides/introduction/getting-started/",
+    "tutorial": "/three/tutorial/basic-visualization/",
+    "examples": "https://navara-preview.netlify.app/",
+    "github": "https://github.com/eukarya-inc/navara",
+    "discord": "#",
+    "roadmap": "/"
+  },
+  "images": {
+    "hero": {
+      "src": "docs/src/assets/hero.png",
+      "alt": "Navara で描画した地球儀のメインビジュアル"
+    },
+    "tutorial-wide": {
+      "src": "docs/src/assets/tutorial/realistic-atmosphere-result.png",
+      "alt": "Realistic Atmosphere チュートリアル",
+      "href": "/three/tutorial/realistic-atmosphere/"
+    },
+    "tutorial-left": {
+      "src": "docs/src/assets/tutorial/arch-line-visualization-result.png",
+      "alt": "Arc Line Visualization チュートリアル",
+      "href": "/three/tutorial/arch-line-visualization/"
+    },
+    "tutorial-right": {
+      "src": "web/navara_three/example/public/screenshots/use-cases-interior-explore.avif",
+      "alt": "Interior Explore チュートリアル",
+      "href": "/three/tutorial/interior-explore/"
+    },
+    "example-row1-left": {
+      "src": "web/navara_three/example/public/screenshots/getting-started/layers.avif",
+      "alt": "レイヤー表示"
+    },
+    "example-row1-right": {
+      "src": "web/navara_three/example/public/screenshots/styling-geojson-polyline.avif",
+      "alt": "GeoJSON Polylineの表示"
+    },
+    "example-row2-left": {
+      "src": "web/navara_three/example/public/screenshots/water-reflection.avif",
+      "alt": "SSR — 水面反射"
+    },
+    "example-row2-center": {
+      "src": "web/navara_three/example/public/screenshots/selective-bloom-effect-mesh.avif",
+      "alt": "Selective Effect"
+    },
+    "example-row2-right": {
+      "src": "web/navara_three/example/public/screenshots/styling-geojson-color-emoji.avif",
+      "alt": "Color emoji"
+    },
+    "example-row3-left": {
+      "src": "web/navara_three/example/public/screenshots/mapterhorn.avif",
+      "alt": "Terrain"
+    },
+    "example-row3-right": {
+      "src": "web/navara_three/example/public/screenshots/styling-cesium3dtiles.avif",
+      "alt": "Data-driven Styling"
+    },
+    "maplibre-logo": {
+      "src": "docs/src/assets/lp/maplibre-logo.svg",
+      "alt": "MapLibre ロゴ"
+    },
+    "maplibre-visual": {
+      "src": "web/navara_three/example/public/screenshots/maplibre-style.avif",
+      "alt": "MapLibre スタイルで描いた地図"
+    },
+    "users-1": {
+      "src": "web/navara_three/example/public/screenshots/showcases-photoreal.avif",
+      "alt": "Re:Earth スクリーンショット"
+    },
+    "users-2": {
+      "src": "web/navara_three/example/public/screenshots/styling-cesium3dtiles1.1.avif",
+      "alt": "PLATEAU 3D 都市モデルのスクリーンショット"
+    },
+    "users-3": {
+      "src": "web/navara_three/example/public/screenshots/use-cases-photorealistic.avif",
+      "alt": "ヒロシマアーカイブ スクリーンショット"
+    }
+  }
+}

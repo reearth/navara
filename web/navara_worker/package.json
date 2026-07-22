@@ -30,8 +30,8 @@
     "access": "public"
   },
   "dependencies": {
-    "workerpool": "10.0.1",
     "@navaramap/core": "workspace:*",
-    "@navaramap/engine-worker": "workspace:*"
+    "@navaramap/engine-worker": "workspace:*",
+    "workerpool": "10.0.3"
   }
 }

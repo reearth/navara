@@ -1,5 +1,5 @@
 use crate::Geometry;
-use navara_core::{Aabb, Ellipsoid, Extent, LLE, Meters, Radians, TileXYZ};
+use navara_core::{Aabb, Angle, Ellipsoid, Extent, LLE, Meters, Radians, TileXYZ};
 use navara_math::{FloatType, Vec2, Vec3};
 
 /// Represents a UV transformation for mapping a child tile to its parent's texture space.
@@ -94,6 +94,19 @@ pub fn uv_rect_from_extents(
 
 const WM_MAX_LAT: f64 = 1.484_422_229_745_332_4; // atan(sinh(π))
 
+/// WebMercator northing `ln(tan(lat/2 + π/4))` for a latitude in radians,
+/// clamped to the valid WebMercator band (~±85.05°) so polar latitudes don't
+/// diverge to ±∞.
+pub fn mercator_y(lat: f64) -> f64 {
+    let lat = lat.clamp(-WM_MAX_LAT, WM_MAX_LAT);
+    (lat * 0.5 + std::f64::consts::FRAC_PI_4).tan().ln()
+}
+
+/// Inverse of [`mercator_y`]: latitude (radians) for a WebMercator northing.
+pub fn mercator_y_to_lat(y: f64) -> f64 {
+    2.0 * y.exp().atan() - std::f64::consts::FRAC_PI_2
+}
+
 /// Like [`uv_rect_from_extents`] but the latitude (y) axis is computed in the
 /// WebMercator projection (`phi = ln(tan(lat/2 + π/4))`) instead of raw
 /// latitude. Use this for the **bake** camera that draws a source tile's
@@ -107,12 +120,10 @@ pub fn uv_rect_from_extents_mercator(
     source: Extent<f64, Radians>,
 ) -> TileUvTransform {
     // Mercator northing; increases monotonically with latitude (south → north).
-    // Clamp to the WebMercator valid band (~±85.05°) so a polar Geographic target
-    // tile doesn't diverge to ±∞ (it collapses onto the band edge, as raster does).
-    let merc = |lat: f64| {
-        let lat = lat.clamp(-WM_MAX_LAT, WM_MAX_LAT);
-        (lat * 0.5 + std::f64::consts::FRAC_PI_4).tan().ln()
-    };
+    // Clamped to the WebMercator valid band (~±85.05°) so a polar Geographic
+    // target tile doesn't diverge to ±∞ (it collapses onto the band edge, as
+    // raster does).
+    let merc = mercator_y;
 
     let target_width = target.east.val() - target.west.val();
     let source_width = source.east.val() - source.west.val();
@@ -214,11 +225,14 @@ pub fn ortho_camera_transform(child: TileXYZ, parent_z: usize) -> OrthoCamTransf
 /// Construct a flat tile geometry with RTC translation.
 /// Returns a tuple of (Geometry, RTC translation vector).
 /// Vertices in the geometry are in local space relative to the RTC center.
+///
+/// `mercator_v` selects the vertex row distribution — see [`tile_triangles`].
 pub fn tile_triangles_flat(
     ellipsoid: Ellipsoid<FloatType>,
     extent: &Extent<FloatType, Radians>,
     segments: usize,
     height: FloatType,
+    mercator_v: bool,
 ) -> (Geometry, Vec3) {
     let aabb = Aabb::from_extent_f64(*extent, 0., 0.);
     let tile_center = aabb.center;
@@ -230,18 +244,30 @@ pub fn tile_triangles_flat(
         segments,
         &mut |_, _| height,
         &tile_center,
+        mercator_v,
     );
 
     (geometry, tile_center)
 }
 
 /// Calculate a tile geometry with optional RTC translation.
+///
+/// The mesh UV is the uniform grid fraction, so the vertex row distribution
+/// defines what `uv.y` means to every texture sampled through it. WebMercator
+/// tiles (`mercator_v`) space rows uniformly in Mercator northing: `uv.y` is
+/// then the tile's Mercator fraction, matching the v axis of WM raster/DEM
+/// tile images and the power-of-two sub-rects of `uv_transform` — a
+/// latitude-linear grid would misplace those textures within the tile (worst
+/// at low zoom, where a tile spans a large latitude band). Geographic tiles
+/// keep the latitude-linear rows their scheme (and the composite shader's
+/// Mercator reprojection) assumes.
 pub(crate) fn tile_triangles<F: FnMut(usize, usize) -> FloatType>(
     ellipsoid: Ellipsoid<FloatType>,
     extent: &Extent<FloatType, Radians>,
     segments: usize,
     height: &mut F,
     center: &Vec3,
+    mercator_v: bool,
 ) -> Geometry {
     let segments = if segments == 0 { 1 } else { segments };
 
@@ -251,13 +277,22 @@ pub(crate) fn tile_triangles<F: FnMut(usize, usize) -> FloatType>(
     let mut indices = Vec::with_capacity(segments * segments * 6);
 
     let dlng = (extent.east - extent.west) / segments as FloatType;
-    let dlat = (extent.north - extent.south) / segments as FloatType;
+    let merc_south = mercator_y(extent.south.val());
+    let merc_north = mercator_y(extent.north.val());
+    let lat_at = |j: usize| -> FloatType {
+        let f = j as FloatType / segments as FloatType;
+        if mercator_v {
+            mercator_y_to_lat(merc_south + (merc_north - merc_south) * f)
+        } else {
+            extent.south.val() + (extent.north.val() - extent.south.val()) * f
+        }
+    };
 
     for i in 0..=segments {
         for j in 0..=segments {
             let lle = LLE {
                 lng: extent.west + dlng * i as FloatType,
-                lat: extent.south + dlat * j as FloatType,
+                lat: Angle::new(lat_at(j)),
                 height: Meters::new(height(i, j)),
             };
             let xyz = lle.to_xyz(ellipsoid);
@@ -448,6 +483,84 @@ mod tests {
         );
     }
 
+    /// WebMercator tiles must space their vertex rows uniformly in Mercator
+    /// northing so the uniform-grid `uv.y` is the tile's Mercator fraction —
+    /// the v axis of WM raster/DEM images. A latitude-linear grid misplaces
+    /// the texture within the tile (worst at low zoom: ~17° at z0/z1).
+    #[test]
+    fn tile_triangles_mercator_v_spaces_rows_in_mercator() {
+        use navara_core::{LLE, Meters, TilingScheme, WGS84_64};
+
+        // z1 north tile: lat 0..~85.05°. Its Mercator midpoint is the z2 row
+        // boundary atan(sinh(π/2)) ≈ 66.51°, far from the lat midpoint ~42.5°.
+        let scheme = TilingScheme::WebMercator { tms: false };
+        let extent = scheme.tile_extent(TileXYZ { x: 0, y: 0, z: 1 });
+        let (geometry, center) = tile_triangles_flat(WGS84_64, &extent, 2, 0., true);
+
+        let mid_merc = (mercator_y(extent.south.val()) + mercator_y(extent.north.val())) * 0.5;
+        let mid_lat = mercator_y_to_lat(mid_merc);
+        assert_relative_eq!(mid_lat, (std::f64::consts::FRAC_PI_2).sinh().atan());
+
+        // Vertex (i=0, j=1) is the west-edge middle row; uv.y must be 0.5 and
+        // the position must sit at the Mercator-midpoint latitude.
+        let expected = LLE {
+            lng: extent.west,
+            lat: Angle::new(mid_lat),
+            height: Meters::new(0.),
+        }
+        .to_xyz(WGS84_64);
+        assert_relative_eq!(geometry.uvs[3], 0.5, epsilon = 1e-6);
+        assert_relative_eq!(
+            geometry.vertices[3] as f64 + center.x,
+            expected.x.val(),
+            epsilon = 1.0
+        );
+        assert_relative_eq!(
+            geometry.vertices[4] as f64 + center.y,
+            expected.y.val(),
+            epsilon = 1.0
+        );
+        assert_relative_eq!(
+            geometry.vertices[5] as f64 + center.z,
+            expected.z.val(),
+            epsilon = 1.0
+        );
+    }
+
+    /// Geographic tiles keep the latitude-linear rows their scheme assumes
+    /// (the composite shader's Mercator reprojection builds on this).
+    #[test]
+    fn tile_triangles_geographic_keeps_latitude_linear_rows() {
+        use navara_core::{LLE, Meters, TilingScheme, WGS84_64};
+
+        let scheme = TilingScheme::Geographic { tms: false };
+        let extent = scheme.tile_extent(TileXYZ { x: 0, y: 0, z: 0 });
+        let (geometry, center) = tile_triangles_flat(WGS84_64, &extent, 2, 0., false);
+
+        let mid_lat = (extent.south.val() + extent.north.val()) * 0.5;
+        let expected = LLE {
+            lng: extent.west,
+            lat: Angle::new(mid_lat),
+            height: Meters::new(0.),
+        }
+        .to_xyz(WGS84_64);
+        assert_relative_eq!(
+            geometry.vertices[3] as f64 + center.x,
+            expected.x.val(),
+            epsilon = 1.0
+        );
+        assert_relative_eq!(
+            geometry.vertices[4] as f64 + center.y,
+            expected.y.val(),
+            epsilon = 1.0
+        );
+        assert_relative_eq!(
+            geometry.vertices[5] as f64 + center.z,
+            expected.z.val(),
+            epsilon = 1.0
+        );
+    }
+
     /// A Geographic terrain tile fully inside the polar cap collapses onto the WM
     /// band edge (target_north == target_south after clamping). The mercator rect
     /// must still have a strictly positive height so the downstream bake camera
@@ -478,7 +591,7 @@ mod tests {
         assert!(tf.scale.y.is_finite());
         // North cap → sliver hugs the top edge of the source tile, framed in [0, 1].
         assert!(tf.offset.y >= 0.0);
-        assert!(tf.offset.y as f64 + tf.scale.y as f64 <= 1.0 + 1e-9);
-        assert!(tf.offset.y as f64 >= 1.0 - 1e-3 - 1e-9);
+        assert!(tf.offset.y + tf.scale.y <= 1.0 + 1e-9);
+        assert!(tf.offset.y >= 1.0 - 1e-3 - 1e-9);
     }
 }
