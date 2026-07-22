@@ -246,7 +246,6 @@ export const run = async () => {
   let pane: Pane | null = null;
   let switching = false;
 
-  // Re-apply the current base's map credits (clear() + add() replaces the list).
   const applyAttribution = (base: AttributionItem[]) => {
     attribution?.clear();
     attribution?.add(base);

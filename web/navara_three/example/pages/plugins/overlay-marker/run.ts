@@ -9,7 +9,7 @@ import {
   moveOverlayElement,
 } from "@navaramap/three_plugins";
 
-import { TILES_3D_DATASETS } from "../../../helpers/constants";
+import { LOCAL_DATASETS, TILES_3D_DATASETS } from "../../../helpers/constants";
 import { atZoneTime } from "../../../helpers/control";
 import { GOOGLE_MAPS_API_KEY } from "../../../helpers/keys";
 
@@ -77,7 +77,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
 
   // Google 3D Tiles
   const googleApiKey = GOOGLE_MAPS_API_KEY;
-  const sources: AttributionSource[] = [];
+  const sources: AttributionSource[] = [LOCAL_DATASETS.animatedBirdPigeonGLTF];
   if (googleApiKey) {
     const tilesLayer = view.addLayer({
       type: "cesium3dtiles",
