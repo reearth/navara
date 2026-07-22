@@ -1,8 +1,16 @@
 name: Release
 
-# Publishes all @navaramap/* packages to npm via trusted publishing (OIDC).
+# Publishes all @navaramap/* packages to npm via trusted publishing (OIDC),
+# then creates the GitHub Release for the tag.
 # Trigger: push a tag like `v0.1.0`. The tag is the single source of truth for
 # the version; every package is stamped with it (lockstep versioning).
+#
+# Release steps:
+#   1. cargo make changelog vX.Y.Z  — generates the CHANGELOG.md section from
+#      conventional commits (git-cliff, see cliff.toml)
+#   2. review/edit the section, commit it to main
+#   3. push the vX.Y.Z tag — this workflow publishes to npm and then creates
+#      a GitHub Release whose notes are the reviewed CHANGELOG.md section
 #
 # npm side setup (once per package, after its first publish):
 #   npmjs.com -> package -> Settings -> Trusted Publisher
@@ -35,6 +43,11 @@ jobs:
       id-token: write # for npm provenance and trusted publishing
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Fail fast if the changelog section for this tag was never committed;
+      # the github-release job below needs it for the release notes.
+      - name: Verify changelog has an entry for this tag
+        run: node scripts/extract-changelog.mjs "$GITHUB_REF_NAME" > /dev/null
 
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # 2026-03-27
         with:
@@ -91,3 +104,33 @@ jobs:
 
       - name: Publish to npm (trusted publishing)
         run: pnpm publish -r --provenance --access public --no-git-checks
+
+  # Runs only after a successful npm publish. Kept as a separate job so that
+  # `contents: write` never coexists with the OIDC publish permissions above.
+  # The release notes are the human-reviewed CHANGELOG.md section — commit
+  # messages are never interpolated into shell commands or regenerated here,
+  # and the notes are passed to gh via a file, not inline.
+  github-release:
+    name: GitHub release
+    runs-on: ubuntu-latest
+    needs: publish
+    # Skip on forks; keep in sync with the canonical repo slug (currently
+    # eukarya-inc/navara, reearth/navara kept for a future transfer — see the
+    # trusted-publishing note at the top).
+    if: github.repository == 'eukarya-inc/navara' || github.repository == 'reearth/navara'
+    permissions:
+      contents: write # create the GitHub Release for the pushed tag
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Extract release notes from CHANGELOG.md
+        run: node scripts/extract-changelog.mjs "$GITHUB_REF_NAME" > "$RUNNER_TEMP/release-notes.md"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --verify-tag \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file "$RUNNER_TEMP/release-notes.md"
