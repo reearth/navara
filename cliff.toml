@@ -5,8 +5,8 @@
 # https://git-cliff.org/docs/configuration
 
 [changelog]
-# Rendered once per version. Section headers are `## vX.Y.Z - YYYY-MM-DD`;
-# scripts/extract-changelog.mjs relies on that exact shape.
+# Rendered once per version. Section headers must start with `## vX.Y.Z`;
+# scripts/extract-changelog.mjs matches either `## vX.Y.Z` or `## vX.Y.Z ...`.
 body = """
 ## {% if version %}{{ version }}{% else %}Unreleased{% endif %}{% if timestamp %} - {{ timestamp | date(format="%Y-%m-%d") }}{% endif %}
 {% for group, commits in commits | group_by(attribute="group") %}
