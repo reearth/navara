@@ -44,11 +44,6 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      # Fail fast if the changelog section for this tag was never committed;
-      # the github-release job below needs it for the release notes.
-      - name: Verify changelog has an entry for this tag
-        run: node scripts/extract-changelog.mjs "$GITHUB_REF_NAME" > /dev/null
-
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # 2026-03-27
         with:
           toolchain: 1.97.1
@@ -69,6 +64,12 @@ jobs:
           cache: "pnpm"
           node-version: '24.14.1'
           registry-url: 'https://registry.npmjs.org'
+
+      # Fail fast if the changelog section for this tag was never committed;
+      # the github-release job below needs it for the release notes. Runs
+      # after setup-node so the whole job uses the pinned Node version.
+      - name: Verify changelog has an entry for this tag
+        run: node scripts/extract-changelog.mjs "$GITHUB_REF_NAME" > /dev/null
 
       - name: Install Tools (wasm-bindgen-cli, cargo-make)
         uses: taiki-e/install-action@ed67fa35ac944f3a9b33f12c4dd43b6f31a47e20 # v2.83.3
@@ -122,6 +123,12 @@ jobs:
       contents: write # create the GitHub Release for the pushed tag
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Same pinned Node as the publish job, instead of whatever happens to
+      # be preinstalled on the runner.
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '24.14.1'
 
       - name: Extract release notes from CHANGELOG.md
         run: node scripts/extract-changelog.mjs "$GITHUB_REF_NAME" > "$RUNNER_TEMP/release-notes.md"
