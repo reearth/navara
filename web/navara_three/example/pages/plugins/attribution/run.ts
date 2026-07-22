@@ -17,8 +17,6 @@ import {
 import { atZoneTime } from "../../../helpers/control";
 import { GOOGLE_MAPS_API_KEY } from "../../../helpers/keys";
 
-import { GSI_ATTRIBUTION } from "./data/attributions";
-
 export type CustomDescriptions = DefaultDescriptions;
 
 const LIGHT_STYLE: AttributionStyle = {
@@ -111,7 +109,10 @@ export const run = async () => {
       data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
       rasterTile: { maxZoom: 18 },
     });
-    attribution?.add([GSI_ATTRIBUTION, TERRAIN_DATASETS.mapterhorn]);
+    attribution?.add([
+      TILE_DATASETS.gsiSeamlessphoto,
+      TERRAIN_DATASETS.mapterhorn,
+    ]);
   };
 
   // Build a fresh view for the given mode. Recreating the view (rather than
