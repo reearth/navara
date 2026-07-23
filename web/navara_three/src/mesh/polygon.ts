@@ -391,9 +391,15 @@ export class PolygonMesh extends BatchedFeatureMesh<
   _update(material: PolygonMaterial, active: boolean, isTexturized: boolean) {
     const enhancer = this.getEnhancer();
 
-    // Update mesh properties (not handled by enhancer)
-    this.visible =
-      (material.show ?? true) && (material.surfaceShow ?? true) && active;
+    // Update mesh properties (not handled by enhancer).
+    // Draped (clamp-to-ground) polygons bake offscreen only — never the main
+    // scene — and the Rust drape resolve, not this LOD `active` flag, picks which
+    // baked tile composites per terrain region. Tying bake visibility to `active`
+    // makes the drape flicker on LOD swaps; keep a draped mesh bakeable whenever
+    // shown so every built tile stays a stable drape source (see
+    // PolylineMesh._update).
+    const shown = (material.show ?? true) && (material.surfaceShow ?? true);
+    this.visible = isTexturized ? shown : shown && active;
     if (this._debugBoundingSphereMesh) {
       this._debugBoundingSphereMesh.visible = this.visible;
     }

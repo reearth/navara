@@ -118,6 +118,20 @@ export async function processRenderableFeatureAdded(
 
   const featureLayerId = ev.layer_id;
 
+  // Captured once: the render-completion report is deferred until the mesh is
+  // in its render/bake scene (see below), by which point `ev` may be gone.
+  const bits = ev.bits;
+  const renderedType =
+    point || billboard || text
+      ? "point"
+      : model
+        ? "model"
+        : polyline
+          ? "polyline"
+          : polygon
+            ? "polygon"
+            : undefined;
+
   const useParallel = checkFeatureParallel(feature);
 
   if (useParallel) {
@@ -127,15 +141,6 @@ export async function processRenderableFeatureAdded(
 
   const obj = await renderFeature(ctx, feature, tileHandle, featureLayerId)
     ?.then((r) => {
-      const type = (() => {
-        if (point || billboard || text) return "point";
-        else if (model) return "model";
-        else if (polyline) return "polyline";
-        else if (polygon) return "polygon";
-      })();
-      if (type) {
-        featureHandler.markFeatureIsRendered(type, ev.bits);
-      }
       // The glTF/Draco decode happened on the JS side, so report the actual
       // decoded GPU size back to the ledger (its compressed-payload estimate
       // undercounts Draco content). Draco decode inflates geometry markedly.
@@ -164,7 +169,12 @@ export async function processRenderableFeatureAdded(
       }
     });
 
-  if (!obj) return;
+  if (!obj) {
+    // renderFeature produced no mesh (e.g. empty geometry); still report
+    // rendered so the tile's LOD/activation can advance, as before.
+    if (renderedType) featureHandler.markFeatureIsRendered(renderedType, bits);
+    return;
+  }
 
   // Sprite should be handled by mesh itself.
   const transform = (polyline ?? polygon ?? model)?.transform;
@@ -215,6 +225,14 @@ export async function processRenderableFeatureAdded(
       texturizedSceneByTileCoordinates.markDirty(tileHandle, featureLayerId);
     });
   }
+
+  // Report render-completion to Rust only now that the mesh is in its render
+  // (MRT) or bake (texturized) scene. For draped features this must follow the
+  // `texturizedSceneByTileCoordinates.add` above: the Rust drape resolve flips a
+  // terrain tile's vector source to this tile once its features report rendered,
+  // so reporting before the offscreen scene existed left the terrain tile's
+  // vector drape blank until a camera-move re-traverse.
+  if (renderedType) featureHandler.markFeatureIsRendered(renderedType, bits);
 
   if (obj instanceof PolygonMesh && polygon && polygon.outline_geometry) {
     const outline = await renderPolygonOutline(ctx, polygon);

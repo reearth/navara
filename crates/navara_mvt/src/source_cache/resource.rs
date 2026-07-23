@@ -26,11 +26,21 @@ impl MvtSourceId for SourceId {
         url: String,
         source: &navara_source::Source,
     ) -> Option<SourceId> {
+        // Per-layer horizon-relaxation override lives on the vector source; a
+        // non-vector source (shouldn't happen for an MVT layer) falls back to
+        // the content-based default.
+        let dynamic_sse_scale = match source {
+            navara_source::Source::VectorTile(s) => s.dynamic_sse_scale,
+            _ => None,
+        };
+
         let traversal_config = TraversalConfig::from_appearances(
             &layer.appearances,
+            source.min_zoom(),
             source.max_zoom(),
             source.max_sse(),
             source.overscaled_max_zoom(),
+            dynamic_sse_scale,
         );
 
         Some(SourceId::new(url, traversal_config))
@@ -126,6 +136,47 @@ mod tests {
         };
 
         assert_eq!(config.max_sse(), 3.5);
+    }
+
+    #[test]
+    fn test_source_id_inequality_same_url_different_min_zoom() {
+        let config1 = TraversalConfig {
+            min_zoom: 0,
+            ..Default::default()
+        };
+        let config2 = TraversalConfig {
+            min_zoom: 5,
+            ..Default::default()
+        };
+
+        let id1 = make_source_id_with_config("https://example.com/tiles", config1);
+        let id2 = make_source_id_with_config("https://example.com/tiles", config2);
+
+        assert_ne!(id1, id2);
+    }
+
+    #[test]
+    fn test_from_appearances_threads_min_zoom() {
+        // The data-available floor must survive the source → config plumbing;
+        // if it drops back to 0, the traversal's min-zoom clamp is a no-op and
+        // dynamic-SSE relaxation coarsens features away again (#697).
+        let config = TraversalConfig::from_appearances(&[], 7, 16, 2.0, 24, None);
+        assert_eq!(config.min_zoom, 7);
+        assert_eq!(config.max_zoom, 16);
+    }
+
+    #[test]
+    fn test_from_appearances_dynamic_sse_scale_defaults_and_override() {
+        use navara_vector_tile::{CLAMP_TO_GROUND_DYNAMIC_SSE_SCALE, GEOMETRY_DYNAMIC_SSE_SCALE};
+
+        // No clamp-to-ground appearances → geometry default (slight relaxation).
+        let geometry = TraversalConfig::from_appearances(&[], 0, 16, 2.0, 24, None);
+        assert_eq!(geometry.dynamic_sse_scale(), GEOMETRY_DYNAMIC_SSE_SCALE);
+        assert!(geometry.dynamic_sse_scale() < CLAMP_TO_GROUND_DYNAMIC_SSE_SCALE);
+
+        // An explicit override wins over the content-based default.
+        let overridden = TraversalConfig::from_appearances(&[], 0, 16, 2.0, 24, Some(1.0));
+        assert_eq!(overridden.dynamic_sse_scale(), 1.0);
     }
 
     #[test]

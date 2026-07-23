@@ -12,6 +12,12 @@ pub struct GeoJsonLayer {
     pub source_id: Option<String>,
     pub appearances: Vec<Appearance>,
     pub crs: Option<CRS>,
+    /// Per-layer override for the horizon dynamic-SSE relaxation strength of
+    /// the tiled render path (`0.0` off … `1.0` raster-equivalent). `None`
+    /// falls back to a content-based default. Only applies to tiled GeoJSON
+    /// (clamp-to-ground / `tiled` appearances), which shares the vector-tile
+    /// traversal; non-tiled GeoJSON renders as batched features with no LOD.
+    pub dynamic_sse_scale: Option<f32>,
 }
 
 #[derive(Debug, Component)]
