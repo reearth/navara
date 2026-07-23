@@ -1,4 +1,9 @@
-import ThreeView, { Color, Layer, Source } from "@navaramap/three";
+import ThreeView, {
+  Color,
+  Layer,
+  Source,
+  type AttributionItem,
+} from "@navaramap/three";
 import { AmbientLightDesc } from "@navaramap/three_default_descs";
 import {
   DefaultPlugin,
@@ -220,7 +225,9 @@ function createMvt(view: ThreeView) {
  * Add a "fly to" button and an add/delete toggle for a layer's source. Deleting
  * removes the layer first (`Source.delete()` is reference-counted and only
  * removes the source once no layer references it); the toggle tracks presence so
- * clicks can't stack duplicate sources or no-op on an already-deleted one.
+ * clicks can't stack duplicate sources or no-op on an already-deleted one. The
+ * optional `credit` supplies the source's current attribution so it is removed
+ * on delete and restored on re-add.
  */
 function addSourceLifecycleButtons(
   view: ThreeView,
@@ -229,6 +236,7 @@ function addSourceLifecycleButtons(
   getSource: () => Source,
   reAdd: () => void,
   flyTarget: () => FlyToTarget,
+  credit?: () => AttributionItem | undefined,
 ) {
   folder
     .addButton({ title: "fly to" })
@@ -240,9 +248,13 @@ function addSourceLifecycleButtons(
     if (present) {
       getLayer().delete();
       getSource().delete();
+      const c = credit?.();
+      if (c) view.attribution?.remove([c]);
       toggle.title = "add source";
     } else {
       reAdd();
+      const c = credit?.();
+      if (c) view.attribution?.add([c]);
       toggle.title = "delete source";
     }
     present = !present;
@@ -267,6 +279,13 @@ export const run = async (view: ThreeView<DefaultDescriptions>) => {
   createB3dm(view);
   createPnts(view);
   createMvt(view);
+
+  // Credit the non-base layers (B3DM / PNTS / MVT sources).
+  view.attribution?.add([
+    TILES_3D_DATASETS.plateauChiyoda,
+    TILES_3D_DATASETS.plateauKakegawaCastle,
+    MVT_DATASETS.plateauTokyoFirePrevention,
+  ]);
 
   const pane = new Pane({
     title: "Parameters",
@@ -346,6 +365,11 @@ function addRasterTileFolder(view: ThreeView, pane: Pane) {
       showBoundingBox: tileParams.rasterShowBoundingBox,
     });
 
+  // Keep the credit in sync with the active base imagery.
+  const attribution = view.attribution;
+  let creditedRaster: keyof typeof TILE_DATASETS = "openstreetmap";
+  attribution?.add([TILE_DATASETS.openstreetmap]);
+
   addSourceLifecycleButtons(
     view,
     tileFolder,
@@ -356,6 +380,7 @@ function addRasterTileFolder(view: ThreeView, pane: Pane) {
       applyRaster();
     },
     () => RASTER_TARGET,
+    () => TILE_DATASETS[creditedRaster],
   );
 
   const rasterFolder = tileFolder.addFolder({
@@ -378,9 +403,12 @@ function addRasterTileFolder(view: ThreeView, pane: Pane) {
       options: rasterUrlOptions,
     })
     .on("change", (v) => {
-      updateTileSource({
-        url: TILE_DATASETS[v.value as keyof typeof TILE_DATASETS].url,
-      });
+      const next = v.value as keyof typeof TILE_DATASETS;
+      if (next === creditedRaster) return;
+      updateTileSource({ url: TILE_DATASETS[next].url });
+      attribution?.remove([TILE_DATASETS[creditedRaster]]);
+      attribution?.add([TILE_DATASETS[next]]);
+      creditedRaster = next;
     });
 
   rasterFolder
@@ -633,6 +661,7 @@ function addB3dmLayerFolder(view: ThreeView, pane: Pane) {
       },
     });
 
+  let b3dmCredit: keyof typeof TILES_3D_DATASETS = "plateauChiyoda";
   addSourceLifecycleButtons(
     view,
     b3dmFolder,
@@ -643,6 +672,7 @@ function addB3dmLayerFolder(view: ThreeView, pane: Pane) {
       applyB3dm();
     },
     () => gB3dmTarget,
+    () => TILES_3D_DATASETS[b3dmCredit],
   );
 
   // Source URL switch: each option is a PLATEAU 3D Tiles building tileset in a
@@ -669,10 +699,17 @@ function addB3dmLayerFolder(view: ThreeView, pane: Pane) {
     })
     .on("change", (v) => {
       const o = b3dmSources[v.value];
-      gB3dmUrl = TILES_3D_DATASETS[o.key as keyof typeof TILES_3D_DATASETS].url;
+      const key = o.key as keyof typeof TILES_3D_DATASETS;
+      gB3dmUrl = TILES_3D_DATASETS[key].url;
       gB3dmTarget = o.target;
       gB3dmSource.update({ type: "3d-tiles", url: gB3dmUrl });
       flyTo(view, gB3dmTarget);
+      // Keep the credit in sync with the active B3DM source.
+      if (key !== b3dmCredit) {
+        view.attribution?.remove([TILES_3D_DATASETS[b3dmCredit]]);
+        view.attribution?.add([TILES_3D_DATASETS[key]]);
+        b3dmCredit = key;
+      }
     });
 
   const modelFolder = b3dmFolder.addFolder({
@@ -751,6 +788,7 @@ function addPntsLayerFolder(view: ThreeView, pane: Pane) {
       },
     });
 
+  let pntsCredit: keyof typeof TILES_3D_DATASETS = "plateauKakegawaCastle";
   addSourceLifecycleButtons(
     view,
     pntsFolder,
@@ -761,6 +799,7 @@ function addPntsLayerFolder(view: ThreeView, pane: Pane) {
       applyPnts();
     },
     () => gPntsTarget,
+    () => TILES_3D_DATASETS[pntsCredit],
   );
 
   // Source URL switch between two PLATEAU point-cloud tilesets.
@@ -785,10 +824,17 @@ function addPntsLayerFolder(view: ThreeView, pane: Pane) {
     })
     .on("change", (v) => {
       const o = pntsSources[v.value];
-      gPntsUrl = TILES_3D_DATASETS[o.key as keyof typeof TILES_3D_DATASETS].url;
+      const key = o.key as keyof typeof TILES_3D_DATASETS;
+      gPntsUrl = TILES_3D_DATASETS[key].url;
       gPntsTarget = o.target;
       gPntsSource.update({ type: "3d-tiles", url: gPntsUrl });
       flyTo(view, gPntsTarget);
+      // Keep the credit in sync with the active PNTS source.
+      if (key !== pntsCredit) {
+        view.attribution?.remove([TILES_3D_DATASETS[pntsCredit]]);
+        view.attribution?.add([TILES_3D_DATASETS[key]]);
+        pntsCredit = key;
+      }
     });
 
   const modelFolder = pntsFolder.addFolder({
@@ -867,6 +913,7 @@ function addMvtLayerFolder(view: ThreeView, pane: Pane) {
       applyMvt();
     },
     () => gMvtOption.target,
+    () => MVT_DATASETS.plateauTokyoFirePrevention,
   );
 
   // Source URL switch. Each PLATEAU MVT dataset stores its polygons under a

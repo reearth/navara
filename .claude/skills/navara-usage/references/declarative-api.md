@@ -35,6 +35,13 @@ view.addLayer({
 
 Layer material `color` fields take the `Color` class from `@navaramap/three` (`new Color().setHex(...)` / `.setStyle("#00aaff")`), not raw hex numbers — raw numbers only work in mesh Descriptor configs. For one-off inline data, a `geojson` **source** accepts a `data` field (a GeoJSON object) instead of a URL; layers themselves always reference a source.
 
+Vector material gotchas (verified):
+
+- `point` / `billboard` `size` is in **meters** by default (`sizeInMeters ?? true`) — a 24 m dot is invisible from a high camera. For constant on-screen size markers set `sizeInMeters: false` (size becomes pixels).
+- `clampToGround` vectors are **baked into globe surface tiles**, so they only render where some tile-producing layer exists (raster or terrain). With no basemap at all, add a plain ellipsoid surface to drape onto: `view.addLayer({ type: "terrain", ellipsoid: {} })`, and color the bare globe via `view.globe.color = new Color().setStyle(...)`.
+- `polygon.outline` is not rendered when `clampToGround: true` (outlines only exist on the non-draped 3D path).
+- `text` labels sourced from feature properties are set via the evaluator, and the evaluate callback must return **both** `text` and `show: true` — returning only `text` leaves every label hidden. Register a Google Font first: `view.addFontFamily(await fetchFontFamilyFromCss("Arsenal", "https://fonts.googleapis.com/css2?family=Arsenal:wght@700"))`, then reference it as `text: { font: "Arsenal", ... }`.
+
 ## Terrain
 
 ```typescript

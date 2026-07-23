@@ -96,8 +96,14 @@ const layers: MaterialDesc[] = [
 
 export const run = async (view: ThreeView<DefaultDescriptions>) => {
   view.addPlugin(new DefaultPlugin());
+  const attribution = view.attribution;
 
   await view.init();
+
+  attribution?.add([
+    VECTOR_DATASETS.gsiExperimentalVector,
+    TILE_DATASETS.openstreetmap,
+  ]);
 
   view.addLight<AmbientLightDesc>({
     ambient: {

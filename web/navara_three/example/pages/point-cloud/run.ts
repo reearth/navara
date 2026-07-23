@@ -62,7 +62,11 @@ export const run = async (view: ThreeView) => {
   addCameraControl(view, pane);
   addCtrlPanel(geoLayersDef, view, pane);
   addDateControl(view, pane);
-  attribution?.add([TILE_DATASETS.openstreetmap]);
+  attribution?.add([
+    TILE_DATASETS.openstreetmap,
+    TILES_3D_DATASETS.plateauKakegawaCastle,
+    TILES_3D_DATASETS.YamanashiKyonaka,
+  ]);
 };
 
 const addCameraControl = (view: ThreeView, pane: Pane) => {

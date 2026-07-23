@@ -1,3 +1,5 @@
+import type { AttributionChild } from "@navaramap/three";
+
 /** A tile/asset data source used by the examples, with its attribution fields. */
 export type Dataset = {
   url: string;
@@ -16,6 +18,8 @@ export type Dataset = {
    * turned into a link).
    */
   logoUrl?: string;
+  /** Optional zoom-banded sub-credits, shown when the current zoom is within the band. */
+  children?: AttributionChild[];
 };
 
 /**
@@ -41,12 +45,73 @@ export const TILE_DATASETS = {
     attribution:
       "Geospatial Information Authority of Japan Tiles - Standard Map",
     attributionUrl: "https://maps.gsi.go.jp/development/ichiran.html",
+    children: [
+      // z9-11
+      {
+        attribution:
+          "1:1,000,000 International Map (Electronic topographic map (tiles) / Geospatial Information Authority of Japan (GSI))",
+        minZoom: 9,
+        maxZoom: 11,
+      },
+      // z5-8
+      {
+        attribution:
+          "Japan And Its Surroundings (Electronic topographic map (tiles) / Geospatial Information Authority of Japan (GSI))",
+        minZoom: 5,
+        maxZoom: 8,
+      },
+      {
+        attribution:
+          "The bathymetric contours are derived from those contained within the GEBCO Digital Atlas, published by the BODC on behalf of IOC and IHO (2003) (https://www.gebco.net) 海上保安庁許可第292502号（水路業務法第25条に基づく類似刊行物）",
+        minZoom: 5,
+        maxZoom: 8,
+      },
+      {
+        attribution:
+          'Shoreline data is derived from: United States. National Imagery and Mapping Agency. "Vector Map Level 0 (VMAP0)." Bethesda, MD: Denver, CO: The Agency; USGS Information Services, 1997.',
+        minZoom: 5,
+        maxZoom: 8,
+      },
+    ],
   },
   gsiSeamlessphoto: {
     url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
     attribution:
       "Geospatial Information Authority of Japan Tiles - Latest Nationwide Photo (Seamless)",
     attributionUrl: "https://maps.gsi.go.jp/development/ichiran.html",
+    children: [
+      // z14-18
+      {
+        attribution: "Nationwide latest aerial photos (seamless)",
+        minZoom: 14,
+        maxZoom: 18,
+      },
+      { attribution: "GRUS画像（© Axelspace）", minZoom: 14, maxZoom: 18 },
+      // z9-13
+      {
+        attribution: "Nationwide Landsat mosaic imagery",
+        minZoom: 9,
+        maxZoom: 13,
+      },
+      {
+        attribution:
+          "データソース：Landsat8画像（GSI,TSIC,GEO Grid/AIST）, Landsat8画像（courtesy of the U.S. Geological Survey）, 海底地形（GEBCO）",
+        minZoom: 9,
+        maxZoom: 13,
+      },
+      // z2-8
+      {
+        attribution: "Global satellite mosaic imagery",
+        minZoom: 2,
+        maxZoom: 8,
+      },
+      {
+        attribution:
+          "Images on 世界衛星モザイク画像 obtained from site https://lpdaac.usgs.gov/data_access maintained by the NASA Land Processes Distributed Active Archive Center (LP DAAC), USGS/Earth Resources Observation and Science (EROS) Center, Sioux Falls, South Dakota, (Year). Source of image data product.",
+        minZoom: 2,
+        maxZoom: 8,
+      },
+    ],
   },
 } satisfies Record<string, Dataset>;
 

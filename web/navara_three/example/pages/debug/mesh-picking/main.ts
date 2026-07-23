@@ -30,11 +30,7 @@ import {
 } from "@navaramap/three_default_plugin";
 import { Pane } from "tweakpane";
 
-import {
-  LOCAL_DATASETS,
-  TERRAIN_DATASETS,
-  TILE_DATASETS,
-} from "../../../helpers/constants";
+import { LOCAL_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 import { addDateControl, atZoneTime } from "../../../helpers/control";
 
 const run = async () => {
@@ -570,7 +566,7 @@ const run = async () => {
   }
 
   addDateControl(view, pane);
-  attribution?.add([TILE_DATASETS.openstreetmap, TERRAIN_DATASETS.gsi]);
+  attribution?.add([TILE_DATASETS.openstreetmap]);
 };
 
 run();

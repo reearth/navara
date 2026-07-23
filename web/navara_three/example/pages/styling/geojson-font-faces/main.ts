@@ -2,11 +2,7 @@ import ThreeView, { Color, fetchFontFamilyFromCss } from "@navaramap/three";
 import { DefaultPlugin } from "@navaramap/three_default_plugin";
 import { Pane } from "tweakpane";
 
-import {
-  GEOJSON_DATASETS,
-  TERRAIN_DATASETS,
-  TILE_DATASETS,
-} from "../../../helpers/constants";
+import { GEOJSON_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 import { addDateControl } from "../../../helpers/control";
 
 // Self-hosted multi-script faces (Roboto + Noto Sans script fonts + sliced
@@ -149,7 +145,7 @@ const run = async () => {
       layer?.update({ text: { textAlign: value } });
     });
 
-  attribution?.add([TILE_DATASETS.openstreetmap, TERRAIN_DATASETS.mapterhorn]);
+  attribution?.add([TILE_DATASETS.openstreetmap]);
 };
 
 run();

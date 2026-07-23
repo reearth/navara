@@ -130,8 +130,8 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   addDateControl(view, pane);
 
   attribution?.add([
-    TERRAIN_DATASETS.mapterhorn,
     TILE_DATASETS.openstreetmap,
+    TERRAIN_DATASETS.gsi,
     TILES_3D_DATASETS.plateauChiyoda,
   ]);
 

@@ -164,8 +164,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   addEffectsControl(view, pane, defaultEffects);
 
   attribution?.add([
-    TERRAIN_DATASETS.gsi,
-    TILE_DATASETS.gsiSeamlessphoto,
+    TERRAIN_DATASETS.reearthQuantizedMesh,
     TILES_3D_DATASETS.plateauChiyoda,
     TILES_3D_DATASETS.plateauChuo,
     LOCAL_DATASETS.blueMarbleClouds,
@@ -190,6 +189,12 @@ const addTileControl = (view: ThreeView<CustomDescriptions>, pane: Pane) => {
 
   let layer = view.addLayer(description);
 
+  // Keep the credit in sync with the active base tile.
+  const tileByUrl = (url: string) =>
+    Object.values(TILE_DATASETS).find((t) => t.url === url);
+  let tileCredit = tileByUrl(PARAMS.type);
+  if (tileCredit) view.attribution?.add([tileCredit]);
+
   const folder = pane.addFolder({
     title: "RasterTile",
   });
@@ -210,6 +215,9 @@ const addTileControl = (view: ThreeView<CustomDescriptions>, pane: Pane) => {
           url: v.value,
         },
       });
+      if (tileCredit) view.attribution?.remove([tileCredit]);
+      tileCredit = tileByUrl(v.value);
+      if (tileCredit) view.attribution?.add([tileCredit]);
       tileChangeBinding.emit("change");
     });
 

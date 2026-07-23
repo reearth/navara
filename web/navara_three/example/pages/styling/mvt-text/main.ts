@@ -202,6 +202,7 @@ const run = async () => {
 
   attribution?.add([
     TILE_DATASETS.openstreetmap,
+    TERRAIN_DATASETS.gsi,
     VECTOR_DATASETS.gsiExperimentalVector,
   ]);
 };

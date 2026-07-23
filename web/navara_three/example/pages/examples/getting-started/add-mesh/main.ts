@@ -36,9 +36,9 @@ view.addLight({ ambient: { intensity: 0.6 } });
 view.addLight({ sun: { intensity: 1.8 } });
 
 view.setCamera({
-  lng: 137.6501,
-  lat: 36.2357,
-  height: 1150,
+  lng: 137.6495,
+  lat: 36.2382,
+  height: 820,
   heading: 0,
   pitch: -50,
   roll: 0,
@@ -61,24 +61,28 @@ const frame = northUpEastToFixedFrame(
   }),
 );
 
-// One row of meshes, spread along the east axis. Primitives are centered on
-// their origin, so each is lifted to sit on the ground.
+// One row of meshes, spread along the east axis with the same spacing as the
+// Layers example's exhibits. Primitives are centered on their origin, so each
+// is lifted to sit on the ground.
+const SPACING = 315;
+const rowZ = (index: number) => (index - 1.5) * SPACING;
+
 const addMeshes = (color: string) => {
   const accent = () => new Color().setStyle(color);
   const box = view.addMesh<BoxMeshDesc>({
     box: { width: 100, height: 150, depth: 100, color: accent() },
     matrixWorld: frame,
-    position: { x: 0, y: 75, z: -240 },
+    position: { x: 0, y: 75, z: rowZ(0) },
   });
   const sphere = view.addMesh<SphereMeshDesc>({
     sphere: { radius: 65, color: accent() },
     matrixWorld: frame,
-    position: { x: 0, y: 65, z: -80 },
+    position: { x: 0, y: 65, z: rowZ(1) },
   });
   const cylinder = view.addMesh<CylinderMeshDesc>({
     cylinder: { radiusTop: 50, radiusBottom: 50, height: 150, color: accent() },
     matrixWorld: frame,
-    position: { x: 0, y: 75, z: 80 },
+    position: { x: 0, y: 75, z: rowZ(2) },
   });
   const tube = view.addMesh<TubeMeshDesc>({
     tube: {
@@ -94,7 +98,7 @@ const addMeshes = (color: string) => {
       color: accent(),
     },
     matrixWorld: frame,
-    position: { x: 0, y: 75, z: 240 },
+    position: { x: 0, y: 75, z: rowZ(3) },
   });
   return { box, sphere, cylinder, tube };
 };

@@ -163,7 +163,7 @@ const run = async () => {
     }
   });
 
-  attribution?.add([TILE_DATASETS.openstreetmap]);
+  attribution?.add([TILE_DATASETS.openstreetmap, TERRAIN_DATASETS.gsi]);
 };
 
 run();

@@ -97,7 +97,11 @@ export const run = async (
         terrain: { castShadow: true, receiveShadow: true },
       });
     }
-    attribution?.add([terrainDataset(type), TILE_DATASETS.eox]);
+    attribution?.add([
+      terrainDataset(type),
+      TILE_DATASETS.eox,
+      TILE_DATASETS.gsiSeamlessphoto,
+    ]);
   };
 
   // Delete the current terrain layer and its explicit source (if any) on the
@@ -107,7 +111,7 @@ export const run = async (
     terrainSource?.delete();
     terrainLayer = undefined;
     terrainSource = undefined;
-    // Drop the current terrain's credit (eox stays — permanent base).
+    // Drop the current terrain's credit (EOX + GSI seamless photo stay — permanent base).
     attribution?.remove([terrainDataset(currentTerrainType)]);
   };
 

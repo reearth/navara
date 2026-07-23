@@ -75,7 +75,10 @@ export function run() {
       const view = new ThreeView<CustomDescriptions>({});
       const plugin = new DefaultPlugin();
       view.addPlugin(plugin);
+      const attribution = view.attribution;
       await view.init();
+
+      attribution?.add([TILE_DATASETS.gsiStd, TERRAIN_DATASETS.gsi]);
 
       plugin.addDefaultPhotorealScene();
 

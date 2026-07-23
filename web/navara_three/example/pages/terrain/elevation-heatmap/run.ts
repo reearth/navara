@@ -102,7 +102,10 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   const pane = new Pane();
   addDateControl(view, pane);
   addCameraControl(view, pane);
-  attribution?.add([TERRAIN_DATASETS.mapterhorn]);
+  attribution?.add([
+    TERRAIN_DATASETS.mapterhorn,
+    TERRAIN_DATASETS.reearthQuantizedMesh,
+  ]);
 
   const params = {
     color_map: "plateau",
