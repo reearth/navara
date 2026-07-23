@@ -7,6 +7,7 @@ import {
   calcCameraPosition,
   calcModelMatrixRTE,
   encodePositionRTE,
+  RTE_ONE_UNIFORM,
 } from "@navaramap/three";
 import {
   Object3D,
@@ -466,6 +467,7 @@ export class SmoothLine extends Object3D {
       shader.uniforms.u_cameraPositionHigh = sharedUniforms.cameraPositionHigh;
       shader.uniforms.u_cameraPositionLow = sharedUniforms.cameraPositionLow;
       shader.uniforms.modelViewMatrixRTE = sharedUniforms.modelViewMatrixRTE;
+      shader.uniforms.u_rteOne = RTE_ONE_UNIFORM;
 
       // Modify vertex shader to use RTE instance attributes
       shader.vertexShader = createReplacer(shader.vertexShader)
@@ -478,6 +480,9 @@ export class SmoothLine extends Object3D {
         uniform vec3 u_cameraPositionHigh;
         uniform vec3 u_cameraPositionLow;
         uniform mat4 modelViewMatrixRTE;
+        // Always 1.0 — blocks fast-math reassociation of the high/low
+        // recombination (see chunks/rte_pars_vertex.glsl).
+        uniform float u_rteOne;
 
         // RTE instance attributes
         attribute vec3 instanceStartHigh;
@@ -489,7 +494,7 @@ export class SmoothLine extends Object3D {
         .replace(
           "vec4 start = modelViewMatrix * vec4( instanceStart, 1.0 );",
           /* glsl */ `// Decode RTE position for start point
-        vec3 startHighDiff = instanceStartHigh - u_cameraPositionHigh;
+        vec3 startHighDiff = (instanceStartHigh - u_cameraPositionHigh) * u_rteOne;
         vec3 startLowDiff = instanceStartLow - u_cameraPositionLow;
         vec3 startRTE = startHighDiff + startLowDiff;
         vec4 start = modelViewMatrixRTE * vec4( startRTE, 1.0 );`,
@@ -498,7 +503,7 @@ export class SmoothLine extends Object3D {
         .replace(
           "vec4 end = modelViewMatrix * vec4( instanceEnd, 1.0 );",
           /* glsl */ `// Decode RTE position for end point
-        vec3 endHighDiff = instanceEndHigh - u_cameraPositionHigh;
+        vec3 endHighDiff = (instanceEndHigh - u_cameraPositionHigh) * u_rteOne;
         vec3 endLowDiff = instanceEndLow - u_cameraPositionLow;
         vec3 endRTE = endHighDiff + endLowDiff;
         vec4 end = modelViewMatrixRTE * vec4( endRTE, 1.0 );`,

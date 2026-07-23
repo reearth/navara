@@ -111,6 +111,8 @@ export type SdfTextBaseRefs = {
   uRTCCenterView: UniformValue<Vector3>;
   uEyeRTELow: UniformValue<Vector3>;
   uEyeRTEHigh: UniformValue<Vector3>;
+  /** Always 1.0 — blocks fast-math reassociation of the RTE recombination. */
+  u_rteOne?: UniformValue<number>;
   nvr_uBatchId: UniformValue<number>;
   nvr_uPickable: UniformValue<number>;
   uAtlas: UniformValue<DataTexture | null>;

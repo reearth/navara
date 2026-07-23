@@ -77,6 +77,8 @@ export type InstancedSpriteBaseRefs = {
   uRTCCenterView: UniformValue<Vector3>;
   uEyeRTELow: UniformValue<Vector3>;
   uEyeRTEHigh: UniformValue<Vector3>;
+  /** Always 1.0 — blocks fast-math reassociation of the RTE recombination. */
+  u_rteOne?: UniformValue<number>;
   uScale: UniformValue<number>;
   uCenter: UniformValue<Vector2>;
   uSizeInMeters: UniformValue<boolean>;

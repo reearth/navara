@@ -282,7 +282,8 @@ export class PolygonMesh extends BatchedFeatureMesh<
     this.receiveShadow = !!meshMaterial.receiveShadow;
 
     // This mesh is texturized if it has a tile handle (terrain attachment).
-    const isTexturized = !!tileHandle;
+    // `!= null`, not truthiness: the root vector tile's handle is 0.
+    const isTexturized = tileHandle != null;
     const material = this.material;
 
     material.vertexColors = false;

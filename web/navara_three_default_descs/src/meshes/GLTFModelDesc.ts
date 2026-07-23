@@ -14,6 +14,7 @@ import {
   createReplacer,
   encodePositionRTE,
   composeWorldMatrixForRTE,
+  RTE_ONE_UNIFORM,
 } from "@navaramap/three";
 import ProjectVertexRteModel from "@shaders/glsl/chunks/project_vertex_rte_model.glsl";
 import RteUniformParsVertex from "@shaders/glsl/chunks/rte_uniform_pars_vertex.glsl";
@@ -476,6 +477,7 @@ export class GLTFModelDesc extends MeshDesc<
         shader.uniforms.rtePosLow = { value: this.modelPositionLow };
         shader.uniforms.modelViewMatrixRTE = this.rteUserData
           .modelViewMatrixRTE || { value: new Matrix4() };
+        shader.uniforms.u_rteOne = RTE_ONE_UNIFORM;
 
         // Modify vertex shader with RTE chunks
         shader.vertexShader = createReplacer(shader.vertexShader)

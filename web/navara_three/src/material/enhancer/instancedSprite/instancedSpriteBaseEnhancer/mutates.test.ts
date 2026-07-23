@@ -10,6 +10,7 @@ import type { InstancedSpriteBaseState } from "./types";
 
 vi.mock("@navaramap/three_api", () => ({
   degreeToRadian: (degree: number) => (degree * Math.PI) / 180,
+  RTE_ONE_UNIFORM: { value: 1.0 },
 }));
 
 vi.mock("@navaramap/engine-api", () => ({

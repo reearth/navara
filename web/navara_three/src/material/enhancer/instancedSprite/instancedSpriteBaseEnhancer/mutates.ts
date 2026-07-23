@@ -1,4 +1,5 @@
 import { encodePosition } from "@navaramap/engine-api";
+import { RTE_ONE_UNIFORM } from "@navaramap/three_api";
 import {
   type Matrix4,
   type Texture,
@@ -82,6 +83,7 @@ export const createBaseMutates = (
       uniforms.uRTCCenterView = refs.uRTCCenterView;
       uniforms.uEyeRTELow = refs.uEyeRTELow;
       uniforms.uEyeRTEHigh = refs.uEyeRTEHigh;
+      uniforms.u_rteOne = RTE_ONE_UNIFORM;
       uniforms.uScale = refs.uScale;
       uniforms.uCenter = refs.uCenter;
       uniforms.uSizeInMeters = refs.uSizeInMeters;
