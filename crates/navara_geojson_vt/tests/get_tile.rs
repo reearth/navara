@@ -233,3 +233,44 @@ fn test_polygon_clipping_on_boundary() {
         serde_json::Value::Null
     );
 }
+
+// ── MultiPolygon ring grouping ───────────────────────────────────────
+
+/// A MultiPolygon's member polygons must stay grouped per polygon in the tile
+/// output. Consumers read `polygon[0]` as the outer ring and `polygon[1..]` as
+/// holes, so flattening every member's rings into one polygon would turn the
+/// 2nd..Nth outer rings into holes of the 1st (e.g. a country's mainland
+/// becoming a "hole" of its small exclave).
+#[test]
+fn test_multipolygon_members_stay_separate_polygons() {
+    let geojson: GeoJson = serde_json::from_str(
+        r#"{
+            "type": "Feature",
+            "properties": {},
+            "geometry": {
+                "type": "MultiPolygon",
+                "coordinates": [
+                    [[[-60, -30], [-40, -30], [-40, -10], [-60, -10], [-60, -30]]],
+                    [
+                        [[10, 10], [50, 10], [50, 50], [10, 50], [10, 10]],
+                        [[20, 20], [40, 20], [40, 40], [20, 40], [20, 20]]
+                    ]
+                ]
+            }
+        }"#,
+    )
+    .unwrap();
+
+    let mut index = GeoJsonVt::new(&geojson, Options::default());
+    let tile = index.get_tile(0, 0, 0).expect("root tile should exist");
+    assert_eq!(tile.features.len(), 1);
+
+    let TileGeometry::Polygons(polygons) = &tile.features[0].geometry else {
+        panic!("expected polygons");
+    };
+    // Two member polygons: the first with a single outer ring, the second with
+    // an outer ring plus one hole.
+    assert_eq!(polygons.len(), 2, "members must not be flattened together");
+    assert_eq!(polygons[0].len(), 1);
+    assert_eq!(polygons[1].len(), 2);
+}
