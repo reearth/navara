@@ -4,8 +4,8 @@ use rustc_hash::FxHashMap;
 
 /// Horizon dynamic-SSE relaxation strength (`0.0` off … `1.0`
 /// raster-equivalent) for draped clamp-to-ground polyline/polygon layers.
-/// They render as a terrain-draped texture like raster, but still carry
-/// geometry, so they coarsen a little less eagerly than raster (< 1.0).
+/// They render as a terrain-draped texture like raster, so the default is
+/// raster-equivalent strength (1.0) unless overridden per layer.
 pub const CLAMP_TO_GROUND_DYNAMIC_SSE_SCALE: f32 = 1.0;
 /// Horizon relaxation strength for point / non-clamped geometry layers: only
 /// a slight coarsening of far tiles, since these render as discrete features
