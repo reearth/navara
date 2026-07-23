@@ -419,7 +419,7 @@ const geoLayersDef: MaterialDesc[] = [
   {
     type: "b3dm",
     data: {
-      url: TILES_3D_DATASETS.plateauChiyodaB3DM,
+      url: TILES_3D_DATASETS.plateauChiyodaB3DM.url,
     },
     model: {
       show: true,
