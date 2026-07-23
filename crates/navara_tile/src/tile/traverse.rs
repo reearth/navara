@@ -1191,10 +1191,11 @@ mod tests {
                 !tile.intersect_with_camera_frustum(&frustum),
                 "precondition: the target must be outside the narrow frustum"
             );
+            let occludee_point = tile
+                .occludee_point_in_scaled_space
+                .expect("precondition: phase A traversal computed the occludee point");
             assert!(
-                tile.occludee_point_in_scaled_space
-                    .map(|p| occluder.is_scaled_space_point_visible(p))
-                    .unwrap_or(true),
+                occluder.is_scaled_space_point_visible(occludee_point),
                 "precondition: the target must not be horizon-occluded"
             );
         }
