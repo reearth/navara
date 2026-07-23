@@ -108,6 +108,8 @@ export type PolygonBaseRefs = {
   modelViewMatrixRTE?: UniformValue<Matrix4>;
   u_cameraPositionHigh?: UniformValue<Vector3>;
   u_cameraPositionLow?: UniformValue<Vector3>;
+  /** Always 1.0 — blocks fast-math reassociation of the RTE recombination. */
+  u_rteOne?: UniformValue<number>;
 };
 
 export type PolygonBaseUniforms = Partial<PolygonBaseRefs>;

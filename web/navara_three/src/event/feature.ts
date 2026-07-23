@@ -185,7 +185,10 @@ export async function processRenderableFeatureAdded(
 
   meshes.set(id, obj);
 
-  if (isDraped && tileHandle) {
+  // `!= null` (not truthiness): the root vector tile's handle is 0, which is
+  // falsy — a truthy check silently dropped root-tile draped meshes from the
+  // texturized scene cache, leaving small datasets that render at z0 blank.
+  if (isDraped && tileHandle != null) {
     // Insert the bakeable draped mesh into the per-tile cache now (it is fully built at
     // this point). Readiness/ancestor-fallback is decided entirely on the Rust side from
     // the ECS lifecycle, so no `scene_ready` is reported. Insert even when invisible —
@@ -320,7 +323,7 @@ export async function processRenderableFeatureChanged(
   if (
     ((obj instanceof PolygonMesh && obj.clampToGround) ||
       (obj instanceof PolylineMesh && obj.draped)) &&
-    tileHandle
+    tileHandle != null // the root tile's handle is 0 (falsy)
   ) {
     texturizedSceneByTileCoordinates.markDirty(tileHandle, layerId);
   }

@@ -101,6 +101,49 @@ Both RTE and RTC solve this by **working with small relative coordinates** inste
 - **Computation**: Done in vertex shader every frame
 - **Camera dependency**: Requires camera position encoding each frame
 
+### Compiler Reassociation Hazard: the `u_rteOne` Trick
+
+RTE only works if the GPU evaluates the recombination **in the written order**:
+
+```glsl
+transformed = (high - camHigh) + (low - camLow)   // subtract first: small, precise values
+```
+
+Some shader compilers (observed with Chrome's ANGLE Metal backend on Apple
+Silicon) treat this as mathematically equivalent to and reassociate it into:
+
+```glsl
+transformed = (high + low) - (camHigh + camLow)   // sums hit ~6.4e6 in f32: precision gone
+```
+
+The intermediate sums reach ECEF magnitude, where f32 resolution is only
+0.25–0.5 m. The visible symptom: geometry **freezes** while the camera moves
+within one f32 ULP and then **snaps** by 0.25–0.5 m — jitter that only shows
+at close range (tens to hundreds of meters) and never at far zoom.
+
+The fix is to multiply the high-order difference by `u_rteOne`, a uniform
+whose value is always `1.0`:
+
+```glsl
+vec3 highDiff = (position_3d_high - u_cameraPositionHigh) * u_rteOne;
+vec3 lowDiff = position_3d_low - u_cameraPositionLow;
+vec3 transformed = highDiff + lowDiff;
+```
+
+Because a uniform's value is unknown at compile time, the compiler cannot
+assume it is 1.0 and can no longer reorder the expression across it — the
+subtraction must happen first. At runtime the JS side always supplies 1.0
+(`RTE_ONE_UNIFORM` in `web/navara_three_api/src/rte.ts`), so the result is
+bit-identical to the intended math. A literal `* 1.0` does NOT work: the
+compiler folds it away. deck.gl uses the same workaround ("ONE trick") in its
+fp64 emulation.
+
+**Every RTE recombination site must carry this factor and register the
+uniform.** The canonical declaration and full rationale live in
+`shaders/glsl/chunks/rte_pars_vertex.glsl`; a shader that declares `u_rteOne`
+but never receives the uniform renders garbage (WebGL defaults it to 0.0,
+zeroing `highDiff`).
+
 ---
 
 ## RTC (Relative-To-Center)
@@ -328,13 +371,14 @@ PolygonGeometryAttributes {
 const RTE_VERTEX_SHADER = `
 uniform vec3 u_cameraPositionHigh;
 uniform vec3 u_cameraPositionLow;
+uniform float u_rteOne; // always 1.0 — blocks reassociation (see above)
 uniform mat4 modelViewMatrixRTE;
 
 attribute vec3 position_3d_high;
 attribute vec3 position_3d_low;
 
 vec3 transform_position_rte() {
-    vec3 highDiff = position_3d_high - u_cameraPositionHigh;
+    vec3 highDiff = (position_3d_high - u_cameraPositionHigh) * u_rteOne;
     vec3 lowDiff = position_3d_low - u_cameraPositionLow;
     return highDiff + lowDiff;
 }
@@ -391,11 +435,12 @@ attribute vec3 position_3d_low;
 // Custom uniforms
 uniform vec3 u_cameraPositionHigh;
 uniform vec3 u_cameraPositionLow;
+uniform float u_rteOne; // always 1.0 — blocks reassociation
 uniform mat4 modelViewMatrixRTE;
 
 void main() {
-    // Custom computation
-    vec3 highDiff = position_3d_high - u_cameraPositionHigh;
+    // Custom computation (u_rteOne keeps the subtract-first order)
+    vec3 highDiff = (position_3d_high - u_cameraPositionHigh) * u_rteOne;
     vec3 lowDiff = position_3d_low - u_cameraPositionLow;
     vec3 transformed = highDiff + lowDiff;
 
@@ -450,6 +495,11 @@ void main() {
 - Use RTE for batched tiles (use RTC instead)
 - Use RTC for individual scattered features (use RTE instead)
 - Forget to call `updateRTE()` each frame for RTE meshes
+- Write the high/low recombination without the `u_rteOne` factor (see
+  [Compiler Reassociation Hazard](#compiler-reassociation-hazard-the-u_rteone-trick))
+- Recombine `high + low` back into an absolute position in the shader —
+  that discards the split's precision (only acceptable for coarse uses
+  like horizon culling)
 
 ### Further Reading
 

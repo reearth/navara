@@ -1,4 +1,5 @@
 import { encodePosition } from "@navaramap/engine-api";
+import { RTE_ONE_UNIFORM } from "@navaramap/three_api";
 import { Color, DataTexture, type Matrix4, Vector2, Vector3 } from "three";
 
 import type { UniformValue } from "../../../types";
@@ -119,6 +120,7 @@ export const createBaseMutates = (
       uniforms.uRTCCenterView = refs.uRTCCenterView;
       uniforms.uEyeRTELow = refs.uEyeRTELow;
       uniforms.uEyeRTEHigh = refs.uEyeRTEHigh;
+      uniforms.u_rteOne = RTE_ONE_UNIFORM;
       uniforms.nvr_uBatchId = refs.nvr_uBatchId;
       uniforms.nvr_uPickable = refs.nvr_uPickable;
       uniforms.uAtlas = refs.uAtlas;

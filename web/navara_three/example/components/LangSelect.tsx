@@ -1,4 +1,4 @@
-import { Languages } from "lucide-react";
+import { Globe } from "lucide-react";
 
 import { SUPPORTED_LANGS, type Lang } from "../pages/examples/sections";
 
@@ -28,7 +28,7 @@ export const LangSelect = ({ lang, setLang, label }: LangSelectProps) => {
         aria-label={label}
         className="h-9 w-auto gap-1.5 border-0 bg-transparent px-2 font-medium uppercase text-muted-foreground shadow-none hover:bg-accent hover:text-foreground"
       >
-        <Languages className="h-4 w-4" />
+        <Globe className="h-4 w-4" />
         {lang}
       </SelectTrigger>
       <SelectContent align="end" className="min-w-[6rem]">

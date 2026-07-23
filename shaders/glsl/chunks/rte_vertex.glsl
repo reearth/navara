@@ -11,8 +11,10 @@
 // function call. In some contexts (e.g., Points/SpherePoints), calling the function
 // can cause vertex jittering due to GLSL compiler optimization or precision issues.
 // Inlining the calculation directly avoids these problems.
+//
+// The u_rteOne (== 1.0) factor is load-bearing: see rte_pars_vertex.glsl.
 
-vec3 highDiff = position_3d_high - u_cameraPositionHigh;
+vec3 highDiff = (position_3d_high - u_cameraPositionHigh) * u_rteOne;
 vec3 lowDiff = position_3d_low - u_cameraPositionLow;
 vec3 transformed = highDiff + lowDiff;
 

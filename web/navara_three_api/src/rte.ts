@@ -2,6 +2,20 @@ import { encodePosition } from "@navaramap/engine-api";
 import { Matrix4, Vector3 } from "three";
 
 /**
+ * Shared `u_rteOne` uniform for RTE vertex shaders. Always 1.0.
+ *
+ * Multiplying the high-order difference by a uniform the shader compiler
+ * cannot constant-fold blocks fast-math reassociation of
+ * `(high - camHigh) + (low - camLow)` into `(high + low) - (camHigh + camLow)`,
+ * which would collapse the math to absolute-ECEF f32 precision and make
+ * geometry freeze/snap in ~0.25-0.5 m steps as the camera moves
+ * (observed on ANGLE Metal). One frozen object is shared by every material.
+ */
+export const RTE_ONE_UNIFORM: { readonly value: number } = Object.freeze({
+  value: 1.0,
+});
+
+/**
  * Encodes a position into high and low precision Vector3 components for RTE (Relative-To-Eye) rendering.
  * This enables GPU double precision emulation by splitting a position into two float components.
  * @param original - Position to encode

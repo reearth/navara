@@ -3,6 +3,7 @@ import {
   calcCameraPosition,
   calcModelMatrixRTE,
   encodePositionRTE,
+  RTE_ONE_UNIFORM,
 } from "@navaramap/three";
 import RteParsVertex from "@shaders/glsl/chunks/rte_pars_vertex.glsl";
 import RteVertex from "@shaders/glsl/chunks/rte_vertex.glsl";
@@ -175,6 +176,7 @@ export class SpherePoints extends Points {
         u_cameraPositionHigh: this._rteUniforms.cameraPositionHigh,
         u_cameraPositionLow: this._rteUniforms.cameraPositionLow,
         modelViewMatrixRTE: this._rteUniforms.modelViewMatrixRTE,
+        u_rteOne: RTE_ONE_UNIFORM,
       },
       vertexShader: `
         precision highp float;

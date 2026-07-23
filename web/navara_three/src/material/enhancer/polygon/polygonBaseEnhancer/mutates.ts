@@ -1,3 +1,4 @@
+import { RTE_ONE_UNIFORM } from "@navaramap/three_api";
 import type { Matrix4, Texture, Vector3 } from "three";
 import { Matrix4 as ThreeMatrix4, Vector3 as ThreeVector3 } from "three";
 
@@ -78,6 +79,7 @@ export const createBaseMutates = (useRTE: boolean): PolygonBaseMutates => {
         uniforms.u_cameraPositionHigh = refs.u_cameraPositionHigh;
         uniforms.u_cameraPositionLow = refs.u_cameraPositionLow;
         uniforms.modelViewMatrixRTE = refs.modelViewMatrixRTE;
+        uniforms.u_rteOne = RTE_ONE_UNIFORM;
       }
 
       // Height uniforms

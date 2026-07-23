@@ -105,3 +105,18 @@ Dev/debug page UI is **Tweakpane** (`new Pane({ title })` + `.addBinding(...).on
 4. Show data credits via `AttributionPlugin` when using external datasets.
 5. Screenshot for the index card: `pnpm navara_three screenshots <page>` (dev server must be running; adjust wait time in `web/navara_three/scripts/generate-screenshots.ts` via `PAGE_CONFIGS` if the scene loads slowly).
 6. Before committing: `pnpm run build:example`, `pnpm run format`, `pnpm run lint`, `pnpm run test` (from the repo root).
+
+## Verifying an example actually works (not just loads)
+
+- Dev server: `pnpm --filter @navaramap/three dev` picks the next free port when 5173 is taken — pass the real port to the screenshot script via `SERVER_URL=http://localhost:<port>`.
+- Gallery demo URLs are slash-form: `/demo/<section>/<slug>` (e.g. `/demo/getting-started/source`); only legacy pages use the dash form.
+- Drive the page headlessly (playwright: load `/demo/...`, collect `pageerror`, count `canvas`, click the example's buttons, screenshot before/after) and **look at the images** — a page with a canvas and no errors can still be a broken or badly framed scene. Tune camera/sun from what you see.
+- If every page throws `SyntaxError: ... does not provide an export named ...` for a `navara_wasm_*` module, the WASM binaries are stale relative to the TS source — rebuild them (`cargo make build-dev-all`), then reload. If that build fails with "requires rustc X", run it with a newer installed toolchain: `RUSTUP_TOOLCHAIN=<ver> cargo make build-dev-all` (don't change the rustup override).
+
+## Judging gallery thumbnails as a lineup
+
+Thumbnails are viewed side by side on the index, so after `pnpm navara_three screenshots <path...>` review them **as a set, not one by one**: composite the section's `.avif` files into one strip (sharp: resize each to 400×250, `composite` onto one canvas, output PNG) and check —
+
+- one vivid accent per state (blue `#0091ff`) against neutral stages, not a new hue per example;
+- adjacent cards alternate light/dark stages (grayscale basemap vs space/dark map) so the row doesn't blur together;
+- no two near-identical compositions — when two examples share a subject (e.g. two space globes), mirror the composition via `atmosphere.date` (put the terminator on opposite sides) or change altitude/framing.

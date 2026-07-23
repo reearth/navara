@@ -1,0 +1,45 @@
+# git-cliff configuration for generating CHANGELOG.md from conventional
+# commits. Run locally via `cargo make changelog vX.Y.Z`, then review and edit
+# the generated section before committing — the committed file is the source
+# of truth for GitHub release notes (see .github/workflows/release.yml).
+# https://git-cliff.org/docs/configuration
+
+[changelog]
+# Rendered once per version. Section headers must start with `## vX.Y.Z`;
+# scripts/extract-changelog.mjs matches either `## vX.Y.Z` or `## vX.Y.Z ...`.
+body = """
+## {% if version %}{{ version }}{% else %}Unreleased{% endif %}{% if timestamp %} - {{ timestamp | date(format="%Y-%m-%d") }}{% endif %}
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | striptags | trim | upper_first }}
+{% for commit in commits %}
+- {% if commit.breaking %}**BREAKING:** {% endif %}\
+{% if commit.scope %}*({{ commit.scope }})* {% endif %}\
+{{ commit.message | split(pat="\n") | first | trim | upper_first }}
+{%- endfor %}
+{% endfor %}
+"""
+trim = true
+
+[git]
+conventional_commits = true
+# Keep non-conventional commits instead of dropping them silently; the
+# catch-all parser below puts them under "Other".
+filter_unconventional = false
+protect_breaking_commits = true
+# Only tags created by the release flow count as release boundaries.
+tag_pattern = "^v[0-9]+\\.[0-9]+\\.[0-9]+$"
+sort_commits = "oldest"
+
+# The <!-- N --> prefix fixes the section order; `striptags` removes it from
+# the rendered output.
+commit_parsers = [
+  { message = "^feat", group = "<!-- 0 -->🚀 Features" },
+  { message = "^fix", group = "<!-- 1 -->🐛 Bug Fixes" },
+  { message = "^perf", group = "<!-- 2 -->⚡ Performance" },
+  { message = "^refactor", group = "<!-- 3 -->🔨 Refactoring" },
+  { message = "^docs", group = "<!-- 4 -->📚 Documentation" },
+  { message = "^test", group = "<!-- 5 -->🧪 Testing" },
+  { message = "^(chore|ci|build)\\(release\\)", skip = true },
+  { message = "^(chore|ci|build|style)", group = "<!-- 6 -->🧹 Miscellaneous" },
+  { message = ".*", group = "<!-- 7 -->Other" },
+]

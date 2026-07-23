@@ -14,6 +14,9 @@ attribute float glyphIsColor; // 1.0 = sample COLRv1 color atlas, 0.0 = sample S
     uniform vec3 uRTEPositionHIGH;
     uniform vec3 uEyeRTEHigh;
     uniform vec3 uEyeRTELow;
+    // Always 1.0 — blocks fast-math reassociation of the high/low
+    // recombination (see chunks/rte_pars_vertex.glsl).
+    uniform float u_rteOne;
 #else
     uniform vec3 uRTCPosition;
     uniform vec3 uRTCCenter;
@@ -66,7 +69,8 @@ void main() {
 
     vec4 mvPosition;
 #ifdef USE_RTE
-    vec3 highDiff = uRTEPositionHIGH - uEyeRTEHigh;
+    // The u_rteOne (== 1.0) factor is load-bearing: see chunks/rte_pars_vertex.glsl.
+    vec3 highDiff = (uRTEPositionHIGH - uEyeRTEHigh) * u_rteOne;
     vec3 lowDiff = uRTEPositionLOW - uEyeRTELow;
     vec3 resolvedPosition = highDiff + lowDiff;
 
