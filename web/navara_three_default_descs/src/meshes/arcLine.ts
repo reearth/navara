@@ -8,6 +8,7 @@ import {
   geodeticToVector3,
   degreeToRadian,
   encodePositionRTE,
+  RTE_ONE_UNIFORM,
 } from "@navaramap/three";
 import ArclineFragShader from "@shaders/glsl/arcLine.frag.glsl";
 import ArclineVertShader from "@shaders/glsl/arcLine.vert.glsl";
@@ -662,6 +663,9 @@ export class ArcLine extends Object3D {
       u_cameraPositionHigh: { value: new Vector3() },
       u_cameraPositionLow: { value: new Vector3() },
       modelViewMatrixRTE: { value: new Matrix4() },
+      // Load-bearing 1.0: prevents the compiler from reassociating the RTE
+      // high/low subtraction back into absolute-ECEF f32 precision.
+      u_rteOne: RTE_ONE_UNIFORM,
     };
 
     material.depthTest = true;
