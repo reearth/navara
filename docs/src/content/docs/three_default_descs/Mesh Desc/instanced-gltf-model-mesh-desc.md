@@ -146,6 +146,16 @@ Subscribe via `handle.on(event, handler)`.
 () => void
 ```
 
+### error
+
+**Description:** Emitted when loading the GLTF fails.
+
+**Handler Type:**
+
+```typescript
+(error: unknown) => void
+```
+
 ### needsUpdate
 
 **Description:** Emitted when the descriptor's instance state changes (add/remove/update/replace/clear).

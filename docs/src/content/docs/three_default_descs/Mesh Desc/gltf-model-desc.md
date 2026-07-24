@@ -385,6 +385,18 @@ modelDesc.ref.on("load", () => {
 });
 ```
 
+### error
+
+**Description:** Fired when the model fails to load.
+
+**Example:**
+
+```typescript
+modelDesc.ref.on("error", (error) => {
+  console.warn("Model failed to load:", error);
+});
+```
+
 ### animationReady
 
 **Description:** Fired when animation initialization is complete.

@@ -385,6 +385,18 @@ modelDesc.ref.on("load", () => {
 });
 ```
 
+### error
+
+**Description:** モデルの読み込みに失敗したときに発火します。
+
+**Example:**
+
+```typescript
+modelDesc.ref.on("error", (error) => {
+  console.warn("Model failed to load:", error);
+});
+```
+
 ### animationReady
 
 **Description:** アニメーションの初期化が完了したときに発火します。

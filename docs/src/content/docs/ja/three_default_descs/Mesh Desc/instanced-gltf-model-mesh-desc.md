@@ -146,6 +146,16 @@ GLTF の内容に基づき、2 つの内部レンダリングパスのいずれ�
 () => void
 ```
 
+### error
+
+**Description:** GLTF の読み込みに失敗したときに発火します。
+
+**Handler Type:**
+
+```typescript
+(error: unknown) => void
+```
+
 ### needsUpdate
 
 **Description:** descriptor のインスタンス状態が変化（追加・削除・更新・置換・クリア）したときに発火します。
