@@ -133,25 +133,40 @@ export class ArcLine extends Object3D {
       this.add(subMesh);
     });
 
-    // Setup shared RTE callback for all sub-meshes
-    // All sub-meshes share the same RTE uniforms and can use the same modelViewMatrixRTE because:
-    // 1. All sub-meshes are at origin (no local transforms)
-    // 2. Real world positions are encoded in ECEF coordinates (per-instance attributes)
-    // 3. modelViewMatrixRTE = identityMatrix * camera.matrixWorldInverse (rotation-only view matrix)
-    // Only the first sub-mesh needs onBeforeRender/onBeforeShadow callbacks to update shared uniforms
-    if (this._subMeshes.length > 0) {
-      const identityMatrix = new Matrix4();
-      const callback = setupRTEBeforeRender(
-        this,
-        this._sharedRTEUniforms,
-        identityMatrix,
-        identityMatrix,
-      );
+    this.attachRteCallback();
+  }
 
-      if (callback) {
-        this._subMeshes[0].onBeforeRender = callback;
-        this._subMeshes[0].onBeforeShadow = callback;
-      }
+  /**
+   * Attach the per-frame RTE uniform updater to the current first sub-mesh.
+   *
+   * All sub-meshes share the same RTE uniforms and can use the same
+   * modelViewMatrixRTE because:
+   * 1. All sub-meshes are at origin (no local transforms)
+   * 2. Real world positions are encoded in ECEF coordinates (per-instance attributes)
+   * 3. modelViewMatrixRTE = identityMatrix * camera.matrixWorldInverse (rotation-only view matrix)
+   *
+   * So only one sub-mesh needs the onBeforeRender/onBeforeShadow callback that
+   * refreshes the shared uniforms each frame. It must be re-attached whenever
+   * sub-meshes are rebuilt (e.g. `segments` change), because a rebuild replaces
+   * the sub-mesh instance and would otherwise drop the callback — freezing the
+   * RTE uniforms and making the arc appear to follow the camera.
+   */
+  private attachRteCallback(): void {
+    if (this._subMeshes.length === 0) {
+      return;
+    }
+
+    const identityMatrix = new Matrix4();
+    const callback = setupRTEBeforeRender(
+      this,
+      this._sharedRTEUniforms,
+      identityMatrix,
+      identityMatrix,
+    );
+
+    if (callback) {
+      this._subMeshes[0].onBeforeRender = callback;
+      this._subMeshes[0].onBeforeShadow = callback;
     }
   }
 
@@ -903,6 +918,13 @@ export class ArcLine extends Object3D {
       this._subMeshes[configIndex] = newMesh;
       this.add(newMesh);
     });
+
+    // A rebuild replaces sub-mesh instances, so the RTE uniform-update callback
+    // (attached to the first sub-mesh) must be re-attached — otherwise the arc's
+    // shared RTE uniforms freeze and it appears to follow the camera.
+    if (configsNeedingRebuild.size > 0) {
+      this.attachRteCallback();
+    }
 
     // Handle configs that need to update arc vertex (ECEF re-encoding)
     configsNeedingUpdateArcVertex.forEach((configIndex) => {
