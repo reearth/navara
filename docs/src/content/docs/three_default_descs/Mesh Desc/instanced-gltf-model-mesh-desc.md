@@ -134,7 +134,7 @@ Properties for each individual model instance, specified in the `children` array
 
 ## Events
 
-Subscribe via `handle.on(event, handler)`.
+Subscribe via `handle.ref.on(event, handler)`.
 
 ### load
 
@@ -214,7 +214,7 @@ Gets the number of active instances.
 Read-only list of animation clip names found in the loaded GLTF. Empty until the `load` event fires.
 
 ```typescript
-handle.on("load", () => {
+handle.ref.on("load", () => {
   console.log("Available clips:", handle.ref.animationClips);
 });
 ```
@@ -276,7 +276,7 @@ const handle = view.addMesh<InstancedGltfModelMeshDesc>({
   position: { x: 0, y: 0, z: 6378137 },
 });
 
-handle.on("load", () => {
+handle.ref.on("load", () => {
   console.log("Clips:", handle.ref.animationClips);
 });
 ```
