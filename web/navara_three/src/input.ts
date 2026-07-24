@@ -20,12 +20,13 @@ export function registerInputEvents(
   // drag delta is never computed against a stale position (e.g. after the
   // window lost focus while the OS cursor kept moving).
   const normalizePosition = (event: MouseEvent) => {
+    const rect = element.getBoundingClientRect();
     const width = element.clientWidth;
     const height = element.clientHeight;
     const aspectRatio = width / height;
     return {
-      x: (event.clientX / width) * aspectRatio,
-      y: event.clientY / height,
+      x: ((event.clientX - rect.left) / width) * aspectRatio,
+      y: (event.clientY - rect.top) / height,
     };
   };
 
