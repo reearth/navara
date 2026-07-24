@@ -80,6 +80,9 @@ pub struct VectorTileSourceDescription {
     pub url: Option<String>,
     #[wasm_bindgen(getter_with_clone)]
     pub crs: Option<String>,
+    #[wasm_bindgen(js_name = minZoom)]
+    #[serde(rename = "minZoom")]
+    pub min_zoom: Option<usize>,
     #[wasm_bindgen(js_name = maxZoom)]
     #[serde(rename = "maxZoom")]
     pub max_zoom: Option<usize>,
@@ -89,6 +92,11 @@ pub struct VectorTileSourceDescription {
     #[wasm_bindgen(js_name = maxSse)]
     #[serde(rename = "maxSse")]
     pub max_sse: Option<f32>,
+    /// Per-layer horizon dynamic-SSE relaxation strength (`0.0` off … `1.0`
+    /// raster-equivalent). Omit for a content-based default.
+    #[wasm_bindgen(js_name = dynamicSseScale)]
+    #[serde(rename = "dynamicSseScale")]
+    pub dynamic_sse_scale: Option<f32>,
 }
 
 #[wasm_bindgen]
@@ -303,6 +311,9 @@ impl VectorLayerDescription {
                 source_id: Some(source.source_id().to_owned()),
                 appearances,
                 crs: gj.crs.clone(),
+                // No per-layer override on this source-reconstruction path;
+                // the tiled traverse falls back to the content-based default.
+                dynamic_sse_scale: None,
             }))),
             _ => None,
         }
@@ -579,6 +590,10 @@ impl SourceDescription {
                 Some(Source::VectorTile(VectorTileSource {
                     source_id: source_id.to_string(),
                     url: desc.url.or_else(|| old.map(|o| o.url.clone()))?,
+                    min_zoom: desc
+                        .min_zoom
+                        .or(old.map(|o| o.min_zoom))
+                        .unwrap_or(DEFAULT_MIN_ZOOM),
                     max_zoom: desc
                         .max_zoom
                         .or(old.map(|o| o.max_zoom))
@@ -591,6 +606,9 @@ impl SourceDescription {
                         .max_sse
                         .or(old.map(|o| o.max_sse))
                         .unwrap_or(DEFAULT_MAX_SSE),
+                    dynamic_sse_scale: desc
+                        .dynamic_sse_scale
+                        .or(old.and_then(|o| o.dynamic_sse_scale)),
                     crs: crs(desc.crs).or_else(|| old.and_then(|o| o.crs.clone())),
                 }))
             }
@@ -968,11 +986,13 @@ pub fn legacy_source(source_id: &str, layer_type: &str, value: JsValue) -> Optio
             Some(Source::VectorTile(VectorTileSource {
                 source_id: source_id.to_owned(),
                 url: url?,
+                min_zoom: vt.and_then(|m| m.min_zoom).unwrap_or(DEFAULT_MIN_ZOOM),
                 max_zoom: vt.and_then(|m| m.max_zoom).unwrap_or(DEFAULT_MAX_ZOOM),
                 overscaled_max_zoom: vt
                     .and_then(|m| m.overscaled_max_zoom)
                     .unwrap_or(DEFAULT_OVERSCALED_MAX_ZOOM),
                 max_sse: vt.and_then(|m| m.max_sse).unwrap_or(DEFAULT_MAX_SSE),
+                dynamic_sse_scale: vt.and_then(|m| m.dynamic_sse_scale),
                 crs: None,
             }))
         }
@@ -1066,6 +1086,7 @@ mod tests {
             source_id: Some("source".into()),
             appearances,
             crs: None,
+            dynamic_sse_scale: None,
         }))
     }
 

@@ -107,5 +107,27 @@
     "github": "GitHub",
     "discord": "Discord",
     "credit": "Navara · MIT / Apache-2.0"
+  },
+  "imageAlts": {
+    "hero": "Main visual: a globe rendered with Navara",
+    "tutorial-wide": "Realistic Atmosphere tutorial",
+    "tutorial-left": "Arc Line Visualization tutorial",
+    "tutorial-right": "Interior Explore tutorial",
+    "example-row1-left": "Atmospheric scattering — New York at dusk",
+    "example-row1-right": "Volumetric clouds",
+    "example-row2-left": "Text labels",
+    "example-row2-center": "glTF animation",
+    "example-row2-right": "A city in the rain",
+    "example-row3-left": "Massive rendering with instanced meshes",
+    "example-row3-right": "Sun position simulation — Tokyo at sunset",
+    "example-row4-left": "Gaussian Splatting",
+    "example-row4-center-left": "Polyline — road network",
+    "example-row4-center-right": "glTF model",
+    "example-row4-right": "Extruded polygons",
+    "maplibre-logo": "MapLibre logo",
+    "maplibre-visual": "A map rendered with a MapLibre style",
+    "users-1": "Re:Earth screenshot",
+    "users-2": "Screenshot of PLATEAU 3D city models",
+    "users-3": "Hiroshima Archive screenshot"
   }
 }

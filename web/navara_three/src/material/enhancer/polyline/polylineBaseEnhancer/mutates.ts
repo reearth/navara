@@ -1,3 +1,4 @@
+import { RTE_ONE_UNIFORM } from "@navaramap/three_api";
 import {
   Color as ThreeColor,
   Matrix4 as ThreeMatrix4,
@@ -101,6 +102,7 @@ export const createBaseMutates = (useRTE: boolean): PolylineBaseMutates => {
         uniforms.u_cameraPositionHigh = refs.u_cameraPositionHigh;
         uniforms.u_cameraPositionLow = refs.u_cameraPositionLow;
         uniforms.modelViewMatrixRTE = refs.modelViewMatrixRTE;
+        uniforms.u_rteOne = RTE_ONE_UNIFORM;
       }
 
       // Batch texture

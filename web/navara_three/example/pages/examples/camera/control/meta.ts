@@ -5,8 +5,8 @@ export default {
   order: 5,
   title: { en: "Camera", ja: "Camera" },
   description: {
-    en: "Place the view precisely with setCamera, then glide between airports with flyTo.",
-    ja: "setCamera で視点を厳密に置き、flyTo で世界の空港へ滑空する。",
+    en: "Set the initial view with setCamera, then move the camera with an animated flyTo.",
+    ja: "setCamera で初期位置を設定し、flyTo でアニメーション付きでカメラ移動する。",
   },
   docs: "three/api/camera",
 } satisfies ExampleMeta;

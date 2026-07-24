@@ -49,7 +49,6 @@ const imageModules = import.meta.glob<{ default: ImageMetadata }>(
 
 interface ImageSlot {
   src: string | null;
-  alt: string;
   href?: string;
 }
 
@@ -71,6 +70,12 @@ const slot = (id: string): ImageSlot => {
   return s;
 };
 const src = (id: string): string | null => resolveImage(slot(id));
+// Alt text is copy, so it lives with the locale strings (imageAlts, keyed by slot id).
+const alt = (id: string): string => {
+  const text = t.imageAlts?.[id];
+  if (text === undefined) throw new Error(`LP image alt not defined for locale "${locale}": ${id}`);
+  return text;
+};
 
 const { colors, links } = lp;
 const rootStyle = `--pri:${colors.primary};--acc:${colors.accent};--sub:${colors.sub};--ml:${colors.maplibre}`;
@@ -128,7 +133,7 @@ const rootStyle = `--pri:${colors.primary};--acc:${colors.accent};--sub:${colors
            visible the page scrolls normally again. -->
       <div class="lp-hero-stage">
         <div class="lp-hero">
-          {src("hero") && <img src={src("hero")} alt={slot("hero").alt} />}
+          {src("hero") && <img src={src("hero")} alt={alt("hero")} />}
         </div>
         <!-- Catch copy + intro -->
         <section class="lp-intro">
@@ -262,7 +267,7 @@ const rootStyle = `--pri:${colors.primary};--acc:${colors.accent};--sub:${colors
               data-motion="img"
               href={localizeHref(slot("tutorial-wide").href ?? links.tutorial)}
             >
-              {src("tutorial-wide") && <img src={src("tutorial-wide")} alt={slot("tutorial-wide").alt} />}
+              {src("tutorial-wide") && <img src={src("tutorial-wide")} alt={alt("tutorial-wide")} />}
             </a>
             <a
               class="lp-tile lp-tile-half"
@@ -270,7 +275,7 @@ const rootStyle = `--pri:${colors.primary};--acc:${colors.accent};--sub:${colors
               data-motion="img"
               href={localizeHref(slot("tutorial-left").href ?? links.tutorial)}
             >
-              {src("tutorial-left") && <img src={src("tutorial-left")} alt={slot("tutorial-left").alt} />}
+              {src("tutorial-left") && <img src={src("tutorial-left")} alt={alt("tutorial-left")} />}
             </a>
             <a
               class="lp-tile lp-tile-half"
@@ -279,33 +284,46 @@ const rootStyle = `--pri:${colors.primary};--acc:${colors.accent};--sub:${colors
               style="--rd:1"
               href={localizeHref(slot("tutorial-right").href ?? links.tutorial)}
             >
-              {src("tutorial-right") && <img src={src("tutorial-right")} alt={slot("tutorial-right").alt} />}
+              {src("tutorial-right") && <img src={src("tutorial-right")} alt={alt("tutorial-right")} />}
             </a>
           </div>
           <div class="lp-example-grid">
           <!-- Row 1 — 3:2 -->
-          <div class="lp-tile lp-span-9" data-reveal data-motion="img">
-            {src("example-row1-left") && <img src={src("example-row1-left")} alt={slot("example-row1-left").alt} />}
+          <div class="lp-tile lp-span-36" data-reveal data-motion="img">
+            {src("example-row1-left") && <img src={src("example-row1-left")} alt={alt("example-row1-left")} />}
           </div>
-          <div class="lp-tile lp-span-6" data-reveal data-motion="img" style="--rd:1">
-            {src("example-row1-right") && <img src={src("example-row1-right")} alt={slot("example-row1-right").alt} />}
+          <div class="lp-tile lp-span-24" data-reveal data-motion="img" style="--rd:1">
+            {src("example-row1-right") && <img src={src("example-row1-right")} alt={alt("example-row1-right")} />}
           </div>
           <!-- Row 2 — 1:1:1 -->
-          <div class="lp-tile lp-span-5" data-reveal data-motion="img">
-            {src("example-row2-left") && <img src={src("example-row2-left")} alt={slot("example-row2-left").alt} />}
+          <div class="lp-tile lp-span-20" data-reveal data-motion="img">
+            {src("example-row2-left") && <img src={src("example-row2-left")} alt={alt("example-row2-left")} />}
           </div>
-          <div class="lp-tile lp-span-5" data-reveal data-motion="img" style="--rd:1">
-            {src("example-row2-center") && <img src={src("example-row2-center")} alt={slot("example-row2-center").alt} />}
+          <div class="lp-tile lp-span-20" data-reveal data-motion="img" style="--rd:1">
+            {src("example-row2-center") && <img src={src("example-row2-center")} alt={alt("example-row2-center")} />}
           </div>
-          <div class="lp-tile lp-span-5" data-reveal data-motion="img" style="--rd:2">
-            {src("example-row2-right") && <img src={src("example-row2-right")} alt={slot("example-row2-right").alt} />}
+          <div class="lp-tile lp-span-20" data-reveal data-motion="img" style="--rd:2">
+            {src("example-row2-right") && <img src={src("example-row2-right")} alt={alt("example-row2-right")} />}
           </div>
           <!-- Row 3 — 2:3 -->
-          <div class="lp-tile lp-span-6" data-reveal data-motion="img">
-            {src("example-row3-left") && <img src={src("example-row3-left")} alt={slot("example-row3-left").alt} />}
+          <div class="lp-tile lp-span-24" data-reveal data-motion="img">
+            {src("example-row3-left") && <img src={src("example-row3-left")} alt={alt("example-row3-left")} />}
           </div>
-          <div class="lp-tile lp-span-9" data-reveal data-motion="img" style="--rd:1">
-            {src("example-row3-right") && <img src={src("example-row3-right")} alt={slot("example-row3-right").alt} />}
+          <div class="lp-tile lp-span-36" data-reveal data-motion="img" style="--rd:1">
+            {src("example-row3-right") && <img src={src("example-row3-right")} alt={alt("example-row3-right")} />}
+          </div>
+          <!-- Row 4 — 3:3:2:2 -->
+          <div class="lp-tile lp-span-15" data-reveal data-motion="img">
+            {src("example-row4-left") && <img src={src("example-row4-left")} alt={alt("example-row4-left")} />}
+          </div>
+          <div class="lp-tile lp-span-15" data-reveal data-motion="img" style="--rd:1">
+            {src("example-row4-center-left") && <img src={src("example-row4-center-left")} alt={alt("example-row4-center-left")} />}
+          </div>
+          <div class="lp-tile lp-span-15" data-reveal data-motion="img" style="--rd:2">
+            {src("example-row4-center-right") && <img src={src("example-row4-center-right")} alt={alt("example-row4-center-right")} />}
+          </div>
+          <div class="lp-tile lp-span-15" data-reveal data-motion="img" style="--rd:3">
+            {src("example-row4-right") && <img src={src("example-row4-right")} alt={alt("example-row4-right")} />}
           </div>
           </div>
           </div>
@@ -322,7 +340,7 @@ const rootStyle = `--pri:${colors.primary};--acc:${colors.accent};--sub:${colors
                   <img
                     class="lp-maplibre-logo"
                     src={src("maplibre-logo")}
-                    alt={slot("maplibre-logo").alt}
+                    alt={alt("maplibre-logo")}
                   />
                 ) : (
                   <div class="lp-maplibre-logo lp-maplibre-logo-placeholder" />
@@ -349,7 +367,7 @@ const rootStyle = `--pri:${colors.primary};--acc:${colors.accent};--sub:${colors
             </p>
           </div>
           <div class="lp-maplibre-visual" data-reveal data-motion="img">
-            {src("maplibre-visual") && <img src={src("maplibre-visual")} alt={slot("maplibre-visual").alt} />}
+            {src("maplibre-visual") && <img src={src("maplibre-visual")} alt={alt("maplibre-visual")} />}
           </div>
         </div>
       </section>
@@ -365,7 +383,7 @@ const rootStyle = `--pri:${colors.primary};--acc:${colors.accent};--sub:${colors
               t.users.items.map((item: any) => (
                 <div>
                   <div class="lp-user-visual">
-                    {src(item.slot) && <img src={src(item.slot)} alt={slot(item.slot).alt} />}
+                    {src(item.slot) && <img src={src(item.slot)} alt={alt(item.slot)} />}
                   </div>
                   <b>{item.name}</b>
                   <p>{item.desc}</p>
@@ -1325,24 +1343,27 @@ const rootStyle = `--pri:${colors.primary};--acc:${colors.accent};--sub:${colors
       .lp-tile-half {
         height: min(30vw, 480px);
       }
-      /* 15-column grid so rows can mix 3:2 (9+6), 1:1:1 (5+5+5), and
-         2:3 (6+9). */
+      /* 60-column grid so rows can mix 3:2 (36+24), 1:1:1 (20+20+20),
+         2:3 (24+36), and 1:1:1:1 (15x4) — one distinct split per row. */
       .lp-example-grid {
         display: grid;
-        grid-template-columns: repeat(15, 1fr);
+        grid-template-columns: repeat(60, 1fr);
         grid-auto-rows: min(32vw, 512px);
         gap: 2px;
         margin-top: 2px;
         background: var(--sub);
       }
-      .lp-span-5 {
-        grid-column: span 5;
+      .lp-span-15 {
+        grid-column: span 15;
       }
-      .lp-span-6 {
-        grid-column: span 6;
+      .lp-span-20 {
+        grid-column: span 20;
       }
-      .lp-span-9 {
-        grid-column: span 9;
+      .lp-span-24 {
+        grid-column: span 24;
+      }
+      .lp-span-36 {
+        grid-column: span 36;
       }
 
       /* MapLibre family */

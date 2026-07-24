@@ -67,11 +67,12 @@ void main() {
     vec3 offset;
 
     #ifdef USE_RTE
-        vec3 startHighDiff = start_3d_high - u_cameraPositionHigh;
+        // The u_rteOne (== 1.0) factors are load-bearing: see chunks/rte_pars_vertex.glsl.
+        vec3 startHighDiff = (start_3d_high - u_cameraPositionHigh) * u_rteOne;
         vec3 startLowDiff = start_3d_low - u_cameraPositionLow;
         vec3 startCameraRelative = startHighDiff + startLowDiff;
 
-        vec3 endHighDiff = end_3d_high - u_cameraPositionHigh;
+        vec3 endHighDiff = (end_3d_high - u_cameraPositionHigh) * u_rteOne;
         vec3 endLowDiff = end_3d_low - u_cameraPositionLow;
         vec3 endCameraRelative = endHighDiff + endLowDiff;
 

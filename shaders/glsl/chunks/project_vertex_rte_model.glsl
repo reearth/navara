@@ -16,7 +16,8 @@
 // the behavior of the standard #include <project_vertex> chunk we replace.
 
 // Calculate camera-relative model center offset (high-precision)
-vec3 modelHighDiff = rtePosHigh - u_cameraPositionHigh;
+// The u_rteOne (== 1.0) factor is load-bearing: see rte_pars_vertex.glsl.
+vec3 modelHighDiff = (rtePosHigh - u_cameraPositionHigh) * u_rteOne;
 vec3 modelLowDiff = rtePosLow - u_cameraPositionLow;
 vec3 modelCenterOffset = modelHighDiff + modelLowDiff;
 

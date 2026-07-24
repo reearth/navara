@@ -19,5 +19,6 @@ export function processPolygonChanged(
   active: boolean,
   tileHandle: TileHandle | undefined,
 ) {
-  obj._update(m.material, active, !!tileHandle);
+  // `!= null`, not truthiness: the root vector tile's handle is 0.
+  obj._update(m.material, active, tileHandle != null);
 }

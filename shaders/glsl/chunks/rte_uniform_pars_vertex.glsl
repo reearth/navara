@@ -12,6 +12,10 @@
 uniform vec3 u_cameraPositionHigh;
 uniform vec3 u_cameraPositionLow;
 
+// Always 1.0 — blocks fast-math reassociation of the high/low recombination
+// (see rte_pars_vertex.glsl for the full explanation).
+uniform float u_rteOne;
+
 // Model-view matrix with translation zeroed out (rotation only)
 uniform mat4 modelViewMatrixRTE;
 

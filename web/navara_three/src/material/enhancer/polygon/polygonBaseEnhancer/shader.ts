@@ -115,7 +115,11 @@ ${ShadowMapDepthVertex}
 #include <envmap_vertex>
 
 vPosition = absTransformed.xyz;
-vViewPosition = -absMvPosition.xyz;
+// mvPosition comes from the RTE projection (modelViewMatrixRTE * camera-relative
+// position), so it is precise at any distance. Deriving vViewPosition from
+// modelViewMatrix * absTransformed instead would suffer f32 cancellation at
+// ECEF magnitude and make view-dependent shading wobble as the camera moves.
+vViewPosition = -mvPosition.xyz;
 `,
       useRTE,
     )

@@ -146,6 +146,7 @@ const run = async () => {
 
   attribution?.add([
     TILE_DATASETS.gsiSeamlessphoto,
+    TERRAIN_DATASETS.gsi,
     MVT_DATASETS.plateauTokyoFirePrevention,
   ]);
 };

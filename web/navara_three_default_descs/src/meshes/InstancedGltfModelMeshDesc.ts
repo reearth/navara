@@ -6,6 +6,7 @@ import {
   createReplacer,
   encodePositionRTE,
   setupRTEBeforeRender,
+  RTE_ONE_UNIFORM,
   type MeshConfig,
   type MeshUpdate,
   type PassKey,
@@ -349,6 +350,7 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
       shader.uniforms.rtePosLow = { value: this.rtePosLow };
       shader.uniforms.modelViewMatrixRTE = this.rteUserData
         .modelViewMatrixRTE ?? { value: new Matrix4() };
+      shader.uniforms.u_rteOne = RTE_ONE_UNIFORM;
 
       shader.vertexShader = createReplacer(shader.vertexShader)
         .replace(

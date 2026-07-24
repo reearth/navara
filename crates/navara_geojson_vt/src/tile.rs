@@ -187,12 +187,16 @@ fn transform_geometry(
             }
         }
         InternalGeometry::MultiPolygon(polygons) => {
-            let mut all_rings: Vec<Vec<[f64; 2]>> =
-                Vec::with_capacity(polygons.iter().map(|p| p.len()).sum::<usize>());
+            // Keep each member polygon's rings grouped: downstream consumers
+            // read `polygon[0]` as the outer ring and `polygon[1..]` as holes,
+            // so flattening every member's rings into one polygon would turn
+            // the 2nd..Nth outer rings into holes of the 1st.
+            let mut all_polygons: Vec<Vec<Vec<[f64; 2]>>> = Vec::with_capacity(polygons.len());
             for rings in polygons {
+                let mut polygon_rings: Vec<Vec<[f64; 2]>> = Vec::with_capacity(rings.len());
                 for (i, ring) in rings.iter().enumerate() {
                     add_line(
-                        &mut all_rings,
+                        &mut polygon_rings,
                         ring,
                         z2,
                         tile_x,
@@ -206,11 +210,14 @@ fn transform_geometry(
                         num_simplified,
                     );
                 }
+                if !polygon_rings.is_empty() {
+                    all_polygons.push(polygon_rings);
+                }
             }
-            if all_rings.is_empty() {
+            if all_polygons.is_empty() {
                 None
             } else {
-                Some(TileGeometry::Polygons(vec![all_rings]))
+                Some(TileGeometry::Polygons(all_polygons))
             }
         }
     }

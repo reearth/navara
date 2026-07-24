@@ -59,6 +59,7 @@ impl Source {
     /// Minimum zoom level this source provides tiles for.
     pub fn min_zoom(&self) -> usize {
         match self {
+            Source::VectorTile(s) => s.min_zoom,
             Source::RasterTile(s) => s.min_zoom,
             Source::RasterDem(s) => s.min_zoom,
             Source::QuantizedMesh(s) => s.min_zoom,
@@ -227,9 +228,17 @@ pub struct GeoJsonSource {
 pub struct VectorTileSource {
     pub source_id: String,
     pub url: String,
+    /// Lowest zoom the source provides data for. Traversal never selects a
+    /// tile below this level as a leaf, so LOD relaxation (dynamic SSE) can
+    /// coarsen down to — but not past — the data-available floor.
+    pub min_zoom: usize,
     pub max_zoom: usize,
     pub overscaled_max_zoom: usize,
     pub max_sse: f32,
+    /// Per-layer override for the horizon dynamic-SSE relaxation strength
+    /// (`0.0` off … `1.0` raster-equivalent). `None` falls back to a
+    /// content-based default (see `TraversalConfig::from_appearances`).
+    pub dynamic_sse_scale: Option<f32>,
     pub crs: Option<CRS>,
 }
 

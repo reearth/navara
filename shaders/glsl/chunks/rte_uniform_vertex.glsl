@@ -10,6 +10,7 @@
 //
 
 vec3 absTransformed = rtePosHigh + rtePosLow; // Absolute world position
-vec3 highDiff = rtePosHigh - u_cameraPositionHigh;
+// The u_rteOne (== 1.0) factor is load-bearing: see rte_pars_vertex.glsl.
+vec3 highDiff = (rtePosHigh - u_cameraPositionHigh) * u_rteOne;
 vec3 lowDiff = rtePosLow - u_cameraPositionLow;
 vec3 transformed = highDiff + lowDiff; // Camera-relative position

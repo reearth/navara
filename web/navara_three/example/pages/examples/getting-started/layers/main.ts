@@ -25,8 +25,8 @@ view.addLight({ sun: { intensity: 1.8 } });
 
 view.setCamera({
   lng: 137.6501,
-  lat: 36.2357,
-  height: 1150,
+  lat: 36.2382,
+  height: 820,
   heading: 0,
   pitch: -50,
   roll: 0,

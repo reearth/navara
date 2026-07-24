@@ -155,7 +155,11 @@ const run = async () => {
       layer?.update({ polyline: { width: value } });
     });
 
-  attribution?.add([TILE_DATASETS.openstreetmap, MVT_DATASETS.plateauGifuTran]);
+  attribution?.add([
+    TILE_DATASETS.openstreetmap,
+    TERRAIN_DATASETS.gsi,
+    MVT_DATASETS.plateauGifuTran,
+  ]);
 };
 
 run();

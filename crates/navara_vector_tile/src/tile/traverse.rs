@@ -68,11 +68,22 @@ pub fn traverse_tile(
 ) -> TraversalResult {
     let tile = qt.qt.get_mut(handle).unwrap();
     tile.is_rendered = false;
+    let coords_z = tile.coords.z;
 
     let traversal_config = source_id.traversal_config();
 
     // Clamped to ground polygon need to be overscaled, since it is rendered as texture.
     let is_texturized = traversal_config.has_clamp_to_ground;
+
+    // Scale the horizon dynamic-SSE relaxation per layer instead of the global
+    // raster strength: clamp-to-ground polylines/polygons drape as a texture
+    // like raster but still carry geometry, so they take a reduced share;
+    // points and non-clamped geometry render as discrete features that vanish
+    // when over-coarsened, so they take only a slight share (never zero, so far
+    // tiles still relax a little). Strengths come from `TraversalConfig`
+    // (content-based defaults, per-layer overridable). The `min_zoom` gate
+    // below still bounds how far any of it can coarsen. (#697)
+    let dynamic_sse = dynamic_sse.scaled(traversal_config.dynamic_sse_scale() as f64);
 
     if tile.coords.z > traversal_config.max_zoom && !is_texturized {
         return TraversalResult::NotFound;
@@ -156,7 +167,29 @@ pub fn traverse_tile(
     } else {
         None
     };
-    let drape_source = if is_activated && !is_overscaled {
+
+    // Bake-readiness for the drape source. Texturized (clamp-to-ground) layers
+    // bake offscreen and are composited by the drape resolve, so a tile's source
+    // readiness is the STABLE "scene built" signal (JS-reported `is_rendered`),
+    // NOT the flickering LOD `active` flag: a built offscreen scene stays bakeable
+    // until eviction (its draped meshes are kept visible regardless of activation,
+    // JS-side), so every built tile is a valid drape source and the resolve picks
+    // the finest per region — raster-like, gap-free across LOD swaps. Tying it to
+    // `active` instead made the drape flicker: on a swap the old tile deactivated
+    // before the new one turned visible, leaving a frame with no bakeable source.
+    // Non-texturized layers render directly, so their `active` state is correct.
+    let bakeable = if is_texturized {
+        are_all_renderable_features_rendered(
+            tc,
+            &handle,
+            rendered_tiles,
+            features,
+            renderable_features,
+        )
+    } else {
+        is_activated
+    };
+    let drape_source = if bakeable && !is_overscaled {
         Some(handle)
     } else {
         inherited_drape_source
@@ -172,7 +205,13 @@ pub fn traverse_tile(
     } else {
         traversal_config.max_sse()
     } as f64;
-    let meets_sse = sse <= degrade.effective_max_sse(max_sse, distance_from_camera);
+    // Clamp LOD selection to the source's data-available floor: a tile below
+    // `min_zoom` never counts as a leaf, so dynamic-SSE relaxation can coarsen
+    // down to — but not past — where the source has data. Without this, a
+    // horizon-tilted view relaxes far tiles below `min_zoom` and their
+    // features vanish.
+    let meets_sse = coords_z >= traversal_config.min_zoom
+        && sse <= degrade.effective_max_sse(max_sse, distance_from_camera);
 
     let is_renderable = is_rendered_last_frame || is_tile_ready;
 
@@ -449,20 +488,25 @@ pub fn traverse_tile(
             return TraversalResult::NotFound;
         }
 
-        let tile = qt.qt.get_mut(handle).unwrap();
-        source.prepare_tile(
-            command,
-            tile,
-            handle,
-            tc,
-            buf,
-            data_requesters,
-            if is_culled_by_frustum {
-                Priority::Medium.demote()
-            } else {
-                Priority::Medium
-            },
-        );
+        // Below the source's data floor there is nothing to fetch; like the
+        // raster traverse, only request at or above `min_zoom` (traversal still
+        // descends toward it above).
+        if coords_z >= traversal_config.min_zoom {
+            let tile = qt.qt.get_mut(handle).unwrap();
+            source.prepare_tile(
+                command,
+                tile,
+                handle,
+                tc,
+                buf,
+                data_requesters,
+                if is_culled_by_frustum {
+                    Priority::Medium.demote()
+                } else {
+                    Priority::Medium
+                },
+            );
+        }
 
         return TraversalResult::NotFound;
     }
@@ -585,6 +629,29 @@ pub fn are_all_features_rendered(renderable_features: Option<Vec<&RenderableFeat
     renderable_features
         .map(|rs| rs.iter().all(|r| r.is_rendered()))
         .unwrap_or(false)
+}
+
+/// Whether every feature of this tile has been BUILT in the rendering engine
+/// (JS-reported `is_rendered`). Unlike activation this is stable — true from
+/// build until the tile is destroyed — so it is the drape-source readiness
+/// signal for texturized (clamp-to-ground) layers: a built offscreen scene is
+/// bakeable regardless of the LOD `active` flag (draped meshes are kept visible
+/// JS-side), the vector twin of a loaded raster texture. `false` when the tile
+/// has no rendered entity / features yet.
+pub fn are_all_renderable_features_rendered(
+    tc: &TileCacheManager,
+    handle: &TileHandle,
+    rendered_tiles: &Query<&RenderedTile>,
+    features: &Query<&FeatureId, With<VectorTileFeatureMarker>>,
+    renderable_features: &mut Query<&mut RenderableFeature>,
+) -> bool {
+    are_all_features_rendered(get_renderable_feature(
+        tc,
+        handle,
+        rendered_tiles,
+        features,
+        renderable_features,
+    ))
 }
 
 // We should use entity to store the rendered tile, because the Bevy's entity is extensible.

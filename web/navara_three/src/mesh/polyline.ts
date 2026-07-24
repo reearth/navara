@@ -404,8 +404,16 @@ export class PolylineMesh extends BatchedFeatureMesh<
 
     const enhancer = this.getEnhancer();
 
-    // Update mesh properties (not handled by enhancer)
-    this.visible = (material.show ?? true) && active;
+    // Update mesh properties (not handled by enhancer).
+    // Draped polylines render only through the offscreen bake, never the main
+    // scene, and the Rust drape resolve — not this LOD `active` flag — decides
+    // which baked tile is composited per terrain region. Tying bake visibility
+    // to `active` makes the drape flicker on every LOD swap (the tile goes
+    // invisible → bakes empty before its replacement is ready). Keep a draped
+    // mesh bakeable whenever its material is shown, so every built tile stays a
+    // stable drape source — the vector twin of a loaded raster texture.
+    const shown = material.show ?? true;
+    this.visible = enhancer.states().isTexturized ? shown : shown && active;
     this.castShadow = !!material.castShadow;
     this.receiveShadow = !!material.receiveShadow;
 

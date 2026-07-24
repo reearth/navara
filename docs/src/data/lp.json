@@ -16,71 +16,67 @@
   },
   "images": {
     "hero": {
-      "src": "docs/src/assets/hero.png",
-      "alt": "Navara で描画した地球儀のメインビジュアル"
+      "src": "docs/src/assets/hero.png"
     },
     "tutorial-wide": {
       "src": "docs/src/assets/tutorial/realistic-atmosphere-result.png",
-      "alt": "Realistic Atmosphere チュートリアル",
       "href": "/three/tutorial/realistic-atmosphere/"
     },
     "tutorial-left": {
       "src": "docs/src/assets/tutorial/arch-line-visualization-result.png",
-      "alt": "Arc Line Visualization チュートリアル",
       "href": "/three/tutorial/arch-line-visualization/"
     },
     "tutorial-right": {
       "src": "web/navara_three/example/public/screenshots/use-cases-interior-explore.avif",
-      "alt": "Interior Explore チュートリアル",
       "href": "/three/tutorial/interior-explore/"
     },
     "example-row1-left": {
-      "src": "web/navara_three/example/public/screenshots/getting-started/layers.avif",
-      "alt": "レイヤー表示"
+      "src": "web/navara_three/example/public/screenshots/sky/atmosphere.avif"
     },
     "example-row1-right": {
-      "src": "web/navara_three/example/public/screenshots/styling-geojson-polyline.avif",
-      "alt": "GeoJSON Polylineの表示"
+      "src": "web/navara_three/example/public/screenshots/weather/clouds.avif"
     },
     "example-row2-left": {
-      "src": "web/navara_three/example/public/screenshots/water-reflection.avif",
-      "alt": "SSR — 水面反射"
+      "src": "web/navara_three/example/public/screenshots/evaluator/text.avif"
     },
     "example-row2-center": {
-      "src": "web/navara_three/example/public/screenshots/selective-bloom-effect-mesh.avif",
-      "alt": "Selective Effect"
+      "src": "web/navara_three/example/public/screenshots/mesh/gltf-animation.avif"
     },
     "example-row2-right": {
-      "src": "web/navara_three/example/public/screenshots/styling-geojson-color-emoji.avif",
-      "alt": "Color emoji"
+      "src": "web/navara_three/example/public/screenshots/weather/precipitation.avif"
     },
     "example-row3-left": {
-      "src": "web/navara_three/example/public/screenshots/mapterhorn.avif",
-      "alt": "Terrain"
+      "src": "web/navara_three/example/public/screenshots/mesh/instanced.avif"
     },
     "example-row3-right": {
-      "src": "web/navara_three/example/public/screenshots/styling-cesium3dtiles.avif",
-      "alt": "Data-driven Styling"
+      "src": "web/navara_three/example/public/screenshots/sky/sun-time.avif"
+    },
+    "example-row4-left": {
+      "src": "web/navara_three/example/public/screenshots/mesh/splat.avif"
+    },
+    "example-row4-center-left": {
+      "src": "web/navara_three/example/public/screenshots/gis/polyline.avif"
+    },
+    "example-row4-center-right": {
+      "src": "web/navara_three/example/public/screenshots/mesh/gltf-model.avif"
+    },
+    "example-row4-right": {
+      "src": "web/navara_three/example/public/screenshots/gis/extruded-polygon.avif"
     },
     "maplibre-logo": {
-      "src": "docs/src/assets/lp/maplibre-logo.svg",
-      "alt": "MapLibre ロゴ"
+      "src": "docs/src/assets/lp/maplibre-logo.svg"
     },
     "maplibre-visual": {
-      "src": "web/navara_three/example/public/screenshots/maplibre-style.avif",
-      "alt": "MapLibre スタイルで描いた地図"
+      "src": "web/navara_three/example/public/screenshots/maplibre-style.avif"
     },
     "users-1": {
-      "src": "web/navara_three/example/public/screenshots/showcases-photoreal.avif",
-      "alt": "Re:Earth スクリーンショット"
+      "src": "web/navara_three/example/public/screenshots/showcases-photoreal.avif"
     },
     "users-2": {
-      "src": "web/navara_three/example/public/screenshots/styling-cesium3dtiles1.1.avif",
-      "alt": "PLATEAU 3D 都市モデルのスクリーンショット"
+      "src": "web/navara_three/example/public/screenshots/styling-cesium3dtiles1.1.avif"
     },
     "users-3": {
-      "src": "web/navara_three/example/public/screenshots/use-cases-photorealistic.avif",
-      "alt": "ヒロシマアーカイブ スクリーンショット"
+      "src": "web/navara_three/example/public/screenshots/use-cases-photorealistic.avif"
     }
   }
 }

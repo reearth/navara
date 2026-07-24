@@ -83,7 +83,7 @@ Gallery visual conventions (from the AD_EXAMPLE.md direction):
 
 - Neutral stage: the grayscale basemap `https://papers.reearth.land/styles/grayscale/tilejson.json` added via `TileJsonPlugin` (`tilejson.addSource({ type: "raster-tile", url }) ` + `view.addLayer({ type: "raster", source })`), so the data colors are the hero.
 - Data colors: one vivid accent per state rather than one hue per geometry (e.g. blue `#0091ff`, switching to orange `#ff6b2c` to visualize a style update).
-- Lighting for meshes/extrusions (Lambert materials render black unlit): `view.addLight({ ambient: { intensity: 0.6 } })` + `view.addLight({ sun: { intensity: 1.8 } })` with a **fixed UTC** `view.atmosphere.date`, instead of the full photoreal scene.
+- Lighting for meshes/extrusions (Lambert materials render black unlit): `view.addLight({ ambient: { intensity: 0.6 } })` + `view.addLight({ sun: { intensity: 1.8 } })` with a **fixed UTC** `view.atmosphere.date`, instead of the full photoreal scene. **Unlit content needs no lights at all**: clamp-to-ground (draped) vectors, `point`/`billboard` sprites, and raster basemaps render identically with zero lights — pure-2D pages should add none.
 
 ## Shared helpers — use these, don't reinvent
 

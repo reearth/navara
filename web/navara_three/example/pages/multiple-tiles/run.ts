@@ -66,5 +66,6 @@ export const run = async (view: ThreeView<DefaultDescriptions>) => {
     TILE_DATASETS.openstreetmap,
     TILE_DATASETS.gsiStd,
     TILE_DATASETS.gsiSeamlessphoto,
+    TERRAIN_DATASETS.reearthQuantizedMesh,
   ]);
 };

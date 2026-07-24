@@ -14,7 +14,13 @@ import invariant from "tiny-invariant";
 
 import { type ThreeViewCamera } from "./camera";
 import { ATMOSPHERE_ASSETS_URL, STBN_URL } from "./constants";
-import { shiftDateToElevation, shiftDateToHourAngle } from "./solar";
+import {
+  dateForSolarTime,
+  getSolarTime as solarTimeAt,
+  getSunElevation as sunElevationAt,
+  shiftDateToElevation,
+  shiftDateToHourAngle,
+} from "./solar";
 
 /**
  * Events emitted by the {@link Atmosphere} class.
@@ -256,6 +262,42 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
       .normalize();
     const dotProduct = normalizedPosition.dot(this.sunDirection);
     return dotProduct < 0;
+  }
+
+  /**
+   * Returns the sun's elevation angle in degrees above the local horizon at
+   * `location` for the current {@link date}. Positive is above the horizon,
+   * negative below (night); includes atmospheric refraction.
+   *
+   * @example
+   * const elevation = view.atmosphere.getSunElevation(view.camera.positionGeographic);
+   * if (elevation < 0) console.log("The sun has set.");
+   */
+  getSunElevation(location: { lat: number; lng: number }): number {
+    return sunElevationAt(this.date, location.lat, location.lng);
+  }
+
+  /**
+   * Returns the local apparent solar time at `lng` for the current
+   * {@link date}, in hours in the range [0, 24) where 12 is solar noon.
+   * Accounts for the equation of time.
+   *
+   * @example
+   * const hours = view.atmosphere.getSolarTime({ lng: 139.69 }); // e.g. 6.3 = 06:18
+   */
+  getSolarTime(location: { lng: number }): number {
+    return solarTimeAt(this.date, location.lng);
+  }
+
+  /**
+   * Sets {@link date} so the local apparent solar time at `lng` equals `hours`
+   * (0–24), keeping the same solar day. Inverse of {@link getSolarTime}.
+   *
+   * @example
+   * view.atmosphere.setSolarTime({ lng: 139.69 }, 6.3); // sunrise over Tokyo
+   */
+  setSolarTime(location: { lng: number }, hours: number): void {
+    this.date = dateForSolarTime(this.date, location.lng, hours);
   }
 
   /**

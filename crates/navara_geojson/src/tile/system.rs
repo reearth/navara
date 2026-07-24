@@ -69,8 +69,18 @@ pub fn setup_tiled_geojson(
         let extent = opts.extent;
         let vt = GeoJsonVt::new(geojson, opts);
 
-        let traversal_config =
-            TraversalConfig::from_appearances(&layer.appearances, max_zoom as usize, 2.0, 24);
+        // GeoJSON is client-tiled from a single document, so it has data at
+        // every zoom down to 0; no min-zoom floor is needed. Horizon relaxation
+        // honors the layer's per-layer override, else the content-based default
+        // — same treatment as MVT.
+        let traversal_config = TraversalConfig::from_appearances(
+            &layer.appearances,
+            0,
+            max_zoom as usize,
+            2.0,
+            24,
+            layer.dynamic_sse_scale,
+        );
         let source_id = SourceId::new(format!("geojson:{}", layer.layer_id), traversal_config);
 
         let quadtree = commands

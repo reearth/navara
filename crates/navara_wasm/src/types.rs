@@ -241,12 +241,20 @@ pub struct LegacyVectorTileMaterial {
     #[wasm_bindgen(js_name = receiveShadow)]
     #[serde(rename = "receiveShadow")]
     pub receive_shadow: Option<bool>,
+    #[wasm_bindgen(js_name = minZoom)]
+    #[serde(rename = "minZoom")]
+    pub min_zoom: Option<usize>,
     #[wasm_bindgen(js_name = maxZoom)]
     #[serde(rename = "maxZoom")]
     pub max_zoom: Option<usize>,
     #[wasm_bindgen(js_name = maxSse)]
     #[serde(rename = "maxSse")]
     pub max_sse: Option<f32>,
+    /// Per-layer horizon dynamic-SSE relaxation strength (`0.0` off … `1.0`
+    /// raster-equivalent). Omit for a content-based default.
+    #[wasm_bindgen(js_name = dynamicSseScale)]
+    #[serde(rename = "dynamicSseScale")]
+    pub dynamic_sse_scale: Option<f32>,
     /// Sub-layer filter (MapLibre's `source-layer`). This is the only render-side
     /// field; the rest is fetch config carried onto the implicit source.
     #[wasm_bindgen(getter_with_clone)]
@@ -361,6 +369,12 @@ pub struct GeoJsonLayerDescription {
     #[wasm_bindgen(getter_with_clone)]
     #[serde(skip_deserializing)]
     pub data: JsValue,
+    /// Per-layer horizon dynamic-SSE relaxation strength for the tiled render
+    /// path (`0.0` off … `1.0` raster-equivalent). Omit for a content-based
+    /// default.
+    #[wasm_bindgen(js_name = dynamicSseScale)]
+    #[serde(rename = "dynamicSseScale")]
+    pub dynamic_sse_scale: Option<f32>,
 
     // Appearances
     #[wasm_bindgen(getter_with_clone)]
@@ -926,6 +940,7 @@ impl LayerDescription {
                         source_id: source_id.clone(),
                         appearances: layer.appearances(old_desc),
                         crs: layer.crs(),
+                        dynamic_sse_scale: layer.dynamic_sse_scale,
                     },
                 )))
             }

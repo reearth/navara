@@ -148,6 +148,78 @@ if (isNight) {
 }
 ```
 
+### getSunElevation()
+
+現在の `date` における、指定した位置での太陽の地平線からの高度を度で返します。正の値は地平線より上、負の値は地平線より下（夜）を意味します。大気による屈折補正を含みます。
+
+**Syntax:**
+
+```typescript
+getSunElevation(location: { lat: number; lng: number }): number
+```
+
+**Parameters:**
+
+- `location`: 度単位の地理座標。`lat` と `lng` のみを使用します。
+
+**Returns:**
+
+太陽高度（度）。
+
+**Example:**
+
+```typescript
+const elevation = view.atmosphere.getSunElevation(view.camera.positionGeographic);
+if (elevation < 0) {
+  console.log("太陽は沈んでいます。");
+}
+```
+
+### getSolarTime()
+
+現在の `date` における、指定した経度での太陽時を、`12` を正午とする `[0, 24)` の時間（hours）で返します。太陽の時角に基づくため、均時差を考慮しています。
+
+**Syntax:**
+
+```typescript
+getSolarTime(location: { lng: number }): number
+```
+
+**Parameters:**
+
+- `location`: `lng`（度）のみが結果に影響します。
+
+**Returns:**
+
+太陽時（時間、例: `6.3` = 06:18）。
+
+**Example:**
+
+```typescript
+const hours = view.atmosphere.getSolarTime({ lng: 139.69 });
+```
+
+### setSolarTime()
+
+指定した経度での太陽時が `hours`（0〜24）になるように、同じ太陽日を保ったまま `date` を調整します。[`getSolarTime()`](#getsolartime) の逆操作で、閲覧者のタイムゾーンに関係なく中央が昼になる「時刻スライダー」の駆動などに便利です。
+
+**Syntax:**
+
+```typescript
+setSolarTime(location: { lng: number }, hours: number): void
+```
+
+**Parameters:**
+
+- `location`: `lng`（度）のみが結果に影響します。
+- `hours`: 目標の太陽時（時間、0〜24）。
+
+**Example:**
+
+```typescript
+view.atmosphere.setSolarTime({ lng: 139.69 }, 6.3); // 東京の日の出
+```
+
 ### setDateAt()
 
 `from` のローカル太陽時と一致するよう、`to` の `atmosphere.date` を調整します。

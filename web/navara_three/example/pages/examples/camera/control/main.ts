@@ -1,5 +1,4 @@
 import ThreeView from "@navaramap/three";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
 import { TileJsonPlugin } from "@navaramap/three_plugins";
 
 import { addButton } from "../../../../helpers/button";
@@ -16,8 +15,6 @@ const AIRPORTS = [
 
 const view = new ThreeView();
 
-const defaultPlugin = new DefaultPlugin();
-view.addPlugin(defaultPlugin);
 const tilejson = new TileJsonPlugin();
 view.addPlugin(tilejson);
 

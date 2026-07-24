@@ -431,8 +431,13 @@ export function setupMaterialForMRT(
   material: ShaderMaterial,
   options?: SetupMaterialForMRTOptions,
 ): void {
-  if (material instanceof LineMaterial) {
-    injectGBufferToLineMaterial(material);
+  // Detect LineMaterial by `type`, not only `instanceof`: callers may construct
+  // it from `three/examples/jsm/lines` while this module's `LineMaterial` comes
+  // from `three-stdlib`, so a bare `instanceof` misses those cross-copy
+  // instances and would wrongly route them through the ShaderMaterial path
+  // (whose normal-buffer write references an undeclared `normal`).
+  if (material instanceof LineMaterial || material.type === "LineMaterial") {
+    injectGBufferToLineMaterial(material as LineMaterial);
     return;
   }
   injectGBufferToShaderMaterial(material, options?.normal);

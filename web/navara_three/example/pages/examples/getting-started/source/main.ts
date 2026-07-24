@@ -1,5 +1,4 @@
 import ThreeView from "@navaramap/three";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
 
 import { addButton } from "../../../../helpers/button";
 
@@ -9,9 +8,6 @@ const DAY_URL =
 const NIGHT_URL = "https://papers.reearth.land/blackmarble/{z}/{x}/{y}.webp";
 
 const view = new ThreeView();
-
-const defaultPlugin = new DefaultPlugin();
-view.addPlugin(defaultPlugin);
 
 await view.init();
 

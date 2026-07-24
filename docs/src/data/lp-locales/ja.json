@@ -116,5 +116,27 @@
     "github": "GitHub",
     "discord": "Discord",
     "credit": "Navara · MIT / Apache-2.0"
+  },
+  "imageAlts": {
+    "hero": "Navara で描画した地球儀のメインビジュアル",
+    "tutorial-wide": "Realistic Atmosphere チュートリアル",
+    "tutorial-left": "Arc Line Visualization チュートリアル",
+    "tutorial-right": "Interior Explore チュートリアル",
+    "example-row1-left": "大気散乱 — 夕暮れのニューヨーク",
+    "example-row1-right": "ボリューメトリッククラウド",
+    "example-row2-left": "テキストラベル",
+    "example-row2-center": "glTF アニメーション",
+    "example-row2-right": "雨天の都市",
+    "example-row3-left": "インスタンスメッシュによる大量描画",
+    "example-row3-right": "太陽位置シミュレーション — 東京の夕景",
+    "example-row4-left": "Gaussian Splatting",
+    "example-row4-center-left": "Polyline — 道路ネットワーク",
+    "example-row4-center-right": "glTF モデル",
+    "example-row4-right": "Extruded Polygon",
+    "maplibre-logo": "MapLibre ロゴ",
+    "maplibre-visual": "MapLibre スタイルで描いた地図",
+    "users-1": "Re:Earth スクリーンショット",
+    "users-2": "PLATEAU 3D 都市モデルのスクリーンショット",
+    "users-3": "ヒロシマアーカイブ スクリーンショット"
   }
 }

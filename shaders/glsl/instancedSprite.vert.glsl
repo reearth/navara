@@ -34,6 +34,9 @@ uniform vec3 uRTCCenter;
 uniform vec3 uRTCCenterView;
 uniform vec3 uEyeRTEHigh;
 uniform vec3 uEyeRTELow;
+// Always 1.0 — blocks fast-math reassociation of the high/low recombination
+// (see chunks/rte_pars_vertex.glsl).
+uniform float u_rteOne;
 uniform float uScale;
 uniform bool uSizeInMeters;
 uniform vec2 uCenter;
@@ -74,7 +77,8 @@ void main() {
 
     vec4 mvPosition;
 #ifdef USE_RTE
-    vec3 highDiff = instancePositionHIGH - uEyeRTEHigh;
+    // The u_rteOne (== 1.0) factor is load-bearing: see chunks/rte_pars_vertex.glsl.
+    vec3 highDiff = (instancePositionHIGH - uEyeRTEHigh) * u_rteOne;
     vec3 lowDiff = instancePositionLOW - uEyeRTELow;
     vec3 resolvedPosition = highDiff + lowDiff;
 
