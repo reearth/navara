@@ -21,6 +21,37 @@ export function getSunElevation(date: Date, lat: number, lng: number): number {
 }
 
 /**
+ * Returns the local apparent solar time at `lng` for `date`, in hours in the
+ * range [0, 24) where 12 is solar noon. Derived from the sun's hour angle, so
+ * it accounts for the equation of time.
+ */
+export function getSolarTime(date: Date, lng: number): number {
+  const ha = HourAngle(Body.Sun, new AstroTime(date), new Observer(0, lng, 0));
+  return (ha + 12) % 24;
+}
+
+/**
+ * Returns a new Date on the same UTC-anchored solar day such that the local
+ * apparent solar time at `lng` equals `hours` (0–24). Inverse of
+ * {@link getSolarTime}.
+ */
+export function dateForSolarTime(date: Date, lng: number, hours: number): Date {
+  const targetHourAngle = (((hours - 12) % 24) + 24) % 24;
+  const dayStart = new AstroTime(
+    new Date(
+      Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+    ),
+  );
+  return SearchHourAngle(
+    Body.Sun,
+    new Observer(0, lng, 0),
+    targetHourAngle,
+    dayStart,
+    1,
+  ).time.date;
+}
+
+/**
  * Returns a new Date such that the sun's hour angle at `targetLng` matches the
  * hour angle currently at `fromLng`.
  *
