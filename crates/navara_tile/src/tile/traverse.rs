@@ -186,11 +186,10 @@ pub fn traverse_terrain(
     // If this tile has a terrain and it's prepared, request its hillshade
     // textures lazily. Regular raster textures are draped from the raster
     // pipeline (see `update_mesh_material`).
-    // Frustum-culled tiles are still requested (they backfill the parent and
-    // prevent flickering) but one priority step lower, so in-view tiles win
-    // the pending-request slots and bandwidth.
-    let demote_if_culled = |p: Priority| if is_culled_by_frustum { p.demote() } else { p };
-
+    // Frustum-culled tiles are requested at the SAME priority as in-view
+    // tiles: a culled sibling is part of the same swap group (the parent can
+    // only hand off once ALL children are prepared), so demoting it just
+    // delays the swap and keeps the low-res parent on screen longer.
     if terrain_layer.is_some() && is_renderable {
         let tile = qt.qt.get_mut(handle).unwrap();
         request_hillshade_data_requester(
@@ -200,7 +199,7 @@ pub fn traverse_terrain(
             source_store,
             handle,
             data_requesters,
-            demote_if_culled(Priority::High),
+            Priority::High,
             buf,
             data_manager,
         );
@@ -226,11 +225,11 @@ pub fn traverse_terrain(
                 source_store,
                 data_requesters,
                 terrain_data_requester,
-                demote_if_culled(if is_renderable {
+                if is_renderable {
                     Priority::Medium
                 } else {
                     Priority::High
-                }),
+                },
             );
         }
 
@@ -479,7 +478,7 @@ pub fn traverse_terrain(
                 source_store,
                 data_requesters,
                 terrain_data_requester,
-                demote_if_culled(Priority::Extreme),
+                Priority::Extreme,
             );
         }
         return TraversalResult::NotFound;
@@ -631,7 +630,7 @@ pub fn prepare_tile_resource(
             source_store,
             handle,
             data_requesters,
-            Priority::High,
+            priority,
             buf,
             data_manager,
         );
