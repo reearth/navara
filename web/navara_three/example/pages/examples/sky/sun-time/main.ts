@@ -5,6 +5,7 @@ import {
 } from "@navaramap/three_default_plugin";
 
 import { addButton } from "../../../../helpers/button";
+import { initializeExample } from "../../../../helpers/initialize";
 import { GOOGLE_MAPS_API_KEY } from "../../../../helpers/keys";
 import { addPlayer } from "../../../../helpers/player";
 
@@ -19,6 +20,8 @@ const CITIES = [
 const DAY_PLAY_MS = 22_500;
 
 const view = new ThreeView<DefaultDescriptions>({ animation: true });
+
+initializeExample(view);
 
 const defaultPlugin = new DefaultPlugin();
 view.addPlugin(defaultPlugin);

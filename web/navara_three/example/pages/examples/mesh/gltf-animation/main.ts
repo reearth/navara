@@ -12,11 +12,14 @@ import { TileJsonPlugin } from "@navaramap/three_plugins";
 import { Euler, Quaternion, Vector3 } from "three";
 
 import { addButton } from "../../../../helpers/button";
+import { initializeExample } from "../../../../helpers/initialize";
 
 const FOX = { lng: 137.6479, lat: 36.2517 };
 const FOX_HEADING = 100;
 
 const view = new ThreeView<DefaultDescriptions>();
+
+initializeExample(view);
 
 const defaultPlugin = new DefaultPlugin();
 view.addPlugin(defaultPlugin);
@@ -33,13 +36,14 @@ view.atmosphere.date = new Date("2026-07-16T02:00:00Z");
 view.addLight({ ambient: { intensity: 0.6 } });
 view.addLight({ sun: { intensity: 1.6 } });
 
+// Front three-quarter view, close enough that the fox fills the frame.
 view.setCamera({
   lng: FOX.lng,
   lat: FOX.lat,
   height: 5,
-  distance: 50,
-  heading: FOX_HEADING - 60,
-  pitch: -35,
+  distance: 22,
+  heading: FOX_HEADING + 135,
+  pitch: -18,
   roll: 0,
 });
 

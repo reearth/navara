@@ -2,6 +2,7 @@ import ThreeView from "@navaramap/three";
 import { TileJsonPlugin } from "@navaramap/three_plugins";
 
 import { addButton } from "../../../../helpers/button";
+import { initializeExample } from "../../../../helpers/initialize";
 
 // Distance from the airport along the camera forward ray; keeps the airport
 // at the view center regardless of pitch.
@@ -14,6 +15,8 @@ const AIRPORTS = [
 ];
 
 const view = new ThreeView();
+
+initializeExample(view);
 
 const tilejson = new TileJsonPlugin();
 view.addPlugin(tilejson);

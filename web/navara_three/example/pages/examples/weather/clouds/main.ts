@@ -7,6 +7,7 @@ import {
 import { Vector2 } from "three";
 
 import { addButton } from "../../../../helpers/button";
+import { initializeExample } from "../../../../helpers/initialize";
 
 const STAGE = { lng: 138.634, lat: 35.5 };
 
@@ -30,6 +31,8 @@ const view = new ThreeView<DefaultDescriptions>({
   animation: true,
   shadow: true,
 });
+
+initializeExample(view);
 
 const defaultPlugin = new DefaultPlugin();
 view.addPlugin(defaultPlugin);

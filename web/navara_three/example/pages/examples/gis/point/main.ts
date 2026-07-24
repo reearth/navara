@@ -1,9 +1,13 @@
 import ThreeView, { Color } from "@navaramap/three";
 import { TileJsonPlugin } from "@navaramap/three_plugins";
 
+import { initializeExample } from "../../../../helpers/initialize";
+
 import { peaks } from "./data";
 
 const view = new ThreeView();
+
+initializeExample(view);
 
 const tilejson = new TileJsonPlugin();
 view.addPlugin(tilejson);
@@ -12,9 +16,9 @@ await view.init();
 
 // `distance` frames the peak cluster at the view center.
 view.setCamera({
-  lng: 170.13,
-  lat: -43.575,
-  distance: 32_000,
+  lng: 170.16,
+  lat: -43.57,
+  distance: 17_000,
   heading: 0,
   pitch: -60,
   roll: 0,
@@ -35,7 +39,7 @@ view.addLayer({
     color: new Color().setStyle("#0091ff"),
     // `sizeInMeters: false` keeps every symbol the same on-screen size
     // regardless of camera distance.
-    size: 24,
+    size: 48,
     sizeInMeters: false,
     clampToGround: true,
   },

@@ -11,6 +11,8 @@ import {
 import { TileJsonPlugin } from "@navaramap/three_plugins";
 import { Euler, Quaternion, Vector3 } from "three";
 
+import { initializeExample } from "../../../../helpers/initialize";
+
 // A point on the Nagano Expressway (E19) mountain stretch near the Shiojiri
 // pass (lng/lat in degrees, height in meters), and the road's bearing there
 // (degrees clockwise from north) so the car can be aligned with the lane.
@@ -18,6 +20,8 @@ const CAR = { lng: 138.036142, lat: 36.085621, height: 1 };
 const ROAD_BEARING = 321;
 
 const view = new ThreeView<DefaultDescriptions>();
+
+initializeExample(view);
 
 const defaultPlugin = new DefaultPlugin();
 view.addPlugin(defaultPlugin);
@@ -32,15 +36,19 @@ view.addLight({ ambient: { intensity: 1.2 } });
 view.addLight({ sun: { intensity: 2 } });
 
 // `distance` sets the camera back from the target along its forward ray, so
-// the car sits at the view center; a shallow pitch gives the oblique view.
+// the car sits at the view center. A near-ground pitch and a narrow (telephoto)
+// field of view give a compressed side profile with the horizon behind it.
 view.setCamera({
   lng: CAR.lng,
   lat: CAR.lat,
-  distance: 30,
-  heading: ROAD_BEARING - 60,
-  pitch: -35,
+  // Aim at the body rather than the ground so the car sits at the frame center.
+  height: 2,
+  distance: 26,
+  heading: ROAD_BEARING + 90,
+  pitch: -8,
   roll: 0,
 });
+view.camera.fov = 25;
 
 const basemap = await tilejson.addSource({
   type: "raster-tile",

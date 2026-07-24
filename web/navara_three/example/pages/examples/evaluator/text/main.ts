@@ -1,9 +1,13 @@
 import ThreeView, { Color, fetchFontFamilyFromCss } from "@navaramap/three";
 import { TileJsonPlugin } from "@navaramap/three_plugins";
 
+import { initializeExample } from "../../../../helpers/initialize";
+
 import { oceans } from "./data";
 
 const view = new ThreeView();
+
+initializeExample(view);
 
 const tilejson = new TileJsonPlugin();
 view.addPlugin(tilejson);
@@ -23,7 +27,7 @@ view.addFontFamily(
 view.setCamera({
   lng: -25,
   lat: 8,
-  height: 13_000_000,
+  height: 8_200_000,
   heading: 0,
   pitch: -90,
   roll: 0,
@@ -44,7 +48,7 @@ const layer = view.addLayer({
   text: {
     font: "Arsenal",
     color: new Color().setStyle("#ffffff"),
-    size: 20,
+    size: 32,
     sizeInMeters: false,
     clampToGround: true,
     center: { x: 0.5, y: 0 },

@@ -1,10 +1,14 @@
 import ThreeView, { Color } from "@navaramap/three";
 import { TileJsonPlugin } from "@navaramap/three_plugins";
 
+import { initializeExample } from "../../../../helpers/initialize";
+
 // The summit of Mount Everest.
 const EVEREST = { lng: 86.925, lat: 27.9881 };
 
 const view = new ThreeView();
+
+initializeExample(view);
 
 const tilejson = new TileJsonPlugin();
 view.addPlugin(tilejson);
@@ -45,7 +49,7 @@ view.addLayer({
     color: new Color().setStyle("#ffffff"),
     // `sizeInMeters: false` keeps the pin the same on-screen size regardless
     // of camera distance.
-    size: 96,
+    size: 240,
     sizeInMeters: false,
     center: { x: 0, y: -0.5 },
     transparent: true,

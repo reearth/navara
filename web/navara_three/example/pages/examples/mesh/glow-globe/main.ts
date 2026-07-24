@@ -6,7 +6,11 @@ import {
 } from "@navaramap/three_default_plugin";
 import { TileJsonPlugin } from "@navaramap/three_plugins";
 
+import { initializeExample } from "../../../../helpers/initialize";
+
 const view = new ThreeView<DefaultDescriptions>();
+
+initializeExample(view);
 
 const defaultPlugin = new DefaultPlugin();
 view.addPlugin(defaultPlugin);
@@ -14,6 +18,17 @@ const tilejson = new TileJsonPlugin();
 view.addPlugin(tilejson);
 
 await view.init();
+
+// Large enough that the globe dominates the frame while the glow ring still
+// clears the edges.
+view.setCamera({
+  lng: 15,
+  lat: 30,
+  height: 8_500_000,
+  heading: 0,
+  pitch: -90,
+  roll: 0,
+});
 
 const basemap = await tilejson.addSource({
   type: "raster-tile",

@@ -4,9 +4,12 @@ import {
   type DefaultDescriptions,
 } from "@navaramap/three_default_plugin";
 
+import { initializeExample } from "../../../../helpers/initialize";
 import { GOOGLE_MAPS_API_KEY } from "../../../../helpers/keys";
 
 const view = new ThreeView<DefaultDescriptions>({ animation: true });
+
+initializeExample(view);
 
 const defaultPlugin = new DefaultPlugin();
 view.addPlugin(defaultPlugin);

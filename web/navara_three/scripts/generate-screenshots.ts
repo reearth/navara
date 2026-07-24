@@ -255,11 +255,43 @@ class ScreenshotGenerator {
     return pages;
   }
 
-  async waitForWebGL(page: Page, config: PageConfig = {}): Promise<void> {
+  /**
+   * Page chrome (buttons, panels, attribution, loading overlay) is for
+   * visitors, not thumbnails — hide everything except the canvas (and its
+   * ancestors) so screenshots show only the rendered scene, whatever UI a
+   * page happens to add.
+   */
+  async hidePageUI(page: Page): Promise<void> {
+    await page.addStyleTag({
+      content:
+        "body :not(canvas):not(:has(canvas)) { display: none !important; }",
+    });
+  }
+
+  async waitForWebGL(
+    page: Page,
+    config: PageConfig = {},
+    expectSceneLoadedSignal = false,
+  ): Promise<void> {
     try {
       // Wait for canvas element to appear with longer timeout
       await page.waitForSelector("canvas", { timeout: 100000 });
       console.log("✓ Canvas found");
+
+      // Curated examples post SCENE_LOADED_MESSAGE (helpers/initialize.ts) once
+      // the engine first settles; standalone /demo/ pages post it to their own
+      // window, where the init script records it. Legacy pages never post it
+      // and rely on the fixed waits alone.
+      if (expectSceneLoadedSignal) {
+        try {
+          await page.waitForFunction("window.__navaraSceneLoaded === true", {
+            timeout: 120000,
+          });
+          console.log("✓ Scene loaded signal received");
+        } catch {
+          console.log("⚠️  No scene loaded signal, proceeding anyway");
+        }
+      }
 
       // Give WebGL time to initialize
       await page.waitForTimeout(3000);
@@ -327,6 +359,16 @@ class ScreenshotGenerator {
 
         const page = await context.newPage();
 
+        // Record the demo's scene-loaded signal (posted to its own window when
+        // not embedded in the detail page) before any page script runs.
+        await page.addInitScript(`
+          window.addEventListener("message", (event) => {
+            if (event.data?.type === "navara-example:scene-loaded") {
+              window.__navaraSceneLoaded = true;
+            }
+          });
+        `);
+
         // Set longer default timeout for this page
         page.setDefaultTimeout(this.config.timeout);
 
@@ -338,8 +380,14 @@ class ScreenshotGenerator {
 
         await page.goto(url, { waitUntil: "networkidle" });
 
+        await this.hidePageUI(page);
+
         // Wait for WebGL content to load
-        await this.waitForWebGL(page, pageConfig);
+        await this.waitForWebGL(
+          page,
+          pageConfig,
+          examplePage.url.startsWith("/demo/"),
+        );
 
         // Capture screenshot. Curated example keys are nested paths
         // ("getting-started/hello-world"), so ensure the parent dir exists.

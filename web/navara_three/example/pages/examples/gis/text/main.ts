@@ -1,10 +1,14 @@
 import ThreeView, { Color, fetchFontFamilyFromCss } from "@navaramap/three";
 import { TileJsonPlugin } from "@navaramap/three_plugins";
 
+import { initializeExample } from "../../../../helpers/initialize";
+
 // The summit of Mount Everest.
 const EVEREST = { lng: 86.925, lat: 27.9881 };
 
 const view = new ThreeView();
+
+initializeExample(view);
 
 const tilejson = new TileJsonPlugin();
 view.addPlugin(tilejson);
@@ -53,7 +57,7 @@ view.addLayer({
     text: "Mount Everest",
     font: "Arsenal",
     color: new Color().setStyle("#ffffff"),
-    size: 28,
+    size: 110,
     sizeInMeters: false,
     clampToGround: true,
     center: { x: 0.5, y: 0 },

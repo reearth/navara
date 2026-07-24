@@ -10,11 +10,15 @@ import {
 } from "@navaramap/three_default_plugin";
 import { TileJsonPlugin } from "@navaramap/three_plugins";
 
+import { initializeExample } from "../../../../helpers/initialize";
+
 const SPLAT_URL = "/splat/Sunny%20Meadow.sog";
 
 const CENTER = { lng: 11.6, lat: 46.543, height: 2 };
 
 const view = new ThreeView<DefaultDescriptions>();
+
+initializeExample(view);
 
 const defaultPlugin = new DefaultPlugin();
 view.addPlugin(defaultPlugin);

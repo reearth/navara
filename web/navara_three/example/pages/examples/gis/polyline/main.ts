@@ -1,20 +1,25 @@
 import ThreeView, { Color } from "@navaramap/three";
 import { TileJsonPlugin } from "@navaramap/three_plugins";
 
+import { initializeExample } from "../../../../helpers/initialize";
+
 const view = new ThreeView();
+
+initializeExample(view);
 
 const tilejson = new TileJsonPlugin();
 view.addPlugin(tilejson);
 
 await view.init();
 
-// Straight-down view over the historic center of Venice.
+// Oblique view over the historic center of Venice, so the canal network
+// recedes toward the horizon instead of reading as a flat diagram.
 view.setCamera({
   lng: 12.334,
   lat: 45.438,
-  height: 4200,
-  heading: 0,
-  pitch: -90,
+  distance: 3400,
+  heading: 35,
+  pitch: -35,
   roll: 0,
 });
 

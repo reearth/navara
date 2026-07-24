@@ -1,13 +1,19 @@
 import ThreeView, { Color } from "@navaramap/three";
 
+import { initializeExample } from "../../../../helpers/initialize";
+
 const view = new ThreeView();
+
+initializeExample(view);
 
 await view.init();
 
+// Close enough that the globe slightly overflows the frame, so the draped
+// polygons are the subject rather than the space around the sphere.
 view.setCamera({
   lng: 20,
-  lat: 15,
-  height: 16_000_000,
+  lat: 5,
+  height: 6_500_000,
   heading: 0,
   pitch: -90,
   roll: 0,
