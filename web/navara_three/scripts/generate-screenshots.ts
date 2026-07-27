@@ -113,6 +113,9 @@ const PAGE_CONFIGS: Record<string, PageConfig> = {
   "water-reflection": {
     waitTime: 10000,
   },
+  "ssr-puddle": {
+    waitTime: 50000,
+  },
   "use-cases-photorealistic": {
     waitTime: 50000,
   },

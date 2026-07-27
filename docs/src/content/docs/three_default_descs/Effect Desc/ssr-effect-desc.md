@@ -17,6 +17,43 @@ The `SSREffectDesc` class is a Descriptor that generates screen-space reflection
 
 **Default:** `true`
 
+### geometryBuffer
+
+**Type:** `Texture | null | undefined`
+
+**Description:** A custom geometry buffer used for reflection calculations. When unset or `null`, the engine's MRT normal buffer is used, so SSR applies wherever materials write reflectivity (e.g. `water: true` polygons). Supplying your own screen-aligned texture gives the application full control over where SSR applies — for example, dynamically drawn puddles.
+
+Each texel must follow the engine's G-buffer encoding:
+
+- `.xy` — octahedral-packed **view-space** normal (`packNormalToVec2` from `@takram/three-geospatial/shaders` `packing`)
+- `.z` — reflectivity mask; SSR is skipped where the value is below `0.01`
+- `.w` — roughness
+
+The texture is sampled by normalized screen UV, so it should match the drawing-buffer size (use `HalfFloatType`; packed normal values are signed). Keeping it sized correctly on resize is the application's responsibility. Updating the *contents* of the texture (render-to-texture every frame) takes effect automatically; only swapping the texture *object* requires an `update()` call. Passing `null` to `update()` resets SSR to the MRT normal buffer.
+
+To composite over the scene's own normals, read the MRT normal buffer through the SSR descriptor handle:
+
+```typescript
+import { type MRTPassEffectDesc } from "@navaramap/three";
+
+const mrtPass = ssrDesc.ref.find<MRTPassEffectDesc>("mrt");
+const sceneNormals = mrtPass?.normalBuffer; // Texture | undefined
+```
+
+**Default:** `null` (the engine's MRT normal buffer)
+
+**Example:**
+
+```typescript
+{
+  ssr: {
+    geometryBuffer: myRenderTarget.texture,
+  }
+}
+```
+
+A full working example that draws animated puddles into a custom geometry buffer is available at `example/pages/ssr-puddle/` in the Navara repository.
+
 ### resolutionScale
 
 **Type:** `number | undefined`
