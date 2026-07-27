@@ -15,6 +15,7 @@ import {
 import { TileJsonPlugin } from "@navaramap/three_plugins";
 
 import { addButton } from "../../../../helpers/button";
+import { initializeExample } from "../../../../helpers/initialize";
 
 const CITY = { lng: 139.7671, lat: 35.6812 };
 const FIELD_RADIUS = 1000; // meters
@@ -34,11 +35,11 @@ await view.init();
 view.addLight({ ambient: { intensity: 0.45 } });
 
 view.setCamera({
-  lng: 139.7592,
-  lat: 35.6748,
-  height: 95,
+  lng: 139.7625,
+  lat: 35.6772,
+  height: 60,
   heading: 34,
-  pitch: -6,
+  pitch: -14,
   roll: 0,
 });
 
@@ -71,7 +72,7 @@ const generateLanterns = (count: number): ModelChildConfig[] => {
   return out;
 };
 
-let density = DENSITIES[2];
+let density = DENSITIES[0];
 
 const lanterns = view.addMesh<InstancedGltfModelMeshDesc>({
   gltfModels: {
@@ -104,3 +105,5 @@ view.attribution?.add([
       "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Lantern",
   },
 ]);
+
+initializeExample(view, [lanterns]);

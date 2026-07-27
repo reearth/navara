@@ -7,6 +7,7 @@ import {
 import { TileJsonPlugin } from "@navaramap/three_plugins";
 
 import { addButton } from "../../../../helpers/button";
+import { initializeExample } from "../../../../helpers/initialize";
 
 import { flightArcs } from "./data";
 
@@ -25,7 +26,7 @@ view.animation = true;
 view.setCamera({
   lng: 146,
   lat: 33,
-  height: 9_500_000,
+  height: 7_600_000,
   heading: 0,
   pitch: -73,
   roll: 0,
@@ -68,3 +69,5 @@ const animate = () => {
   requestAnimationFrame(animate);
 };
 animate();
+
+initializeExample(view);

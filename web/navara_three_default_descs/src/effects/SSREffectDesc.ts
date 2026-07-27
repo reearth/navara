@@ -11,7 +11,7 @@ import invariant from "tiny-invariant";
 import { SSR, type SSROptions } from "./ssr";
 
 type Description = {
-  ssr?: Omit<SSROptions, "enabled" | "geometryBuffer">;
+  ssr?: Omit<SSROptions, "enabled">;
 };
 
 export type SSRConfig = Description & EffectConfig;
@@ -36,7 +36,7 @@ export class SSREffectDesc extends EffectDesc<SSRConfig, SSRUpdate, SSR> {
 
     const pass = new SSR(this.view.camera.raw, {
       ...this.config.ssr,
-      geometryBuffer: mrtPass.normalBuffer,
+      geometryBuffer: this.config.ssr?.geometryBuffer ?? mrtPass.normalBuffer,
       enabled: this.config.visible ?? true,
     });
 
@@ -53,6 +53,13 @@ export class SSREffectDesc extends EffectDesc<SSRConfig, SSRUpdate, SSR> {
     if (!config) return;
 
     // Update all SSR properties
+    if (config.geometryBuffer !== undefined) {
+      // null resets to the engine's MRT normal buffer
+      this._instance.geometryBuffer =
+        config.geometryBuffer ??
+        this.find<MRTPassEffectDesc>("mrt")?.normalBuffer ??
+        null;
+    }
     if (config.resolutionScale !== undefined) {
       this._instance.resolutionScale = config.resolutionScale;
     }

@@ -139,10 +139,19 @@ function warnIfChanged<T>(field: string, next: T, current: T): void {
   }
 }
 
+export type SplatMeshEvent = {
+  /** Emitted once the splat file has been fetched and parsed. */
+  load: () => void;
+  /** Emitted when fetching or parsing the splat file fails. */
+  error: (error: unknown) => void;
+  needsUpdate: () => void;
+};
+
 export class SplatMeshDesc extends MeshDesc<
   SplatMeshConfig,
   SplatMeshUpdate,
-  SplatMesh
+  SplatMesh,
+  SplatMeshEvent
 > {
   private config: SplatMeshConfig;
   private holdsSlot = false;
@@ -194,9 +203,13 @@ export class SplatMeshDesc extends MeshDesc<
     const mesh = new SplatMesh({ url, lod: effectiveLod });
 
     mesh.initialized
-      .then(() => this.requestUpdate())
+      .then(() => {
+        this.requestUpdate();
+        this.emit("load");
+      })
       .catch((err: unknown) => {
         console.warn(`SplatMesh load failed (${url}):`, err);
+        this.emit("error", err);
       })
       .finally(() => this.releaseSlot());
     return mesh;

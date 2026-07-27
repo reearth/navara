@@ -5,6 +5,7 @@ import {
 } from "@navaramap/three_default_plugin";
 
 import { addButton } from "../../../../helpers/button";
+import { initializeExample } from "../../../../helpers/initialize";
 import { GOOGLE_MAPS_API_KEY } from "../../../../helpers/keys";
 import { addPlayer } from "../../../../helpers/player";
 
@@ -114,3 +115,5 @@ view.attribution?.add([
     creditLayerId: tiles.id,
   },
 ]);
+
+initializeExample(view);

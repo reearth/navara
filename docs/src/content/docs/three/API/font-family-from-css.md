@@ -95,7 +95,7 @@ parseFontFamilyFromCss(
   family: string,
   cssText: string,
   options?: ParseCssFontFamilyOptions,
-): FontFamily
+): Promise<FontFamily>
 ```
 
 **Parameters:**
@@ -106,14 +106,14 @@ parseFontFamilyFromCss(
 
 **Returns:**
 
-The parsed `FontFamily`.
+A promise resolving to the parsed `FontFamily`. The parsing runs in WebAssembly, so the module is initialized on first use.
 
 **Example:**
 
 ```typescript
 import { parseFontFamilyFromCss } from "@navaramap/three";
 
-const family = parseFontFamilyFromCss(
+const family = await parseFontFamilyFromCss(
   "MapFont",
   `@font-face {
     font-family: "Latin";
@@ -131,7 +131,7 @@ Parses a CSS `unicode-range` descriptor value into inclusive codepoint ranges. S
 **Syntax:**
 
 ```typescript
-parseCssUnicodeRange(value: string): UnicodeRange[]
+parseCssUnicodeRange(value: string): Promise<UnicodeRange[]>
 ```
 
 **Parameters:**
@@ -140,14 +140,14 @@ parseCssUnicodeRange(value: string): UnicodeRange[]
 
 **Returns:**
 
-An array of `{ from, to }` codepoint ranges (inclusive).
+A promise resolving to an array of `{ from, to }` codepoint ranges (inclusive).
 
 **Example:**
 
 ```typescript
 import { parseCssUnicodeRange } from "@navaramap/three";
 
-parseCssUnicodeRange("U+0102-0103, U+20AB");
+await parseCssUnicodeRange("U+0102-0103, U+20AB");
 // [{ from: 0x0102, to: 0x0103 }, { from: 0x20ab, to: 0x20ab }]
 ```
 

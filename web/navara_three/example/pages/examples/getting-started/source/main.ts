@@ -1,6 +1,7 @@
 import ThreeView from "@navaramap/three";
 
 import { addButton } from "../../../../helpers/button";
+import { initializeExample } from "../../../../helpers/initialize";
 
 // NASA "Blue Marble" (day) and "Black Marble" (night) global imagery.
 const DAY_URL =
@@ -10,6 +11,17 @@ const NIGHT_URL = "https://papers.reearth.land/blackmarble/{z}/{x}/{y}.webp";
 const view = new ThreeView();
 
 await view.init();
+
+// Close enough that the globe nearly fills the frame, centered on Asia's
+// night lights.
+view.setCamera({
+  lng: 100,
+  lat: 25,
+  height: 7_500_000,
+  heading: 0,
+  pitch: -90,
+  roll: 0,
+});
 
 // One source feeds the layer below. The layer never changes; swapping the
 // source's data is enough to reload everything that references it.
@@ -45,3 +57,5 @@ button.onclick = () => {
   imagery.update({ type: "raster-tile", url: night ? NIGHT_URL : DAY_URL });
   button.textContent = night ? "Switch to day" : "Switch to night";
 };
+
+initializeExample(view);

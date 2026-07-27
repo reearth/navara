@@ -11,6 +11,7 @@ import {
 import { Vector2 } from "three";
 
 import { addButton } from "../../../../helpers/button";
+import { initializeExample } from "../../../../helpers/initialize";
 import { GOOGLE_MAPS_API_KEY } from "../../../../helpers/keys";
 
 const STAGE = { lng: 139.6867, lat: 35.7153 };
@@ -102,3 +103,5 @@ view.attribution?.add([
     creditLayerId: tiles.id,
   },
 ]);
+
+initializeExample(view);

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createHighlighter } from "shiki";
 import type { Highlighter } from "shiki";
 
+import { SCENE_LOADED_MESSAGE } from "../../helpers/initialize";
 import { docsUrl, localize, SECTION_LABELS } from "../examples/sections";
 import type { ExampleMeta, Lang, Localized } from "../examples/sections";
 
@@ -142,6 +143,49 @@ export const DetailApp = () => {
   //     map, even while the cursor passes over it. When scrolling settles, the
   //     shield lifts and, if the pointer is still over the demo, we engage.
   const demoRef = useRef<HTMLIFrameElement>(null);
+
+  // Loading screen over the demo. This page owns the overlay so it also covers
+  // the time before the iframe document loads; the demo posts
+  // SCENE_LOADED_MESSAGE from its view's first `idle` event to dismiss it.
+  const [demoLoaded, setDemoLoaded] = useState(false);
+  const [overlayGone, setOverlayGone] = useState(false);
+  const [progress, setProgress] = useState(0);
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      if (
+        (event.data as { type?: string } | null)?.type ===
+          SCENE_LOADED_MESSAGE &&
+        event.source === demoRef.current?.contentWindow
+      ) {
+        setDemoLoaded(true);
+      }
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
+
+  // Scene loading has no measurable progress (tiles stream until the engine
+  // settles), so ease a pseudo-progress toward 90% over time, snap to 100% on
+  // the demo's signal (derived below), and fade the overlay once 100% has
+  // been visible.
+  useEffect(() => {
+    if (demoLoaded) {
+      const timer = window.setTimeout(() => setOverlayGone(true), 450);
+      return () => window.clearTimeout(timer);
+    }
+    let raf = 0;
+    let start: number | undefined;
+    const tick = (time: number) => {
+      if (start === undefined) start = time;
+      const elapsed = (time - start) / 1000;
+      setProgress(0.9 * (1 - Math.exp(-elapsed / 3)));
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [demoLoaded]);
+  const shownProgress = demoLoaded ? 1 : progress;
+
   const pointerInsideRef = useRef(false);
   const scrollIdleTimer = useRef<number | null>(null);
   const [engaged, setEngaged] = useState(false);
@@ -312,6 +356,22 @@ export const DetailApp = () => {
                 onTouchCancel={onDemoPointerLeave}
                 className="block h-full w-full rounded-lg border bg-muted"
               />
+              <div
+                aria-hidden
+                className={`pointer-events-none absolute inset-0 flex flex-col items-center justify-center rounded-lg border bg-background transition-opacity duration-500 ${
+                  overlayGone ? "opacity-0" : "opacity-100"
+                }`}
+              >
+                <div className="h-1 w-[220px] overflow-hidden rounded-full bg-foreground/15">
+                  <div
+                    className="h-full rounded-full bg-foreground/85 transition-[width] duration-200 ease-linear"
+                    style={{ width: `${Math.round(shownProgress * 100)}%` }}
+                  />
+                </div>
+                <span className="mt-3 text-xs tabular-nums text-foreground/70">
+                  {Math.round(shownProgress * 100)}%
+                </span>
+              </div>
               {scrolling && (
                 // Transparent shield: while the page is scrolling, it catches the
                 // wheel so the gesture keeps scrolling the document instead of

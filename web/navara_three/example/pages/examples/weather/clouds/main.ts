@@ -7,6 +7,7 @@ import {
 import { Vector2 } from "three";
 
 import { addButton } from "../../../../helpers/button";
+import { initializeExample } from "../../../../helpers/initialize";
 
 const STAGE = { lng: 138.634, lat: 35.5 };
 
@@ -112,3 +113,5 @@ view.attribution?.add([
     attributionUrl: "https://maps.gsi.go.jp/development/ichiran.html",
   },
 ]);
+
+initializeExample(view);

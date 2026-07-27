@@ -10,6 +10,8 @@ import {
 } from "@navaramap/three_default_plugin";
 import { TileJsonPlugin } from "@navaramap/three_plugins";
 
+import { initializeExample } from "../../../../helpers/initialize";
+
 const SPLAT_URL = "/splat/Sunny%20Meadow.sog";
 
 const CENTER = { lng: 11.6, lat: 46.543, height: 2 };
@@ -27,12 +29,15 @@ defaultPlugin.addDefaultPhotorealScene();
 
 view.atmosphere.date = new Date("2024-06-21T09:00:00Z");
 
+// Close-up on the tree line: aim above the meadow floor so the trees, not
+// the grass, fill the frame.
 view.setCamera({
   lng: CENTER.lng,
   lat: CENTER.lat,
-  distance: 22,
-  heading: 20,
-  pitch: -12,
+  height: 4,
+  distance: 15,
+  heading: 12,
+  pitch: -8,
   roll: 0,
 });
 
@@ -50,7 +55,7 @@ const frame = northUpEastToFixedFrame(
   }),
 );
 
-view.addMesh<SplatMeshDesc>({
+const splat = view.addMesh<SplatMeshDesc>({
   matrixWorld: frame,
   splat: { url: SPLAT_URL, lod: false },
   rotation: { x: Math.PI, y: -Math.PI / 2, z: 0 },
@@ -67,3 +72,5 @@ view.attribution?.add([
       '<a href="https://s2maps.eu">Sentinel-2 cloudless 2016</a> by <a href="https://eox.at">EOX IT Services GmbH</a> (contains modified Copernicus Sentinel data 2016)',
   },
 ]);
+
+initializeExample(view, [splat]);

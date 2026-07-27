@@ -53,6 +53,7 @@ export {
   SplatMeshDesc,
   type SplatMeshConfig,
   type SplatMeshUpdate,
+  type SplatMeshEvent,
 } from "./SplatMeshDesc";
 export {
   TubeMeshDesc,

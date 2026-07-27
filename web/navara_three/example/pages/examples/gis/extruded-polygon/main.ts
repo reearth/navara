@@ -5,6 +5,8 @@ import {
 } from "@navaramap/three_default_plugin";
 import { TileJsonPlugin } from "@navaramap/three_plugins";
 
+import { initializeExample } from "../../../../helpers/initialize";
+
 import { huts } from "./data";
 
 const view = new ThreeView<DefaultDescriptions>();
@@ -25,9 +27,9 @@ view.addLight({ sun: { intensity: 1.8 } });
 view.setCamera({
   lng: 86.82918,
   lat: 27.98082,
-  distance: 72,
+  distance: 52,
   heading: 25,
-  pitch: -40,
+  pitch: -35,
   roll: 0,
 });
 
@@ -56,3 +58,5 @@ view.attribution?.add([
     attributionUrl: "https://www.openstreetmap.org/copyright",
   },
 ]);
+
+initializeExample(view);

@@ -97,6 +97,7 @@ export type InstancedGltfModelMeshUpdate = MeshUpdate & DescriptionUpdate;
 
 export type InstancedGltfModelEvent = {
   load: () => void;
+  error: (error: unknown) => void;
   needsUpdate: () => void;
 };
 
@@ -254,6 +255,7 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
     if (cfg?.url) {
       this.loadModel(cfg.url, root).catch((err) => {
         console.error("Failed to load instanced GLTF model:", err);
+        this.emit("error", err);
       });
     }
     return root;

@@ -19,7 +19,7 @@ sidebar:
 
 **Description:** 読み込む splat ファイルの URL。必須パラメータです。ライセンスが確認された外部ホストの URL を指定するか、プロジェクトの `public/splat/` 配下にアセットを置いて `/splat/your-asset.ply` のように参照してください。
 
-取得失敗時は `console.warn` が出力されます。例外やイベントは発生しないため、必要に応じてアプリ側でリトライや fallback を実装してください。
+取得失敗時は `console.warn` が出力され、`error` イベントが発火します。例外は発生しません。必要に応じてアプリ側でリトライや fallback を実装してください。
 
 **Example:**
 
@@ -70,6 +70,32 @@ sidebar:
 ```
 
 > `url`、`lod`、`originCellSize` は構築時に固定されます。`handle.update()` で異なる値を渡すと警告が出るので、Descriptor を作り直してください。
+
+## イベント
+
+### load
+
+**Description:** splat ファイルの取得とパースが完了したときに発火します。読み込みに失敗した場合は発火しません（代わりに `error` イベントが発火します）。
+
+**Example:**
+
+```typescript
+splat.ref.on("load", () => {
+  console.log("Splat loaded!");
+});
+```
+
+### error
+
+**Description:** splat ファイルの取得またはパースに失敗したときに発火します。
+
+**Example:**
+
+```typescript
+splat.ref.on("error", (error) => {
+  console.warn("Splat failed to load:", error);
+});
+```
 
 ## Usage Examples
 

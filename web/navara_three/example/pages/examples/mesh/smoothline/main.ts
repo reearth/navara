@@ -7,6 +7,7 @@ import {
 import { TileJsonPlugin } from "@navaramap/three_plugins";
 
 import { addButton } from "../../../../helpers/button";
+import { initializeExample } from "../../../../helpers/initialize";
 
 import { CENTER, MID_HEIGHT, loopTrajectory } from "./data";
 
@@ -26,7 +27,7 @@ view.setCamera({
   lng: CENTER.lng,
   lat: CENTER.lat,
   height: MID_HEIGHT,
-  distance: 3300,
+  distance: 2300,
   heading: 14,
   pitch: -22,
   roll: 0,
@@ -50,17 +51,23 @@ const trail = view.addMesh<SmoothLineMeshDesc>({
   },
 });
 
-const REVEAL_SPEED = 0.3; // control points revealed per frame
+const REVEAL_SPEED = 36; // control points revealed per second
 
 let revealed = 2;
 let rafId = 0;
+let prevTime: number | undefined;
 
 const drawUpTo = (count: number) =>
   trail.update({ smoothLines: { points: loopTrajectory.slice(0, count) } });
 
-const step = () => {
+// Advance by elapsed wall-clock time (capped across tab suspensions), so the
+// reveal speed is the same on every display refresh rate.
+const step = (time: number) => {
+  const elapsed =
+    prevTime === undefined ? 0 : Math.min(time - prevTime, 100) / 1000;
+  prevTime = time;
   const shown = Math.floor(revealed);
-  revealed = Math.min(revealed + REVEAL_SPEED, loopTrajectory.length);
+  revealed = Math.min(revealed + REVEAL_SPEED * elapsed, loopTrajectory.length);
   if (Math.floor(revealed) !== shown) drawUpTo(Math.floor(revealed));
   if (revealed < loopTrajectory.length) rafId = requestAnimationFrame(step);
 };
@@ -68,9 +75,12 @@ const step = () => {
 const replay = () => {
   cancelAnimationFrame(rafId);
   revealed = 2;
+  prevTime = undefined;
   drawUpTo(2);
   rafId = requestAnimationFrame(step);
 };
 
 addButton("Replay").onclick = replay;
-step();
+rafId = requestAnimationFrame(step);
+
+initializeExample(view);

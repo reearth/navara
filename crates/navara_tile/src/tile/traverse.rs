@@ -186,11 +186,10 @@ pub fn traverse_terrain(
     // If this tile has a terrain and it's prepared, request its hillshade
     // textures lazily. Regular raster textures are draped from the raster
     // pipeline (see `update_mesh_material`).
-    // Frustum-culled tiles are still requested (they backfill the parent and
-    // prevent flickering) but one priority step lower, so in-view tiles win
-    // the pending-request slots and bandwidth.
-    let demote_if_culled = |p: Priority| if is_culled_by_frustum { p.demote() } else { p };
-
+    // Frustum-culled tiles are requested at the SAME priority as in-view
+    // tiles: a culled sibling is part of the same swap group (the parent can
+    // only hand off once ALL children are prepared), so demoting it just
+    // delays the swap and keeps the low-res parent on screen longer.
     if terrain_layer.is_some() && is_renderable {
         let tile = qt.qt.get_mut(handle).unwrap();
         request_hillshade_data_requester(
@@ -200,7 +199,7 @@ pub fn traverse_terrain(
             source_store,
             handle,
             data_requesters,
-            demote_if_culled(Priority::High),
+            Priority::High,
             buf,
             data_manager,
         );
@@ -226,11 +225,11 @@ pub fn traverse_terrain(
                 source_store,
                 data_requesters,
                 terrain_data_requester,
-                demote_if_culled(if is_renderable {
+                if is_renderable {
                     Priority::Medium
                 } else {
                     Priority::High
-                }),
+                },
             );
         }
 
@@ -246,8 +245,17 @@ pub fn traverse_terrain(
         }
     }
 
-    // Culled tiles do not traverse children, but they are rendered to prevent parent tiles from flickering.
-    if !is_culled_by_frustum && let Some(children) = TerrainTile::traversable_children(qt, handle) {
+    // Frustum-culled tiles keep traversing an already-swapped subtree
+    // (`were_children_rendered`): the recursion stamps `visited_at` so
+    // `clear_caches` doesn't destroy the subtree within two frames, and the
+    // group re-enters the frustum fully prepared instead of collapsing to the
+    // low-res parent (flicker while rotating a tilted camera). This mirrors
+    // the 3D Tiles REPLACE handling, which preserves touched culled tiles.
+    // Never-rendered subtrees are still not expanded while culled, so being
+    // out of the frustum never starts deeper refinement on its own.
+    if (!is_culled_by_frustum || were_children_rendered)
+        && let Some(children) = TerrainTile::traversable_children(qt, handle)
+    {
         let mut any_children_rendered = false;
 
         let ready_parent_tile_handle = if tile_ready_state.is_texture_ready {
@@ -470,7 +478,7 @@ pub fn traverse_terrain(
                 source_store,
                 data_requesters,
                 terrain_data_requester,
-                demote_if_culled(Priority::Extreme),
+                Priority::Extreme,
             );
         }
         return TraversalResult::NotFound;
@@ -622,7 +630,7 @@ pub fn prepare_tile_resource(
             source_store,
             handle,
             data_requesters,
-            Priority::High,
+            priority,
             buf,
             data_manager,
         );
@@ -704,10 +712,14 @@ mod tests {
     /// Camera placed at twice the Earth radius above (lng 0, lat 0), looking at
     /// the globe centre. The horizon half-angle is `acos(R / 2R) = 60°`, so any
     /// tile centred more than ~60° away in longitude/latitude is occluded.
-    fn test_camera() -> (Transform, CameraFrustum, EllipsoidalOccluder) {
+    /// `fov_deg` narrows the frustum: with the default 60° the whole near
+    /// hemisphere is in view, while e.g. 10° frustum-culls off-centre tiles
+    /// that are still inside the horizon (not occluded).
+    fn test_camera(fov_deg: f64) -> (Transform, CameraFrustum, EllipsoidalOccluder) {
         let camera_ecef = Vec3::new(WGS84_A_64 * 2.0, 0.0, 0.0);
         let camera = Transform::from_translation(camera_ecef).looking_at(Vec3::ZERO, Vec3::Y);
-        let frustum = CameraFrustum::new(&camera, 0.1, 1e9, Angle::new(60.0).rad().val(), 1.0, 1.0);
+        let frustum =
+            CameraFrustum::new(&camera, 0.1, 1e9, Angle::new(fov_deg).rad().val(), 1.0, 1.0);
         let occluder = EllipsoidalOccluder::new(&camera_ecef, WGS84_64);
         (camera, frustum, occluder)
     }
@@ -716,7 +728,7 @@ mod tests {
 
     #[test]
     fn begin_traverse_terrain_stamps_visit_and_computes_occludee() {
-        let (camera, _frustum, occluder) = test_camera();
+        let (camera, _frustum, occluder) = test_camera(60.0);
         let frame = FrameManager::default(); // rendered_frame() == 0
 
         // A small tile near (lng 0, lat 0) so the occludee point is well defined.
@@ -742,6 +754,11 @@ mod tests {
     struct TraverseConfig {
         max_sse: f64,
     }
+
+    /// Vertical field of view (degrees) used by `run_terrain_traverse`,
+    /// overridable per test to frustum-cull specific tiles.
+    #[derive(bevy_ecs::prelude::Resource)]
+    struct TestFov(f64);
 
     #[derive(bevy_ecs::prelude::Resource, Default)]
     struct LastResult(String);
@@ -776,9 +793,10 @@ mod tests {
         target: Res<TargetHandle>,
         config: Res<TraverseConfig>,
         source_store: Res<SourceStore>,
+        fov: Res<TestFov>,
         mut out: ResMut<LastResult>,
     ) {
-        let (camera, frustum, occluder) = test_camera();
+        let (camera, frustum, occluder) = test_camera(fov.0);
         let fog = Fog {
             enabled: false,
             density: 0.,
@@ -891,6 +909,7 @@ mod tests {
         app.insert_resource(LastResult::default());
         app.insert_resource(TraverseConfig { max_sse: 1e30 });
         app.insert_resource(SourceStore::default());
+        app.insert_resource(TestFov(60.0));
 
         (app, handle)
     }
@@ -1097,6 +1116,108 @@ mod tests {
         );
         for e in child_meshes {
             assert!(mesh_active(&app, e), "child mesh shown after swap");
+        }
+    }
+
+    /// A subtree that already swapped to its children must survive leaving the
+    /// frustum: the traversal keeps visiting it (stamping `visited_at`, which
+    /// `clear_caches` uses as the liveness signal) and keeps the children
+    /// active, so rotating a tilted camera doesn't collapse the group back to
+    /// the low-res parent when the tile re-enters the frustum.
+    #[test]
+    fn traverse_terrain_keeps_culled_swapped_subtree_alive() {
+        let (mut app, _root) = terrain_app_with_root();
+        // (9, 8, 4) covers lng [22.5°, 45°]: inside the horizon (< 60°, never
+        // occluded) but well off the view axis, so a narrow frustum culls it.
+        let target = {
+            let mut qt = app.world_mut().resource_mut::<TerrainTileQuadtree>();
+            qt.qt
+                .initialize_leaf((9, 8, 4), &|(x, y, z)| {
+                    TerrainTile::new(TileXYZ { x, y, z }, 0., 0.)
+                })
+                .unwrap()
+        };
+        app.insert_resource(TargetHandle(target));
+        // max_zoom=6 bounds the forced subdivision: the z=5 children render,
+        // their z=6 grandchildren are over max → NotFound.
+        spawn_layer(&mut app, raster_layer("a", 0, 6), Order(0));
+        // Zero threshold: the target never meets SSE, so it always subdivides.
+        app.insert_resource(TraverseConfig { max_sse: 0. });
+
+        app.add_systems(Update, run_terrain_traverse);
+
+        // --- Phase A: wide frustum, subdivide and swap to the children ---
+        app.update();
+        let children: Vec<TileHandle> = {
+            let qt = app.world().resource::<TerrainTileQuadtree>();
+            let tc = app.world().resource::<TileCacheManager>();
+            qt.qt
+                .children((9, 8, 4))
+                .unwrap()
+                .iter()
+                .map(|c| c.handle())
+                .filter(|h| tc.rendered_tile_caches.contains_key(h))
+                .collect()
+        };
+        assert_eq!(children.len(), 4, "all 4 children rendered while in view");
+
+        let child_meshes: Vec<Entity> = children
+            .iter()
+            .map(|&child| {
+                let e = spawn_mesh(&mut app, true);
+                let mut tc = app.world_mut().resource_mut::<TileCacheManager>();
+                let cache = tc.rendered_tile_caches.get_mut(&child).unwrap();
+                cache.mesh_entity = Some(e);
+                cache.mesh_prepared = true;
+                e
+            })
+            .collect();
+
+        app.update();
+        assert_eq!(
+            app.world().resource::<LastResult>().0,
+            "children_prepared",
+            "children take over once all meshes are prepared"
+        );
+
+        // --- Phase B: narrow frustum culls the target (still not occluded) ---
+        app.insert_resource(TestFov(10.0));
+        {
+            let (_, frustum, occluder) = test_camera(10.0);
+            let qt = app.world().resource::<TerrainTileQuadtree>();
+            let tile = qt.qt.get(target).unwrap();
+            assert!(
+                !tile.intersect_with_camera_frustum(&frustum),
+                "precondition: the target must be outside the narrow frustum"
+            );
+            let occludee_point = tile
+                .occludee_point_in_scaled_space
+                .expect("precondition: phase A traversal computed the occludee point");
+            assert!(
+                occluder.is_scaled_space_point_visible(occludee_point),
+                "precondition: the target must not be horizon-occluded"
+            );
+        }
+
+        app.update();
+
+        // The swapped subtree is preserved, not handed back to the parent.
+        assert_eq!(
+            app.world().resource::<LastResult>().0,
+            "children_prepared",
+            "culled swapped subtree keeps its children selected"
+        );
+        let frame = app.world().resource::<FrameManager>().rendered_frame();
+        let qt = app.world().resource::<TerrainTileQuadtree>();
+        for child in &children {
+            assert_eq!(
+                qt.qt.get(*child).unwrap().visited_at,
+                frame,
+                "culled children stay visited so clear_caches keeps them"
+            );
+        }
+        for e in child_meshes {
+            assert!(mesh_active(&app, e), "child mesh stays active while culled");
         }
     }
 }
