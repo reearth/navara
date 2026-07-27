@@ -26,10 +26,14 @@ The `SSREffectDesc` class is a Descriptor that generates screen-space reflection
 Each texel must follow the engine's G-buffer encoding:
 
 - `.xy` — octahedral-packed **view-space** normal (`packNormalToVec2` from `@takram/three-geospatial/shaders` `packing`)
-- `.z` — reflectivity mask; SSR is skipped where the value is below `0.01`
-- `.w` — roughness
+- `.z` — reflectivity/metalness mask; SSR is skipped where the value is below `0.01`. The ray-tracing shader also uses `.z` as its roughness base value
+- `.w` — roughness; with cone tracing enabled (the default) it drives the blur cone angle, and with cone tracing disabled it multiplies `.z` to form the GGX ray-jitter roughness (`.z * .w`)
 
-The texture is sampled by normalized screen UV, so it should match the drawing-buffer size (use `HalfFloatType`; packed normal values are signed). Keeping it sized correctly on resize is the application's responsibility. Updating the *contents* of the texture (render-to-texture every frame) takes effect automatically; only swapping the texture *object* requires an `update()` call. Passing `null` to `update()` resets SSR to the MRT normal buffer.
+The texture is sampled by normalized screen UV, so it should match the drawing-buffer size (use `HalfFloatType`; packed normal values are signed). Keeping it sized correctly on resize is the application's responsibility. Updating the *contents* of the texture (render-to-texture every frame) takes effect automatically; only swapping the texture *object* requires an `update()` call. Setting the option back to `null` resets SSR to the MRT normal buffer:
+
+```typescript
+ssrDesc.update({ ssr: { geometryBuffer: null } });
+```
 
 To composite over the scene's own normals, read the MRT normal buffer through the SSR descriptor handle:
 
