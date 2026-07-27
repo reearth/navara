@@ -273,6 +273,9 @@ export class BatchedSdfTextMesh
       this._fontIdentifier,
       batchId,
       RTE,
+      // Pin quality to the batch, not `this._material.highQuality`, which a
+      // later `_update` may have changed (quality is immutable per batch).
+      this._highQuality,
     );
     mesh.renderOrder = this.renderOrder;
     // Re-prepare evicted glyphs through the batch so font-family faces and

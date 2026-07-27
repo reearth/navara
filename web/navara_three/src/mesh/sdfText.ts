@@ -261,12 +261,17 @@ export class SDFTextMesh
     fontUrl: string,
     batchId: number | undefined,
     RTE: boolean,
+    // Quality is fixed by the owning batch (flipping it needs a new batch), so
+    // it is passed in rather than re-derived from `material.highQuality` — the
+    // stored material can carry a newer, mismatched value by the time a mesh is
+    // created lazily, which must not diverge from the batch's atlas/shaping.
+    highQuality: boolean,
   ) {
     super();
 
     this._fontManager = fontManager;
     this._fontUrl = fontUrl;
-    this._highQuality = material.highQuality ?? false;
+    this._highQuality = highQuality;
     this._maxWidth = material.maxWidth ?? 0;
     this._lineHeight = material.lineHeight ?? 1.0;
     this._textAlign = ALIGN_FACTORS[material.textAlign ?? "center"] ?? 0.5;
