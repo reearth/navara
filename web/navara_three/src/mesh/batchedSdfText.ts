@@ -3,7 +3,7 @@ import type {
   TextMaterial as NavaraTextMaterial,
 } from "@navaramap/engine";
 import type { FontManager } from "@navaramap/font";
-import { type Color } from "three";
+import { Color } from "three";
 import invariant from "tiny-invariant";
 
 import type {
@@ -38,6 +38,22 @@ type PositionsInfo = PositionsInfoBase &
       }
   );
 
+/**
+ * Per-feature evaluator state received before the feature's `SDFTextMesh`
+ * exists (meshes are created lazily on the first non-empty text — see
+ * `initMeshes`). Replayed onto the mesh at creation. Colors are kept as hex
+ * so a shared evaluator `Color` instance mutated later can't leak in.
+ */
+type PendingFeatureState = {
+  colorHex?: number;
+  show?: boolean;
+  height?: number;
+  size?: number;
+  opacity?: number;
+  declutterPriority?: number | undefined;
+  hasDeclutterPriority?: boolean;
+};
+
 export class BatchedSdfTextMesh
   extends InstancedMesh<SDFTextMesh>
   implements PickableMesh, DeclutterParticipant
@@ -59,6 +75,15 @@ export class BatchedSdfTextMesh
    * and must be balanced with unloadFont() on dispose or font change.
    */
   private _loadedFaceUrls: Set<string>;
+  /** Geometry-extracted anchor data; per-index meshes slice it lazily. */
+  private _positions: PositionsInfo | null = null;
+  /** Sparse batchIndex → mesh; `allMeshes` holds only created meshes. */
+  private _meshByIndex: (SDFTextMesh | undefined)[] = [];
+  /** Evaluator state received before a feature's mesh exists. */
+  private _pending = new Map<number, PendingFeatureState>();
+  /** Material/transform used when creating meshes lazily. */
+  private _material: NavaraTextMaterial;
+  private _transform: NavaraTextMesh["transform"];
 
   constructor(
     ctx: EventContext,
@@ -74,7 +99,12 @@ export class BatchedSdfTextMesh
     invariant(ctx.fontManager);
     this._fontManager = ctx.fontManager;
     this._loadedFaceUrls = loadedFaceUrls ?? new Set();
-    this.initMeshes(m);
+    // One getter call each: wasm getters clone, so these snapshots are owned
+    // by this batch and safe to use after the event object is freed.
+    this._material = m.material;
+    this._transform = m.transform;
+    this._positions = this.extractPositions(m);
+    this.initMeshes();
     // When the shared atlas evicts glyphs, a still-in-flight glyph this batch
     // already baked into a visible mesh may have had its rect reused. Rebuild
     // any such stale mesh so its UVs and retains refresh.
@@ -167,73 +197,146 @@ export class BatchedSdfTextMesh
     return this._highQuality;
   }
 
-  private initMeshes(m: NavaraTextMesh) {
-    const positionInfo = this.extractPositions(m);
+  /**
+   * A mesh per anchor is expensive (geometry + ShaderMaterial + enhancer
+   * mount), and with per-feature texts (MVT) most features never receive a
+   * non-empty text — they'd sit invisible while still costing construction and
+   * every per-frame loop. So meshes are created lazily by `_ensureMeshAt` on
+   * the first non-empty `setTextByBatchIndex`. Only a non-empty material-level
+   * default text (single-label sources) renders without the evaluator ever
+   * setting text, so only that case creates all meshes eagerly.
+   */
+  private initMeshes() {
+    const positionInfo = this._positions;
     if (!positionInfo) {
       return;
     }
 
-    const { position, nPositions, positionSize, batchIDs, batchIDSize, RTE } =
-      positionInfo;
-
-    const material = m.material;
-    const transform = m.transform;
-
-    // Get the font-level shared atlas textures (one DataTexture per font,
-    // shared across all per-feature meshes). The color atlas is `null` for
-    // monochrome fonts.
-    const sharedTex = this._fontManager.getAtlasTexture(
-      this._fontIdentifier,
-      this._highQuality,
-    );
-    const sharedColorTex = this._fontManager.getColorAtlasTexture(
-      this._fontIdentifier,
-      this._highQuality,
-    );
-
-    for (let i = 0; i < nPositions; i++) {
-      const batchIdIdx = i * batchIDSize;
-      const batchId = batchIDs ? batchIDs[batchIdIdx] : undefined;
-      const posIdx = i * positionSize;
-      const pos = RTE
-        ? {
-            high: position.high.subarray(posIdx, posIdx + positionSize),
-            low: position.low.subarray(posIdx, posIdx + positionSize),
-          }
-        : position.subarray(posIdx, posIdx + positionSize);
-
-      const mesh = new SDFTextMesh(
-        pos,
-        material,
-        transform,
-        this._fontManager,
-        this._fontIdentifier,
-        batchId,
-        RTE,
-      );
-      mesh.renderOrder = this.renderOrder;
-      // Re-prepare evicted glyphs through the batch so font-family faces and
-      // refcounts stay consistent; request a render once they're rebuilt.
-      mesh.setGlyphLifecycleHandlers(
-        (text) =>
-          this._fontManager.prepareText(
-            this._fontIdentifier,
-            text,
-            this._highQuality,
-            this._loadedFaceUrls,
-          ),
-        () => this._needRender?.(),
-      );
-
-      if (sharedTex) {
-        mesh.setAtlasTexture(sharedTex);
+    if (this._material.text) {
+      // The atlas can't be reallocated within this synchronous loop, so fetch
+      // the shared textures once and hand them to every creation.
+      const shared = this._sharedTextures();
+      for (let i = 0; i < positionInfo.nPositions; i++) {
+        this._ensureMeshAt(i, shared);
       }
-      mesh.setColorAtlasTexture(sharedColorTex);
-
-      mesh.update(material);
-
-      this.addWithBatchIndex(mesh, i);
     }
+  }
+
+  /** The font-level shared atlas textures for this batch's font+quality (the
+   *  color atlas is `null` for monochrome fonts). */
+  private _sharedTextures() {
+    return {
+      tex: this._fontManager.getAtlasTexture(
+        this._fontIdentifier,
+        this._highQuality,
+      ),
+      colorTex: this._fontManager.getColorAtlasTexture(
+        this._fontIdentifier,
+        this._highQuality,
+      ),
+    };
+  }
+
+  /**
+   * The feature's mesh, created on first need (see `initMeshes`). `shared`
+   * lets a batch creation pass hoist the atlas lookups; when omitted (a single
+   * lazy creation) they are fetched here, since the atlas may have been
+   * (re)allocated since this batch was constructed.
+   */
+  private _ensureMeshAt(
+    batchIndex: number,
+    shared?: ReturnType<BatchedSdfTextMesh["_sharedTextures"]>,
+  ): SDFTextMesh | undefined {
+    const existing = this._meshByIndex[batchIndex];
+    if (existing) return existing;
+
+    const info = this._positions;
+    if (!info || batchIndex < 0 || batchIndex >= info.nPositions) {
+      return undefined;
+    }
+
+    const { position, positionSize, batchIDs, batchIDSize, RTE } = info;
+    const batchId = batchIDs ? batchIDs[batchIndex * batchIDSize] : undefined;
+    const posIdx = batchIndex * positionSize;
+    const pos = RTE
+      ? {
+          high: position.high.subarray(posIdx, posIdx + positionSize),
+          low: position.low.subarray(posIdx, posIdx + positionSize),
+        }
+      : position.subarray(posIdx, posIdx + positionSize);
+
+    const mesh = new SDFTextMesh(
+      pos,
+      this._material,
+      this._transform,
+      this._fontManager,
+      this._fontIdentifier,
+      batchId,
+      RTE,
+    );
+    mesh.renderOrder = this.renderOrder;
+    // Re-prepare evicted glyphs through the batch so font-family faces and
+    // refcounts stay consistent; request a render once they're rebuilt.
+    mesh.setGlyphLifecycleHandlers(
+      (text) =>
+        this._fontManager.prepareText(
+          this._fontIdentifier,
+          text,
+          this._highQuality,
+          this._loadedFaceUrls,
+        ),
+      () => this._needRender?.(),
+    );
+
+    const { tex, colorTex } = shared ?? this._sharedTextures();
+    if (tex) {
+      mesh.setAtlasTexture(tex);
+    }
+    mesh.setColorAtlasTexture(colorTex);
+
+    mesh.update(this._material);
+
+    // Replay evaluator state that arrived before the mesh existed.
+    const pending = this._pending.get(batchIndex);
+    if (pending) {
+      this._pending.delete(batchIndex);
+      if (pending.colorHex !== undefined) {
+        mesh.setColor(new Color(pending.colorHex));
+      }
+      if (pending.show !== undefined) {
+        mesh._setFeatureShow(pending.show);
+      }
+      if (pending.height !== undefined) {
+        mesh.setHeight(pending.height);
+      }
+      if (pending.size !== undefined) {
+        mesh.setSize(pending.size);
+      }
+      if (pending.opacity !== undefined) {
+        mesh.setOpacity(pending.opacity);
+      }
+      if (pending.hasDeclutterPriority) {
+        mesh.setDeclutterPriority(pending.declutterPriority);
+      }
+    }
+
+    this._meshByIndex[batchIndex] = mesh;
+    this.addWithBatchIndex(mesh, batchIndex);
+    return mesh;
+  }
+
+  /** Pending-state slot for a feature whose mesh doesn't exist yet. */
+  private _pendingAt(batchIndex: number): PendingFeatureState | undefined {
+    const info = this._positions;
+    if (!info || batchIndex < 0 || batchIndex >= info.nPositions) {
+      return undefined;
+    }
+    let state = this._pending.get(batchIndex);
+    if (!state) {
+      state = {};
+      this._pending.set(batchIndex, state);
+    }
+    return state;
   }
 
   async _update(m: NavaraTextMesh, needRender?: () => void) {
@@ -241,30 +344,39 @@ export class BatchedSdfTextMesh
 
     const material = m.material;
     const text = material.text ?? "";
+    // Later lazy creations must see the updated material/transform too.
+    this._material = material;
+    this._transform = m.transform;
 
     const positionInfo = this.extractPositions(m);
     if (positionInfo) {
-      const { position, nPositions, positionSize, RTE } = positionInfo;
-
       invariant(
-        nPositions === this.meshes().length,
-        "Number of positions in the updated geometry must match the number of existing meshes",
+        this._positions === null ||
+          positionInfo.nPositions === this._positions.nPositions,
+        "Number of positions in the updated geometry must match the initial geometry",
       );
+      this._positions = positionInfo;
 
+      const { position, positionSize, RTE } = positionInfo;
       const transform = m.transform;
-      for (let i = 0; i < nPositions; i++) {
-        const posIdx = i * positionSize;
+      for (const mesh of this.meshes()) {
+        const posIdx = (mesh.userData.batchIndex as number) * positionSize;
         const pos = RTE
           ? {
               high: position.high.subarray(posIdx, posIdx + positionSize),
               low: position.low.subarray(posIdx, posIdx + positionSize),
             }
           : position.subarray(posIdx, posIdx + positionSize);
-        this.meshes()[i].setPosition(pos, RTE, transform);
+        mesh.setPosition(pos, RTE, transform);
       }
       // Anchors moved (e.g. terrain height resolution) — re-place labels.
       this._markDeclutterDirty();
     }
+
+    // A non-empty default text renders without per-feature setText calls, so
+    // any lazily-skipped meshes must exist before `_applyUpdate` (no-op for
+    // already-created ones).
+    if (text) this.initMeshes();
 
     const fontIdentifier = m.material.font ?? this._fontIdentifier;
     const needFontUpdate = fontIdentifier !== this._fontIdentifier;
@@ -411,7 +523,12 @@ export class BatchedSdfTextMesh
   }
 
   setTextByBatchIndex(batchIndex: number, text: string) {
-    const mesh = this.meshes()[batchIndex];
+    // An empty text on a not-yet-created mesh changes nothing (a lazily
+    // skipped mesh is exactly an invisible empty-text label); only a
+    // non-empty text forces the mesh into existence.
+    const mesh = text
+      ? this._ensureMeshAt(batchIndex)
+      : this.getMeshByBatchIndex(batchIndex);
 
     if (mesh) {
       // If the text hasn't been prepared in the worker yet, schedule async preparation
@@ -471,57 +588,101 @@ export class BatchedSdfTextMesh
     }
   }
 
+  /**
+   * The mesh for a feature's `batchIndex`, or `undefined` if not created yet.
+   * Meshes are created lazily and pushed onto `allMeshes` in creation order, so
+   * `allMeshes[batchIndex]` (the base-class mapping) does NOT hold here; the
+   * batchIndex→mesh mapping lives in `_meshByIndex`. Overriding this one
+   * accessor keeps the base-class setters and any external caller (picking,
+   * plugins) correct without patching each call site.
+   */
+  override getMeshByBatchIndex(batchIndex: number): SDFTextMesh | undefined {
+    return this._meshByIndex[batchIndex];
+  }
+
   setFeatureColorByBatchIndex(batchIndex: number, color: Color) {
-    const mesh = this.meshes()[batchIndex];
+    const mesh = this.getMeshByBatchIndex(batchIndex);
     if (mesh) {
       mesh.setColor(color);
+      return;
     }
+    const pending = this._pendingAt(batchIndex);
+    if (pending) pending.colorHex = color.getHex();
   }
 
   setFeatureShowByBatchIndex(batchIndex: number, rawVisible: boolean) {
-    const mesh = this.meshes()[batchIndex];
+    const mesh = this.getMeshByBatchIndex(batchIndex);
     if (mesh) {
       mesh._setFeatureShow(rawVisible);
       this.markVisibility(mesh);
       this._markDeclutterDirty();
+      return;
+    }
+    // A lazily-created mesh starts hidden (empty text ⇒ `visible=false`), so a
+    // mesh-less feature is already effectively `show:false`. Only `show:true`
+    // needs buffering; buffering `show:false` would allocate a pending entry
+    // per hidden feature — the common MVT case (most features stay hidden and
+    // never get a mesh) and exactly the allocation lazy creation avoids. For
+    // `show:false` just clear any stale buffered `show`, never allocate.
+    if (rawVisible) {
+      const pending = this._pendingAt(batchIndex);
+      if (pending) pending.show = true;
+    } else {
+      const pending = this._pending.get(batchIndex);
+      if (pending) pending.show = undefined;
     }
   }
 
   setFeatureHeightByBatchIndex(batchIndex: number, height: number) {
-    const mesh = this.meshes()[batchIndex];
+    const mesh = this.getMeshByBatchIndex(batchIndex);
     if (mesh) {
       mesh.setHeight(height);
       this._markDeclutterDirty();
+      return;
     }
+    const pending = this._pendingAt(batchIndex);
+    if (pending) pending.height = height;
   }
 
   setFeatureSizeByBatchIndex(batchIndex: number, size: number) {
-    const mesh = this.meshes()[batchIndex];
+    const mesh = this.getMeshByBatchIndex(batchIndex);
     if (mesh) {
       mesh.setSize(size);
       this._markDeclutterDirty();
+      return;
     }
+    const pending = this._pendingAt(batchIndex);
+    if (pending) pending.size = size;
   }
 
   setFeatureDeclutterPriorityByBatchIndex(
     batchIndex: number,
     priority: number,
   ) {
-    const mesh = this.meshes()[batchIndex];
+    const mesh = this.getMeshByBatchIndex(batchIndex);
     if (mesh) {
       mesh.setDeclutterPriority(priority);
       this._markDeclutterDirty();
+      return;
+    }
+    const pending = this._pendingAt(batchIndex);
+    if (pending) {
+      pending.declutterPriority = priority;
+      pending.hasDeclutterPriority = true;
     }
   }
 
   setFeatureOpacityByBatchIndex(batchIndex: number, opacity: number) {
-    const mesh = this.meshes()[batchIndex];
+    const clampedOpacity = Number.isFinite(opacity)
+      ? Math.max(0, Math.min(1, opacity))
+      : 1.0;
+    const mesh = this.getMeshByBatchIndex(batchIndex);
     if (mesh) {
-      const clampedOpacity = Number.isFinite(opacity)
-        ? Math.max(0, Math.min(1, opacity))
-        : 1.0;
       mesh.setOpacity(clampedOpacity);
+      return;
     }
+    const pending = this._pendingAt(batchIndex);
+    if (pending) pending.opacity = clampedOpacity;
   }
 
   dispose() {
