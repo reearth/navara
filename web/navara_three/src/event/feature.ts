@@ -366,7 +366,16 @@ export async function processRenderableFeatureChanged(
 
   obj.updateMatrix();
 
-  if (obj.visible) {
+  // Re-emit `featureUpdated` (which re-runs the layer's registered evaluator
+  // over this whole feature set) only when the set is actually displayed at the
+  // current LOD. `obj.visible` is not that signal for draped meshes: they stay
+  // visible while built so they remain stable bakeable drape sources (see
+  // PolygonMesh._update), so gating on it alone re-evaluated every built draped
+  // tile on every activation flip during zoom. The evaluator's per-feature
+  // values persist in the batch data texture, and user-driven restyles reach
+  // inactive sets through `Layer.forceUpdate`, so skipping inactive sets here
+  // is safe.
+  if (obj.visible && active) {
     handleFeatureUpdatedEventByLayerId(
       viewEvents,
       layersManager,
