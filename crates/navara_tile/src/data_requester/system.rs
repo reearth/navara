@@ -24,7 +24,7 @@ pub(crate) fn filter_requestable_data_requester(
         (Added<TerrainDataRequesterMarker>, Without<Deleted>),
     >,
     requested_data_requesters: Query<
-        &DataRequester,
+        (&DataRequester, &Priority),
         (
             With<TerrainDataRequesterMarker>,
             With<Requested>,
@@ -38,47 +38,63 @@ pub(crate) fn filter_requestable_data_requester(
     // Count only Pending DataRequesters with Requested marker.
     // Success+Requested entities exist (shared-handle consumers with already-loaded data)
     // and should not count toward the limit.
-    let pendings = requested_data_requesters
-        .iter()
-        .filter(|dr| dr.status == DataRequesterStatus::Pending)
-        .count();
+    let mut pendings = 0u32;
+    let mut prefetch_pendings = 0u32;
+    for (dr, priority) in requested_data_requesters.iter() {
+        if dr.status != DataRequesterStatus::Pending {
+            continue;
+        }
+        pendings += 1;
+        if is_prefetch_priority(priority) {
+            prefetch_pendings += 1;
+        }
+    }
     // Load gate: when the memory budget is exhausted, start ZERO new fetches
     // and settle on the already-loaded tiles instead of evicting → refetching
-    // in an endless loop. In-flight requests proceed; forcing `num_skip == 0`
-    // rejects every newly-Added requester this frame so none is dispatched.
-    let num_skip = if pressure.load_gate_closed {
-        0
+    // in an endless loop. In-flight requests proceed; zero free slots rejects
+    // every newly-Added requester this frame so none is dispatched.
+    let (mut free_slots, mut free_prefetch_slots) = if pressure.load_gate_closed {
+        (0, 0)
     } else {
-        (limits.max_pendings as i32 - pendings as i32).max(0)
+        (
+            (limits.max_pendings as i32 - pendings as i32).max(0),
+            (prefetch_max_pendings(limits.max_pendings) as i32 - prefetch_pendings as i32).max(0),
+        )
     };
 
     // Limit the number of requests in this frame.
     // Skip DataRequesters with Success status - they already have
     // their data (loaded by previous consumers) and should not be subject to the
     // MAX_PENDINGS limit. Rejecting them would cause create-delete loops.
-    let admissible: Vec<_> = data_requesters
+    let admissible = data_requesters
         .iter()
         .sort::<(&Priority, &OrderByDistance)>()
-        .filter(|(_, _, data_req, _, _)| data_req.status != DataRequesterStatus::Success)
-        .collect();
+        .filter(|(_, _, data_req, _, _)| data_req.status != DataRequesterStatus::Success);
 
-    // Reserve the estimated cost for the requesters actually dispatched this
-    // frame (the admitted prefix that is NOT skipped/rejected below). The
-    // amount (EMA of landed terrain mesh costs, seeded by
-    // `terrain_reserve_seed` on a cold start) is resolved by the `ReservedCost`
-    // on_insert hook; the reservation is released when the fetch resolves or
-    // the requester is despawned (see `ReservedCost`).
-    if ledger.enabled() {
-        for (e, _, _, _, _) in admissible.iter().take(num_skip as usize) {
-            commands
-                .entity(*e)
-                .try_insert(navara_memory::ReservedCost::for_key(
-                    navara_memory::ReserveKey::Terrain,
-                ));
+    for (e, marker, _data_req, _, priority) in admissible {
+        let is_prefetch = is_prefetch_priority(priority);
+        if free_slots > 0 && (!is_prefetch || free_prefetch_slots > 0) {
+            free_slots -= 1;
+            if is_prefetch {
+                free_prefetch_slots -= 1;
+            }
+
+            // Reserve the estimated cost for the requesters actually
+            // dispatched this frame. The amount (EMA of landed terrain mesh
+            // costs, seeded by `terrain_reserve_seed` on a cold start) is
+            // resolved by the `ReservedCost` on_insert hook; the reservation
+            // is released when the fetch resolves or the requester is
+            // despawned (see `ReservedCost`).
+            if ledger.enabled() {
+                commands
+                    .entity(e)
+                    .try_insert(navara_memory::ReservedCost::for_key(
+                        navara_memory::ReserveKey::Terrain,
+                    ));
+            }
+            continue;
         }
-    }
 
-    for (e, marker, _data_req, _, _) in admissible.into_iter().skip(num_skip as usize) {
         let handle = marker.0;
         let tile = qt.qt.get_mut(handle);
         if let Some(tile) = tile {
@@ -91,6 +107,21 @@ pub(crate) fn filter_requestable_data_requester(
             commands.entity(e).insert((Deleted, Ignored));
         }
     }
+}
+
+/// Background prefetches (horizon-occluded tiles) are issued at these
+/// priorities; everything the camera can currently see uses `Medium` or above.
+fn is_prefetch_priority(priority: &Priority) -> bool {
+    matches!(priority, Priority::Low | Priority::VeryLow)
+}
+
+/// How many of the pending-request slots background prefetches may hold at
+/// once. In-flight fetches cannot be preempted, so letting slow prefetches
+/// fill the whole queue would starve the Extreme/High requests issued when the
+/// camera moves — recreating the parent-flicker the prefetch exists to
+/// prevent. The rest of the queue always keeps turning over for visible tiles.
+fn prefetch_max_pendings(max_pendings: u32) -> u32 {
+    (max_pendings / 5).max(1)
 }
 
 #[cfg(test)]
@@ -152,6 +183,82 @@ mod load_gate_tests {
         app.update();
         app.update();
         assert!(app.world().get::<Deleted>(e).is_none());
+    }
+}
+
+#[cfg(test)]
+mod prefetch_cap_tests {
+    use super::*;
+    use bevy_app::{App, Update};
+    use navara_core::TileXYZ;
+    use navara_data_requester::RequestLimits;
+    use navara_memory::{MemoryLedger, SsePressure};
+    use navara_tile_component::TerrainTile;
+
+    /// Prefetch requesters (`Low`) may only hold `max_pendings / 5` slots so
+    /// slow background fetches never crowd out camera-driven requests, while
+    /// higher priorities use the full queue.
+    #[test]
+    fn prefetch_admission_is_capped_high_priority_is_not() {
+        let mut app = App::new();
+        app.init_resource::<BufferStore>();
+        app.init_resource::<MemoryLedger>();
+        app.init_resource::<navara_memory::ReserveEstimates>();
+        app.insert_resource(RequestLimits { max_pendings: 10 });
+        app.insert_resource(SsePressure {
+            multiplier: 1.0,
+            load_gate_closed: false,
+            ..Default::default()
+        });
+
+        let mut qt = TerrainTileQuadtree::new_with_linear_qt();
+        qt.qt
+            .initialize_zero(&|(x, y, z)| TerrainTile::new(TileXYZ { x, y, z }, 0., 0.));
+        let handle = qt.qt.zero().unwrap().handle();
+        app.insert_resource(qt);
+
+        fn spawn(
+            app: &mut App,
+            handle: navara_tile_component::TileHandle,
+            priority: Priority,
+            i: usize,
+        ) -> Entity {
+            app.world_mut()
+                .spawn((
+                    DataRequester::default(),
+                    TerrainDataRequesterMarker(handle),
+                    OrderByDistance {
+                        sse: i as f64,
+                        distance: i as f64,
+                    },
+                    priority,
+                ))
+                .id()
+        }
+        let highs: Vec<Entity> = (0..3)
+            .map(|i| spawn(&mut app, handle, Priority::High, i))
+            .collect();
+        // max_pendings = 10 → prefetch cap = 2: the third Low is rejected even
+        // though plenty of free slots remain.
+        let lows: Vec<Entity> = (0..3)
+            .map(|i| spawn(&mut app, handle, Priority::Low, i))
+            .collect();
+
+        app.add_systems(Update, filter_requestable_data_requester);
+        app.update();
+        app.update();
+
+        for e in &highs {
+            assert!(
+                app.world().get::<Deleted>(*e).is_none(),
+                "high-priority requesters are all admitted"
+            );
+        }
+        let rejected_lows = lows
+            .iter()
+            .filter(|e| app.world().get::<Deleted>(**e).is_some())
+            .count();
+        assert_eq!(rejected_lows, 1, "prefetch admissions stop at the cap");
     }
 }
 

@@ -32,6 +32,17 @@ use super::{
 use navara_layer::{TerrainDataType, TerrainLayer, TilesLayer};
 use navara_source::SourceStore;
 
+/// Maximum number of consecutive not-yet-renderable levels the traversal may
+/// descend past before it must wait for one of them to become renderable.
+/// Without this bound the traversal descends straight to the SSE-satisfying
+/// level; once those deep tiles swap in, their ancestors stop being requested,
+/// so on a slow source the levels in between never finish loading. A later
+/// tilt/zoom-out that reveals frustum-culled tiles then falls back to an
+/// ancestor many levels up, flashing a huge low-res parent. Bounding the
+/// descent keeps a renderable ancestor within this many levels of every
+/// traversed tile.
+const MAX_LEVELS_WITHOUT_RENDERABLE_ANCESTOR: u8 = 3;
+
 // This process works in the following steps.
 // 1. Check if the AABB of the tile is within the camera's frustum.(Frustum culling)
 // 2. Check horizon culling because the frustum culling isn't enough.
@@ -74,6 +85,14 @@ pub fn traverse_terrain(
     // This tracks the nearest ready hillshade parent for each layer.
     // Shared (Arc) because every child of every visited tile receives a copy.
     ready_layer_parents: Option<Arc<Vec<Option<LayerParent>>>>,
+    // How many consecutive ancestor levels above this tile are not renderable
+    // (0 when the parent is renderable). See
+    // `MAX_LEVELS_WITHOUT_RENDERABLE_ANCESTOR`.
+    levels_without_renderable_ancestor: u8,
+    // Beyond-the-horizon prefetching is paused while the memory load gate is
+    // closed: its requests would be rejected anyway (churning requester
+    // entities every frame) and its meshes are the first spend to cut.
+    allow_occlusion_prefetch: bool,
 ) -> TraversalResult {
     let has_regular_tiles = sorted_layers
         .iter()
@@ -131,6 +150,25 @@ pub fn traverse_terrain(
         .map(|p| occluder.is_scaled_space_point_visible(p))
         .unwrap_or(true);
     if is_culled_by_occlusion {
+        if !allow_occlusion_prefetch {
+            return TraversalResult::Culled;
+        }
+        prefetch_occluded_tile(
+            command,
+            qt,
+            tc,
+            buf,
+            data_manager,
+            frame,
+            terrain_layer,
+            sorted_layers,
+            source_store,
+            handle,
+            data_requesters,
+            terrain_data_requester,
+            ready_parent_tile_handle,
+            &ready_layer_parents,
+        );
         return TraversalResult::Culled;
     }
 
@@ -245,6 +283,46 @@ pub fn traverse_terrain(
         }
     }
 
+    // The not-yet-renderable chain from the nearest renderable ancestor down
+    // to (and including) this tile.
+    let unrenderable_chain_len = if is_renderable {
+        0
+    } else {
+        levels_without_renderable_ancestor.saturating_add(1)
+    };
+
+    // Ladder refinement: once the chain of not-yet-renderable levels reaches
+    // the bound, request this tile and wait for it to load instead of
+    // descending further. The frontier advances as each level becomes
+    // renderable, so deep target tiles are reached in bounded steps and every
+    // traversed tile keeps a renderable ancestor nearby as fallback cover.
+    // Already-swapped subtrees (`were_children_rendered`) are exempt: their
+    // children are on screen and must keep being traversed. Descendants of an
+    // SSE-satisfying tile (`meets_sse_ancestors`) are exempt as well — that
+    // path intentionally avoids new requests while the parent activates.
+    if !meets_sse_ancestors
+        && !were_children_rendered
+        && unrenderable_chain_len >= MAX_LEVELS_WITHOUT_RENDERABLE_ANCESTOR
+    {
+        if is_over_min_z {
+            prepare_tile_resource(
+                command,
+                qt,
+                buf,
+                data_manager,
+                terrain_layer,
+                handle,
+                tc,
+                sorted_layers,
+                source_store,
+                data_requesters,
+                terrain_data_requester,
+                Priority::Extreme,
+            );
+        }
+        return TraversalResult::NotFound;
+    }
+
     // Frustum-culled tiles keep traversing an already-swapped subtree
     // (`were_children_rendered`): the recursion stamps `visited_at` so
     // `clear_caches` doesn't destroy the subtree within two frames, and the
@@ -282,9 +360,11 @@ pub fn traverse_terrain(
         let mut are_all_children_prepared = true;
         let mut are_all_children_activated = true;
 
-        let mut rendered_children_indices = vec![];
-        let mut activated_children_indices = vec![];
-        let mut hidden_children_indices = vec![];
+        // Bitmasks over the (at most 4) child slots; avoids per-tile Vec
+        // allocations in this per-frame hot path.
+        let mut rendered_children_mask = 0u8;
+        let mut activated_children_mask = 0u8;
+        let mut hidden_children_mask = 0u8;
         for (i, child) in children.iter().enumerate() {
             let traversal_result = traverse_terrain(
                 command,
@@ -317,6 +397,8 @@ pub fn traverse_terrain(
                 meets_sse,
                 ready_parent_tile_handle,
                 ready_layer_parents.clone(),
+                unrenderable_chain_len,
+                allow_occlusion_prefetch,
             );
 
             if matches!(traversal_result, TraversalResult::NotFound) {
@@ -329,7 +411,7 @@ pub fn traverse_terrain(
                 traversal_result,
                 TraversalResult::NotFound | TraversalResult::Culled
             ) {
-                hidden_children_indices.push(i);
+                hidden_children_mask |= 1 << i;
             }
 
             // If there is one child at least, trigger the rendering children process.
@@ -363,11 +445,11 @@ pub fn traverse_terrain(
                 traversal_result,
                 TraversalResult::ChildrenRendered | TraversalResult::ChildrenMeshesPrepared
             ) {
-                rendered_children_indices.push(i);
+                rendered_children_mask |= 1 << i;
             }
 
             if matches!(traversal_result, TraversalResult::ChildrenMeshesPrepared) {
-                activated_children_indices.push(i);
+                activated_children_mask |= 1 << i;
             }
         }
 
@@ -386,12 +468,12 @@ pub fn traverse_terrain(
             if allow_updating_state_of_children {
                 for (i, child) in children.iter().enumerate() {
                     // If this child is not renderable, skip rendering this child.
-                    if hidden_children_indices.contains(&i) {
+                    if hidden_children_mask & (1 << i) != 0 {
                         continue;
                     }
 
                     // If this child's children are rendered, skip rendering this child.
-                    if rendered_children_indices.contains(&i) {
+                    if rendered_children_mask & (1 << i) != 0 {
                         continue;
                     }
 
@@ -428,12 +510,13 @@ pub fn traverse_terrain(
                         handle,
                         ready_parent_tile_handle,
                         ready_layer_parents.clone(),
+                        false,
                     );
                 }
             }
 
             for (i, child) in children.iter().enumerate() {
-                if activated_children_indices.contains(&i) || hidden_children_indices.contains(&i) {
+                if (activated_children_mask | hidden_children_mask) & (1 << i) != 0 {
                     // Hide parent tile when children are activated.
                     tc.activate_rendered_tile(child, meshes, false);
                     continue;
@@ -501,6 +584,10 @@ pub fn spawn_tile_entity(
     tile_handle: TileHandle,
     ready_parent_tile_handle: Option<TileHandle>,
     layer_parents: Option<Arc<Vec<Option<LayerParent>>>>,
+    // `true` only when spawned speculatively for a hidden tile (see
+    // `prefetch_occluded_tile`); any visible-path spawn clears the flag so
+    // the eviction pass never touches a tile the view relies on.
+    prefetched: bool,
 ) {
     tile.rendered_at = frame.rendered_frame();
     tc.is_updated_in_this_frame = true;
@@ -508,6 +595,7 @@ pub fn spawn_tile_entity(
     if let Some(tile) = tc.rendered_tile_caches.get_mut(&tile_handle) {
         tile.ready_parent_tile_handle = ready_parent_tile_handle;
         tile.layer_parents = layer_parents;
+        tile.prefetched &= prefetched;
         return;
     }
 
@@ -530,8 +618,92 @@ pub fn spawn_tile_entity(
             mesh_entity: None,
             mesh_prepared: false,
             needs_material_update: true,
+            prefetched,
         },
     );
+}
+
+/// Prefetch a horizon-occluded tile so the area beyond the horizon has usable
+/// cover when it is revealed: zooming out (or pitching up) raises the horizon
+/// and exposes that area all at once, and without prefetch the only cover
+/// there is an ancestor many levels up — a huge low-zoom parent takes over
+/// the whole view until the gap reloads.
+///
+/// Two stages, both invisible while the tile stays culled:
+/// 1. Request the DEM at `Low` priority, so visible tiles always win the
+///    pending-request slots (see `prefetch_max_pendings`).
+/// 2. Once the data lands, spawn the tile (inactive) so its mesh is built
+///    ahead of time — the strict swap can only fall back to an ancestor with
+///    a PREPARED mesh, so data alone would still climb to a low-zoom parent.
+#[allow(clippy::too_many_arguments)]
+fn prefetch_occluded_tile(
+    command: &mut Commands,
+    qt: &mut TerrainTileQuadtree,
+    tc: &mut TileCacheManager,
+    buf: &mut BufferStore,
+    data_manager: &mut DataManager,
+    frame: &FrameManager,
+    terrain_layer: &Option<&TerrainLayer>,
+    sorted_layers: &[(&TilesLayer, &Order)],
+    source_store: &SourceStore,
+    handle: TileHandle,
+    data_requesters: &Query<&navara_data_requester::DataRequester>,
+    terrain_data_requester: &TileTerrainDataRequesterQuery,
+    ready_parent_tile_handle: Option<TileHandle>,
+    ready_layer_parents: &Option<Arc<Vec<Option<LayerParent>>>>,
+) {
+    // Raster-only maps drape textures with the raster pipeline's own ancestor
+    // fallback; there is no terrain geometry to prefetch.
+    if terrain_layer.is_none() {
+        return;
+    }
+
+    // Already prefetched: the data landed and the mesh is building or built.
+    if tc.rendered_tile_caches.contains_key(&handle) {
+        return;
+    }
+
+    // Terrain/hillshade zoom bounds are enforced inside the request helpers.
+    prepare_tile_resource(
+        command,
+        qt,
+        buf,
+        data_manager,
+        terrain_layer,
+        handle,
+        tc,
+        sorted_layers,
+        source_store,
+        data_requesters,
+        terrain_data_requester,
+        Priority::Low,
+    );
+
+    let is_tile_ready = qt
+        .qt
+        .get(handle)
+        .unwrap()
+        .is_ready(
+            qt,
+            data_requesters,
+            terrain_data_requester,
+            terrain_layer,
+            sorted_layers,
+            source_store,
+        )
+        .is_tile_ready;
+    if is_tile_ready {
+        spawn_tile_entity(
+            command,
+            tc,
+            frame,
+            qt.qt.get_mut(handle).unwrap(),
+            handle,
+            ready_parent_tile_handle,
+            ready_layer_parents.clone(),
+            true,
+        );
+    }
 }
 
 /// Update the per-layer hillshade ancestor fallback by tracking the nearest
@@ -545,6 +717,15 @@ fn update_ready_layer_parents(
     data_requesters: &Query<&navara_data_requester::DataRequester>,
     ready_layer_parents: Option<Arc<Vec<Option<LayerParent>>>>,
 ) -> Option<Arc<Vec<Option<LayerParent>>>> {
+    // Without hillshade layers every slot stays `None`; skip the per-tile
+    // Vec + Arc allocation (this runs for every traversed tile every frame).
+    if sorted_layers
+        .iter()
+        .all(|(layer, _)| layer.hillshade_config.is_none())
+    {
+        return ready_layer_parents;
+    }
+
     let tile = qt.qt.get(handle)?;
     let mut updated_parents = Vec::with_capacity(sorted_layers.len());
 
@@ -753,12 +934,10 @@ mod tests {
     #[derive(bevy_ecs::prelude::Resource)]
     struct TraverseConfig {
         max_sse: f64,
+        /// Vertical field of view (degrees) used by `run_terrain_traverse`,
+        /// overridable per test to frustum-cull specific tiles.
+        fov: f64,
     }
-
-    /// Vertical field of view (degrees) used by `run_terrain_traverse`,
-    /// overridable per test to frustum-cull specific tiles.
-    #[derive(bevy_ecs::prelude::Resource)]
-    struct TestFov(f64);
 
     #[derive(bevy_ecs::prelude::Resource, Default)]
     struct LastResult(String);
@@ -781,6 +960,7 @@ mod tests {
     fn run_terrain_traverse(
         mut commands: Commands,
         tiles: Query<(&TilesLayer, &Order)>,
+        terrain_layers: Query<&TerrainLayer>,
         mut qt: ResMut<TerrainTileQuadtree>,
         mut tc: ResMut<TileCacheManager>,
         mut buf: ResMut<BufferStore>,
@@ -793,16 +973,15 @@ mod tests {
         target: Res<TargetHandle>,
         config: Res<TraverseConfig>,
         source_store: Res<SourceStore>,
-        fov: Res<TestFov>,
         mut out: ResMut<LastResult>,
     ) {
-        let (camera, frustum, occluder) = test_camera(fov.0);
+        let (camera, frustum, occluder) = test_camera(config.fov);
         let fog = Fog {
             enabled: false,
             density: 0.,
             sse_factor: 1.0,
         };
-        let terrain_layer: Option<&TerrainLayer> = None;
+        let terrain_layer: Option<&TerrainLayer> = terrain_layers.iter().next();
 
         let sorted_layers: Vec<_> = tiles.iter().sort::<&Order>().collect();
         let result = traverse_terrain(
@@ -832,6 +1011,8 @@ mod tests {
             false,
             None,
             None,
+            0,
+            true,
         );
         out.0 = result_label(&result).to_string();
 
@@ -907,9 +1088,11 @@ mod tests {
             pixel_ratio: 1.,
         });
         app.insert_resource(LastResult::default());
-        app.insert_resource(TraverseConfig { max_sse: 1e30 });
+        app.insert_resource(TraverseConfig {
+            max_sse: 1e30,
+            fov: 60.0,
+        });
         app.insert_resource(SourceStore::default());
-        app.insert_resource(TestFov(60.0));
 
         (app, handle)
     }
@@ -941,7 +1124,10 @@ mod tests {
         spawn_layer(&mut app, raster_layer("a", 0, 20), Order(0));
         // Huge threshold: the root's error is acceptable. With no terrain layer the
         // tile is ready (flat geometry), so geometry-first rendering selects it.
-        app.insert_resource(TraverseConfig { max_sse: 1e30 });
+        app.insert_resource(TraverseConfig {
+            max_sse: 1e30,
+            fov: 60.0,
+        });
 
         app.add_systems(Update, run_terrain_traverse);
         app.update();
@@ -964,7 +1150,10 @@ mod tests {
         // max_zoom=1 bounds the forced subdivision to a single level.
         spawn_layer(&mut app, raster_layer("a", 0, 1), Order(0));
         // Zero threshold: the root error is never satisfied, so it subdivides.
-        app.insert_resource(TraverseConfig { max_sse: 0. });
+        app.insert_resource(TraverseConfig {
+            max_sse: 0.,
+            fov: 60.0,
+        });
 
         app.add_systems(Update, run_terrain_traverse);
         app.update();
@@ -1040,6 +1229,7 @@ mod tests {
                 rendered_tile_entity: dummy,
                 mesh_prepared: prepared,
                 needs_material_update: false,
+                prefetched: false,
             },
         );
     }
@@ -1055,7 +1245,10 @@ mod tests {
         // max_zoom=2 bounds the forced subdivision: the z=1 children render, their
         // z=2 grandchildren are over max → NotFound, so each child resolves at z=1.
         spawn_layer(&mut app, raster_layer("a", 0, 2), Order(0));
-        app.insert_resource(TraverseConfig { max_sse: 0. });
+        app.insert_resource(TraverseConfig {
+            max_sse: 0.,
+            fov: 60.0,
+        });
 
         // The parent begins visible: a prepared, active mesh.
         let root_mesh = spawn_mesh(&mut app, true);
@@ -1119,6 +1312,179 @@ mod tests {
         }
     }
 
+    /// A raster-DEM terrain layer whose fetches never resolve: every spawned
+    /// `DataRequester` stays `Pending`, so no tile becomes renderable until a
+    /// test flips the status.
+    fn spawn_pending_terrain_layer(app: &mut App) {
+        app.world_mut().resource_mut::<SourceStore>().add(
+            "dem".to_string(),
+            navara_source::Source::RasterDem(navara_source::RasterDemSource {
+                source_id: "dem".to_string(),
+                url: "https://example.com/{z}/{x}/{y}.png".to_string(),
+                tms: false,
+                elevation_decoder: navara_core::ElevationDecoder::default(),
+                tile_size: 256,
+                min_zoom: 0,
+                // Bounds runaway subdivision if the ladder gate regresses: the
+                // traversal bails out past the overscaled max zoom.
+                max_zoom: 8,
+                overscaled_max_zoom: 8,
+            }),
+        );
+        app.world_mut().spawn(TerrainLayer {
+            layer_id: "terrain".to_string(),
+            source_id: Some("dem".to_string()),
+            terrain_type: TerrainDataType::RasterDEM,
+            appearance: None,
+        });
+    }
+
+    fn deepest_initialized_level(app: &App) -> usize {
+        let qt = app.world().resource::<TerrainTileQuadtree>();
+        (0..=8usize)
+            .filter(|&z| {
+                let n = 1usize << z;
+                (0..n).any(|x| (0..n).any(|y| qt.qt.leaf((x, y, z)).is_some()))
+            })
+            .max()
+            .unwrap()
+    }
+
+    /// With nothing loaded, the traversal must not descend past
+    /// `MAX_LEVELS_WITHOUT_RENDERABLE_ANCESTOR` unrenderable levels: it
+    /// requests that ladder rung and waits, so every deeper region always has
+    /// a nearby loaded ancestor as fallback cover. The frontier advances only
+    /// as levels finish loading.
+    #[test]
+    fn traverse_terrain_bounds_descent_below_renderable_ancestor() {
+        let (mut app, root) = terrain_app_with_root();
+        app.insert_resource(TargetHandle(root));
+        spawn_pending_terrain_layer(&mut app);
+        // Zero threshold: every tile subdivides toward deeper levels.
+        app.insert_resource(TraverseConfig {
+            max_sse: 0.,
+            fov: 60.0,
+        });
+
+        app.add_systems(Update, run_terrain_traverse);
+        app.update();
+        app.update();
+
+        // The chain z0..z2 is unrenderable and z2 hits the bound: z2 exists
+        // (created while z1 descended) but z3 was never initialized.
+        let gated = MAX_LEVELS_WITHOUT_RENDERABLE_ANCESTOR as usize - 1;
+        assert_eq!(
+            deepest_initialized_level(&app),
+            gated,
+            "descent must stop at the ladder bound while nothing is loaded"
+        );
+        assert_eq!(
+            app.world().resource::<LastResult>().0,
+            "notfound",
+            "nothing is renderable yet"
+        );
+
+        // The gated rung (and the levels above it) were still requested.
+        let tc = app.world().resource::<TileCacheManager>();
+        assert!(tc.requested_tile_caches.contains(&root));
+
+        // --- All pending fetches resolve → the frontier advances ---
+        let pending: Vec<Entity> = {
+            let mut q = app
+                .world_mut()
+                .query::<(Entity, &navara_data_requester::DataRequester)>();
+            q.iter(app.world()).map(|(e, _)| e).collect()
+        };
+        assert!(!pending.is_empty(), "the ladder rungs were requested");
+        for e in pending {
+            app.world_mut()
+                .get_mut::<navara_data_requester::DataRequester>(e)
+                .unwrap()
+                .status = navara_data_requester::DataRequesterStatus::Success;
+        }
+
+        app.update();
+
+        // z0..z2 are now renderable, so the traversal descends and creates the
+        // next rungs (z3..z5) but is gated again at z5 before creating z6.
+        assert_eq!(
+            deepest_initialized_level(&app),
+            gated + MAX_LEVELS_WITHOUT_RENDERABLE_ANCESTOR as usize,
+            "the frontier advances by the ladder stride once a rung loads"
+        );
+    }
+
+    /// A horizon-occluded tile is not rendered or descended, but its terrain
+    /// data must still be prefetched: zooming out reveals the area beyond the
+    /// old horizon at once, and prefetched tiles are the only nearby cover
+    /// that prevents a many-levels-up ancestor from flashing.
+    #[test]
+    fn traverse_terrain_prefetches_occluded_tile_data() {
+        let (mut app, _root) = terrain_app_with_root();
+        spawn_pending_terrain_layer(&mut app);
+
+        // A tile on the far side of the globe (same setup as
+        // `traverse_terrain_culls_occluded_tile`), so it is horizon-occluded.
+        let occluded = {
+            let mut qt = app.world_mut().resource_mut::<TerrainTileQuadtree>();
+            qt.qt
+                .initialize_leaf((7, 4, 3), &|(x, y, z)| {
+                    TerrainTile::new(TileXYZ { x, y, z }, 0., 0.)
+                })
+                .unwrap()
+        };
+        app.insert_resource(TargetHandle(occluded));
+
+        app.add_systems(Update, run_terrain_traverse);
+        app.update();
+
+        assert_eq!(app.world().resource::<LastResult>().0, "culled");
+
+        // The occluded tile's DEM was requested even though it is not shown.
+        let qt = app.world().resource::<TerrainTileQuadtree>();
+        assert!(
+            qt.qt
+                .get(occluded)
+                .unwrap()
+                .terrain_data
+                .as_ref()
+                .is_some_and(|t| t.data_requester_entity_id().is_some()),
+            "occluded tile must hold a terrain data request"
+        );
+        let tc = app.world().resource::<TileCacheManager>();
+        assert!(tc.requested_tile_caches.contains(&occluded));
+        assert!(
+            !tc.rendered_tile_caches.contains_key(&occluded),
+            "no mesh is prepared while the DEM is still pending"
+        );
+
+        // --- The DEM lands → the tile is spawned (inactive) so its mesh is
+        // built ahead of time; a later reveal can fall back to it instead of
+        // climbing to a huge low-zoom ancestor.
+        let requester = {
+            let qt = app.world().resource::<TerrainTileQuadtree>();
+            qt.qt
+                .get(occluded)
+                .unwrap()
+                .terrain_data
+                .as_ref()
+                .and_then(|t| t.data_requester_entity_id())
+                .unwrap()
+        };
+        app.world_mut()
+            .get_mut::<navara_data_requester::DataRequester>(requester)
+            .unwrap()
+            .status = navara_data_requester::DataRequesterStatus::Success;
+
+        app.update();
+
+        let tc = app.world().resource::<TileCacheManager>();
+        assert!(
+            tc.rendered_tile_caches.contains_key(&occluded),
+            "a loaded occluded tile prepares its mesh while staying culled"
+        );
+    }
+
     /// A subtree that already swapped to its children must survive leaving the
     /// frustum: the traversal keeps visiting it (stamping `visited_at`, which
     /// `clear_caches` uses as the liveness signal) and keeps the children
@@ -1142,7 +1508,10 @@ mod tests {
         // their z=6 grandchildren are over max → NotFound.
         spawn_layer(&mut app, raster_layer("a", 0, 6), Order(0));
         // Zero threshold: the target never meets SSE, so it always subdivides.
-        app.insert_resource(TraverseConfig { max_sse: 0. });
+        app.insert_resource(TraverseConfig {
+            max_sse: 0.,
+            fov: 60.0,
+        });
 
         app.add_systems(Update, run_terrain_traverse);
 
@@ -1181,7 +1550,7 @@ mod tests {
         );
 
         // --- Phase B: narrow frustum culls the target (still not occluded) ---
-        app.insert_resource(TestFov(10.0));
+        app.world_mut().resource_mut::<TraverseConfig>().fov = 10.0;
         {
             let (_, frustum, occluder) = test_camera(10.0);
             let qt = app.world().resource::<TerrainTileQuadtree>();

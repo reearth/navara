@@ -293,6 +293,8 @@ pub fn update_terrain(
             false,
             is_texture_ready.then_some(root_handle),
             None,
+            0,
+            !(pressure.load_gate_closed || pressure.prefetch_gate_closed),
         );
 
         // Skip rendering root tile if below minimum zoom, but allow traversal above.
@@ -310,6 +312,7 @@ pub fn update_terrain(
                     root_handle,
                     None,
                     None,
+                    false,
                 );
                 if tc.is_rendered_tile_prepared(&root_handle) {
                     tc.activate_rendered_tile(&root_handle, &mut meshes, true);
@@ -1854,6 +1857,7 @@ pub fn enforce_memory_budget(
     mut buf: ResMut<BufferStore>,
     mut rendered_tiles: Query<(Entity, &mut RenderedTile, &OrderByDistance)>,
     meshes: Query<&mut Mesh, (With<TileMeshMarker>, Without<Deleted>)>,
+    tile_costs: Query<&TileCost>,
 ) {
     // Purge entries that were revisited (traversal reactivated them) or
     // whose tile no longer exists. `survives_purge` shares the one-frame
@@ -1882,6 +1886,37 @@ pub fn enforce_memory_budget(
     }
 
     let current_frame = frame.rendered_frame();
+
+    // Speculative prefetch meshes (spawned for horizon-occluded tiles, never
+    // shown — see `prefetch_occluded_tile`) go first: dropping one costs at
+    // most a re-prefetch once headroom returns (the prefetch gate stays
+    // closed at this usage level, so eviction cannot kick off a refetch
+    // loop), while dropping a retained tile loses zoom history a revisit
+    // would reuse. Deepest first — coarse cover protects the most area per
+    // byte.
+    let mut prefetched: Vec<(TileHandle, usize, u64)> = tc
+        .rendered_tile_caches
+        .iter()
+        .filter(|(handle, cache)| {
+            cache.prefetched
+                && !tc.retained.contains_key(handle)
+                // Never touch a mesh that is on screen.
+                && !cache
+                    .mesh_entity
+                    .is_some_and(|e| meshes.get(e).is_ok_and(|m| m.active))
+        })
+        .filter_map(|(handle, cache)| {
+            let tile = qt.qt.get(*handle)?;
+            let gpu_est = cache
+                .mesh_entity
+                .and_then(|e| tile_costs.get(e).ok())
+                .map(|c| c.gpu_est)
+                .unwrap_or_default();
+            Some((*handle, tile.coords.z, gpu_est))
+        })
+        .collect();
+    prefetched.sort_by(|a, b| b.1.cmp(&a.1));
+
     let mut candidates: Vec<(TileHandle, usize, f64, u64)> = tc
         .retained
         .iter()
@@ -1903,7 +1938,15 @@ pub fn enforce_memory_budget(
     candidates.sort_by(|a, b| navara_memory::eviction::order((a.1, a.2), (b.1, b.2)));
 
     let mut budget = navara_memory::eviction::EvictBudget::new(usage_est, ledger.evict_target());
-    for (handle, _, _, gpu_est) in candidates {
+    for (handle, gpu_est) in prefetched
+        .into_iter()
+        .map(|(handle, _, gpu_est)| (handle, gpu_est))
+        .chain(
+            candidates
+                .into_iter()
+                .map(|(handle, _, _, gpu_est)| (handle, gpu_est)),
+        )
+    {
         if !budget.over_target() {
             break;
         }
@@ -2023,6 +2066,7 @@ mod memory_budget_tests {
                 rendered_tile_entity,
                 mesh_prepared: true,
                 needs_material_update: false,
+                prefetched: false,
             },
         );
         tc.last_rendered_frame = 2;
@@ -2126,6 +2170,54 @@ mod memory_budget_tests {
         assert!(app.world().get::<Deleted>(setup.mesh_entity).is_some());
         let tc = app.world().resource::<TileCacheManager>();
         assert!(tc.retained.is_empty());
+    }
+
+    /// Prefetched (never-activated) meshes are evictable even though their
+    /// tiles are still visited every frame: without this they would sit
+    /// outside both the retention pool and the budget's reach for as long as
+    /// the camera keeps them in the occluded ring.
+    #[test]
+    fn enforce_memory_budget_evicts_prefetched_mesh() {
+        let mut app = new_app(Some(50));
+        let setup = setup(&mut app, 100);
+        {
+            let world = app.world_mut();
+            world.get_mut::<Mesh>(setup.mesh_entity).unwrap().active = false;
+            let mut tc = world.resource_mut::<TileCacheManager>();
+            tc.rendered_tile_caches
+                .get_mut(&setup.handle)
+                .unwrap()
+                .prefetched = true;
+        }
+        app.add_systems(Update, enforce_memory_budget);
+        app.update();
+
+        assert!(
+            app.world().get_entity(setup.rendered_tile_entity).is_err(),
+            "prefetched mesh is evicted without waiting for retention"
+        );
+        assert_eq!(app.world().resource::<MemoryLedger>().evicted_count, 1);
+    }
+
+    /// The prefetched eviction pass must never touch a mesh that is on
+    /// screen (e.g. a prefetched tile that was activated before the visible
+    /// path cleared the flag).
+    #[test]
+    fn enforce_memory_budget_keeps_active_prefetched_mesh() {
+        let mut app = new_app(Some(50));
+        let setup = setup(&mut app, 100);
+        {
+            let mut tc = app.world_mut().resource_mut::<TileCacheManager>();
+            tc.rendered_tile_caches
+                .get_mut(&setup.handle)
+                .unwrap()
+                .prefetched = true;
+        }
+        app.add_systems(Update, enforce_memory_budget);
+        app.update();
+
+        assert!(app.world().get_entity(setup.rendered_tile_entity).is_ok());
+        assert_eq!(app.world().resource::<MemoryLedger>().evicted_count, 0);
     }
 
     /// Eviction must free every BufferStore handle the tile holds: the shared
@@ -2410,6 +2502,7 @@ mod memory_budget_tests {
                         rendered_tile_entity,
                         mesh_prepared: true,
                         needs_material_update: false,
+                        prefetched: false,
                     },
                 );
                 tc.retained.insert(
@@ -2773,6 +2866,7 @@ mod delete_layer_tests {
                 mesh_entity: Some(mesh_entity),
                 mesh_prepared: true,
                 needs_material_update: false,
+                prefetched: false,
             },
         );
         tc.requested_tile_caches.insert(handle);
@@ -2869,6 +2963,7 @@ mod delete_layer_tests {
                 mesh_entity: Some(mesh_entity),
                 mesh_prepared: true,
                 needs_material_update: false,
+                prefetched: false,
             },
         );
         app.insert_resource(tc);
