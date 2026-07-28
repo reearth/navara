@@ -203,7 +203,7 @@ export class DeclutterManager {
       camera.near,
       widthPx,
       heightPx,
-      // Plain math instead of @navara/three_api's degreeToRadian — that one
+      // Plain math instead of @navaramap/three-api's degreeToRadian — that one
       // is a WASM call whose result we'd only marshal straight back in.
       (camera.fov * Math.PI) / 180.0,
       DeclutterManager.PADDING_PX,
