@@ -26,6 +26,13 @@ uniform vec3 u_cameraPositionHigh;
 uniform vec3 u_cameraPositionLow;
 uniform mat4 modelViewMatrixRTE;
 
+// Always 1.0. Multiplying the high-order difference by a uniform the compiler
+// cannot constant-fold blocks fast-math reassociation of
+// (high - camHigh) + (low - camLow) into (high + low) - (camHigh + camLow),
+// which would collapse the math to absolute-ECEF f32 precision and make short
+// arcs snap/flicker in ~0.25-0.5 m steps as the camera moves.
+uniform float u_rteOne;
+
 // Packed vertex attributes
 attribute vec2 aVertexData; // x=aT, y=aSide
 
@@ -52,6 +59,39 @@ out vec4 vDash;
 
 #include chunks/geographic;
 
+// Arc angular size (radians) at which the surface-curvature "bulge" is faded
+// in. Below LO the bulge is smaller than absolute-ECEF f32 cancellation noise
+// (~1 m), so we render a precise eye-relative chord instead; between LO and HI
+// we blend the geodesic curvature back so long arcs still hug the surface.
+const float ARC_BULGE_OMEGA_LO = 5e-4; // ~3 km
+const float ARC_BULGE_OMEGA_HI = 5e-3; // ~32 km
+
+// Eye-relative position of the arc at parameter tt, precise to sub-meter near
+// the camera. srcRel/tgtRel are the precise eye-relative endpoints; srcAbs/
+// tgtAbs are absolute ECEF, used only for the geocentric up direction and the
+// long-arc curvature bulge — both tolerate f32 magnitude.
+vec3 arcPointRel(
+  vec3 srcRel, vec3 tgtRel,
+  vec3 srcAbs, vec3 tgtAbs,
+  float bulgeWeight, float tt,
+  float arcHeight, float extraHeight,
+  float a, float e2
+) {
+  // Straight chord in precise eye-relative space (preserves tiny separations).
+  vec3 chordRel = mix(srcRel, tgtRel, tt);
+
+  // Surface point and straight chord share the same absolute f32 magnitude, so
+  // their difference is the curvature bulge; trusted only for long arcs.
+  vec3 geoAbs = ellipsoidGeodesic(srcAbs, tgtAbs, tt, a, e2);
+  vec3 chordAbs = mix(srcAbs, tgtAbs, tt);
+  vec3 baseRel = chordRel + (geoAbs - chordAbs) * bulgeWeight;
+
+  // Lift along local geocentric up (direction stays accurate even for tiny arcs).
+  vec3 upDir = normalize(geoAbs);
+  float lift = arcHeight * sin(PI * tt);
+  return baseRel + upDir * (lift + extraHeight);
+}
+
 void main() {
   // Unpack vertex data
   float t = aVertexData.x;
@@ -66,33 +106,34 @@ void main() {
   float aInstanceGradation = aInstanceParams2.y;
 
   float dt = 1.0 / aInstanceSegments;
-  float t_dir2 = clamp(t + dt, 0.0, 1.0);
-  float t_pos2 = min(1.0, t + dt);
+  float t_dir = clamp(t + dt, 0.0, 1.0);
 
-  // Decode ECEF positions from high/low precision components (absolute world positions)
-  vec3 source3D_abs = aInstanceSourceHigh + aInstanceSourceLow;
-  vec3 target3D_abs = aInstanceTargetHigh + aInstanceTargetLow;
+  // Absolute ECEF endpoints (f32) — used only for direction & curvature.
+  vec3 srcAbs = aInstanceSourceHigh + aInstanceSourceLow;
+  vec3 tgtAbs = aInstanceTargetHigh + aInstanceTargetLow;
 
-  // Apply RTE transformation: make coordinates relative to camera
-  vec3 cameraPos = u_cameraPositionHigh + u_cameraPositionLow;
+  // Precise eye-relative endpoints (RTE): subtract the camera in high/low space
+  // so the large ECEF magnitude cancels exactly and sub-meter separation
+  // survives. u_rteOne (== 1.0) stops the compiler collapsing this back to
+  // absolute-ECEF precision (see the uniform declaration above).
+  vec3 srcRel = (aInstanceSourceHigh - u_cameraPositionHigh) * u_rteOne
+              + (aInstanceSourceLow - u_cameraPositionLow);
+  vec3 tgtRel = (aInstanceTargetHigh - u_cameraPositionHigh) * u_rteOne
+              + (aInstanceTargetLow - u_cameraPositionLow);
 
-  // Interpolate along geodesic using absolute positions
-  vec3 base0_abs = ellipsoidGeodesic(source3D_abs, target3D_abs, t, uA, uE2);
-  vec3 base1_pos_abs = ellipsoidGeodesic(source3D_abs, target3D_abs, t_pos2, uA, uE2);
-  vec3 base1_dir_abs = ellipsoidGeodesic(source3D_abs, target3D_abs, t_dir2, uA, uE2);
+  // Fade in surface curvature by arc angular size (robust to acos noise: short
+  // arcs land below LO regardless of the noise, so bulgeWeight is exactly 0).
+  float cosOmega = clamp(dot(normalize(srcAbs), normalize(tgtAbs)), -1.0, 1.0);
+  float omega = acos(cosOmega);
+  float bulgeWeight = smoothstep(ARC_BULGE_OMEGA_LO, ARC_BULGE_OMEGA_HI, omega);
 
-  float lift0 = aInstanceArcHeight * sin(PI * t);
-  float lift1_pos = aInstanceArcHeight * sin(PI * t_pos2);
-  float lift1_dir = aInstanceArcHeight * sin(PI * clamp(t_dir2, 0.0, 1.0));
-
-  // Apply height and lift, then make relative to camera
-  vec3 p0      = normalize(base0_abs)     * (length(base0_abs)     + lift0     + aInstanceHeight) - cameraPos;
-  vec3 p1_pos  = normalize(base1_pos_abs) * (length(base1_pos_abs) + lift1_pos + aInstanceHeight) - cameraPos;
-  vec3 p1_dir  = normalize(base1_dir_abs) * (length(base1_dir_abs) + lift1_dir + aInstanceHeight) - cameraPos;
+  vec3 p0 = arcPointRel(srcRel, tgtRel, srcAbs, tgtAbs, bulgeWeight, t,
+                        aInstanceArcHeight, aInstanceHeight, uA, uE2);
+  vec3 p1_dir = arcPointRel(srcRel, tgtRel, srcAbs, tgtAbs, bulgeWeight, t_dir,
+                            aInstanceArcHeight, aInstanceHeight, uA, uE2);
 
   // Use RTE model-view matrix (rotation only, no translation)
   vec4 clip0     = projectionMatrix * modelViewMatrixRTE * vec4(p0,     1.0);
-  vec4 clip1_pos = projectionMatrix * modelViewMatrixRTE * vec4(p1_pos, 1.0);
   vec4 clip1_dir = projectionMatrix * modelViewMatrixRTE * vec4(p1_dir, 1.0);
 
   vec2 ndc0 = clip0.xy / clip0.w;
