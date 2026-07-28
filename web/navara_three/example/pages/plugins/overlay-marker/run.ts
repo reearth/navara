@@ -2,12 +2,12 @@ import ThreeView, { type AttributionSource } from "@navaramap/three";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
+} from "@navaramap/three-default-plugin";
 import {
   PersonViewPlugin,
   OverlayPlugin,
   moveOverlayElement,
-} from "@navaramap/three_plugins";
+} from "@navaramap/three-plugins";
 
 import { LOCAL_DATASETS, TILES_3D_DATASETS } from "../../../helpers/constants";
 import { atZoneTime } from "../../../helpers/control";

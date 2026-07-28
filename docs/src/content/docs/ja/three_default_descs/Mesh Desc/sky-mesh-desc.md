@@ -141,7 +141,7 @@ sidebar:
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { SkyMeshDesc } from "@navaramap/three_default_descs";
+import { SkyMeshDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 view.registerMesh("sky", SkyMeshDesc);

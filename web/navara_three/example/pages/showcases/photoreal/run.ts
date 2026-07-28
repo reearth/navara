@@ -13,11 +13,11 @@ import {
   type RainDropConfig,
   type RainMeshConfig,
   type SnowMeshConfig,
-} from "@navaramap/three_default_descs";
+} from "@navaramap/three-default-descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
+} from "@navaramap/three-default-plugin";
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";

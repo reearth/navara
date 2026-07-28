@@ -1,5 +1,5 @@
 {
-  "name": "@navaramap/three_default_plugin",
+  "name": "@navaramap/three-default-plugin",
   "type": "module",
   "version": "0.0.0",
   "main": "dist/index.umd.cjs",
@@ -33,7 +33,7 @@
     "@navaramap/three": "workspace:*"
   },
   "dependencies": {
-    "@navaramap/three_default_descs": "workspace:*"
+    "@navaramap/three-default-descs": "workspace:*"
   },
   "devDependencies": {
     "@navaramap/three": "workspace:*"

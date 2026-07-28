@@ -41,7 +41,7 @@ Rust クレートは、それぞれ異なるユースケースをターゲット
 
 **`navara_wasm_worker`** は `web/wasm/navara_engine_worker/` にコンパイルされ、処理に特化したクレートを含みます。地形メッシュ構築やポリゴン/ポリラインバッチ処理など、CPU 負荷の高いバックグラウンドタスクのために Web Worker で実行されます。
 
-**`navara_wasm_api`** は `web/wasm/navara_engine_api/` にコンパイルされ、6 つのコアクレート（`navara_core`、`navara_math`、`navara_camera` など）のみを含みます。座標変換や数学的操作のための軽量でステートレスなユーティリティ関数を提供します。`@navaramap/three_api` が通信するモジュールです。
+**`navara_wasm_api`** は `web/wasm/navara_engine_api/` にコンパイルされ、6 つのコアクレート（`navara_core`、`navara_math`、`navara_camera` など）のみを含みます。座標変換や数学的操作のための軽量でステートレスなユーティリティ関数を提供します。`@navaramap/three-api` が通信するモジュールです。
 
 ビルドパイプラインは cargo-make によって管理され、厳密な順序に従います：まず Rust クレートを WASM にコンパイルし、wasm-bindgen で TypeScript バインディングを生成し、Web 依存関係をインストールし、TypeScript パッケージをビルドし、最後にサンプルとアセットを準備します。
 
@@ -49,7 +49,7 @@ Rust クレートは、それぞれ異なるユースケースをターゲット
 
 Navara は、WASM で生成されたクラスを公開 TypeScript API で直接公開しないという厳格なポリシーを適用しています。`wasm-bindgen` が生成するクラスには手動のメモリ管理要件があり、Rust がメモリを解放すると JavaScript の参照が無効になり、use-after-free エラーやメモリリークにつながります。
 
-代わりに、`@navaramap/three` と `@navaramap/three_api` の公開関数は、プレーンな JavaScript オブジェクトまたは Three.js 型を入力として受け取り、内部で WASM オブジェクトを作成し、操作を実行し、結果をプレーンな JavaScript/Three.js 型に変換して返し、WASM オブジェクトを解放します。このラッパーパターンにより、利用者が WASM メモリを手動で管理する必要がなくなります。
+代わりに、`@navaramap/three` と `@navaramap/three-api` の公開関数は、プレーンな JavaScript オブジェクトまたは Three.js 型を入力として受け取り、内部で WASM オブジェクトを作成し、操作を実行し、結果をプレーンな JavaScript/Three.js 型に変換して返し、WASM オブジェクトを解放します。このラッパーパターンにより、利用者が WASM メモリを手動で管理する必要がなくなります。
 
 `NormalizeWASMClass<T>` ユーティリティ型（`@navaramap/core` から提供）は、WASM クラス定義から `free()` メソッドを削除し、getter/setter ペアをプレーンなプロパティに変換することで TypeScript 型を導出するために使用されます。
 

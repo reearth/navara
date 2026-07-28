@@ -1,9 +1,9 @@
 import ThreeView, { TERRARIUM_ELEVATION_DECODER } from "@navaramap/three";
-import type { CloudsEffectDesc } from "@navaramap/three_default_descs";
+import type { CloudsEffectDesc } from "@navaramap/three-default-descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
+} from "@navaramap/three-default-plugin";
 import { Vector2 } from "three";
 
 import { addButton } from "../../../../helpers/button";

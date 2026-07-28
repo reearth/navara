@@ -1,4 +1,4 @@
-# @navaramap/three_plugins
+# @navaramap/three-plugins
 
 Optional feature plugins for `@navaramap/three`. Each plugin packages a self-contained capability on top of the core view:
 
@@ -16,8 +16,8 @@ import ThreeView from "@navaramap/three";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
-import { OverlayPlugin, moveOverlayElement } from "@navaramap/three_plugins";
+} from "@navaramap/three-default-plugin";
+import { OverlayPlugin, moveOverlayElement } from "@navaramap/three-plugins";
 
 const view = new ThreeView<DefaultDescriptions>();
 view.addPlugin(new DefaultPlugin());
@@ -47,7 +47,7 @@ overlay.onUpdate(({ projected }) => {
 });
 ```
 
-`@navaramap/three`, `@navaramap/three_default_plugin`, and `three` are peer dependencies.
+`@navaramap/three`, `@navaramap/three-default-plugin`, and `three` are peer dependencies.
 
 ## Documentation
 

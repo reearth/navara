@@ -141,7 +141,7 @@ For details on the atmosphere system, see the [Atmosphere class](../../../three/
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { SkyMeshDesc } from "@navaramap/three_default_descs";
+import { SkyMeshDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 view.registerMesh("sky", SkyMeshDesc);

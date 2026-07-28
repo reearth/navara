@@ -14,12 +14,12 @@ import {
   RainDropEffectDesc,
   RainMeshDesc,
   SnowMeshDesc,
-} from "@navaramap/three_default_descs";
+} from "@navaramap/three-default-descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
-import { PersonViewPlugin, type ViewMode } from "@navaramap/three_plugins";
+} from "@navaramap/three-default-plugin";
+import { PersonViewPlugin, type ViewMode } from "@navaramap/three-plugins";
 import { Vector2 } from "three";
 import { Pane } from "tweakpane";
 

@@ -7,7 +7,7 @@ import ThreeView, {
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
+} from "@navaramap/three-default-plugin";
 import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 

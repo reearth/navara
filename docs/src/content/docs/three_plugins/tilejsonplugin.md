@@ -22,8 +22,8 @@ To build a custom credit UI instead, opt out of the built-in one (`new ThreeView
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
-import { TileJsonPlugin } from "@navaramap/three_plugins";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
+import { TileJsonPlugin } from "@navaramap/three-plugins";
 
 const view = new ThreeView({ container });
 

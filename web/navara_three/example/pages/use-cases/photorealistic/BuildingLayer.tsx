@@ -5,7 +5,7 @@ import type {
   ColorTuple,
   FeatureUpdatedParams,
 } from "@navaramap/three";
-import { Layer } from "@navaramap/three_react";
+import { Layer } from "@navaramap/three-react";
 import { useEffect, useMemo, useRef } from "react";
 
 import {

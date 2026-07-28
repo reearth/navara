@@ -27,7 +27,7 @@ The Rust/WASM GIS engine handles all geospatial computation independently of the
 
 Navara uses a plugin system to register descriptor types. Before calling `init()`, you add plugins to a `ThreeView` instance. Each plugin registers the mesh, light, and effect descriptor types it provides. After initialization, you can add descriptors of those registered types.
 
-[`DefaultPlugin`](../../../three_default_plugin/about/) (from `@navaramap/three_default_plugin`) registers built-in mesh, light, and effect descriptors. For most applications, adding `DefaultPlugin` is all you need to get started.
+[`DefaultPlugin`](../../../three_default_plugin/about/) (from `@navaramap/three-default-plugin`) registers built-in mesh, light, and effect descriptors. For most applications, adding `DefaultPlugin` is all you need to get started.
 
 You can also create your own mesh descriptors, effect descriptors, and light descriptors with full access to the rendering engine's scene graph. This is the same mechanism that powers Navara's built-in descriptors. For details, see the [Custom Descriptor](../../../three/core/custom-desc/) documentation.
 
@@ -91,14 +91,14 @@ For most applications, you will only interact with Tier 0 — the `ThreeView` cl
 
 Navara is split into several npm packages. This can seem complex at first, but the separation follows directly from the headless design: the GIS engine is independent of any renderer, the rendering backend is a separate layer, and descriptor implementations are separate from the core so you can choose which ones to include.
 
-In practice, most applications only need two packages: `@navaramap/three` for the core engine and `@navaramap/three_default_plugin` for the built-in descriptors.
+In practice, most applications only need two packages: `@navaramap/three` for the core engine and `@navaramap/three-default-plugin` for the built-in descriptors.
 
 | Package | Role | When you need it |
 |---------|------|-----------------|
 | `@navaramap/three` | Main package — `ThreeView` class, source & layer API, camera control | Always |
-| `@navaramap/three_default_plugin` | `DefaultPlugin` — built-in mesh, light, and effect descriptors | Almost always |
-| `@navaramap/three_default_descs` | Individual descriptor class implementations | When registering descriptors manually without `DefaultPlugin` |
-| `@navaramap/three_api` | Standalone GIS utilities (coordinate transforms, geodesic calculations) | When you need GIS math without the full map engine |
+| `@navaramap/three-default-plugin` | `DefaultPlugin` — built-in mesh, light, and effect descriptors | Almost always |
+| `@navaramap/three-default-descs` | Individual descriptor class implementations | When registering descriptors manually without `DefaultPlugin` |
+| `@navaramap/three-api` | Standalone GIS utilities (coordinate transforms, geodesic calculations) | When you need GIS math without the full map engine |
 
 ## Navigating the Documentation
 
@@ -106,7 +106,7 @@ This documentation is organized into several sections that correspond to differe
 
 The [**three** section](../../../three/introduction/what-is-navara-three/) covers everything related to `@navaramap/three` — the `ThreeView` API, camera controls, layer concepts, and step-by-step tutorials. If you are building an application with Navara, this is where you will spend most of your time.
 
-The [**three_default_descs** section](../../../three_default_descs/about/) is a reference for all the mesh, effect, and light descriptor types provided by `@navaramap/three_default_descs`. Each descriptor type has its own page documenting its configuration options and usage examples.
+The [**three_default_descs** section](../../../three_default_descs/about/) is a reference for all the mesh, effect, and light descriptor types provided by `@navaramap/three-default-descs`. Each descriptor type has its own page documenting its configuration options and usage examples.
 
 The [**three_default_plugin** section](../../../three_default_plugin/about/) documents the `DefaultPlugin` API, including the convenience methods it provides for common setups.
 

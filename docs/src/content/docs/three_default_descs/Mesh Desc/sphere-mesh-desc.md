@@ -291,7 +291,7 @@ import { Color } from "@navaramap/three";
 
 ```typescript
 import ThreeView, { Color } from "@navaramap/three";
-import { SphereMeshDesc } from "@navaramap/three_default_descs";
+import { SphereMeshDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 view.registerMesh("sphere", SphereMeshDesc);

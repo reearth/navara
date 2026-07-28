@@ -17,7 +17,7 @@
  *
  * ```ts
  * import ThreeView from "@navaramap/three";
- * import { TileJsonPlugin } from "@navaramap/three_plugins";
+ * import { TileJsonPlugin } from "@navaramap/three-plugins";
  *
  * const view = new ThreeView({ container });
  * const tilejson = new TileJsonPlugin();
@@ -58,7 +58,7 @@ import ThreeView, {
   type Source,
   type ViewContext,
 } from "@navaramap/three";
-import type { DefaultDescriptions } from "@navaramap/three_default_plugin";
+import type { DefaultDescriptions } from "@navaramap/three-default-plugin";
 
 type View = ThreeView<DefaultDescriptions>;
 

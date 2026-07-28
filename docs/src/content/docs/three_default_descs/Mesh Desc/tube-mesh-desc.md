@@ -275,7 +275,7 @@ import { Color } from "@navaramap/three";
 
 ```typescript
 import ThreeView, { Color } from "@navaramap/three";
-import { TubeMeshDesc } from "@navaramap/three_default_descs";
+import { TubeMeshDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 view.registerMesh("tube", TubeMeshDesc);

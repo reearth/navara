@@ -23,7 +23,7 @@ import {
   type FontWorkerMemoryStats,
 } from "@navaramap/font";
 import FontWorkerURL from "@navaramap/font/fontWorker?worker&url";
-import { initNavaraApi } from "@navaramap/three_api";
+import { initNavaraApi } from "@navaramap/three-api";
 import {
   initializeWorkerPool,
   probeWorkerPoolHeap,
@@ -158,7 +158,7 @@ export type {
 } from "@navaramap/core";
 export { CameraDirection } from "@navaramap/engine";
 // CSM exports for advanced users
-export { CascadedShadowMaps, CSMHelper } from "@navaramap/three_csm";
+export { CascadedShadowMaps, CSMHelper } from "@navaramap/three-csm";
 
 export * from "./type";
 export * from "./constants";
@@ -176,7 +176,7 @@ export * from "./layers";
 export * from "./passes";
 export * from "./evaluations";
 export { SKY_RENDER_ORDER, STARS_RENDER_ORDER } from "./renderOrder";
-export * from "@navaramap/three_api";
+export * from "@navaramap/three-api";
 export * from "./Color";
 export { type BlendMode, blendFunction, createReplacer } from "./utils";
 export { Atmosphere, type AtmosphereOptions } from "./atmosphere";

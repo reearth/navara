@@ -416,7 +416,7 @@ This property can only be set when creating the Descriptor. It cannot be changed
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { SSREffectDesc } from "@navaramap/three_default_descs";
+import { SSREffectDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();
@@ -431,8 +431,8 @@ const ssrDesc = view.addEffect<SSREffectDesc>({
 
 ```typescript
 import ThreeView, { Color } from "@navaramap/three";
-import { SSREffectDesc } from "@navaramap/three_default_descs";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { SSREffectDesc } from "@navaramap/three-default-descs";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 
 const view = new ThreeView();
 const plugin = new DefaultPlugin();
@@ -489,7 +489,7 @@ view.addLayer({
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { SSREffectDesc } from "@navaramap/three_default_descs";
+import { SSREffectDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();
@@ -508,7 +508,7 @@ const ssrDesc = view.addEffect<SSREffectDesc>({
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { SSREffectDesc } from "@navaramap/three_default_descs";
+import { SSREffectDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();

@@ -7,11 +7,11 @@ import {
   DEFAULT_SKY_BOX_OPTIONS,
   ColorGradingLUTEffectDesc,
   ToneMappingMode,
-} from "@navaramap/three_default_descs";
+} from "@navaramap/three-default-descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
+} from "@navaramap/three-default-plugin";
 import { Pane } from "tweakpane";
 
 import { TILE_DATASETS, LUT_DATASETS } from "../../helpers/constants";

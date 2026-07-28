@@ -133,7 +133,7 @@ import { Color } from "@navaramap/three";
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { SSAOEffectDesc } from "@navaramap/three_default_descs";
+import { SSAOEffectDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();
@@ -149,7 +149,7 @@ const ssaoDesc = view.addEffect<SSAOEffectDesc>({
 
 ```typescript
 import ThreeView, { Color } from "@navaramap/three";
-import { SSAOEffectDesc } from "@navaramap/three_default_descs";
+import { SSAOEffectDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();
@@ -171,7 +171,7 @@ const ssaoDesc = view.addEffect<SSAOEffectDesc>({
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { SSAOEffectDesc } from "@navaramap/three_default_descs";
+import { SSAOEffectDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();
@@ -190,8 +190,8 @@ const ssaoDesc = view.addEffect<SSAOEffectDesc>({
 
 ```typescript
 import ThreeView, { Color } from "@navaramap/three";
-import { SSAOEffectDesc } from "@navaramap/three_default_descs";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { SSAOEffectDesc } from "@navaramap/three-default-descs";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 
 const view = new ThreeView();
 const plugin = new DefaultPlugin();

@@ -28,7 +28,7 @@ sidebar:
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { FXAAEffectDesc } from "@navaramap/three_default_descs";
+import { FXAAEffectDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();

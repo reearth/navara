@@ -11,13 +11,13 @@ A plugin bundles descriptor registrations and/or high-level behavior behind one 
 
 | Plugin | Package | Purpose / key API |
 |---|---|---|
-| `DefaultPlugin` | `@navaramap/three_default_plugin` | Registers ~40 built-in descriptors; provides `DefaultDescriptions` type; `addDefaultPhotorealScene()` |
+| `DefaultPlugin` | `@navaramap/three-default-plugin` | Registers ~40 built-in descriptors; provides `DefaultDescriptions` type; `addDefaultPhotorealScene()` |
 | `AttributionPlugin` | `@navaramap/three` (built-in) | Zoom-aware credit UI. `ThreeView` creates one by default, exposed as `view.attribution` (opt out with `defaultAttribution: false`; `undefined` in a worker). Feed credits with `view.attribution?.add([{ attribution, attributionUrl }, { attributionHtml }, ...])` / `.remove([...])`; `show()`/`hide()` toggle the popover. Include credits in every example that loads third-party data — see recipes.md for a full call |
-| `TileJsonPlugin` | `@navaramap/three_plugins` | TileJSON 3.0.0 sources: `await tilejson.addSource({ type, id?, url })` after init registers the document as a Navara source and auto-surfaces its `attribution` via `view.attribution` |
-| `PersonViewPlugin` | `@navaramap/three_plugins` | WASD first/third-person walk with GLTF character: `.start()`, `.teleport()`, `.setViewMode()` |
-| `OverlayPlugin` | `@navaramap/three_plugins` | World→screen DOM overlays: `.setPositions([...])`, `.onUpdate(({ projected }) => ...)` |
-| `CesiumIonPlugin` | `@navaramap/three_plugins` | Cesium Ion assets (quantized-mesh terrain) |
-| `MapLibreStylePlugin` | `@navaramap/maplibre_style` | Render a MapLibre style JSON: `new MapLibreStylePlugin(styleJson)` |
+| `TileJsonPlugin` | `@navaramap/three-plugins` | TileJSON 3.0.0 sources: `await tilejson.addSource({ type, id?, url })` after init registers the document as a Navara source and auto-surfaces its `attribution` via `view.attribution` |
+| `PersonViewPlugin` | `@navaramap/three-plugins` | WASD first/third-person walk with GLTF character: `.start()`, `.teleport()`, `.setViewMode()` |
+| `OverlayPlugin` | `@navaramap/three-plugins` | World→screen DOM overlays: `.setPositions([...])`, `.onUpdate(({ projected }) => ...)` |
+| `CesiumIonPlugin` | `@navaramap/three-plugins` | Cesium Ion assets (quantized-mesh terrain) |
+| `MapLibreStylePlugin` | `@navaramap/maplibre-style` | Render a MapLibre style JSON: `new MapLibreStylePlugin(styleJson)` |
 
 ## addDefaultPhotorealScene()
 

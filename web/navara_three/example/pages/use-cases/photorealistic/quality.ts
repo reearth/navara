@@ -3,7 +3,7 @@ import type {
   CloudsConfig,
   RainDropConfig,
   SSRConfig,
-} from "@navaramap/three_default_descs";
+} from "@navaramap/three-default-descs";
 
 export type QualityFlags = "ultra" | "high" | "medium" | "low";
 

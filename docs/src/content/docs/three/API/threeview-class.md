@@ -11,7 +11,7 @@ ThreeView is the main class for creating and managing 3D map visualizations usin
 
 ```tsx
 import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navaramap/three";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 import { Vector3 } from "three";
 
 // Create ThreeView instance

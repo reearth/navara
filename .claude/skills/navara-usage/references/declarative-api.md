@@ -75,7 +75,7 @@ Layer events: `featureCreated` / `featureUpdated` / `featureVisibilityChanged` /
 Layers need no registration, but mesh/effect/light **Descriptors must be registered before use** — the key of the config object selects the descriptor class:
 
 ```typescript
-import { BoxMeshDesc, FXAAEffectDesc, SunLightDesc } from "@navaramap/three_default_descs";
+import { BoxMeshDesc, FXAAEffectDesc, SunLightDesc } from "@navaramap/three-default-descs";
 
 view.registerMesh("box", BoxMeshDesc);          // DefaultPlugin does this for ~40 built-ins
 const box = view.addMesh<BoxMeshDesc>({ box: { width: 100, height: 100 } });

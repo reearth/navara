@@ -2,11 +2,11 @@ import ThreeView, { Color } from "@navaramap/three";
 import {
   DepthOfFieldEffectDesc,
   DEFAULT_DEPTH_OF_FIELD_OPTIONS,
-} from "@navaramap/three_default_descs";
+} from "@navaramap/three-default-descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
+} from "@navaramap/three-default-plugin";
 import { Pane } from "tweakpane";
 
 import { TILE_DATASETS, TILES_3D_DATASETS } from "../../helpers/constants";

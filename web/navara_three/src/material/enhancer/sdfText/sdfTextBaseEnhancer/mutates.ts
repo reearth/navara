@@ -1,5 +1,5 @@
 import { encodePosition } from "@navaramap/engine-api";
-import { RTE_ONE_UNIFORM } from "@navaramap/three_api";
+import { RTE_ONE_UNIFORM } from "@navaramap/three-api";
 import { Color, DataTexture, type Matrix4, Vector2, Vector3 } from "three";
 
 import type { UniformValue } from "../../../types";

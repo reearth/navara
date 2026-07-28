@@ -19,7 +19,7 @@ Navara は、Three.js などのレンダリングエンジンをラップした�
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 
 const view = new ThreeView({ useNormal: true });
 
@@ -70,7 +70,7 @@ Navara の機能は 4 つの階層に整理されています。まずは宣言�
 
 ### 低レベル API
 
-設定オブジェクトや既製のプラグインでは足りないときは 1 つ下の階層へ。[`FeatureEvaluator`](../../../three/api/feature-evaluator/) で属性に基づいて個々のフィーチャーをスタイリングし（建物を高さで色分けする、属性値でフィルタリングするなど）、`pick` イベントや地形サンプリングでフィーチャーのピックや地形の照会を行い、測地系 / ECEF の数学ユーティリティで座標変換や測地線距離を計算できます。GIS 計算はマップエンジンなしで動作する[スタンドアロンパッケージ](../../../three/api/navara_three_api/)（`@navaramap/three_api`）としても利用できます。
+設定オブジェクトや既製のプラグインでは足りないときは 1 つ下の階層へ。[`FeatureEvaluator`](../../../three/api/feature-evaluator/) で属性に基づいて個々のフィーチャーをスタイリングし（建物を高さで色分けする、属性値でフィルタリングするなど）、`pick` イベントや地形サンプリングでフィーチャーのピックや地形の照会を行い、測地系 / ECEF の数学ユーティリティで座標変換や測地線距離を計算できます。GIS 計算はマップエンジンなしで動作する[スタンドアロンパッケージ](../../../three/api/navara_three_api/)（`@navaramap/three-api`）としても利用できます。
 
 ### カスタム Descriptor
 

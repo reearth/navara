@@ -61,7 +61,7 @@ In addition to the properties below, the common properties from the base class (
 
 ```typescript
 import ThreeView, { Color } from "@navaramap/three";
-import { ArrowHelperDesc } from "@navaramap/three_default_descs";
+import { ArrowHelperDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 view.registerMesh("arrowHelper", ArrowHelperDesc);

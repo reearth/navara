@@ -16,7 +16,7 @@ These integration tests help catch issues that only appear when consuming the li
 ```
 integration-tests/
 ├── navara-three              # Integration test for @navaramap/three
-└── navara-three-react        # Integration test for @navaramap/three_react
+└── navara-three-react        # Integration test for @navaramap/three-react
 ```
 
 ## Prerequisites

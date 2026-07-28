@@ -15,7 +15,7 @@ graph TD
     a1["@navaramap/three"]
     a2["@navaramap/core"]
     a3["@navaramap/worker"]
-    a4["@navaramap/three_api"]
+    a4["@navaramap/three-api"]
   end
 
   subgraph WASM["WebAssembly Interface Layer"]
@@ -46,7 +46,7 @@ Navara compiles two separate WASM modules that serve fundamentally different pur
 
 **`navara_wasm`** is the full engine, built from over 40 Rust crates. It maintains a complete Bevy ECS world with persistent state — entities, camera state, tile hierarchies, feature batches, and rendering buffers. Each frame, the ECS main loop processes input events, updates spatial state, coordinates tile loading, and issues draw commands. This module handles all the complex, coordinated operations that a map engine requires: multi-layer tile management with LOD, feature batching and geometry processing, format parsing (MVT, GeoJSON, 3D Tiles), and background worker task delegation.
 
-**`navara_wasm_api`** is a lightweight utility module built from only 6 core crates. It provides stateless mathematical functions — coordinate transformations, geometric calculations, ray intersections, and reference frame conversions. Each function call is independent with no persistent state, making this module fast to initialize and efficient for one-off computations. It is exposed to users through `@navaramap/three_api` for cases where GIS math is needed without the full engine.
+**`navara_wasm_api`** is a lightweight utility module built from only 6 core crates. It provides stateless mathematical functions — coordinate transformations, geometric calculations, ray intersections, and reference frame conversions. Each function call is independent with no persistent state, making this module fast to initialize and efficient for one-off computations. It is exposed to users through `@navaramap/three-api` for cases where GIS math is needed without the full engine.
 
 A third module, **`navara_wasm_worker`**, runs in Web Workers to handle CPU-intensive background tasks such as terrain mesh construction and polygon/polyline batch processing, keeping the main thread responsive.
 
@@ -56,7 +56,7 @@ The rendering layer provides two paths for communication with the WASM engine.
 
 `@navaramap/three` is the main interface, connecting to `navara_wasm`. It receives comprehensive processed data — transformed geometry, camera matrices, material properties, LOD information — and manages the Three.js scene accordingly. Layer additions, removals, and updates flow through this path. Event-driven rendering updates ensure that the scene stays synchronized with the GIS engine's state.
 
-`@navaramap/three_api` provides a lightweight bridge to `navara_wasm_api` for utility operations. It wraps WASM functions in idiomatic TypeScript, accepting plain JavaScript objects and Three.js types as input and returning the same, without exposing WASM internals. This is used for operations like screen-to-world coordinate conversion and geodesic calculations.
+`@navaramap/three-api` provides a lightweight bridge to `navara_wasm_api` for utility operations. It wraps WASM functions in idiomatic TypeScript, accepting plain JavaScript objects and Three.js types as input and returning the same, without exposing WASM internals. This is used for operations like screen-to-world coordinate conversion and geodesic calculations.
 
 ## Performance Optimizations
 

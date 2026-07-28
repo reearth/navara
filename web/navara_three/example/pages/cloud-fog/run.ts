@@ -3,11 +3,11 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   EffectHandle,
 } from "@navaramap/three";
-import type { CloudsEffectDesc } from "@navaramap/three_default_descs";
+import type { CloudsEffectDesc } from "@navaramap/three-default-descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
+} from "@navaramap/three-default-plugin";
 import { Pane } from "tweakpane";
 
 import {

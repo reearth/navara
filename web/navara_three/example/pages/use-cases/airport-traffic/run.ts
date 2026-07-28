@@ -7,11 +7,11 @@ import {
   ToneMappingMode,
   type ArclineMeshDesc,
   type GlowGlobeMeshDesc,
-} from "@navaramap/three_default_descs";
+} from "@navaramap/three-default-descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
+} from "@navaramap/three-default-plugin";
 import type { FeatureCollection, MultiLineString } from "geojson";
 
 import { PLASMA_COLORMAP } from "../../../helpers/colors";

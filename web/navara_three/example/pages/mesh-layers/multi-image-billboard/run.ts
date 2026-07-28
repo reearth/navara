@@ -3,11 +3,11 @@ import ThreeView, {
   type GeoJsonLayer,
   type Layer,
 } from "@navaramap/three";
-import type { AmbientLightDesc } from "@navaramap/three_default_descs";
+import type { AmbientLightDesc } from "@navaramap/three-default-descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
+} from "@navaramap/three-default-plugin";
 import type { FeatureCollection } from "geojson";
 import { Pane } from "tweakpane";
 

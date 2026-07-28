@@ -3,12 +3,12 @@ import ThreeView, {
   geodeticToVector3,
   northUpEastToFixedFrame,
 } from "@navaramap/three";
-import type { SplatMeshDesc } from "@navaramap/three_default_descs";
+import type { SplatMeshDesc } from "@navaramap/three-default-descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
-import { TileJsonPlugin } from "@navaramap/three_plugins";
+} from "@navaramap/three-default-plugin";
+import { TileJsonPlugin } from "@navaramap/three-plugins";
 
 import { initializeExample } from "../../../../helpers/initialize";
 

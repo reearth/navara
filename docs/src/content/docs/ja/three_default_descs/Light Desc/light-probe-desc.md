@@ -114,7 +114,7 @@ sh.coefficients = nightCoefficients;
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { LightProbeDesc } from "@navaramap/three_default_descs";
+import { LightProbeDesc } from "@navaramap/three-default-descs";
 import * as THREE from "three";
 
 const view = new ThreeView();

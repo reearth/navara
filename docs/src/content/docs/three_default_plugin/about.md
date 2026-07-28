@@ -25,7 +25,7 @@ navara_three (core: ThreeView, Plugin, addPlugin, registerMesh/Effect/Light)
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 
 const plugin = new DefaultPlugin();
 const view = new ThreeView();

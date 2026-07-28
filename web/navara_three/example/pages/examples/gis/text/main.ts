@@ -1,5 +1,5 @@
 import ThreeView, { Color, fetchFontFamilyFromCss } from "@navaramap/three";
-import { TileJsonPlugin } from "@navaramap/three_plugins";
+import { TileJsonPlugin } from "@navaramap/three-plugins";
 
 import { initializeExample } from "../../../../helpers/initialize";
 

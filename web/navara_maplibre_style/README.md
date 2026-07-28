@@ -1,4 +1,4 @@
-# @navaramap/maplibre_style
+# @navaramap/maplibre-style
 
 MapLibre Style support for Navara. This package provides `MapLibreStylePlugin`, which parses a [MapLibre Style](https://maplibre.org/maplibre-style-spec/) JSON specification and translates its sources and layers into Navara layer operations and per-feature evaluators, so existing styles can be rendered on Navara's 3D globe.
 
@@ -10,7 +10,7 @@ Pass the style JSON to the plugin and add it before `view.init()`:
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { MapLibreStylePlugin } from "@navaramap/maplibre_style";
+import { MapLibreStylePlugin } from "@navaramap/maplibre-style";
 import style from "./style.json";
 
 const view = new ThreeView();

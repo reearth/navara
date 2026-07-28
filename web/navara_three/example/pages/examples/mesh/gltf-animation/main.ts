@@ -3,12 +3,12 @@ import ThreeView, {
   eastNorthUpToFixedFrame,
   geodeticToVector3,
 } from "@navaramap/three";
-import type { GLTFModelDesc } from "@navaramap/three_default_descs";
+import type { GLTFModelDesc } from "@navaramap/three-default-descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
-import { TileJsonPlugin } from "@navaramap/three_plugins";
+} from "@navaramap/three-default-plugin";
+import { TileJsonPlugin } from "@navaramap/three-plugins";
 import { Euler, Quaternion, Vector3 } from "three";
 
 import { addButton } from "../../../../helpers/button";

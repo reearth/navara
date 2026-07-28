@@ -33,7 +33,7 @@ navara_three provides multiple light descriptor types to address various lightin
 **Usage example:**
 ```typescript
 import ThreeView, { Color } from "@navaramap/three";
-import { AmbientLightDesc } from "@navaramap/three_default_descs";
+import { AmbientLightDesc } from "@navaramap/three-default-descs";
 
 view.registerLight("ambient", AmbientLightDesc);
 
@@ -57,7 +57,7 @@ view.addLight<AmbientLightDesc>({
 **Usage example:**
 ```typescript
 import ThreeView from "@navaramap/three";
-import { LightProbeDesc } from "@navaramap/three_default_descs";
+import { LightProbeDesc } from "@navaramap/three-default-descs";
 
 view.registerLight("lightProbe", LightProbeDesc);
 
@@ -81,7 +81,7 @@ view.addLight<LightProbeDesc>({
 **Usage example:**
 ```typescript
 import ThreeView from "@navaramap/three";
-import { SkyLightProbeDesc } from "@navaramap/three_default_descs";
+import { SkyLightProbeDesc } from "@navaramap/three-default-descs";
 
 view.registerLight("skyLightProbe", SkyLightProbeDesc);
 
@@ -104,7 +104,7 @@ view.addLight<SkyLightProbeDesc>({
 **Usage example:**
 ```typescript
 import ThreeView from "@navaramap/three";
-import { SunLightDesc } from "@navaramap/three_default_descs";
+import { SunLightDesc } from "@navaramap/three-default-descs";
 
 view.registerLight("sun", SunLightDesc);
 
@@ -145,7 +145,7 @@ view.addLight<AmbientLightDesc>({
 For realistic scenes, combine multiple light Descriptors. Using `DefaultPlugin` from [three_default_plugin](../../../three_default_plugin/about/) registers all Descriptors at once, and `addDefaultPhotorealScene()` makes it easy to set up a photorealistic scene.
 
 ```typescript
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 
 const plugin = new DefaultPlugin();
 view.addPlugin(plugin);

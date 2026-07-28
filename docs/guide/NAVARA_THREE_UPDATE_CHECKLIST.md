@@ -121,10 +121,10 @@ import ThreeView from "@navaramap/three";
 import ThreeView, { LayerType } from "@navaramap/three";
 
 // API utilities
-import { initNavaraApi, functionName } from "@navaramap/three_api";
+import { initNavaraApi, functionName } from "@navaramap/three-api";
 
 // Plugin
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 ```
 
 ### Initialization

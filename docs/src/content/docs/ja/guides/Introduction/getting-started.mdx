@@ -17,14 +17,14 @@ import { Tabs, TabItem } from "@astrojs/starlight/components";
 
 ## パッケージのインストール
 
-Navara は npm の [`@navaramap`](https://www.npmjs.com/org/navaramap) スコープで公開されています。プロジェクト（バンドラーは何でも構いません。素の [Vite](https://vite.dev/) TypeScript プロジェクトで十分です）に、Three.js レンダラーの `@navaramap/three`、デフォルトプラグインの `@navaramap/three_default_plugin`、および peer dependencies の `three` と `postprocessing` をインストールします。
+Navara は npm の [`@navaramap`](https://www.npmjs.com/org/navaramap) スコープで公開されています。プロジェクト（バンドラーは何でも構いません。素の [Vite](https://vite.dev/) TypeScript プロジェクトで十分です）に、Three.js レンダラーの `@navaramap/three`、デフォルトプラグインの `@navaramap/three-default-plugin`、および peer dependencies の `three` と `postprocessing` をインストールします。
 
 <Tabs syncKey="pkg">
 
 <TabItem label="npm">
 
 ```bash
-npm install @navaramap/three @navaramap/three_default_plugin three postprocessing
+npm install @navaramap/three @navaramap/three-default-plugin three postprocessing
 ```
 
 </TabItem>
@@ -32,7 +32,7 @@ npm install @navaramap/three @navaramap/three_default_plugin three postprocessin
 <TabItem label="yarn">
 
 ```bash
-yarn add @navaramap/three @navaramap/three_default_plugin three postprocessing
+yarn add @navaramap/three @navaramap/three-default-plugin three postprocessing
 ```
 
 </TabItem>
@@ -40,7 +40,7 @@ yarn add @navaramap/three @navaramap/three_default_plugin three postprocessing
 <TabItem label="pnpm">
 
 ```bash
-pnpm add @navaramap/three @navaramap/three_default_plugin three postprocessing
+pnpm add @navaramap/three @navaramap/three-default-plugin three postprocessing
 ```
 
 </TabItem>
@@ -55,7 +55,7 @@ pnpm add @navaramap/three @navaramap/three_default_plugin three postprocessing
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 
 const view = new ThreeView({ useNormal: true });
 

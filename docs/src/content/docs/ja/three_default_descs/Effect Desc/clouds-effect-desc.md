@@ -651,8 +651,8 @@ import { Vector2 } from "three";
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { CloudsEffectDesc } from "@navaramap/three_default_descs";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { CloudsEffectDesc } from "@navaramap/three-default-descs";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 
 const view = new ThreeView();
 const plugin = new DefaultPlugin();
@@ -675,8 +675,8 @@ const cloudsDesc = view.addEffect<CloudsEffectDesc>({
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { CloudsEffectDesc } from "@navaramap/three_default_descs";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { CloudsEffectDesc } from "@navaramap/three-default-descs";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 
 const view = new ThreeView({ shadow: true });
 const plugin = new DefaultPlugin();
@@ -712,8 +712,8 @@ const cloudsDesc = view.addEffect<CloudsEffectDesc>({
 
 ```typescript
 import ThreeView, { EffectHandle } from "@navaramap/three";
-import { CloudsEffectDesc } from "@navaramap/three_default_descs";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { CloudsEffectDesc } from "@navaramap/three-default-descs";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 
 const view = new ThreeView();
 const plugin = new DefaultPlugin();
@@ -746,8 +746,8 @@ if (clouds) {
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { CloudsEffectDesc } from "@navaramap/three_default_descs";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { CloudsEffectDesc } from "@navaramap/three-default-descs";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 import { Vector2 } from "three";
 
 const view = new ThreeView();
@@ -774,8 +774,8 @@ const cloudsDesc = view.addEffect<CloudsEffectDesc>({
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { CloudsEffectDesc } from "@navaramap/three_default_descs";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { CloudsEffectDesc } from "@navaramap/three-default-descs";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 import { Vector2 } from "three";
 
 const view = new ThreeView({ animation: true, shadow: true });

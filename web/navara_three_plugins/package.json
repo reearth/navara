@@ -1,5 +1,5 @@
 {
-  "name": "@navaramap/three_plugins",
+  "name": "@navaramap/three-plugins",
   "type": "module",
   "version": "0.0.0",
   "main": "dist/index.umd.cjs",
@@ -31,12 +31,12 @@
   },
   "peerDependencies": {
     "@navaramap/three": "workspace:*",
-    "@navaramap/three_default_plugin": "workspace:*",
+    "@navaramap/three-default-plugin": "workspace:*",
     "three": ">=0.183.0"
   },
   "devDependencies": {
     "@navaramap/three": "workspace:*",
-    "@navaramap/three_default_plugin": "workspace:*",
+    "@navaramap/three-default-plugin": "workspace:*",
     "@types/three": "0.185.1",
     "three": "0.185.1"
   }

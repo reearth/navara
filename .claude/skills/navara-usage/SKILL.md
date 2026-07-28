@@ -16,10 +16,10 @@ Navara is a 3D globe map engine: reusable GIS logic lives in a Rust/WASM core, a
 | Package | What it provides | When you need it |
 |---|---|---|
 | `@navaramap/three` | `ThreeView` (default export), `Color`, geodetic math utils, `MeshDesc`/`EffectDesc`/`LightDesc` base classes, handle types, built-in attribution UI (`view.attribution`, on by default) | Always |
-| `@navaramap/three_default_plugin` | `DefaultPlugin`, `DefaultDescriptions` (registers ~40 built-in descriptors) | Almost always |
-| `@navaramap/three_default_descs` | Individual descriptor classes/types (`BoxMeshDesc`, `SSREffectDesc`, `SunLightDesc`, …) | Typed `addMesh<T>`/`addEffect<T>` calls, or manual registration without DefaultPlugin |
-| `@navaramap/three_plugins` | `PersonViewPlugin`, `OverlayPlugin`, `CesiumIonPlugin`, `TileJsonPlugin` | Per feature |
-| `@navaramap/three_api` | Standalone GIS math (no view) | Pure geometry computation |
+| `@navaramap/three-default-plugin` | `DefaultPlugin`, `DefaultDescriptions` (registers ~40 built-in descriptors) | Almost always |
+| `@navaramap/three-default-descs` | Individual descriptor classes/types (`BoxMeshDesc`, `SSREffectDesc`, `SunLightDesc`, …) | Typed `addMesh<T>`/`addEffect<T>` calls, or manual registration without DefaultPlugin |
+| `@navaramap/three-plugins` | `PersonViewPlugin`, `OverlayPlugin`, `CesiumIonPlugin`, `TileJsonPlugin` | Per feature |
+| `@navaramap/three-api` | Standalone GIS math (no view) | Pure geometry computation |
 
 Most apps need only the first two.
 
@@ -27,7 +27,7 @@ Most apps need only the first two.
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three-default-plugin";
 
 const view = new ThreeView<DefaultDescriptions>({ shadow: true }); // 1. construct
 const defaultPlugin = new DefaultPlugin();

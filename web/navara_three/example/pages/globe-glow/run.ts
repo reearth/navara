@@ -2,11 +2,11 @@ import ThreeView, { Color, MeshHandle } from "@navaramap/three";
 import {
   AmbientLightDesc,
   GlowGlobeMeshDesc,
-} from "@navaramap/three_default_descs";
+} from "@navaramap/three-default-descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
+} from "@navaramap/three-default-plugin";
 import { Pane } from "tweakpane";
 
 import { TILE_DATASETS } from "../../helpers/constants";

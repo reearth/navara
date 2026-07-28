@@ -57,7 +57,7 @@ import ThreeView, {
   eastNorthUpToFixedFrame,
   degreeToRadian,
 } from "@navaramap/three";
-import { BoxMeshDesc } from "@navaramap/three_default_descs";
+import { BoxMeshDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 view.registerMesh("box", BoxMeshDesc);
@@ -98,7 +98,7 @@ To use picking, you must set `picking: true` in the ThreeView constructor.
 
 ```typescript
 import ThreeView, { Color } from "@navaramap/three";
-import { BoxMeshDesc } from "@navaramap/three_default_descs";
+import { BoxMeshDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView({ picking: true });
 view.registerMesh("box", BoxMeshDesc);
@@ -174,7 +174,7 @@ import ThreeView, {
   geodeticToVector3,
   degreeToRadian,
 } from "@navaramap/three";
-import { SphereMeshDesc } from "@navaramap/three_default_descs";
+import { SphereMeshDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 view.registerMesh("sphere", SphereMeshDesc);
@@ -222,7 +222,7 @@ import {
   eastNorthUpToFixedFrame,
   degreeToRadian,
 } from "@navaramap/three";
-import { GLTFModelDesc } from "@navaramap/three_default_descs";
+import { GLTFModelDesc } from "@navaramap/three-default-descs";
 
 // GLTFModelDesc must be registered
 

@@ -103,11 +103,11 @@ splat.ref.on("error", (error) => {
 
 ```typescript
 import ThreeView, { geodeticToVector3, degreeToRadian } from "@navaramap/three";
-import type { SplatMeshDesc } from "@navaramap/three_default_descs";
+import type { SplatMeshDesc } from "@navaramap/three-default-descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
+} from "@navaramap/three-default-plugin";
 
 const view = new ThreeView<DefaultDescriptions>();
 view.addPlugin(new DefaultPlugin()); // "splat" → SplatMeshDesc を登録

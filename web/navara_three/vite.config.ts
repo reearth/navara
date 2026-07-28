@@ -23,7 +23,7 @@ export default defineConfig((env) => {
             "@navaramap/engine",
             "@navaramap/engine-api",
             "@navaramap/core",
-            "@navaramap/three_api",
+            "@navaramap/three-api",
             "@navaramap/worker",
           ],
         },

@@ -4,7 +4,7 @@ import type {
   Layer as NavaraLayer,
   FeatureUpdatedParams,
 } from "@navaramap/three";
-import { Layer } from "@navaramap/three_react";
+import { Layer } from "@navaramap/three-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { czmlToGeoJSON } from "./czml";

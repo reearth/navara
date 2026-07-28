@@ -1,10 +1,10 @@
 import ThreeView, { Color } from "@navaramap/three";
-import type { ArclineMeshDesc } from "@navaramap/three_default_descs";
+import type { ArclineMeshDesc } from "@navaramap/three-default-descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
-import { TileJsonPlugin } from "@navaramap/three_plugins";
+} from "@navaramap/three-default-plugin";
+import { TileJsonPlugin } from "@navaramap/three-plugins";
 
 import { addButton } from "../../../../helpers/button";
 import { initializeExample } from "../../../../helpers/initialize";

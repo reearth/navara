@@ -11,7 +11,7 @@ ThreeView は、Three.js と WebGL を使用して 3D マップビジュアラ�
 
 ```tsx
 import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navaramap/three";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 import { Vector3 } from "three";
 
 // Create ThreeView instance

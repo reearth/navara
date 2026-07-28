@@ -15,7 +15,7 @@ import {
   RenderableFeatureRemovedEvent,
   Events,
 } from "@navaramap/engine";
-import { radianToDegree } from "@navaramap/three_api";
+import { radianToDegree } from "@navaramap/three-api";
 import { canWorkerProcessImmediately } from "@navaramap/worker";
 import { Mesh, Object3D, Sprite } from "three";
 

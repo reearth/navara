@@ -15,11 +15,11 @@ import type {
   StarsDesc,
   FogLightEffectDesc,
   FogLightDefinition,
-} from "@navaramap/three_default_descs";
+} from "@navaramap/three-default-descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
+} from "@navaramap/three-default-plugin";
 import type { FeatureCollection, Point } from "geojson";
 import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";

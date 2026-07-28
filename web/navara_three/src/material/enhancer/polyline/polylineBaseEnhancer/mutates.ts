@@ -1,4 +1,4 @@
-import { RTE_ONE_UNIFORM } from "@navaramap/three_api";
+import { RTE_ONE_UNIFORM } from "@navaramap/three-api";
 import {
   Color as ThreeColor,
   Matrix4 as ThreeMatrix4,

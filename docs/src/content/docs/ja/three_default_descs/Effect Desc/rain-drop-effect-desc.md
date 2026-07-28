@@ -293,8 +293,8 @@ sidebar:
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { RainDropEffectDesc } from "@navaramap/three_default_descs";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { RainDropEffectDesc } from "@navaramap/three-default-descs";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 
 const view = new ThreeView();
 const plugin = new DefaultPlugin();

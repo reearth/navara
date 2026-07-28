@@ -3,7 +3,7 @@
   "compilerOptions": {
     "noEmit": true,
     "paths": {
-      "@navaramap/maplibre_style": ["./src"],
+      "@navaramap/maplibre-style": ["./src"],
       "@navaramap/three": ["../navara_three/src"],
       "@navaramap/core": ["../navara_core/src"]
     }

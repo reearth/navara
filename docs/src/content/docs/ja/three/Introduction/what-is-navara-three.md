@@ -55,7 +55,7 @@ GIS データだけでなく、3D メッシュ、ポストプロセッシング�
 メッシュ・エフェクト・ライトは、使用前に Descriptor クラスの登録が必要です。
 
 ```typescript
-import { BoxMeshDesc, FXAAEffectDesc, SunLightDesc } from "@navaramap/three_default_descs";
+import { BoxMeshDesc, FXAAEffectDesc, SunLightDesc } from "@navaramap/three-default-descs";
 
 // Descriptor クラスを登録
 view.registerMesh("box", BoxMeshDesc);

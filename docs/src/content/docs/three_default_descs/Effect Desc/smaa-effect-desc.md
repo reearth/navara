@@ -59,7 +59,7 @@ The `SMAAEffectDesc` class is a Descriptor that applies the SMAA (Subpixel Morph
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 
 const view = new ThreeView();
 const plugin = new DefaultPlugin();
@@ -83,7 +83,7 @@ defaultLayers.smaa.update({
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { SMAAEffectDesc } from "@navaramap/three_default_descs";
+import { SMAAEffectDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();
@@ -101,8 +101,8 @@ view.addEffect<SMAAEffectDesc>({
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { FXAAEffectDesc } from "@navaramap/three_default_descs";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { FXAAEffectDesc } from "@navaramap/three-default-descs";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 
 const view = new ThreeView();
 const plugin = new DefaultPlugin();

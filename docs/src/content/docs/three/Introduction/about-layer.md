@@ -115,7 +115,7 @@ Mesh descriptors, effect descriptors, and light descriptors create Three.js obje
 - **Descriptor class registration is required before use** (`registerMesh`, `registerEffect`, `registerLight`)
 
 ```typescript
-import { BoxMeshDesc, FXAAEffectDesc, SunLightDesc } from "@navaramap/three_default_descs";
+import { BoxMeshDesc, FXAAEffectDesc, SunLightDesc } from "@navaramap/three-default-descs";
 
 // Register descriptor classes (required before addMesh/addEffect/addLight)
 view.registerMesh("box", BoxMeshDesc);

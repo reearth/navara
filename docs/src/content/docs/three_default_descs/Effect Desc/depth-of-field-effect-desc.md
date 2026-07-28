@@ -77,7 +77,7 @@ The `DepthOfFieldEffectDesc` class is a Descriptor that applies a depth of field
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { DepthOfFieldEffectDesc } from "@navaramap/three_default_descs";
+import { DepthOfFieldEffectDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();
@@ -93,8 +93,8 @@ const depthOfFieldDesc = view.addEffect<DepthOfFieldEffectDesc>({
 
 ```typescript
 import ThreeView, { Color } from "@navaramap/three";
-import { DepthOfFieldEffectDesc } from "@navaramap/three_default_descs";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { DepthOfFieldEffectDesc } from "@navaramap/three-default-descs";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 
 const view = new ThreeView();
 const plugin = new DefaultPlugin();

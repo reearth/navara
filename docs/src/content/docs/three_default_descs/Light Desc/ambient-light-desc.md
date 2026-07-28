@@ -78,7 +78,7 @@ import { Color } from "@navaramap/three";
 
 ```typescript
 import ThreeView, { Color } from "@navaramap/three";
-import { AmbientLightDesc } from "@navaramap/three_default_descs";
+import { AmbientLightDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();

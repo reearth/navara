@@ -1,6 +1,6 @@
-# @navaramap/three_react Integration Test
+# @navaramap/three-react Integration Test
 
-This project tests `@navaramap/three_react` from an end user's perspective, using the built library files instead of source files.
+This project tests `@navaramap/three-react` from an end user's perspective, using the built library files instead of source files.
 
 ## What This Tests
 

@@ -12,7 +12,7 @@ import {
   type ShapedGlyph,
   type ShapeTextResult,
 } from "@navaramap/font";
-import { degreeToRadian } from "@navaramap/three_api";
+import { degreeToRadian } from "@navaramap/three-api";
 import {
   BufferAttribute,
   type Color,

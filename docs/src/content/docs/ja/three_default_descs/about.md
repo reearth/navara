@@ -27,7 +27,7 @@ navara_three（コア）
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { BoxMeshDesc, FXAAEffectDesc, SunLightDesc } from "@navaramap/three_default_descs";
+import { BoxMeshDesc, FXAAEffectDesc, SunLightDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 
@@ -55,7 +55,7 @@ view.addLight({ sun: { intensity: 1.0 } });
 3D メッシュオブジェクトをシーンに追加するDescriptorです。ボックス、球体、円柱などの基本形状や、glTF モデルの読み込みに対応しています。
 
 ```typescript
-import { BoxMeshDesc, GLTFModelDesc } from "@navaramap/three_default_descs";
+import { BoxMeshDesc, GLTFModelDesc } from "@navaramap/three-default-descs";
 
 view.registerMesh("box", BoxMeshDesc);
 view.registerMesh("gltfModel", GLTFModelDesc);
@@ -72,7 +72,7 @@ view.addMesh({ gltfModel: { url: "model.glb" } });
 ポストプロセッシングエフェクトを適用するDescriptorです。アンチエイリアス、SSAO、SSR など、豊富なエフェクトを提供します。
 
 ```typescript
-import { FXAAEffectDesc, SSAOEffectDesc } from "@navaramap/three_default_descs";
+import { FXAAEffectDesc, SSAOEffectDesc } from "@navaramap/three-default-descs";
 
 view.registerEffect("fxaa", FXAAEffectDesc);
 view.registerEffect("ssao", SSAOEffectDesc);
@@ -89,7 +89,7 @@ view.addEffect({ ssao: {} });
 シーンの照明を管理するDescriptorです。太陽光、環境光、ライトプローブなどを提供します。
 
 ```typescript
-import { SunLightDesc, AmbientLightDesc } from "@navaramap/three_default_descs";
+import { SunLightDesc, AmbientLightDesc } from "@navaramap/three-default-descs";
 
 view.registerLight("sun", SunLightDesc);
 view.registerLight("ambient", AmbientLightDesc);

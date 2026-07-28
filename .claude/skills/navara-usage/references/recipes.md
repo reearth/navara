@@ -19,7 +19,7 @@ Proven combinations that get from zero to a high-quality scene. Prefer starting 
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three-default-plugin";
 
 const view = new ThreeView<DefaultDescriptions>({ shadow: true });
 const defaultPlugin = new DefaultPlugin();

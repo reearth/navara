@@ -42,7 +42,7 @@ const unobserve = view.observeTerrainHeightAt({ lat, lng }, (height) => { ... })
 
 Mouse events (`click`, `mousemove`, …) deliver `MapMouseEvent` with `.clientX/Y` and `.map` (ECEF coords). The `idle` event fires after `idleThreshold` ms without tile/data activity.
 
-## Geodetic / ECEF math (exported from `@navaramap/three`; standalone in `@navaramap/three_api`)
+## Geodetic / ECEF math (exported from `@navaramap/three`; standalone in `@navaramap/three-api`)
 
 Positions in the scene are **ECEF meters**. Geodetic helpers take **radians**.
 

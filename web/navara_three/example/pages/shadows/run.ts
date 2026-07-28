@@ -6,8 +6,8 @@ import ThreeView, {
   type Cesium3dTilesLayer,
   type TerrainSourceLayer,
 } from "@navaramap/three";
-import { SunLightDesc, type ShadowMode } from "@navaramap/three_default_descs";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { SunLightDesc, type ShadowMode } from "@navaramap/three-default-descs";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 import { Pane } from "tweakpane";
 
 import {

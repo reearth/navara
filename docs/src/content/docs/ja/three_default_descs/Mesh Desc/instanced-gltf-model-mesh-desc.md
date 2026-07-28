@@ -233,7 +233,7 @@ handle.ref.playAnimation("Fly");
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { InstancedGltfModelMeshDesc } from "@navaramap/three_default_descs";
+import { InstancedGltfModelMeshDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 view.registerMesh("gltfModels", InstancedGltfModelMeshDesc);

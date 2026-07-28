@@ -2,7 +2,7 @@ import {
   PointMesh as NavaraPointMesh,
   BillboardMesh as NavaraBillboardMesh,
 } from "@navaramap/engine";
-import { degreeToRadian } from "@navaramap/three_api";
+import { degreeToRadian } from "@navaramap/three-api";
 import {
   InstancedBufferAttribute,
   InstancedBufferGeometry,

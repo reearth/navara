@@ -28,7 +28,7 @@ export default defineConfig({
     dedupe: ["three"],
     alias: [
       // Redirect @navaramap/three to source so workspace packages that import it
-      // (e.g. @navaramap/three_default_plugin/dist/index.js → @navaramap/three) use
+      // (e.g. @navaramap/three-default-plugin/dist/index.js → @navaramap/three) use
       // the same module instance as the IIFE entry, avoiding double init.
       {
         find: /^@navaramap\/three$/,

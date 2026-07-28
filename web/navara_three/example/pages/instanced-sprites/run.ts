@@ -1,9 +1,9 @@
 import ThreeView, { Color } from "@navaramap/three";
-import { AmbientLightDesc } from "@navaramap/three_default_descs";
+import { AmbientLightDesc } from "@navaramap/three-default-descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
+} from "@navaramap/three-default-plugin";
 import { Pane } from "tweakpane";
 
 import { TILE_DATASETS, VECTOR_DATASETS } from "../../helpers/constants";

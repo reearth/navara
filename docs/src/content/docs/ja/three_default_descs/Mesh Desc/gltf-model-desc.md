@@ -417,7 +417,7 @@ modelDesc.ref.on("animationReady", () => {
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { GLTFModelDesc } from "@navaramap/three_default_descs";
+import { GLTFModelDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 view.registerMesh("gltfModel", GLTFModelDesc);

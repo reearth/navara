@@ -24,8 +24,8 @@ sidebar:
 
 ```typescript
 import ThreeView, { Color } from "@navaramap/three";
-import { ToneMappingMode } from "@navaramap/three_default_descs";
-import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
+import { ToneMappingMode } from "@navaramap/three-default-descs";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three-default-plugin";
 
 const plugin = new DefaultPlugin();
 const view = new ThreeView<DefaultDescriptions>({
@@ -122,7 +122,7 @@ NASA の Earth at Night 画像を XYZ タイル形式に変換する必要があ
 `GlowGlobeMeshDesc` を使うと、地球の周りに美しいグローエフェクトを追加できます。
 
 ```typescript
-import type { GlowGlobeMeshDesc } from "@navaramap/three_default_descs";
+import type { GlowGlobeMeshDesc } from "@navaramap/three-default-descs";
 
 // 地球のグローエフェクトを追加
 view.addMesh<GlowGlobeMeshDesc>({
@@ -255,7 +255,7 @@ const arcLines = data.features.map((feature) => {
 作成したアーチライン定義をメッシュとして追加します。
 
 ```typescript
-import type { ArclineMeshDesc } from "@navaramap/three_default_descs";
+import type { ArclineMeshDesc } from "@navaramap/three-default-descs";
 
 const arcLineHandle = view.addMesh<ArclineMeshDesc>({
   arcLines,
@@ -310,8 +310,8 @@ import {
   ToneMappingMode,
   type ArclineMeshDesc,
   type GlowGlobeMeshDesc,
-} from "@navaramap/three_default_descs";
-import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
+} from "@navaramap/three-default-descs";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three-default-plugin";
 import type { FeatureCollection, MultiLineString } from "geojson";
 
 // 航空交通量データの型定義
