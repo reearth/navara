@@ -581,6 +581,7 @@ pub fn traverse_terrain(
 }
 
 // We should use entity to store the rendered tile, because the Bevy's entity is extensible.
+#[allow(clippy::too_many_arguments)]
 pub fn spawn_tile_entity(
     commands: &mut Commands,
     tc: &mut TileCacheManager,

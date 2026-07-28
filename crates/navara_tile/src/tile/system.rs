@@ -1915,7 +1915,7 @@ pub fn enforce_memory_budget(
             Some((*handle, tile.coords.z, gpu_est))
         })
         .collect();
-    prefetched.sort_by(|a, b| b.1.cmp(&a.1));
+    prefetched.sort_by_key(|b| std::cmp::Reverse(b.1));
 
     let mut candidates: Vec<(TileHandle, usize, f64, u64)> = tc
         .retained
