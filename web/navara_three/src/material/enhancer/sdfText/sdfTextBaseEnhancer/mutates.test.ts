@@ -19,11 +19,8 @@ describe("sdfTextBaseEnhancer/mutates", () => {
     it("should sync core refs from state", () => {
       const state: SdfTextBaseState = {
         ...DEFAULT_BASE_STATE,
-        color: new Color(0xff0000),
-        fontSize: 24,
         center: [0.5, 0.5],
         sizeInMeters: true,
-        addHeight: 50,
         offsetDepth: false,
         outlineWidth: 0.1,
         outlineColor: new Color(0x00ff00),
@@ -34,18 +31,15 @@ describe("sdfTextBaseEnhancer/mutates", () => {
         backgroundOutlineWidth: 0.2,
         pickable: true,
       };
-      const mutates = createBaseMutates(false);
+      const mutates = createBaseMutates();
       mutates.update(state);
 
       const uniforms: ShaderUniforms = {};
       mutates.updateUniforms(uniforms, state);
 
-      expect(uniforms.uColor?.value.getHex()).toBe(0xff0000);
-      expect(uniforms.uFontSize?.value).toBe(24);
       expect(uniforms.uCenter?.value.x).toBe(0.5);
       expect(uniforms.uCenter?.value.y).toBe(0.5);
       expect(uniforms.uSizeInMeters?.value).toBe(true);
-      expect(uniforms.uAddHeight?.value).toBe(50);
       expect(uniforms.uOffsetDepth?.value).toBe(false);
       expect(uniforms.uOutlineWidth?.value).toBe(0.1);
       expect(uniforms.uOutlineColor?.value.getHex()).toBe(0x00ff00);
@@ -61,7 +55,7 @@ describe("sdfTextBaseEnhancer/mutates", () => {
   describe("RTC center", () => {
     it("should initialize uRTCCenter from constructor args", () => {
       const state: SdfTextBaseState = { ...DEFAULT_BASE_STATE };
-      const mutates = createBaseMutates(false, [10, 20, 30]);
+      const mutates = createBaseMutates([10, 20, 30]);
       mutates.update(state);
 
       const uniforms: ShaderUniforms = {};
@@ -73,41 +67,60 @@ describe("sdfTextBaseEnhancer/mutates", () => {
     });
   });
 
-  describe("RTE position refs", () => {
-    it("should create RTE position uniforms when useRTE=true", () => {
-      const state: SdfTextBaseState = {
-        ...DEFAULT_BASE_STATE,
-        useRTE: true,
-      };
-      const mutates = createBaseMutates(true);
-      mutates.update(state);
+  describe("per-label state is not uniform state", () => {
+    // Anchors used to be uRTEPositionHIGH/LOW (RTE) or uRTCPosition (RTC) —
+    // one material per label. Batched, every label's anchor is a texel in
+    // uLabelData, so these uniforms must not come back: a single one would
+    // silently place the whole batch at one point.
+    it.each([true, false])(
+      "exposes no position uniforms (useRTE=%s)",
+      (useRTE) => {
+        const state: SdfTextBaseState = { ...DEFAULT_BASE_STATE, useRTE };
+        const mutates = createBaseMutates();
+        mutates.update(state);
 
-      const uniforms: ShaderUniforms = {};
-      mutates.updateUniforms(uniforms, state);
+        const uniforms: ShaderUniforms = {};
+        mutates.updateUniforms(uniforms, state);
 
-      expect(uniforms.uRTEPositionLOW).toBeDefined();
-      expect(uniforms.uRTEPositionHIGH).toBeDefined();
-      expect(uniforms.uRTCPosition).toBeUndefined();
-    });
+        expect(uniforms.uRTEPositionLOW).toBeUndefined();
+        expect(uniforms.uRTEPositionHIGH).toBeUndefined();
+        expect(uniforms.uRTCPosition).toBeUndefined();
+        // The batch-wide RTC origin does stay a uniform.
+        expect(uniforms.uRTCCenter).toBeDefined();
+        expect(uniforms.uLabelData).toBeDefined();
+      },
+    );
 
-    it("should create RTC position uniform when useRTE=false", () => {
+    it("exposes no per-label style or batch-id uniforms", () => {
       const state: SdfTextBaseState = { ...DEFAULT_BASE_STATE };
-      const mutates = createBaseMutates(false);
+      const mutates = createBaseMutates();
       mutates.update(state);
 
       const uniforms: ShaderUniforms = {};
       mutates.updateUniforms(uniforms, state);
 
-      expect(uniforms.uRTCPosition).toBeDefined();
-      expect(uniforms.uRTEPositionLOW).toBeUndefined();
-      expect(uniforms.uRTEPositionHIGH).toBeUndefined();
+      for (const name of [
+        "uColor",
+        "uOpacity",
+        "uFontSize",
+        "uAddHeight",
+        "uTextWidth",
+        "uTextHeight",
+        "uBgYBounds",
+        "uDeclutterHide",
+        "nvr_uBatchId",
+      ]) {
+        expect(uniforms).not.toHaveProperty(name);
+      }
+      // Pick mode is still batch-wide.
+      expect(uniforms.nvr_uPickable).toBeDefined();
     });
   });
 
   describe("atlas texture ref", () => {
     it("should update uAtlas value without replacing uniform ref", () => {
       const state: SdfTextBaseState = { ...DEFAULT_BASE_STATE };
-      const mutates = createBaseMutates(false);
+      const mutates = createBaseMutates();
       mutates.update(state);
 
       const uniforms: ShaderUniforms = {};
@@ -130,7 +143,7 @@ describe("sdfTextBaseEnhancer/mutates", () => {
   describe("updateAtlasSizes", () => {
     it("should sync uSdfAtlasSize and uColorAtlasSize from bound texture images", () => {
       const state: SdfTextBaseState = { ...DEFAULT_BASE_STATE };
-      const mutates = createBaseMutates(false);
+      const mutates = createBaseMutates();
       mutates.update(state);
 
       const sdfTex = {
@@ -155,7 +168,7 @@ describe("sdfTextBaseEnhancer/mutates", () => {
 
     it("should pick up new dimensions after the atlas grows", () => {
       const state: SdfTextBaseState = { ...DEFAULT_BASE_STATE };
-      const mutates = createBaseMutates(false);
+      const mutates = createBaseMutates();
       mutates.update(state);
 
       const sdfTex = {
@@ -184,7 +197,7 @@ describe("sdfTextBaseEnhancer/mutates", () => {
 
     it("should leave atlas size uniforms unchanged when textures are null", () => {
       const state: SdfTextBaseState = { ...DEFAULT_BASE_STATE };
-      const mutates = createBaseMutates(false);
+      const mutates = createBaseMutates();
       mutates.update(state);
 
       // Both uAtlas and uColorAtlas default to null.
@@ -202,7 +215,7 @@ describe("sdfTextBaseEnhancer/mutates", () => {
 
     it("should leave atlas size uniforms unchanged when image has zero dimensions", () => {
       const state: SdfTextBaseState = { ...DEFAULT_BASE_STATE };
-      const mutates = createBaseMutates(false);
+      const mutates = createBaseMutates();
       mutates.update(state);
 
       const sdfTex = {
@@ -222,7 +235,7 @@ describe("sdfTextBaseEnhancer/mutates", () => {
   describe("updatePerFrame", () => {
     it("should update camera uniforms", () => {
       const state: SdfTextBaseState = { ...DEFAULT_BASE_STATE };
-      const mutates = createBaseMutates(false);
+      const mutates = createBaseMutates();
       mutates.update(state);
 
       mutates.updatePerFrame(1.5, 1080, 10000, 0, 0, 0, new Matrix4(), state);
@@ -240,7 +253,7 @@ describe("sdfTextBaseEnhancer/mutates", () => {
         ...DEFAULT_BASE_STATE,
         useRTE: true,
       };
-      const mutates = createBaseMutates(true);
+      const mutates = createBaseMutates();
       mutates.update(state);
 
       mutates.updatePerFrame(
@@ -268,7 +281,7 @@ describe("sdfTextBaseEnhancer/mutates", () => {
 
     it("should not update RTE eye uniforms when useRTE=false", () => {
       const state: SdfTextBaseState = { ...DEFAULT_BASE_STATE };
-      const mutates = createBaseMutates(false);
+      const mutates = createBaseMutates();
       mutates.update(state);
 
       mutates.updatePerFrame(
@@ -292,7 +305,7 @@ describe("sdfTextBaseEnhancer/mutates", () => {
 
     it("should transform the RTC center into view space when useRTE=false", () => {
       const state: SdfTextBaseState = { ...DEFAULT_BASE_STATE };
-      const mutates = createBaseMutates(false, [6_400_000, 0, 0]);
+      const mutates = createBaseMutates([6_400_000, 0, 0]);
       mutates.update(state);
 
       // View matrix cancels the center's large X so it lands near the origin.
@@ -308,74 +321,54 @@ describe("sdfTextBaseEnhancer/mutates", () => {
     });
   });
 
-  describe("updateTextDimensions", () => {
-    it("should update text dimension uniforms", () => {
+  describe("setLabelDataTexture", () => {
+    it("should bind the texture and its dimensions", () => {
       const state: SdfTextBaseState = { ...DEFAULT_BASE_STATE };
-      const mutates = createBaseMutates(false);
+      const mutates = createBaseMutates();
       mutates.update(state);
 
-      mutates.updateTextDimensions(5.0, 1.0, -0.2, 0.8);
+      const tex = { isDataTexture: true } as unknown as DataTexture;
+      mutates.setLabelDataTexture(tex, 64, 5);
 
       const uniforms: ShaderUniforms = {};
       mutates.updateUniforms(uniforms, state);
 
-      expect(uniforms.uTextWidth?.value).toBe(5.0);
-      expect(uniforms.uTextHeight?.value).toBe(1.0);
-      expect(uniforms.uBgYBounds?.value.x).toBe(-0.2);
-      expect(uniforms.uBgYBounds?.value.y).toBe(0.8);
+      expect(uniforms.uLabelData?.value).toBe(tex);
+      expect(uniforms.uLabelTexSize?.value.x).toBe(64);
+      expect(uniforms.uLabelTexSize?.value.y).toBe(5);
+    });
+
+    // The shader does `i % size.x` and `i / size.x`; a zero would divide by
+    // zero before the mesh has bound anything.
+    it("should never expose a zero dimension", () => {
+      const state: SdfTextBaseState = { ...DEFAULT_BASE_STATE };
+      const mutates = createBaseMutates();
+      mutates.update(state);
+
+      mutates.setLabelDataTexture(null, 0, 0);
+
+      const uniforms: ShaderUniforms = {};
+      mutates.updateUniforms(uniforms, state);
+
+      expect(uniforms.uLabelTexSize?.value.x).toBe(1);
+      expect(uniforms.uLabelTexSize?.value.y).toBe(1);
     });
   });
 
-  describe("setPosition", () => {
-    it("should set RTE position uniforms", () => {
-      const state: SdfTextBaseState = {
-        ...DEFAULT_BASE_STATE,
-        useRTE: true,
-      };
-      const mutates = createBaseMutates(true);
-      mutates.update(state);
-
-      const high = new Float32Array([100, 200, 300]);
-      const low = new Float32Array([0.1, 0.2, 0.3]);
-      mutates.setPosition({ high, low }, true);
-
-      const uniforms: ShaderUniforms = {};
-      mutates.updateUniforms(uniforms, state);
-
-      expect(uniforms.uRTEPositionHIGH?.value.x).toBe(100);
-      expect(uniforms.uRTEPositionLOW?.value.x).toBeCloseTo(0.1);
-    });
-
-    it("should set RTC position uniforms", () => {
+  describe("setRtcCenter", () => {
+    it("should update uRTCCenter after a transform change", () => {
       const state: SdfTextBaseState = { ...DEFAULT_BASE_STATE };
-      const mutates = createBaseMutates(false);
+      const mutates = createBaseMutates([1, 2, 3]);
       mutates.update(state);
 
-      const pos = new Float32Array([10, 20, 30]);
-      mutates.setPosition(pos, false, [100, 200, 300]);
+      mutates.setRtcCenter([100, 200, 300]);
 
       const uniforms: ShaderUniforms = {};
       mutates.updateUniforms(uniforms, state);
 
-      expect(uniforms.uRTCPosition?.value.x).toBe(10);
-      expect(uniforms.uRTCPosition?.value.y).toBe(20);
       expect(uniforms.uRTCCenter?.value.x).toBe(100);
       expect(uniforms.uRTCCenter?.value.y).toBe(200);
-    });
-  });
-
-  describe("setBatchId", () => {
-    it("should update nvr_uBatchId value", () => {
-      const state: SdfTextBaseState = { ...DEFAULT_BASE_STATE };
-      const mutates = createBaseMutates(false);
-      mutates.update(state);
-
-      mutates.setBatchId(42);
-
-      const uniforms: ShaderUniforms = {};
-      mutates.updateUniforms(uniforms, state);
-
-      expect(uniforms.nvr_uBatchId?.value).toBe(42);
+      expect(uniforms.uRTCCenter?.value.z).toBe(300);
     });
   });
 });

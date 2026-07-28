@@ -2,7 +2,11 @@ import sdfTextFragmentShader from "@shaders/glsl/sdfText.frag.glsl";
 import sdfTextVertexShader from "@shaders/glsl/sdfText.vert.glsl";
 import type { WebGLProgramParametersWithUniforms } from "three";
 
-import type { SdfTextBaseMutates, SdfTextBaseState } from "./types";
+import {
+  LABEL_ROWS,
+  type SdfTextBaseMutates,
+  type SdfTextBaseState,
+} from "./types";
 
 /**
  * Transform shader with sdfText base modifications.
@@ -23,6 +27,10 @@ export const transformShader = (
 
   // Set defines based on state
   shader.defines ??= {};
+
+  // Stride of the per-label data texture. Injected rather than hard-coded in
+  // GLSL so the shader's row addressing always matches `LabelRow`.
+  shader.defines.LABEL_ROWS = LABEL_ROWS;
 
   if (state.useRTE) {
     shader.defines.USE_RTE = 1;

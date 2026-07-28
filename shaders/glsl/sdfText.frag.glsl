@@ -1,5 +1,12 @@
-#include "chunks/batch_definition.glsl"
+// chunks/batch_definition.glsl is deliberately NOT included: it declares
+// `nvr_uBatchId` as a uniform, which only works when one material draws one
+// feature. Text batches every label in a tile-layer into a single draw call,
+// so the id arrives per-instance as vBatchID instead — same approach as
+// instancedSprite.frag.glsl.
 #include "chunks/pick.glsl"
+
+// 1.0: enable picking, 0.0: disable picking
+uniform float nvr_uPickable;
 
 #ifndef USE_SHADOWMAP_DEPTH
     layout(location = 1) out vec4 normalBuffer;
@@ -26,13 +33,16 @@ flat varying int vHorizonCulled;
 flat varying int vBackGroundSprite;
 flat varying float vBackGroundRatio;
 flat varying int vIsColor;
+// Per-label style, resolved in the vertex shader from the label data texture.
+flat varying vec3 vColor;
+// Style opacity already scaled by the declutter fade.
+flat varying float vOpacity;
+flat varying float vBatchID;
 
-// Uniforms
+// Uniforms — batch-wide only.
 uniform sampler2D uAtlas;
 uniform sampler2D uColorAtlas;
 uniform float uSdfThreshold;
-uniform vec3 uColor;
-uniform float uOpacity;
 uniform vec3 uOutlineColor;
 uniform float uOutlineWidth;
 uniform float uOutlineOpacity;
@@ -41,16 +51,14 @@ uniform float uFarPlane;
 uniform vec3 uBackgroundColor;
 uniform float uBackgroundOutlineWidth;
 uniform vec3 uBackgroundOutlineColor;
-// Animated hide factor from the screen-space declutter pass (0 = shown,
-// 1 = hidden); fades scale the label's opacity through it.
-uniform float uDeclutterHide;
 
 void main() {
     // Horizon culling discard
     if (vHorizonCulled == 1) discard;
 
-    // Effective opacity: style opacity scaled by the declutter fade.
-    float opacity = uOpacity * (1.0 - uDeclutterHide);
+    // Per-label style opacity, already scaled by the declutter fade in the
+    // vertex shader.
+    float opacity = vOpacity;
 
     // Logarithmic depth buffer
     // When offsetDepth is enabled, multiply input by 0.8 to shift depth slightly
@@ -60,7 +68,7 @@ void main() {
     gl_FragDepth = clamp(gl_FragDepth + 0.0001, 0.0, 1.0);
     // Picking mode
     if (nvr_uPickable > 0.0) {
-        gl_FragColor = vec4(nvr_batchIdToColor(nvr_uBatchId), 1.0);
+        gl_FragColor = vec4(nvr_batchIdToColor(vBatchID), 1.0);
         return;
     }
     
@@ -79,7 +87,7 @@ void main() {
 
     // Color glyph path: sample the COLRv1 RGBA atlas directly. The pre-rasterized
     // bitmap already encodes shape, anti-aliasing, gradients and palette colors —
-    // SDF math, outline, and uColor are all bypassed.
+    // SDF math, outline, and the label color are all bypassed.
     if (vIsColor == 1) {
         vec4 c = texture2D(uColorAtlas, vAtlasUv);
         if (c.a <= 0.0) discard;
@@ -148,7 +156,7 @@ void main() {
         if (outlineAlpha <= 0.0) discard;
 
         // Blend: fill on top of outline
-        vec3 color = mix(uOutlineColor, uColor, fillAlpha);
+        vec3 color = mix(uOutlineColor, vColor, fillAlpha);
         float alpha = mix(outlineAlpha * uOutlineOpacity, 1.0, fillAlpha) * opacity; // Apply text opacity (incl. declutter fade)
         // Pull the FILL toward the camera (SMALLER depth = nearer). Outline pixels
         // (fillAlpha≈0) get no pull and stay at the base label depth — coplanar with
@@ -156,7 +164,8 @@ void main() {
         //   • a neighbouring glyph's fill (nearer) occludes this glyph's outline → seams hidden
         //   • the fill also sits in front of the background quad
         //   • outline stays coplanar with the background, so it still draws over it
-        //     via instance draw order (background is instance 0, drawn first).
+        //     via instance draw order (the background occupies the first slot
+        //     of the label's glyph run, so it is drawn first).
         // AA band ramps smoothly because fillAlpha is the weight.
         gl_FragDepth = clamp(gl_FragDepth - (0.0002 * fillAlpha), 0.0, 1.0);
         gl_FragColor = vec4(color, alpha);
@@ -165,7 +174,7 @@ void main() {
                                  uSdfThreshold + edgeWidth,
                                  dist) * opacity; // Apply text opacity (incl. declutter fade)
         if (alpha <= 0.0) discard;
-        gl_FragColor = vec4(uColor, alpha);
+        gl_FragColor = vec4(vColor, alpha);
         gl_FragDepth = clamp(gl_FragDepth - 0.0001, 0.0, 1.0);
     }
 

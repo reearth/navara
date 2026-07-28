@@ -1,7 +1,7 @@
 import { GlyphCharClass, type ShapedGlyph } from "@navaramap/font";
 import { describe, expect, it } from "vitest";
 
-import { breakLines, isRtlText, lineWidthFu } from "./sdfText";
+import { breakLines, isRtlText, lineWidthFu } from "./layout";
 
 /** Build a glyph run from a compact spec: one entry per glyph. */
 function glyphs(
