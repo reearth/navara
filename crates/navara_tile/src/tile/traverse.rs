@@ -149,6 +149,24 @@ pub fn traverse_terrain(
         .occludee_point_in_scaled_space
         .map(|p| occluder.is_scaled_space_point_visible(p))
         .unwrap_or(true);
+
+    // SSE and camera distance are computed once, up front — even for
+    // horizon-occluded tiles, so the occlusion prefetch orders its requests
+    // and mesh builds by `OrderByDistance` (nearest hidden tiles first).
+    let distance_from_camera = tile.calc_distance_from_camera(camera, ellipsoid).abs();
+    let sse = tile.calc_sse(
+        frustum,
+        window,
+        ellipsoid,
+        if terrain_layer.is_some() { 65. } else { 64. },
+        distance_from_camera,
+        fog,
+        dynamic_sse,
+    );
+    let tile = qt.qt.get_mut(handle).unwrap();
+    tile.sse = sse;
+    tile.distance_from_camera = distance_from_camera;
+
     if is_culled_by_occlusion {
         if !allow_occlusion_prefetch {
             return TraversalResult::Culled;
@@ -172,6 +190,7 @@ pub fn traverse_terrain(
         return TraversalResult::Culled;
     }
 
+    let tile = qt.qt.get(handle).unwrap();
     let is_culled_by_frustum = !tile.intersect_with_camera_frustum(frustum);
 
     let tile_ready_state = tile.is_ready(
@@ -188,21 +207,7 @@ pub fn traverse_terrain(
     let is_activated = tc.is_rendered_tile_activated(&handle, meshes);
     let is_rendered_last_frame = is_activated;
 
-    let distance_from_camera = tile.calc_distance_from_camera(camera, ellipsoid).abs();
-    let sse = tile.calc_sse(
-        frustum,
-        window,
-        ellipsoid,
-        if terrain_layer.is_some() { 65. } else { 64. },
-        distance_from_camera,
-        fog,
-        dynamic_sse,
-    );
-
     let tile = qt.qt.get_mut(handle).unwrap();
-    tile.sse = sse;
-    tile.distance_from_camera = distance_from_camera;
-
     let were_children_rendered = tile.were_children_rendered;
     tile.were_children_rendered = false;
 
