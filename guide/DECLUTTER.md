@@ -172,9 +172,10 @@ planet could sit at the same projected pixel as a real, visible label and evict
 it.
 
 Both checks feed a per-candidate `placeable` flag inside `declutterPlace`.
-Non-placeable candidates skip the grid entirely and are simply marked
-not-hidden, so they show immediately the moment they become visible again —
-they never get stuck hidden by a stale placement decision.
+Non-placeable candidates skip the grid entirely — they claim no space — and are
+marked **hidden**, because a label that isn't on screen has not earned a slot.
+See [Hidden by default](#hidden-by-default-why-panning-doesnt-reveal-clutter)
+for why that direction matters.
 
 ## 3. Sorting: priority and hysteresis
 
@@ -218,16 +219,18 @@ Screen (CSS px), divided into 64px cells, plus a 128px margin ring:
 
 - Each cell holds a list of indices into a flat `boxes` array (4 numbers per
   box: `minX, minY, maxX, maxY`).
-- `insert_if_free(minX, minY, maxX, maxY, testShrinkPx)` is the one operation
+- `try_claim(minX, minY, maxX, maxY, testShrinkPx)` is the one operation
   placement needs: test the box against every box already registered in the
   cells it spans; if nothing overlaps, register it into those same cells and
-  return `true` (claimed); otherwise return `false` (collision, don't claim)
-  and leave the grid untouched.
+  return `Claim::Claimed`; otherwise return `Claim::Blocked` (collision, don't
+  claim) and leave the grid untouched.
 - Boxes are tested with **strict inequalities**, so two boxes that exactly
   touch edges do not count as colliding.
-- A box entirely outside `viewport ± margin` is reported free **without
-  touching the grid** — nothing it could occlude is on screen anyway, so
-  skipping the cell math is a pure win.
+- A box entirely outside `viewport ± margin` returns `Claim::OutsideArea`
+  **without touching the grid** — nothing it could occlude is on screen anyway,
+  so skipping the cell math is a pure win. That third variant exists rather than
+  reusing `Claimed` precisely because such a label must not be treated as a
+  winner (see [below](#hidden-by-default-why-panning-doesnt-reveal-clutter)).
 - The **128px margin** exists so labels just outside the visible viewport
   still compete for space. Without it, panning would let an off-screen label
   "win" the instant it crosses into view, immediately popping out its
@@ -265,14 +268,14 @@ one-time tiebreak. `DeclutterManager.HYSTERESIS_PX = 6`
 `isShown` is true:
 
 ```rust
-let free = grid.insert_if_free(
+let claim = grid.try_claim(
     boxes[o] - pad, boxes[o + 1] - pad,
     boxes[o + 2] + pad, boxes[o + 3] + pad,
     if is_shown { hysteresis_px } else { 0.0 },
 );
 ```
 
-Inside `insert_if_free`, that shrink applies **only to the box used for the
+Inside `try_claim`, that shrink applies **only to the box used for the
 overlap test** — the box actually registered into the grid (what future
 candidates collide against) is still the full, unshrunk box:
 
@@ -300,6 +303,45 @@ Put together: **sticky when shown, strict when hidden.** That asymmetry is
 the whole mechanism — no timers, no frame counters, no separately-tracked
 "cooldown" state. It falls directly out of one boolean (`isShown`) read twice:
 once in the sort comparator, once as the shrink toggle.
+
+## Hidden by default: why panning doesn't reveal clutter
+
+Hysteresis keeps *already-placed* labels stable. A second, independent rule
+governs labels the pass can't judge yet — and getting its direction wrong is
+what produced the most visible artifact the system ever had:
+
+> On load, every label appeared at once and the clutter then faded away; every
+> pan swept a fresh wave of full-opacity labels into view that promptly faded
+> back out.
+
+The cause was a "when in doubt, show it" default. Three groups of candidates
+never contest on-screen space: those behind the near plane, those beyond the
+horizon (both `placeable == false`), and those whose box lands entirely outside
+`viewport ± margin` (`Claim::OutsideArea`). All three used to come back
+`hidden = 0`. Nothing is drawn for them at that moment — but `hidden = 0` is a
+**fade target**, so each one spent 300ms fading in *while invisible*. By the
+time the globe turned it past the horizon, or a pan carried it in from beyond
+the margin, it was already fully opaque. Only the next pass — up to
+`MIN_INTERVAL_MS` (150ms) later — discovered the collision, and the label faded
+out over another 300ms. A visible half-second of clutter, on a label that never
+had a claim to that space.
+
+So the kernel is **hidden by default**: `hidden[i] = 0` only when
+`try_claim` returns `Claim::Claimed`. Both `Blocked` and `OutsideArea`, and
+every non-placeable candidate, come back hidden. The invariant is
+*a label fades in only after it has actually won screen space*.
+
+This makes the two guards in [the frame loop](#running-in-the-frame-loop) work
+*for* smoothness instead of against it: a label entering the viewport waits for
+the next pass while hidden (nothing wrong is on screen meanwhile), then fades in
+if it wins. The 128px margin ring is the lead time that keeps that fade-in from
+starting on screen — labels inside it are placed while still off-screen, so at
+normal pan speeds they cross the edge already faded in and correct.
+
+Note the interaction with hysteresis: hidden-by-default also means `isShown`
+goes false while a label is off screen, so it re-enters as a *challenger* and
+must clear its full padded box (no 6px shrink) to appear. "Prove you deserve
+it" applies to every label arriving from off screen, not just to fresh ones.
 
 ## 5. Fading, not popping
 
