@@ -11,6 +11,7 @@ import {
   Vector2,
 } from "three";
 
+import type { GeometryType } from "../evaluations";
 import type { EventContext } from "../event/context";
 import { createPolylineMaterialEnhancer } from "../material/enhancer";
 
@@ -63,6 +64,13 @@ export class PolylineMesh extends BatchedFeatureMesh<
   constructor(ctx: EventContext) {
     super(new BufferGeometry<Attributes>(), new ShaderMaterial());
     this.ctx = ctx;
+  }
+
+  /**
+   * Get the geometry type of this mesh.
+   */
+  getGeometryType(): Extract<GeometryType, "polyline"> {
+    return "polyline";
   }
 
   init(mesh: NavaraPolylineMesh) {

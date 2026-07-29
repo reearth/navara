@@ -14,8 +14,13 @@ import type {
   StylePropertySpecification,
 } from "@maplibre/maplibre-gl-style-spec";
 
-import { PAINT_SPECS_BY_TYPE } from "./paintSpecs";
 import type { StyleEngine } from "./StyleEngine";
+import {
+  filterNavaraExtensionErrors,
+  getLayoutSpec,
+  getPaintSpec,
+  isLiteralArray,
+} from "./styleEngineUtils";
 import type {
   EvaluationContext,
   FeatureContext,
@@ -32,12 +37,15 @@ export class JsStyleEngine implements StyleEngine {
     const errors = validateStyleMin(raw as StyleSpecification);
 
     if (errors && errors.length > 0) {
-      const errorMessages = errors.map((e: { message: string }) => e.message);
-      const error = new Error(
-        `Invalid MapLibre Style: ${errorMessages.join(", ")}`,
-      );
+      // Filter out errors related to Navara extensions and relaxed validation
+      const relevantErrors = filterNavaraExtensionErrors(errors);
 
-      throw error;
+      if (relevantErrors.length > 0) {
+        const errorMessages = relevantErrors.map(
+          (e: { message: string }) => e.message,
+        );
+        throw new Error(`Invalid MapLibre Style: ${errorMessages.join(", ")}`);
+      }
     }
 
     return raw as ParsedStyle;
@@ -46,7 +54,7 @@ export class JsStyleEngine implements StyleEngine {
   createFilter(
     expr: FilterExpression,
     _layerType: LayerType,
-    geometryType: string,
+    featureGeometryType: string,
   ): (feature: FeatureContext) => boolean {
     // Since v21 `featureFilter` requires a `rootKey` locating the expression in
     // the style JSON; it is only used to prefix runtime warnings.
@@ -59,7 +67,7 @@ export class JsStyleEngine implements StyleEngine {
         type: "Feature" as const,
         properties: ctx.properties ?? {},
         geometry: {
-          type: geometryType, // e.g., "Point", "Polygon", "LineString"
+          type: featureGeometryType, // e.g., "Point", "Polygon", "LineString"
           coordinates: [], // Empty coordinates - most filters only check properties/type
         },
       };
@@ -74,8 +82,29 @@ export class JsStyleEngine implements StyleEngine {
   createValueFn<T extends StyleValue>(
     expr: ValueExpression,
     spec: PropertySpec,
-    geometryType = "Point",
+    featureGeometryType = "Point",
   ): (ctx: EvaluationContext) => T {
+    // Handle constant values directly (optimization).
+    // For color strings, still compile via MapLibre so it can validate/coerce (and preserve alpha).
+    if (typeof expr === "number" || typeof expr === "boolean") {
+      const constantValue = expr as T;
+      return () => constantValue;
+    }
+    if (typeof expr === "string" && spec.type !== "color") {
+      const constantValue = expr as T;
+      return () => constantValue;
+    }
+
+    // MapLibre allows literal arrays as property values (e.g., [1, 2, 3], ["/fonts/..."]).
+    // Only treat as constant if it's empty or doesn't start with a string operator.
+    if (
+      Array.isArray(expr) &&
+      (expr.length === 0 || typeof expr[0] !== "string")
+    ) {
+      const constantValue = expr as unknown as T;
+      return () => constantValue;
+    }
+
     // Since v21 `createExpression` requires a `rootKey` locating the expression
     // in the style JSON; it is only used to prefix runtime warnings.
     const result = createExpression(
@@ -85,6 +114,14 @@ export class JsStyleEngine implements StyleEngine {
     );
 
     if (result.result === "error") {
+      // If compilation fails and this looks like a literal array (paths, font names, etc.),
+      // treat it as a constant value instead of throwing.
+      // This handles cases like text-font: ["/fonts/custom.ttf"] or ["Font Name"] which are valid literals.
+      if (isLiteralArray(expr)) {
+        const constantValue = expr as unknown as T;
+        return () => constantValue;
+      }
+
       const errorMsg = result.value
         .map((e: { message: string }) => e.message)
         .join(", ");
@@ -99,7 +136,7 @@ export class JsStyleEngine implements StyleEngine {
         type: "Feature" as const,
         properties: ctx.properties ?? {},
         geometry: {
-          type: geometryType, // e.g., "Point", "Polygon", "LineString"
+          type: featureGeometryType, // e.g., "Point", "Polygon", "LineString"
           coordinates: [], // Empty coordinates - most expressions only access properties
         },
       };
@@ -117,12 +154,13 @@ export class JsStyleEngine implements StyleEngine {
     layerType: LayerType,
     propertyName: string,
   ): PropertySpec | undefined {
-    const paintSpecs = PAINT_SPECS_BY_TYPE[layerType];
-    if (!paintSpecs) {
-      return undefined;
-    }
+    return getPaintSpec(layerType, propertyName);
+  }
 
-    const spec = paintSpecs[propertyName as keyof typeof paintSpecs];
-    return spec as PropertySpec | undefined;
+  getLayoutSpec(
+    layerType: LayerType,
+    propertyName: string,
+  ): PropertySpec | undefined {
+    return getLayoutSpec(layerType, propertyName);
   }
 }

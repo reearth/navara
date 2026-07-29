@@ -23,6 +23,7 @@ import {
   type DeclutterCandidate,
   type DeclutterParticipant,
 } from "../../declutter/types";
+import type { GeometryType } from "../../evaluations";
 import type { EventContext } from "../../event/context";
 import { createInstancedSpriteMaterialEnhancer } from "../../material/enhancer";
 import type { CustomObject3DEventMap } from "../../object3DEvent";
@@ -58,6 +59,7 @@ export class InstancedSpriteMesh
   extends Mesh<BufferGeometry, Material | Material[], CustomObject3DEventMap>
   implements PickableMesh, DeclutterParticipant
 {
+  private _geometryType: Extract<GeometryType, "point" | "billboard"> = "point";
   private _batchIdToInstance = new Map<number, number>();
   private _initialColor: Color = new Color(0xffffff);
   private _initialHeight = 0.0;
@@ -115,6 +117,29 @@ export class InstancedSpriteMesh
     this._active = active;
     this.updateVisibility();
     this.ctx.declutter?.markDirty();
+  }
+
+  /**
+   * Set the geometry type for this mesh.
+   *
+   * This affects how FeatureEvaluator provides meshGeomType to evaluators,
+   * which is used by MapLibreStylePlugin to determine which properties to apply
+   * (e.g., billboard vs text rendering for symbol layers).
+   *
+   * Changing this after initialization is supported and will affect subsequent
+   * feature evaluations, but does NOT automatically trigger re-evaluation.
+   * Call layer.forceUpdate() if you need to re-evaluate existing features.
+   */
+  setGeometryType(type: Extract<GeometryType, "point" | "billboard">): void {
+    this._geometryType = type;
+  }
+
+  /**
+   * Get the geometry type of this mesh.
+   * Defaults to "point" if not explicitly set.
+   */
+  getGeometryType(): Extract<GeometryType, "point" | "billboard"> {
+    return this._geometryType;
   }
 
   // --- DeclutterParticipant ---

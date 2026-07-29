@@ -87,12 +87,21 @@ export type EvaluatedValue = {
 };
 
 /**
+ * Geometry type for feature evaluation context.
+ * Tells the evaluator which geometry type is being rendered.
+ */
+export type GeometryType =
+  "billboard" | "text" | "point" | "polyline" | "polygon" | "model";
+
+/**
  * Information about a feature batch, passed to evaluation callbacks.
  */
 export type FeatureInfo = {
   batchId: number;
   properties: Record<string, unknown> | undefined;
   layerId: LayerId | undefined;
+  /** Mesh geometry type (e.g., "billboard", "text"). Not GeoJSON geometry ("Point", "Polygon"). */
+  meshGeomType?: GeometryType;
 };
 
 /**
@@ -186,6 +195,65 @@ export class FeatureEvaluator {
   }
 
   /**
+   * Valid geometry type literals for runtime validation.
+   */
+  private static readonly VALID_GEOMETRY_TYPES = new Set<GeometryType>([
+    "billboard",
+    "text",
+    "point",
+    "polyline",
+    "polygon",
+    "model",
+  ]);
+
+  /**
+   * Track objects we've already warned about to avoid log spam.
+   * Uses WeakSet so objects can be garbage collected.
+   */
+  private static readonly warnedObjects = new WeakSet<Object3D>();
+
+  /**
+   * Type guard to check if an Object3D has a getGeometryType method.
+   */
+  private hasGetGeometryType(
+    obj: Object3D,
+  ): obj is Object3D & { getGeometryType(): unknown } {
+    const objRecord = obj as unknown as Record<string, unknown>;
+    return (
+      "getGeometryType" in obj &&
+      typeof objRecord["getGeometryType"] === "function"
+    );
+  }
+
+  /**
+   * Determine geometry type from the mesh object.
+   * Calls getGeometryType() method if available on the mesh.
+   * Validates that the returned value is a valid GeometryType literal.
+   */
+  private determineGeometryType(obj: Object3D): GeometryType | undefined {
+    if (this.hasGetGeometryType(obj)) {
+      const value = obj.getGeometryType();
+
+      // Runtime validation: ensure the returned value is a valid GeometryType
+      if (
+        typeof value === "string" &&
+        FeatureEvaluator.VALID_GEOMETRY_TYPES.has(value as GeometryType)
+      ) {
+        return value as GeometryType;
+      }
+
+      // Invalid value from getGeometryType() - warn once per object to avoid log spam
+      if (!FeatureEvaluator.warnedObjects.has(obj)) {
+        FeatureEvaluator.warnedObjects.add(obj);
+        console.warn(
+          `Invalid geometry type returned from getGeometryType(): "${value}". Expected one of: ${Array.from(FeatureEvaluator.VALID_GEOMETRY_TYPES).join(", ")}`,
+        );
+      }
+    }
+    return undefined;
+  }
+
+  /**
    * Gets the unique identifier of this feature set.
    */
   get id() {
@@ -214,6 +282,9 @@ export class FeatureEvaluator {
    * ```
    */
   readFeatureProperties(f: (info: FeatureInfo, batchIndex: number) => void) {
+    // Read geometry type dynamically to handle cases where it changes after evaluator creation
+    const meshGeomType = this.determineGeometryType(this.obj);
+
     if (this.cachedBatchedProperties) {
       for (const [batchIdx, properties] of this.cachedBatchedProperties) {
         f(
@@ -221,6 +292,7 @@ export class FeatureEvaluator {
             layerId: this.layerId,
             batchId: this.batchIds[batchIdx],
             properties,
+            meshGeomType,
           },
           batchIdx,
         );
@@ -241,6 +313,7 @@ export class FeatureEvaluator {
               layerId: this.layerId,
               batchId,
               properties,
+              meshGeomType,
             },
             batchIdx,
           );
@@ -267,6 +340,9 @@ export class FeatureEvaluator {
     keys: string[],
     f: (info: FeatureInfo, batchIndex: number) => void,
   ) {
+    // Read geometry type dynamically to handle cases where it changes after evaluator creation
+    const meshGeomType = this.determineGeometryType(this.obj);
+
     const cacheKey = keys.join("|");
     if (this.filterCacheKey === cacheKey && this.cachedFilteredProperties) {
       for (const [batchIndex, filtered] of this.cachedFilteredProperties) {
@@ -275,6 +351,7 @@ export class FeatureEvaluator {
             layerId: this.layerId,
             batchId: this.batchIds[batchIndex],
             properties: filtered,
+            meshGeomType,
           },
           batchIndex,
         );
@@ -293,7 +370,15 @@ export class FeatureEvaluator {
           }
           this.cachedFilteredProperties?.set(batchIndex, properties);
           this.batchIds[batchIndex] = batchId;
-          f({ layerId: this.layerId, batchId, properties }, batchIndex);
+          f(
+            {
+              layerId: this.layerId,
+              batchId,
+              properties,
+              meshGeomType,
+            },
+            batchIndex,
+          );
         },
       );
     }

@@ -14,6 +14,7 @@ export async function renderBillboard(
     renderOrder: FEATURE_RENDER_ORDER,
     ctx,
   });
+  mesh.setGeometryType("billboard");
   await mesh._init(m);
   mesh.setActive(m.active);
 

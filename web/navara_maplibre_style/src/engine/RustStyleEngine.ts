@@ -9,8 +9,14 @@ import { validateStyleMin } from "@maplibre/maplibre-gl-style-spec";
 import type { StyleSpecification } from "@maplibre/maplibre-gl-style-spec";
 import { CompiledExpression, CompiledFilter } from "@navaramap/engine";
 
-import { PAINT_SPECS_BY_TYPE } from "./paintSpecs";
 import type { StyleEngine } from "./StyleEngine";
+import {
+  filterNavaraExtensionErrors,
+  getLayoutSpec,
+  getPaintSpec,
+  getTypeDefault,
+  isLiteralArray,
+} from "./styleEngineUtils";
 import type {
   EvaluationContext,
   FeatureContext,
@@ -27,8 +33,15 @@ export class RustStyleEngine implements StyleEngine {
     const errors = validateStyleMin(raw as StyleSpecification);
 
     if (errors && errors.length > 0) {
-      const errorMessages = errors.map((e: { message: string }) => e.message);
-      throw new Error(`Invalid MapLibre Style: ${errorMessages.join(", ")}`);
+      // Filter out errors related to Navara extensions and relaxed validation
+      const relevantErrors = filterNavaraExtensionErrors(errors);
+
+      if (relevantErrors.length > 0) {
+        const errorMessages = relevantErrors.map(
+          (e: { message: string }) => e.message,
+        );
+        throw new Error(`Invalid MapLibre Style: ${errorMessages.join(", ")}`);
+      }
     }
 
     return raw as ParsedStyle;
@@ -37,7 +50,7 @@ export class RustStyleEngine implements StyleEngine {
   createFilter(
     expr: FilterExpression,
     _layerType: LayerType,
-    geometryType: string,
+    featureGeometryType: string,
   ): (feature: FeatureContext) => boolean {
     // Match JsStyleEngine behavior: empty filter array means "no filter".
     if (Array.isArray(expr) && expr.length === 0) {
@@ -58,7 +71,7 @@ export class RustStyleEngine implements StyleEngine {
         return compiled.test(
           ctx.properties ?? {},
           0, // TODO: Get actual zoom from camera
-          geometryType, // Pass geometry type for ["geometry-type"] filters
+          featureGeometryType, // Pass geometry type for ["geometry-type"] filters
         );
       } catch (e) {
         console.error("Filter evaluation error:", e);
@@ -70,7 +83,7 @@ export class RustStyleEngine implements StyleEngine {
   createValueFn<T extends StyleValue>(
     expr: ValueExpression,
     spec: PropertySpec,
-    geometryType = "Point",
+    featureGeometryType = "Point",
   ): (ctx: EvaluationContext) => T {
     // Handle constant values directly (optimization).
     // For color strings, still compile via WASM so maplibre-expr can validate/coerce (and preserve alpha).
@@ -104,6 +117,14 @@ export class RustStyleEngine implements StyleEngine {
       const propsArray = compiled.getRequiredProperties();
       requiredProps = Array.from(propsArray) as string[];
     } catch (e) {
+      // If compilation fails and this looks like a literal array (paths, font names, etc.),
+      // treat it as a constant value instead of throwing.
+      // This handles cases like text-font: ["/fonts/custom.ttf"] or ["Font Name"] which are valid literals.
+      if (isLiteralArray(expr)) {
+        const constantValue = expr as unknown as T;
+        return () => constantValue;
+      }
+
       // Let the caller add property/layer context (and decide the fallback).
       throw e instanceof Error ? e : new Error(String(e));
     }
@@ -133,11 +154,11 @@ export class RustStyleEngine implements StyleEngine {
         const result = compiled.evaluate(
           propsToPass,
           0, // navara currently doesn't provide zoom info, so we pass 0 for now
-          geometryType, // Pass geometry type for expressions that need it
+          featureGeometryType, // Pass geometry type for expressions that need it
         );
 
         if (result == null) {
-          return (spec.default ?? this.getTypeDefault(spec.type)) as T;
+          return (spec.default ?? getTypeDefault(spec.type)) as T;
         }
 
         // Return result as-is; maplibre-expr handles type conversion
@@ -145,7 +166,7 @@ export class RustStyleEngine implements StyleEngine {
       } catch (e) {
         console.error("Expression evaluation error:", e);
         // Return default on evaluation error
-        return (spec.default ?? this.getTypeDefault(spec.type)) as T;
+        return (spec.default ?? getTypeDefault(spec.type)) as T;
       }
     };
   }
@@ -154,30 +175,13 @@ export class RustStyleEngine implements StyleEngine {
     layerType: LayerType,
     propertyName: string,
   ): PropertySpec | undefined {
-    const paintSpecs = PAINT_SPECS_BY_TYPE[layerType];
-    if (!paintSpecs) {
-      return undefined;
-    }
-
-    const spec = paintSpecs[propertyName as keyof typeof paintSpecs];
-    return spec as PropertySpec | undefined;
+    return getPaintSpec(layerType, propertyName);
   }
 
-  private getTypeDefault(type: PropertySpec["type"]): StyleValue {
-    switch (type) {
-      case "color":
-        return { r: 0, g: 0, b: 0, a: 1 }; // Black in MapLibreColor format
-      case "number":
-        return 0;
-      case "boolean":
-        return false;
-      case "string":
-        return "";
-      case "array":
-        return [];
-      default:
-        // Safe fallback for unknown types
-        return [];
-    }
+  getLayoutSpec(
+    layerType: LayerType,
+    propertyName: string,
+  ): PropertySpec | undefined {
+    return getLayoutSpec(layerType, propertyName);
   }
 }

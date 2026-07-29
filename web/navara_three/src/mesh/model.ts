@@ -23,6 +23,7 @@ import {
 } from "three";
 import invariant from "tiny-invariant";
 
+import type { GeometryType } from "../evaluations";
 import type { EventContext } from "../event/context";
 import {
   createModelMaterialEnhancer,
@@ -94,6 +95,13 @@ export class ModelMesh
     this.addEventListener("removedFromWorld", () => {
       this.dispose();
     });
+  }
+
+  /**
+   * Get the geometry type of this mesh.
+   */
+  getGeometryType(): Extract<GeometryType, "model"> {
+    return "model";
   }
 
   get water(): boolean {

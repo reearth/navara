@@ -10,6 +10,7 @@ import type {
   DeclutterCandidate,
   DeclutterParticipant,
 } from "../declutter/types";
+import type { GeometryType } from "../evaluations";
 import type { EventContext } from "../event/context";
 
 import { InstancedMesh, type InstancedMeshOptions } from "./instanced";
@@ -148,6 +149,13 @@ export class BatchedSdfTextMesh
   override setActive(active: boolean) {
     super.setActive(active);
     this._markDeclutterDirty();
+  }
+
+  /**
+   * Get the geometry type of this mesh.
+   */
+  getGeometryType(): Extract<GeometryType, "text"> {
+    return "text";
   }
 
   /**
