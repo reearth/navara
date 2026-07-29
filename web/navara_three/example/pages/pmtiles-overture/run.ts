@@ -16,68 +16,141 @@ import { SH_COEFFICIENTS } from "../../helpers/sh";
 
 export type CustomDescriptions = DefaultDescriptions;
 
-// Family name the label faces are registered under.
-const LABEL_FONT = "OvertureLabels";
+// Family names the label faces are registered under. Two, because the official
+// Overture style uses a different weight for administrative names than for place
+// names, and a Navara font family maps codepoints to faces by unicode range —
+// not by weight — so one weight per registered family.
+const LABEL_FONT = "OvertureAdminLabels";
+const POI_FONT = "OverturePlaceLabels";
 
-// Fonts covering the scripts Overture place names use, in priority order:
-// Archivo (Expanded ExtraBold) for Latin, Noto Sans script fonts for the
-// rest. Faces and their unicode ranges are derived from the Google Fonts
-// stylesheet at runtime; font files themselves are still downloaded lazily,
-// only when a label needs one of their codepoints.
-//
-// Order matters: for each codepoint the first face whose declared ranges
-// contain it wins, and Google's declared ranges are per-subset boilerplate
-// that can claim codepoints a font doesn't actually contain (which would
-// shape as tofu). This order was verified against the fonts' real coverage:
-// - Bengali/Devanagari/Armenian/Gurmukhi/Syriac precede Noto Sans, which
-//   declares (but lacks) some of their signs, e.g. Vedic marks.
-// - Noto Sans and JP/KR precede the remaining script fonts so shared
-//   symbols/punctuation resolve to fonts that really contain them.
-// - SC and Mongolian go last: Google slices them like CJK fonts whose
-//   declared ranges also claim Hiragana, Hangul, Armenian, Arabic, Thai,
-//   Cherokee, and more that these fonts don't cover.
-const LABEL_FONT_STACK = [
-  "Archivo:wdth,wght@125,800",
-  "Noto Sans Bengali:wght@800",
-  "Noto Sans Devanagari:wght@800",
-  "Noto Sans Armenian:wght@800",
-  "Noto Sans Gurmukhi:wght@800",
-  "Noto Sans Arabic:wght@800",
-  "Noto Sans Syriac:wght@800",
-  "Noto Sans:wght@800",
-  "Noto Sans JP:wght@800",
-  "Noto Sans KR:wght@800",
-  "Noto Sans Hebrew:wght@800",
-  "Noto Sans Thaana:wght@800",
-  "Noto Sans NKo",
-  "Noto Sans Thai:wght@800",
-  "Noto Sans Lao:wght@800",
-  "Noto Sans Khmer:wght@800",
-  "Noto Sans Myanmar:wght@800",
-  "Noto Sans Gujarati:wght@800",
-  "Noto Sans Tamil:wght@800",
-  "Noto Sans Telugu:wght@800",
-  "Noto Sans Kannada:wght@800",
-  "Noto Sans Malayalam:wght@800",
-  "Noto Sans Oriya:wght@800",
-  "Noto Sans Sinhala:wght@800",
-  "Noto Sans Georgian:wght@800",
-  "Noto Sans Ethiopic:wght@800",
-  "Noto Serif Tibetan:wght@800",
-  "Noto Sans Tifinagh",
-  "Noto Sans Adlam:wght@700",
-  "Noto Sans Cherokee:wght@800",
-  "Noto Sans Canadian Aboriginal:wght@800",
-  "Noto Sans Vai",
-  "Noto Sans Yi",
-  "Noto Sans Osmanya",
-  "Noto Sans SC:wght@800",
-  "Noto Sans Mongolian",
+/**
+ * Weights taken from the official Overture explorer style
+ * (explore.overturemaps.org). Its `$globals.font` block resolves to
+ * "Noto Sans SemiCondensed" in three weights, referenced as:
+ *   primary   = SemiCondensed Bold    (700) — countries, regions, counties,
+ *                                             localities over 1M population
+ *   secondary = SemiCondensed Medium  (500) — smaller localities, boroughs
+ *   tertiary  = SemiCondensed Regular (400) — filtered places (POI)
+ * This example collapses each layer to one weight: admin labels take primary,
+ * place labels take tertiary.
+ */
+const ADMIN_WEIGHT = 700;
+const POI_WEIGHT = 400;
+
+/**
+ * Latin face. Overture's glyph server exposes "Noto Sans SemiCondensed" as a
+ * named face; on the Google Fonts CSS API the same design is the `wdth` axis of
+ * variable Noto Sans at 87.5 (100 = normal, 75 = Condensed).
+ */
+const latinFace = (weight: number) => `Noto Sans:wdth,wght@87.5,${weight}`;
+
+/**
+ * Non-Latin faces covering the scripts Overture place names use, in priority
+ * order. `variable: false` marks families Google publishes at a single weight —
+ * appending a `wght` axis they don't have makes the whole CSS request fail with
+ * HTTP 400, taking every other family down with it.
+ *
+ * Order matters: for each codepoint the first face whose declared ranges contain
+ * it wins, and Google's declared ranges are per-subset boilerplate that can
+ * claim codepoints a font doesn't actually contain (which would shape as tofu).
+ * This order was verified against the fonts' real coverage:
+ * - Bengali/Devanagari/Armenian/Gurmukhi/Syriac precede Noto Sans, which
+ *   declares (but lacks) some of their signs, e.g. Vedic marks.
+ * - Noto Sans and JP/KR precede the remaining script fonts so shared
+ *   symbols/punctuation resolve to fonts that really contain them.
+ * - SC and Mongolian go last: Google slices them like CJK fonts whose declared
+ *   ranges also claim Hiragana, Hangul, Armenian, Arabic, Thai, Cherokee, and
+ *   more that these fonts don't cover.
+ */
+const SCRIPT_FACES: { family: string; variable?: boolean }[] = [
+  { family: "Noto Sans Bengali" },
+  { family: "Noto Sans Devanagari" },
+  { family: "Noto Sans Armenian" },
+  { family: "Noto Sans Gurmukhi" },
+  { family: "Noto Sans Arabic" },
+  { family: "Noto Sans Syriac" },
+  // No plain "Noto Sans" entry: `latinFace` already requests that family with
+  // the `wdth` axis pinned to 87.5. Asking for both merges into one family in
+  // the CSS response, emitting the same unicode-ranges at 87.5% *and* 100%
+  // width, after which face selection per codepoint is a coin flip between
+  // SemiCondensed and normal.
+  { family: "Noto Sans JP" },
+  { family: "Noto Sans KR" },
+  { family: "Noto Sans Hebrew" },
+  { family: "Noto Sans Thaana" },
+  { family: "Noto Sans NKo", variable: false },
+  { family: "Noto Sans Thai" },
+  { family: "Noto Sans Lao" },
+  { family: "Noto Sans Khmer" },
+  { family: "Noto Sans Myanmar" },
+  { family: "Noto Sans Gujarati" },
+  { family: "Noto Sans Tamil" },
+  { family: "Noto Sans Telugu" },
+  { family: "Noto Sans Kannada" },
+  { family: "Noto Sans Malayalam" },
+  { family: "Noto Sans Oriya" },
+  { family: "Noto Sans Sinhala" },
+  { family: "Noto Sans Georgian" },
+  { family: "Noto Sans Ethiopic" },
+  { family: "Noto Serif Tibetan" },
+  { family: "Noto Sans Tifinagh", variable: false },
+  { family: "Noto Sans Adlam" },
+  { family: "Noto Sans Cherokee" },
+  { family: "Noto Sans Canadian Aboriginal" },
+  { family: "Noto Sans Vai", variable: false },
+  { family: "Noto Sans Yi", variable: false },
+  { family: "Noto Sans Osmanya", variable: false },
+  { family: "Noto Sans SC" },
+  { family: "Noto Sans Mongolian", variable: false },
 ];
 
-const LABEL_FONT_CSS_URL = `https://fonts.googleapis.com/css2?${LABEL_FONT_STACK.map(
-  (family) => `family=${family.replace(/ /g, "+")}`,
-).join("&")}`;
+/** Google Fonts CSS API specs for one weight, Latin face first. */
+const fontStack = (weight: number): string[] => [
+  latinFace(weight),
+  ...SCRIPT_FACES.map(({ family, variable }) =>
+    variable === false ? family : `${family}:wght@${weight}`,
+  ),
+];
+
+const cssUrl = (stack: string[]) =>
+  `https://fonts.googleapis.com/css2?${stack
+    .map((family) => `family=${family.replace(/ /g, "+")}`)
+    .join("&")}`;
+
+/**
+ * Label colors, resolved from the Overture explorer's style variables through
+ * `$semantic` to `$globals.color`:
+ *   admin text  `$semantic.division.label` = gray.900  hsl(0 0% 18%)
+ *   admin halo  `$semantic.division.halo`  = white 80% hsla(0 0% 100% / 0.8)
+ *   place text  `$semantic.place.label`    = gray.950  hsl(0 0% 11%)
+ *   place halo  `$semantic.place.labelHalo`= white 30% hsla(0 0% 100% / 0.3)
+ */
+const OVERTURE_COLORS = {
+  adminText: "#2e2e2e",
+  adminHalo: "#ffffff",
+  adminHaloOpacity: 0.8,
+  placeText: "#1c1c1c",
+  placeHalo: "#ffffff",
+  placeHaloOpacity: 0.3,
+} as const;
+
+/**
+ * Overture states halos as `text-halo-width` in *screen* pixels, constant across
+ * text sizes. Navara's `outlineWidth` is em-relative instead: the value is
+ * texels at the 64 px/em reference density, so it dilates by `w / 64` em (see
+ * `atlasRangePx` in `@navaramap/font`). Converting needs the text size the halo
+ * was authored against:
+ *
+ *   outlineWidth = haloPx / textSize * 64
+ *
+ * Overture's admin halos land near the same em value at their own sizes —
+ * 1.2 px at size 19 (country), 1.5 px at 24 (locality), 1.1 px at 15 (region)
+ * all come to ~0.065 em — so one number reproduces them: 0.065 * 64 ≈ 4.
+ * Their filtered-place halo is proportionally much heavier: 1.5 px at size 12 is
+ * 0.125 em, hence 8.
+ */
+const ADMIN_OUTLINE_WIDTH = 4;
+const POI_OUTLINE_WIDTH = 8;
 
 // Camera presets.
 const VIEWPOINTS = {
@@ -93,24 +166,46 @@ const VIEWPOINTS = {
 // countries beat regions beat counties beat localities wherever they overlap.
 // (The tile pyramid still gates data naturally: fine admin features only
 // exist in higher-zoom tiles, so the world view never even loads them.)
+//
+// `size` reproduces Overture's type hierarchy. Its style ramps each tier's
+// `text-size` over zoom; this globe has no discrete zoom, so each tier takes the
+// mid-ramp value from the official style and the UI slider scales all of them
+// together (see `sizeScale`):
+//   country  z9  → 19    region z9  → 15
+//   county   z10 → 12    locality z12 → 24 (over 1M) / 20
 const LABEL_TIERS = [
   {
     key: "country",
     match: ["country"],
+    size: 19,
   },
   {
     key: "region",
     match: ["region", "macroregion", "governorate", "province", "state"],
+    size: 15,
   },
   {
     key: "county",
     match: ["county", "macrocounty", "localadmin", "district"],
+    size: 12,
   },
   {
     key: "locality",
     match: ["locality", "city", "town"],
+    size: 24,
   },
 ];
+
+/**
+ * Overture sets `text-transform: uppercase` on every administrative label
+ * (country, region, county and locality) — but not on boroughs or
+ * neighbourhoods, which this example does not label. Applied here in the
+ * evaluator because Navara has no `textTransform` property.
+ *
+ * `toLocaleUpperCase` leaves ideographs and other caseless scripts untouched, so
+ * this is safe to run over every name regardless of script.
+ */
+const overtureCase = (name: string) => name.toLocaleUpperCase();
 
 // Reverse index: normalized property value -> tier index (first tier wins).
 const TIER_INDEX_OF = new Map<string, number>();
@@ -127,7 +222,7 @@ const BASE_POLYGONS = [
   { title: "Land", source: "land", color: "#f8f4f1" }, // sand.50
   { title: "Land cover", source: "land_cover", color: "#c4eaa9" }, // grass fallback
   { title: "Land use", source: "land_use", color: "#d6ecd5" }, // park green.200
-  { title: "Water", source: "water", color: "#79cdf6" }, // ocean.900
+  { title: "Water", source: "water", color: "#9adefc" }, // ocean.900
 ] as const;
 
 // 3D buildings (Overture `buildings` theme). Where `height` (meters) is missing
@@ -227,12 +322,27 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
 
   await view.init();
 
-  // The Google Fonts CSS API orders @font-face blocks alphabetically, so
-  // pass the stack as a fontFamily array to restore the intended priority
-  // (e.g. JP before SC/KR for codepoints shared across CJK subsets).
-  view.addFontFamily(
-    await fetchFontFamilyFromCss(LABEL_FONT, LABEL_FONT_CSS_URL, {
-      fontFamily: LABEL_FONT_STACK.map((family) => family.split(":")[0]),
+  // The Google Fonts CSS API orders @font-face blocks alphabetically, so pass
+  // the stack as a fontFamily array to restore the intended priority (e.g. JP
+  // before SC/KR for codepoints shared across CJK subsets).
+  //
+  // Two registrations, one per weight: admin names at Overture's `primary`
+  // (SemiCondensed Bold), place names at its `tertiary` (SemiCondensed Regular).
+  // Face files are still fetched lazily per unicode range, so registering both
+  // does not download two full font sets.
+  await Promise.all(
+    (
+      [
+        [LABEL_FONT, ADMIN_WEIGHT],
+        [POI_FONT, POI_WEIGHT],
+      ] as const
+    ).map(async ([name, weight]) => {
+      const stack = fontStack(weight);
+      view.addFontFamily(
+        await fetchFontFamilyFromCss(name, cssUrl(stack), {
+          fontFamily: stack.map((family) => family.split(":")[0]),
+        }),
+      );
     }),
   );
 
@@ -450,7 +560,10 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   // gating: whatever fits on screen shows, coarser tiers winning overlaps.
   const labelTitle = "Labels";
   visible[labelTitle] = true;
-  const params = { size: 15, maxWidth: 9.0 };
+  // `sizeScale` multiplies every tier's Overture size; 1.0 is the official
+  // hierarchy. `size` on the layer is only the fallback for a feature the
+  // evaluator does not size.
+  const params = { sizeScale: 1.0, maxWidth: 9.0 };
 
   const labelLayer = view.addLayer({
     type: "vector",
@@ -458,14 +571,14 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     sourceLayers: ["division"],
     text: {
       font: LABEL_FONT,
-      color: new Color().setStyle("#000000"),
-      size: params.size,
+      color: new Color().setStyle(OVERTURE_COLORS.adminText),
+      size: LABEL_TIERS[0].size,
       sizeInMeters: false,
       clampToGround: false,
       center: { x: 0.5, y: 0.5 },
-      outlineColor: new Color().setStyle("#ffffff"),
-      outlineWidth: 5,
-      outlineOpacity: 0.4,
+      outlineColor: new Color().setStyle(OVERTURE_COLORS.adminHalo),
+      outlineWidth: ADMIN_OUTLINE_WIDTH,
+      outlineOpacity: OVERTURE_COLORS.adminHaloOpacity,
       offsetDepth: true,
       depthTest: true,
       maxWidth: params.maxWidth,
@@ -510,8 +623,10 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
           name = name.replace(/\s*\/\s*/g, "\n");
 
           return {
-            text: name,
+            text: overtureCase(name),
             show: true,
+            // Overture's per-tier type hierarchy, scaled by the UI slider.
+            size: tier.size * params.sizeScale,
             // Coarser admin levels win overlaps: country > region > county >
             // locality. POI names use confidence (< 1) so they always rank
             // below admin labels.
@@ -575,19 +690,21 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       transparent: true,
       alphaTest: 0.5,
     },
+    // Overture's filtered-place labels: SemiCondensed Regular at `text-size` 12,
+    // gray.950 with a 30%-opacity white halo. Not uppercased — only
+    // administrative names are.
     text: {
-      font: LABEL_FONT,
-      color: new Color().setStyle("#1a1a1a"),
-      size: 14,
+      font: POI_FONT,
+      color: new Color().setStyle(OVERTURE_COLORS.placeText),
+      size: 12,
       sizeInMeters: false,
       clampToGround: false,
       center: { x: 0.0, y: 0.0 },
-      outlineColor: new Color().setStyle("#ffffff"),
-      outlineWidth: 4,
-      outlineOpacity: 0.6,
+      outlineColor: new Color().setStyle(OVERTURE_COLORS.placeHalo),
+      outlineWidth: POI_OUTLINE_WIDTH,
+      outlineOpacity: OVERTURE_COLORS.placeHaloOpacity,
       depthTest: true,
       offsetDepth: true,
-      highQuality: true,
       maxWidth: params.maxWidth,
     },
   });
@@ -680,16 +797,17 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     });
   }
 
+  // Scales every tier together; the evaluator reads `params.sizeScale`, so a
+  // restyle is what applies it.
   layersFolder
-    .addBinding(params, "size", {
-      min: 10,
-      max: 100,
-      step: 1,
-      label: "label size",
+    .addBinding(params, "sizeScale", {
+      min: 0.4,
+      max: 4,
+      step: 0.1,
+      label: "label size ×",
     })
-    .on("change", ({ value }) => {
-      labelLayer.update({ text: { size: value } });
-      view.forceUpdate();
+    .on("change", () => {
+      restyle();
     });
 
   layersFolder
