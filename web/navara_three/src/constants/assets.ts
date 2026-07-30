@@ -26,6 +26,11 @@ export const ATMOSPHERE_HIGHER_ORDER_SCATTERING_URL = new URL(
   import.meta.url,
 ).toString();
 
+export const ATMOSPHERE_SINGLE_MIE_SCATTERING_URL = new URL(
+  "../../assets/atmosphere/single_mie_scattering.exr?no-inline",
+  import.meta.url,
+).toString();
+
 export const STARS_ASSETS_URL = new URL(
   "../../assets/atmosphere/stars.bin?no-inline",
   import.meta.url,
@@ -71,4 +76,5 @@ export const ATMOSPHERE_TEXTURE_URLS: Record<string, string> = {
   "scattering.exr": ATMOSPHERE_SCATTERING_URL,
   "irradiance.exr": ATMOSPHERE_IRRADIANCE_URL,
   "higher_order_scattering.exr": ATMOSPHERE_HIGHER_ORDER_SCATTERING_URL,
+  "single_mie_scattering.exr": ATMOSPHERE_SINGLE_MIE_SCATTERING_URL,
 };

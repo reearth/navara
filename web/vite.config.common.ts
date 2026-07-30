@@ -70,8 +70,8 @@ function noInlineWasm(): PluginOption {
 // static `new URL(..., import.meta.url)` calls so downstream bundlers can
 // detect and emit them. Emit them at their original `assets/...` paths
 // (unhashed) so they coincide with the viteStaticCopy'd directory instead of
-// being duplicated under hashed names, and so directory-based *_ASSETS_URL
-// constants keep resolving for unbundled consumers.
+// being duplicated under hashed names, keeping a single stable on-disk
+// layout for the package's assets.
 export function assetFileNamesPreservingAssetsDir(assetInfo: {
   originalFileNames?: string[];
 }): string {
