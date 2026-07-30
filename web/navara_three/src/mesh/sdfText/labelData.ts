@@ -21,8 +21,24 @@ export { LABEL_ROWS, LabelRow };
  */
 const TEXTURE_WIDTH = 64;
 
-/** Labels reserved by a freshly-created store. */
+/** Labels a freshly-created store is sized for, before row padding. */
 const INITIAL_CAPACITY = 16;
+
+/** Floats needed to hold `capacity` labels, padded out to whole texture rows. */
+function floatsFor(capacity: number): number {
+  const rows = Math.ceil((capacity * LABEL_ROWS) / TEXTURE_WIDTH);
+  return rows * TEXTURE_WIDTH * 4;
+}
+
+/**
+ * Labels an allocation can actually address — the row padding {@link floatsFor}
+ * adds is usable space, not slack. Deriving capacity from the buffer instead of
+ * from the requested count is what stops `ensureCapacity` from growing while
+ * there are still free slots inside the current allocation.
+ */
+function labelsIn(floats: number): number {
+  return Math.max(1, Math.floor(floats / 4 / LABEL_ROWS));
+}
 
 /**
  * Per-label state for a batched text mesh, stored in a float texture that the
@@ -49,8 +65,8 @@ export class LabelDataTexture {
   private readonly _size = new Vector2();
 
   constructor(initialCapacity = INITIAL_CAPACITY) {
-    this._capacity = Math.max(1, initialCapacity);
-    this._data = new Float32Array(this._bytesFor(this._capacity));
+    this._data = new Float32Array(floatsFor(Math.max(1, initialCapacity)));
+    this._capacity = labelsIn(this._data.length);
     this._texture = this._createTexture();
   }
 
@@ -64,7 +80,11 @@ export class LabelDataTexture {
     return this._size;
   }
 
-  /** Labels addressable without a grow. */
+  /**
+   * Labels addressable without a grow. Derived from the allocation, so it
+   * includes the row padding and is generally larger than the count the store
+   * was constructed or grown for.
+   */
   get capacity(): number {
     return this._capacity;
   }
@@ -79,14 +99,14 @@ export class LabelDataTexture {
   ensureCapacity(slotCount: number): boolean {
     if (slotCount <= this._capacity) return false;
 
-    let capacity = this._capacity;
-    while (capacity < slotCount) capacity *= 2;
+    let target = this._capacity;
+    while (target < slotCount) target *= 2;
 
-    const data = new Float32Array(this._bytesFor(capacity));
+    const data = new Float32Array(floatsFor(target));
     data.set(this._data);
 
-    this._capacity = capacity;
     this._data = data;
+    this._capacity = labelsIn(data.length);
     this._texture.dispose();
     this._texture = this._createTexture();
     return true;
@@ -142,14 +162,10 @@ export class LabelDataTexture {
     this._texture.dispose();
   }
 
-  /** Float count backing `capacity` labels, padded to whole texture rows. */
-  private _bytesFor(capacity: number): number {
-    const rows = Math.ceil((capacity * LABEL_ROWS) / TEXTURE_WIDTH);
-    return rows * TEXTURE_WIDTH * 4;
-  }
-
   private _createTexture(): DataTexture {
-    const height = Math.ceil((this._capacity * LABEL_ROWS) / TEXTURE_WIDTH);
+    // Derived from the buffer rather than recomputed from `_capacity`: the
+    // texture must describe exactly the memory it is backed by.
+    const height = this._data.length / (TEXTURE_WIDTH * 4);
     const tex = new DataTexture(
       this._data,
       TEXTURE_WIDTH,

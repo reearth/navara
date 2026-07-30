@@ -77,6 +77,42 @@ describe("LabelDataTexture", () => {
       expect(store.texture).toBe(before);
     });
 
+    // The allocation is padded out to whole texture rows, and that padding is
+    // usable space — 16 labels round up to 2 rows, which address 25. Growing
+    // at 17 would mean an allocate + copy + texture recreate (and a full GPU
+    // re-upload) while free slots were still sitting in the buffer.
+    it("uses the row padding before growing", () => {
+      const store = new LabelDataTexture(16);
+      const before = store.texture;
+
+      expect(store.capacity).toBeGreaterThan(16);
+      expect(store.ensureCapacity(17)).toBe(false);
+      expect(store.ensureCapacity(store.capacity)).toBe(false);
+      expect(store.texture).toBe(before);
+
+      // ...and the padded slots are genuinely addressable.
+      const last = store.capacity - 1;
+      store.setRow(last, LabelRow.BOX, 1, 2, 3, 4);
+      expect(store.getComponent(last, LabelRow.BOX, 3)).toBe(4);
+      expect(texelIndex(last, LABEL_ROWS - 1) * 4 + 3).toBeLessThan(
+        dataOf(store).length,
+      );
+
+      // One past the padded capacity is what actually triggers the grow.
+      expect(store.ensureCapacity(store.capacity + 1)).toBe(true);
+    });
+
+    it("reports a capacity the texture can really back", () => {
+      for (const requested of [1, 2, 16, 32, 40, 64, 128]) {
+        const store = new LabelDataTexture(requested);
+        const { width, height } = store.texture.image;
+        expect(store.capacity).toBeGreaterThanOrEqual(requested);
+        // Every row of every label must land inside the texture.
+        expect(store.capacity * LABEL_ROWS).toBeLessThanOrEqual(width * height);
+        expect(dataOf(store).length).toBe(width * height * 4);
+      }
+    });
+
     it("grows, replaces the texture, and preserves existing data", () => {
       const store = new LabelDataTexture(2);
       store.setRow(0, LabelRow.BOX, 1, 2, 3, 4);
