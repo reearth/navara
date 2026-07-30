@@ -66,6 +66,24 @@ function noInlineWasm(): PluginOption {
   };
 }
 
+// Runtime assets under a package's `assets/` directory are referenced with
+// static `new URL(..., import.meta.url)` calls so downstream bundlers can
+// detect and emit them. Emit them at their original `assets/...` paths
+// (unhashed) so they coincide with the viteStaticCopy'd directory instead of
+// being duplicated under hashed names, keeping a single stable on-disk
+// layout for the package's assets.
+export function assetFileNamesPreservingAssetsDir(assetInfo: {
+  originalFileNames?: string[];
+}): string {
+  const original = (assetInfo.originalFileNames?.[0] ?? "").replace(
+    /\?.*$/,
+    "",
+  );
+  return /^assets\//.test(original)
+    ? original
+    : "assets/[name]-[hash][extname]";
+}
+
 function getPluginName(plugin: PluginOption): string | undefined {
   if (plugin && typeof plugin === "object" && "name" in plugin) {
     return plugin.name;
