@@ -66,6 +66,7 @@ For "make it look good" goals, use the proven compositions in [references/recipe
 - **Effect compatibility:** `hideUnderground: false` and `logarithmicDepthBuffer` break some effect descriptors — test, and prefer defaults.
 - `picking: true` (constructor, default on) is required for the `pick` event and pickable meshes.
 - **API stability tiers:** `ThreeView` = Tier 0 (stable). `Plugin` + `ViewContext` = Tier 1 (may break between minor versions). Keep app code on Tier 0 where possible.
+- **Runtime assets (atmosphere/cloud/noise/water) bundle automatically** — each file is referenced via a static `new URL(..., import.meta.url)`, so Vite/webpack emit them into the app build; no copying or config needed. To self-host instead, pass `atmosphereAssetsUrl` (Atmosphere) / `assetsUrl` (Clouds) pointing at a directory that keeps the **original filenames** (`transmittance.exr`, `local_weather.png`, …); both default to `undefined` = bundled assets. There are no directory URL constants (appending filenames to a directory can't survive bundler hashing) — only per-file constants exist (`ATMOSPHERE_TRANSMITTANCE_URL`, `CLOUD_LOCAL_WEATHER_URL`, `STBN_URL`, `WATER_NORMAL_URL`, `STARS_ASSETS_URL`, …).
 
 ## Lighting — when it's needed and which light to add
 

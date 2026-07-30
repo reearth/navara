@@ -9,11 +9,11 @@ import {
   type AtmosphereShadowLength,
   type PrecomputedTextures,
 } from "@takram/three-atmosphere";
-import { Vector3, Matrix4, type WebGLRenderer } from "three";
+import { Vector3, Matrix4, LoadingManager, type WebGLRenderer } from "three";
 import invariant from "tiny-invariant";
 
 import { type ThreeViewCamera } from "./camera";
-import { ATMOSPHERE_ASSETS_URL, STBN_URL } from "./constants";
+import { ATMOSPHERE_TEXTURE_URLS, STBN_URL } from "./constants";
 import {
   dateForSolarTime,
   getSolarTime as solarTimeAt,
@@ -40,8 +40,12 @@ export type AtmosphereEvents = {
  * Configuration options for the {@link Atmosphere} class.
  */
 export type AtmosphereOptions = {
-  /** URL to load precomputed atmosphere textures from. */
-  atmosphereAssetsUrl?: string;
+  /**
+   * URL of a directory to load precomputed atmosphere textures from. The
+   * directory must keep the original filenames (`transmittance.exr` etc.).
+   * When omitted, the assets bundled with the package are used.
+   */
+  atmosphereAssetsUrl?: string | undefined;
   /** URL to load STBN (Spatio-Temporal Blue Noise) textures from. */
   stbnUrl?: string;
   /** Date used for calculating sun/moon positions. Defaults to current date. */
@@ -51,8 +55,11 @@ export type AtmosphereOptions = {
 /**
  * Default values for {@link AtmosphereOptions}.
  */
-export const DEFAULT_ATMOSPHERE_OPTIONS: Required<AtmosphereOptions> = {
-  atmosphereAssetsUrl: ATMOSPHERE_ASSETS_URL,
+export const DEFAULT_ATMOSPHERE_OPTIONS: Required<
+  Omit<AtmosphereOptions, "atmosphereAssetsUrl">
+> &
+  Pick<AtmosphereOptions, "atmosphereAssetsUrl"> = {
+  atmosphereAssetsUrl: undefined,
   stbnUrl: STBN_URL,
   date: new Date(),
 };
@@ -156,12 +163,22 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
   async initTextures() {
     if (this.textures) return;
 
-    this.texturesPromise ??= new PrecomputedTexturesLoader()
+    const assetsUrl = this.options.atmosphereAssetsUrl;
+    // PrecomputedTexturesLoader appends fixed filenames to the directory URL,
+    // but bundlers emit the bundled default assets under hashed names. When no
+    // directory is provided, remap each requested filename to its
+    // statically-resolved URL.
+    let manager: LoadingManager | undefined;
+    if (assetsUrl == null) {
+      manager = new LoadingManager();
+      manager.setURLModifier((url) => {
+        const file = url.slice(url.lastIndexOf("/") + 1);
+        return ATMOSPHERE_TEXTURE_URLS[file] ?? url;
+      });
+    }
+    this.texturesPromise ??= new PrecomputedTexturesLoader(undefined, manager)
       .setType(this.renderer)
-      .loadAsync(
-        this.options.atmosphereAssetsUrl ??
-          DEFAULT_ATMOSPHERE_OPTIONS.atmosphereAssetsUrl,
-      )
+      .loadAsync(assetsUrl ?? "")
       .then((textures) => {
         this.textures = textures;
         this.emit("textureLoaded");
