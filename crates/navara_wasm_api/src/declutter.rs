@@ -130,9 +130,24 @@ fn project_candidate(c: &[f64], ctx: &ProjectionContext, out: &mut [f64; 4]) -> 
     true
 }
 
+/// Outcome of one placement attempt against the grid.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Claim {
+    /// The box was free: it now occupies its cells, and the label is shown.
+    Claimed,
+    /// An already-claimed box overlaps it; nothing was claimed.
+    Blocked,
+    /// The box lies entirely outside the tracked area (viewport + margin), so
+    /// it contested no on-screen space and claimed nothing. Distinct from
+    /// `Claimed` on purpose: such a label is off screen, and must stay *hidden*
+    /// until it reaches the tracked area rather than fade in unseen and arrive
+    /// at full opacity.
+    OutsideArea,
+}
+
 /// Uniform screen-space grid for label collision (the same structure MapLibre
 /// uses for symbol placement). Boxes are inserted greedily in priority order via
-/// [`ScreenCollisionGrid::insert_if_free`].
+/// [`ScreenCollisionGrid::try_claim`].
 ///
 /// The grid tracks a margin beyond the viewport so labels just off the edge still
 /// compete for space — otherwise panning would let an off-screen label "win" the
@@ -169,24 +184,25 @@ impl ScreenCollisionGrid {
 
     /// Claim `[minX, maxX] × [minY, maxY]` (screen px, y-down) if it does not
     /// overlap any previously claimed box. A box entirely outside the tracked
-    /// area (viewport + margin) is reported free without claiming cells.
+    /// area (viewport + margin) claims nothing and reports
+    /// [`Claim::OutsideArea`].
     ///
     /// `test_shrink_px` shrinks the box used for the *collision test* by that many
     /// pixels per side while the full box is still claimed on success — the
     /// placement-hysteresis primitive: an already-shown label tolerates marginal
     /// overlaps (its shrunk test box clears) yet keeps competitors away from its
     /// real footprint.
-    fn insert_if_free(
+    fn try_claim(
         &mut self,
         min_x: f64,
         min_y: f64,
         max_x: f64,
         max_y: f64,
         test_shrink_px: f64,
-    ) -> bool {
+    ) -> Claim {
         let m = self.margin;
         if max_x <= -m || min_x >= self.width + m || max_y <= -m || min_y >= self.height + m {
-            return true;
+            return Claim::OutsideArea;
         }
 
         let t_min_x = min_x + test_shrink_px;
@@ -209,7 +225,7 @@ impl ScreenCollisionGrid {
                             && t_min_y < self.boxes[b + 3]
                             && t_max_y > self.boxes[b + 1]
                         {
-                            return false;
+                            return Claim::Blocked;
                         }
                     }
                 }
@@ -230,7 +246,7 @@ impl ScreenCollisionGrid {
                 self.cells[r * self.cols + c].push(idx);
             }
         }
-        true
+        Claim::Claimed
     }
 
     fn col_of(&self, x: f64) -> usize {
@@ -255,6 +271,11 @@ const DEFAULT_PADDING_PX: f64 = 2.0;
 /// module docs); `view` and `proj` are column-major 4×4 matrices (16 values each).
 /// `padding_px` pads every box; `hysteresis_px` is the collision-test shrink
 /// applied only to currently-shown labels.
+///
+/// The result is *hidden-by-default*: only a label that claimed space inside the
+/// tracked area (viewport + grid margin) comes back shown. Off-screen and
+/// GPU-culled labels stay hidden so they cannot fade in unseen and then pan into
+/// view at full opacity.
 #[wasm_bindgen(js_name = declutterPlace)]
 #[allow(clippy::too_many_arguments)]
 pub fn declutter_place(
@@ -342,26 +363,31 @@ pub fn declutter_place(
     };
     let mut grid = ScreenCollisionGrid::new(width_px, height_px);
     let mut hidden = vec![0u8; n];
+    // A label is shown only when it actually claimed space on (or just off)
+    // screen. Everything else stays hidden — including labels the pass cannot
+    // judge because they are nowhere near the viewport. Granting those a
+    // fade-in while they are invisible is what used to make a pan reveal fully
+    // opaque clutter that only the *next* pass faded back out.
     for &i in &order {
         if !placeable[i] {
-            // Behind the camera or beyond the horizon: the GPU hides it already.
-            // Leave it un-decluttered so it shows the moment it comes back, and
-            // claim no space for it.
-            hidden[i] = 0;
+            // Behind the camera or beyond the horizon: the GPU hides it already,
+            // so it claims no space — and it stays hidden, so when it comes back
+            // into view it fades in only if it wins its space then.
+            hidden[i] = 1;
             continue;
         }
         let o = i * 4;
         let is_shown = candidates[i * CANDIDATE_STRIDE + 10] != 0.0;
         // Shown labels get a shrunk collision test (sticky); hidden labels need
         // their full padded box free before they may appear.
-        let free = grid.insert_if_free(
+        let claim = grid.try_claim(
             boxes[o] - pad,
             boxes[o + 1] - pad,
             boxes[o + 2] + pad,
             boxes[o + 3] + pad,
             if is_shown { hysteresis_px } else { 0.0 },
         );
-        hidden[i] = u8::from(!free);
+        hidden[i] = u8::from(claim != Claim::Claimed);
     }
 
     hidden
@@ -516,16 +542,33 @@ mod tests {
     }
 
     #[test]
-    fn horizon_culled_labels_claim_no_space_and_are_never_hidden() {
-        // Far side of the globe: GPU horizon culling hides it already.
+    fn horizon_culled_labels_claim_no_space_and_stay_hidden() {
+        // Far side of the globe: GPU horizon culling hides it already. It must
+        // claim no space, yet stay hidden — otherwise it fades in invisibly and
+        // arrives at full opacity when the globe turns it into view.
         let far = label(-R, 0.0, 0.0, 10.0, false);
         let near = label(R, 0.0, 0.0, 0.0, false);
         let hidden = place(&[far, near]);
-        assert_eq!(hidden[0], 0, "horizon-culled label not marked hidden");
+        assert_eq!(hidden[0], 1, "horizon-culled label stays hidden");
         assert_eq!(
             hidden[1], 0,
             "visible label not suppressed by invisible one"
         );
+    }
+
+    #[test]
+    fn labels_outside_the_tracked_area_stay_hidden() {
+        // Projectable and inside the horizon, but its pixel box sits ~2000px to
+        // the right of the anchor — far beyond the viewport + margin, so it
+        // contests nothing. Reported hidden so panning it into view starts a
+        // fade-in instead of revealing it already opaque.
+        let mut off_screen = label(R, 0.0, 0.0, 0.0, false);
+        off_screen[4] = 2000.0; // minX
+        off_screen[5] = 2100.0; // maxX
+        let on_screen = label(R, 0.0, 0.0, 0.0, false);
+        let hidden = place(&[off_screen, on_screen]);
+        assert_eq!(hidden[0], 1, "label outside the tracked area stays hidden");
+        assert_eq!(hidden[1], 0, "on-screen label shown");
     }
 
     // --- projection --------------------------------------------------------
@@ -696,71 +739,78 @@ mod tests {
     #[test]
     fn grid_places_non_overlapping_boxes() {
         let mut g = grid();
-        assert!(g.insert_if_free(10.0, 10.0, 50.0, 30.0, 0.0));
-        assert!(g.insert_if_free(60.0, 10.0, 100.0, 30.0, 0.0));
-        assert!(g.insert_if_free(10.0, 40.0, 50.0, 60.0, 0.0));
+        assert_eq!(g.try_claim(10.0, 10.0, 50.0, 30.0, 0.0), Claim::Claimed);
+        assert_eq!(g.try_claim(60.0, 10.0, 100.0, 30.0, 0.0), Claim::Claimed);
+        assert_eq!(g.try_claim(10.0, 40.0, 50.0, 60.0, 0.0), Claim::Claimed);
     }
 
     #[test]
     fn grid_rejects_overlap_and_leaves_grid_untouched() {
         let mut g = grid();
-        assert!(g.insert_if_free(10.0, 10.0, 50.0, 30.0, 0.0));
-        assert!(!g.insert_if_free(40.0, 20.0, 80.0, 40.0, 0.0));
+        assert_eq!(g.try_claim(10.0, 10.0, 50.0, 30.0, 0.0), Claim::Claimed);
+        assert_eq!(g.try_claim(40.0, 20.0, 80.0, 40.0, 0.0), Claim::Blocked);
         // The rejected box claimed nothing.
-        assert!(g.insert_if_free(55.0, 25.0, 80.0, 40.0, 0.0));
+        assert_eq!(g.try_claim(55.0, 25.0, 80.0, 40.0, 0.0), Claim::Claimed);
     }
 
     #[test]
     fn grid_exactly_touching_boxes_do_not_collide() {
         let mut g = grid();
-        assert!(g.insert_if_free(10.0, 10.0, 50.0, 30.0, 0.0));
-        assert!(g.insert_if_free(50.0, 10.0, 90.0, 30.0, 0.0));
-        assert!(g.insert_if_free(10.0, 30.0, 50.0, 50.0, 0.0));
+        assert_eq!(g.try_claim(10.0, 10.0, 50.0, 30.0, 0.0), Claim::Claimed);
+        assert_eq!(g.try_claim(50.0, 10.0, 90.0, 30.0, 0.0), Claim::Claimed);
+        assert_eq!(g.try_claim(10.0, 30.0, 50.0, 50.0, 0.0), Claim::Claimed);
     }
 
     #[test]
     fn grid_detects_collisions_across_cell_boundaries() {
         let mut g = grid();
-        assert!(g.insert_if_free(30.0, 30.0, 300.0, 90.0, 0.0));
+        assert_eq!(g.try_claim(30.0, 30.0, 300.0, 90.0, 0.0), Claim::Claimed);
         // Overlaps only its far end, in a different cell than the origin.
-        assert!(!g.insert_if_free(280.0, 50.0, 320.0, 70.0, 0.0));
+        assert_eq!(g.try_claim(280.0, 50.0, 320.0, 70.0, 0.0), Claim::Blocked);
     }
 
     #[test]
     fn grid_competes_within_margin_not_beyond() {
         let mut g = grid();
         // Just off the left edge, inside the 128px margin: claims space.
-        assert!(g.insert_if_free(-60.0, 10.0, -10.0, 30.0, 0.0));
-        assert!(!g.insert_if_free(-40.0, 10.0, 20.0, 30.0, 0.0));
-        // Entirely beyond the margin: free, claims nothing.
-        assert!(g.insert_if_free(-500.0, 10.0, -400.0, 30.0, 0.0));
-        assert!(g.insert_if_free(-480.0, 10.0, -420.0, 30.0, 0.0));
+        assert_eq!(g.try_claim(-60.0, 10.0, -10.0, 30.0, 0.0), Claim::Claimed);
+        assert_eq!(g.try_claim(-40.0, 10.0, 20.0, 30.0, 0.0), Claim::Blocked);
+        // Entirely beyond the margin: claims nothing, and is reported as such
+        // rather than as a win — it is off screen, so it stays hidden.
+        assert_eq!(
+            g.try_claim(-500.0, 10.0, -400.0, 30.0, 0.0),
+            Claim::OutsideArea
+        );
+        assert_eq!(
+            g.try_claim(-480.0, 10.0, -420.0, 30.0, 0.0),
+            Claim::OutsideArea
+        );
     }
 
     #[test]
     fn grid_test_shrink_tolerates_marginal_overlap_but_claims_full_box() {
         let mut g = grid();
-        assert!(g.insert_if_free(10.0, 10.0, 50.0, 30.0, 0.0));
+        assert_eq!(g.try_claim(10.0, 10.0, 50.0, 30.0, 0.0), Claim::Claimed);
         // Overlaps by 4px; a 6px shrink clears it (hysteresis case)...
-        assert!(g.insert_if_free(46.0, 10.0, 86.0, 30.0, 6.0));
+        assert_eq!(g.try_claim(46.0, 10.0, 86.0, 30.0, 6.0), Claim::Claimed);
         // ...but the FULL box was claimed: a box overlapping the shrunk-away
         // strip still collides.
-        assert!(!g.insert_if_free(80.0, 10.0, 120.0, 30.0, 0.0));
+        assert_eq!(g.try_claim(80.0, 10.0, 120.0, 30.0, 0.0), Claim::Blocked);
     }
 
     #[test]
     fn grid_without_shrink_marginal_overlap_collides() {
         let mut g = grid();
-        assert!(g.insert_if_free(10.0, 10.0, 50.0, 30.0, 0.0));
-        assert!(!g.insert_if_free(46.0, 10.0, 86.0, 30.0, 0.0));
+        assert_eq!(g.try_claim(10.0, 10.0, 50.0, 30.0, 0.0), Claim::Claimed);
+        assert_eq!(g.try_claim(46.0, 10.0, 86.0, 30.0, 0.0), Claim::Blocked);
     }
 
     #[test]
     fn grid_box_fully_consumed_by_shrink_is_free() {
         let mut g = grid();
-        assert!(g.insert_if_free(10.0, 10.0, 50.0, 30.0, 0.0));
+        assert_eq!(g.try_claim(10.0, 10.0, 50.0, 30.0, 0.0), Claim::Claimed);
         // 8px-wide box inside the claimed area, but 6px/side shrink leaves no
-        // test area — reported free.
-        assert!(g.insert_if_free(20.0, 15.0, 28.0, 25.0, 6.0));
+        // test area — claimed anyway.
+        assert_eq!(g.try_claim(20.0, 15.0, 28.0, 25.0, 6.0), Claim::Claimed);
     }
 }

@@ -62,8 +62,6 @@ let prevTime: number | undefined;
 const drawUpTo = (count: number) =>
   trail.update({ smoothLines: { points: loopTrajectory.slice(0, count) } });
 
-// Advance by elapsed wall-clock time (capped across tab suspensions), so the
-// reveal speed is the same on every display refresh rate.
 const step = (time: number) => {
   const elapsed =
     prevTime === undefined ? 0 : Math.min(time - prevTime, 100) / 1000;

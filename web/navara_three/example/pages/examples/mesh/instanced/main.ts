@@ -33,7 +33,6 @@ view.addPlugin(tilejson);
 
 await view.init();
 
-// Dim fill; the lanterns light themselves via emissive glow.
 view.addLight({ ambient: { intensity: 0.45 } });
 
 view.setCamera({

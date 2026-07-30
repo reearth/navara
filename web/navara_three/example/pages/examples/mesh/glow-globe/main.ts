@@ -17,8 +17,6 @@ view.addPlugin(tilejson);
 
 await view.init();
 
-// Large enough that the globe dominates the frame while the glow ring still
-// clears the edges.
 view.setCamera({
   lng: 15,
   lat: 30,

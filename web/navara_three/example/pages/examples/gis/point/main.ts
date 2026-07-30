@@ -12,7 +12,6 @@ view.addPlugin(tilejson);
 
 await view.init();
 
-// `distance` frames the peak cluster at the view center.
 view.setCamera({
   lng: 170.16,
   lat: -43.57,
@@ -28,15 +27,12 @@ const basemap = await tilejson.addSource({
 });
 view.addLayer({ type: "raster", source: basemap });
 
-// One fixed style for every point — color and size are set on the layer.
 const source = view.addSource({ type: "geojson", data: peaks });
 view.addLayer({
   type: "vector",
   source,
   point: {
     color: new Color().setStyle("#0091ff"),
-    // `sizeInMeters: false` keeps every symbol the same on-screen size
-    // regardless of camera distance.
     size: 48,
     sizeInMeters: false,
     clampToGround: true,

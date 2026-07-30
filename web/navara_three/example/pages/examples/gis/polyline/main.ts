@@ -10,8 +10,6 @@ view.addPlugin(tilejson);
 
 await view.init();
 
-// Oblique view over the historic center of Venice, so the canal network
-// recedes toward the horizon instead of reading as a flat diagram.
 view.setCamera({
   lng: 12.334,
   lat: 45.438,
@@ -27,8 +25,6 @@ const basemap = await tilejson.addSource({
 });
 view.addLayer({ type: "raster", source: basemap });
 
-// Venice's canal network (OpenStreetMap waterways) as one GeoJSON source;
-// every line shares the same fixed color and width.
 const source = view.addSource({
   type: "geojson",
   url: "/venice_canals.geojson",

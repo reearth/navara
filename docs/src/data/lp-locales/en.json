@@ -24,36 +24,63 @@
     "eyebrow": "WHY NAVARA",
     "h2Html": "Hard things made simple —<br />and <mark>beautiful</mark>.",
     "values": [
-      { "title": "Beautiful, instantly", "desc": "A photoreal scene comes up in a few lines of code." },
-      { "title": "Yours to control", "desc": "Tune atmosphere, clouds, water, and effects down to the last detail." },
+      {
+        "title": "Beautiful, instantly",
+        "desc": "A photoreal scene comes up in a few lines of code."
+      },
+      {
+        "title": "Yours to control",
+        "desc": "Tune atmosphere, clouds, water, and effects down to the last detail."
+      },
       {
         "title": "Layered, not complicated",
-        "desc": "Combine the declarative API, plugins, and the low-level API in the same view."
+        "desc": "Combine all four API tiers in the same view."
       },
-      { "title": "A foundation you keep", "desc": "A renderer-agnostic Rust core — ready for WebGPU and native." }
+      {
+        "title": "A foundation you keep",
+        "desc": "A renderer-agnostic Rust core — ready for WebGPU and native."
+      }
     ],
-    "apiTitle": "4 layers of API, 1 engine",
-    "apiRange": "HIGH-LEVEL → LOW-LEVEL",
+    "apiLede": {
+      "title": "Declarative, freely extensible.",
+      "sub": "Plugin, API, and Shader — as deep as you need."
+    },
     "apiSegments": [
-      { "num": "01", "name": "Declarative API", "desc": "Layers as config objects" },
-      { "num": "02", "name": "Plugins", "desc": "Purpose-built features in one line" },
-      { "num": "03", "name": "Low-level API", "desc": "Per-feature evaluation and picking" },
-      { "num": "04", "name": "Custom Descriptors", "desc": "Full access to Three.js" }
+      {
+        "label": "Declarative",
+        "scene": "PLATEAU buildings, terrain, and a basemap — from config alone.",
+        "desc": "Declare layers and materials as plain config objects. The map comes up with no imperative code."
+      },
+      {
+        "label": "Plugin",
+        "scene": "One line of DefaultPlugin adds atmosphere, sun, clouds, and shadows.",
+        "desc": "Add purpose-built features as plugins in one line — and package deeper work to reuse."
+      },
+      {
+        "label": "API",
+        "scene": "Every building evaluated by measured height, colored per feature.",
+        "desc": "Drive feature evaluation, picking, geodesy, and camera control imperatively."
+      },
+      {
+        "label": "Shader",
+        "scene": "A hand-written FogLight shader lights the night city.",
+        "desc": "Full access to Three.js for your own shaders and effects."
+      }
     ],
-    "apiNote": "Start declaratively, and drop down a layer only when you need to. Same engine, same data — no rewrites."
+    "mediaAttribution": [
+      "3D City Model (Project PLATEAU) - MLIT",
+      "Re:Earth Terrain",
+      "Re:Earth Papers",
+      "Protomaps",
+      "© OpenStreetMap contributors"
+    ],
+    "mediaAttributionLabel": "Data attribution"
   },
   "arch": {
     "eyebrow": "ARCHITECTURE",
     "h2": "A headless GIS core, independent of the renderer.",
     "sub": "On Three.js today. In any environment tomorrow.",
-    "coreLabel": "HEADLESS GIS CORE — RUST / WASM + BEVY ECS",
-    "coreDesc": "Tile management · LOD · coordinate transforms · spatial indexing · ellipsoid geometry",
-    "midHtml": "Rendering-ready Output <span>(heavy work runs in Web Workers)</span>",
-    "targetNow": { "name": "@navaramap/three", "sub": "Three.js — today" },
-    "targetsFuture": [
-      { "name": "WebGPU / other engines", "sub": "Future" },
-      { "name": "Native", "sub": "Future" }
-    ]
+    "diagramAlt": "Architecture diagram: Rust / WASM parses data and builds geometry, and its output is drawn by Three.js today, with other engines and Native tomorrow."
   },
   "gallery": {
     "eyebrow": "GALLERY",
@@ -110,14 +137,18 @@
   },
   "imageAlts": {
     "hero": "Main visual: a globe rendered with Navara",
+    "why-tier-1": "Declarative style — PLATEAU buildings and terrain on the paper-white basemap",
+    "why-tier-2": "Plugins — the same scene with the photoreal atmosphere added",
+    "why-tier-3": "Spatial operations — buildings colored by their measured height",
+    "why-tier-4": "Custom shaders — the same scene at night, lit by fog lights",
     "tutorial-wide": "Realistic Atmosphere tutorial",
     "tutorial-left": "Arc Line Visualization tutorial",
     "tutorial-right": "Interior Explore tutorial",
     "example-row1-left": "Atmospheric scattering — New York at dusk",
     "example-row1-right": "Volumetric clouds",
-    "example-row2-left": "Text labels",
-    "example-row2-center": "glTF animation",
-    "example-row2-right": "A city in the rain",
+    "example-row2-left": "glTF animation",
+    "example-row2-center": "A city in the rain",
+    "example-row2-right": "Text labels",
     "example-row3-left": "Massive rendering with instanced meshes",
     "example-row3-right": "Sun position simulation — Tokyo at sunset",
     "example-row4-left": "Gaussian Splatting",

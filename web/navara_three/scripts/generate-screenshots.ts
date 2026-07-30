@@ -107,6 +107,9 @@ const PAGE_CONFIGS: Record<string, PageConfig> = {
   night: {
     waitTime: 10000,
   },
+  "lp-tiers": {
+    waitTime: 20000,
+  },
   weather: {
     waitTime: 40000,
   },
