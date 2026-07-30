@@ -18,6 +18,18 @@
     "hero": {
       "src": "docs/src/assets/hero.png"
     },
+    "why-tier-1": {
+      "src": "docs/src/assets/lp/why-tier-1.avif"
+    },
+    "why-tier-2": {
+      "src": "docs/src/assets/lp/why-tier-2.avif"
+    },
+    "why-tier-3": {
+      "src": "docs/src/assets/lp/why-tier-3.avif"
+    },
+    "why-tier-4": {
+      "src": "docs/src/assets/lp/why-tier-4.avif"
+    },
     "tutorial-wide": {
       "src": "docs/src/assets/tutorial/realistic-atmosphere-result.png",
       "href": "/three/tutorial/realistic-atmosphere/"
@@ -31,37 +43,48 @@
       "href": "/three/tutorial/interior-explore/"
     },
     "example-row1-left": {
-      "src": "web/navara_three/example/public/screenshots/sky/atmosphere.avif"
+      "src": "web/navara_three/example/public/screenshots/sky/atmosphere.avif",
+      "href": "https://navara-preview.netlify.app/sky/atmosphere"
     },
     "example-row1-right": {
-      "src": "web/navara_three/example/public/screenshots/weather/clouds.avif"
+      "src": "web/navara_three/example/public/screenshots/weather/clouds.avif",
+      "href": "https://navara-preview.netlify.app/weather/clouds"
     },
     "example-row2-left": {
-      "src": "web/navara_three/example/public/screenshots/evaluator/text.avif"
+      "src": "web/navara_three/example/public/screenshots/mesh/gltf-animation.avif",
+      "href": "https://navara-preview.netlify.app/mesh/gltf-animation"
     },
     "example-row2-center": {
-      "src": "web/navara_three/example/public/screenshots/mesh/gltf-animation.avif"
+      "src": "web/navara_three/example/public/screenshots/weather/precipitation.avif",
+      "href": "https://navara-preview.netlify.app/weather/precipitation"
     },
     "example-row2-right": {
-      "src": "web/navara_three/example/public/screenshots/weather/precipitation.avif"
+      "src": "web/navara_three/example/public/screenshots/evaluator/text.avif",
+      "href": "https://navara-preview.netlify.app/evaluator/text"
     },
     "example-row3-left": {
-      "src": "web/navara_three/example/public/screenshots/mesh/instanced.avif"
+      "src": "web/navara_three/example/public/screenshots/mesh/instanced.avif",
+      "href": "https://navara-preview.netlify.app/mesh/instanced"
     },
     "example-row3-right": {
-      "src": "web/navara_three/example/public/screenshots/sky/sun-time.avif"
+      "src": "web/navara_three/example/public/screenshots/sky/sun-time.avif",
+      "href": "https://navara-preview.netlify.app/sky/sun-time"
     },
     "example-row4-left": {
-      "src": "web/navara_three/example/public/screenshots/mesh/splat.avif"
+      "src": "web/navara_three/example/public/screenshots/mesh/splat.avif",
+      "href": "https://navara-preview.netlify.app/mesh/splat"
     },
     "example-row4-center-left": {
-      "src": "web/navara_three/example/public/screenshots/gis/polyline.avif"
+      "src": "web/navara_three/example/public/screenshots/gis/polyline.avif",
+      "href": "https://navara-preview.netlify.app/gis/polyline"
     },
     "example-row4-center-right": {
-      "src": "web/navara_three/example/public/screenshots/mesh/gltf-model.avif"
+      "src": "web/navara_three/example/public/screenshots/mesh/gltf-model.avif",
+      "href": "https://navara-preview.netlify.app/mesh/gltf-model"
     },
     "example-row4-right": {
-      "src": "web/navara_three/example/public/screenshots/gis/extruded-polygon.avif"
+      "src": "web/navara_three/example/public/screenshots/gis/extruded-polygon.avif",
+      "href": "https://navara-preview.netlify.app/gis/extruded-polygon"
     },
     "maplibre-logo": {
       "src": "docs/src/assets/lp/maplibre-logo.svg"

@@ -22,7 +22,9 @@ const FIELD_RADIUS = 1000; // meters
 const LANTERN_SCALE = 0.6;
 const DENSITIES = [3_000, 5_000, 10_000];
 
-const view = new ThreeView<DefaultDescriptions>();
+const view = new ThreeView<DefaultDescriptions>({
+  backgroundColor: new Color().setStyle("#0f1118"),
+});
 
 const defaultPlugin = new DefaultPlugin();
 view.addPlugin(defaultPlugin);
@@ -31,7 +33,6 @@ view.addPlugin(tilejson);
 
 await view.init();
 
-// Dim fill; the lanterns light themselves via emissive glow.
 view.addLight({ ambient: { intensity: 0.45 } });
 
 view.setCamera({

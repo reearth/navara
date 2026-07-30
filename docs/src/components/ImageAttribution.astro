@@ -1,0 +1,124 @@
+---
+// Reusable data-attribution overlay for an image or media frame.
+//
+// Collapses a list of credits behind a small info icon so long attribution
+// never overflows the frame; the credits reveal as a list in a tooltip on
+// hover or keyboard focus. Drop it inside any positioned container (e.g. an
+// image wrapper with `position: relative`) — it pins itself to a corner.
+//
+//   <div style="position: relative">
+//     <img ... />
+//     <ImageAttribution items={["© A", "© B"]} label="Data attribution" />
+//   </div>
+import { Info } from "@lucide/astro";
+
+interface Props {
+  /** One credit per data source, each rendered as its own list row. */
+  items: string[];
+  /** Accessible label for the icon button (localize this). */
+  label?: string;
+  /** Corner to pin to. Defaults to bottom-right. */
+  corner?: "br" | "bl" | "tr" | "tl";
+  /** Extra class(es) on the root, e.g. for position overrides. */
+  class?: string;
+}
+
+const {
+  items,
+  label = "Data attribution",
+  corner = "br",
+  class: className,
+} = Astro.props;
+---
+
+<div class:list={["nv-attrib", `nv-attrib-${corner}`, className]}>
+  <button type="button" class="nv-attrib-btn" aria-label={label}>
+    <Info />
+  </button>
+  <ul class="nv-attrib-list" role="tooltip">
+    {items.map((item) => <li>{item}</li>)}
+  </ul>
+</div>
+
+<style>
+  .nv-attrib {
+    position: absolute;
+    z-index: 2;
+  }
+  .nv-attrib-br {
+    right: 8px;
+    bottom: 8px;
+  }
+  .nv-attrib-bl {
+    left: 8px;
+    bottom: 8px;
+  }
+  .nv-attrib-tr {
+    right: 8px;
+    top: 8px;
+  }
+  .nv-attrib-tl {
+    left: 8px;
+    top: 8px;
+  }
+  .nv-attrib-btn {
+    display: flex;
+    padding: 3px;
+    border: 0;
+    border-radius: 50%;
+    background: color-mix(in srgb, black 30%, transparent);
+    color: rgba(255, 255, 255, 0.85);
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  .nv-attrib-btn:hover {
+    background: color-mix(in srgb, black 45%, transparent);
+  }
+  .nv-attrib-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+  .nv-attrib-list {
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 6px);
+    width: max-content;
+    max-width: min(300px, 68vw);
+    margin: 0;
+    padding: 8px 12px;
+    list-style: none;
+    border-radius: 8px;
+    background: color-mix(in srgb, black 82%, transparent);
+    font: 400 10px/1.6 "IBM Plex Mono", monospace;
+    color: rgba(255, 255, 255, 0.9);
+    text-align: left;
+    opacity: 0;
+    transform: translateY(3px);
+    transition:
+      opacity 0.2s,
+      transform 0.2s;
+    pointer-events: none;
+  }
+  /* Top-pinned variants drop the tooltip below the icon instead. */
+  .nv-attrib-tr .nv-attrib-list,
+  .nv-attrib-tl .nv-attrib-list {
+    top: calc(100% + 6px);
+    bottom: auto;
+  }
+  .nv-attrib-bl .nv-attrib-list,
+  .nv-attrib-tl .nv-attrib-list {
+    right: auto;
+    left: 0;
+  }
+  .nv-attrib:hover .nv-attrib-list,
+  .nv-attrib:focus-within .nv-attrib-list {
+    opacity: 1;
+    transform: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .nv-attrib-list {
+      transform: none;
+      transition: opacity 0.2s;
+    }
+  }
+</style>

@@ -67,7 +67,7 @@ const run = async () => {
   // Track updated features to prevent duplicate evaluations
   let updatedFeatures = new Set<bigint>();
 
-  const params = { size: 1000.0 };
+  const params = { size: 10.0 };
 
   // GeoJSON billboard layer
   const addGeoJsonLayer = () => {
@@ -82,7 +82,7 @@ const run = async () => {
         color: new Color().setStyle("#ffffff"),
         size: params.size,
         height: 1,
-        sizeInMeters: true,
+        sizeInMeters: false,
         clampToGround: true,
         depthTest: true,
         url: "/example.png",

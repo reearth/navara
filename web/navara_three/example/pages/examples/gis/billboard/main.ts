@@ -3,7 +3,6 @@ import { TileJsonPlugin } from "@navaramap/three-plugins";
 
 import { initializeExample } from "../../../../helpers/initialize";
 
-// The summit of Mount Everest.
 const EVEREST = { lng: 86.925, lat: 27.9881 };
 
 const view = new ThreeView();
@@ -13,7 +12,6 @@ view.addPlugin(tilejson);
 
 await view.init();
 
-// `distance` frames the summit at the view center.
 view.setCamera({
   lng: EVEREST.lng,
   lat: EVEREST.lat,
@@ -25,12 +23,10 @@ view.setCamera({
 
 const basemap = await tilejson.addSource({
   type: "raster-tile",
-  url: "https://papers.reearth.land/styles/white/tilejson.json",
+  url: "https://papers.reearth.land/styles/papers-light/tilejson.json",
 });
 view.addLayer({ type: "raster", source: basemap });
 
-// A billboard renders an image at each point; `center: {x: 0, y: -0.5}`
-// anchors the tip of the pin image to the coordinate.
 const source = view.addSource({
   type: "geojson",
   data: {
@@ -45,8 +41,6 @@ view.addLayer({
   billboard: {
     url: "/example.png",
     color: new Color().setStyle("#ffffff"),
-    // `sizeInMeters: false` keeps the pin the same on-screen size regardless
-    // of camera distance.
     size: 240,
     sizeInMeters: false,
     center: { x: 0, y: -0.5 },

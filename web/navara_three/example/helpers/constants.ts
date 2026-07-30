@@ -351,34 +351,35 @@ export const GEOJSON_DATASETS = {
  */
 export const LOCAL_DATASETS = {
   blueMarbleClouds: {
-    url: "/data/blue-marble-clouds/{z}/{x}/{y}.webp",
+    url: "https://assets.cms.reearth.io/assets/11/ea0a6a-a94f-47e0-a163-4c675261a1f6/blue-marble-clouds/{z}/{x}/{y}.webp",
     attribution: "NASA Blue Marble Clouds(Converted as raster tiles)",
   },
   blueMarbleNight: {
-    url: "/data/blue-marble-night/{z}/{x}/{y}.webp",
-    attribution: "NASA Earth at Night imagery(Converted as raster tiles)",
+    url: "https://papers.reearth.land/blackmarble/{z}/{x}/{y}.webp",
+    attributionHtml:
+      '\u003Ca href="https://papers.reearth.land"\u003ERe:Earth Papers\u003C/a\u003E · \u003Ca href="https://science.nasa.gov/earth/earth-observatory/earth-at-night/maps"\u003ENASA Earth Observatory\u003C/a\u003E · Suomi NPP VIIRS · Black Marble 2016',
   },
   airportTrafficVolume: {
-    url: "/data/airport-traffic-volume.geojson",
+    url: "https://assets.cms.reearth.io/assets/3b/63858d-9197-4b39-bbed-c17b6add52a4/airport-traffic-volume.geojson",
     attribution:
       "Processed and created from the National Land Numerical Information (inter-airport flow volume data) - MLIT",
     attributionUrl:
       "https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-S10b-2014.html",
   },
   tokyoFlood: {
-    url: "/data/tokyo-flood.geojson",
+    url: "https://assets.cms.reearth.io/assets/11/55daed-a75e-4e8d-b021-c7fd0666e839/tokyo-flood.geojson",
     attribution: "Flood Inundation Zone Data (River-Based) - MLIT",
     attributionUrl:
       "https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-A31a-2024.html",
   },
   railways: {
-    url: "/data/railways.geojson",
+    url: "https://assets.cms.reearth.io/assets/51/794e3a-9464-4655-b96b-ff745781270b/railways.geojson",
     attribution: "Railway Data - MLIT",
     attributionUrl:
       "https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N02-2024.html",
   },
   railwaysTimeSeries: {
-    url: "/data/railwaysTimeSeries.geojson",
+    url: "https://assets.cms.reearth.io/assets/7c/f0b635-b985-491a-86c2-ff78b91f139b/railwaysTimeSeries.geojson",
     attribution: "Railway Time Series Data - MLIT",
     attributionUrl:
       "https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N05-2024.html",

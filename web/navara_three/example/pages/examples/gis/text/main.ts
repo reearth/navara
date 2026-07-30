@@ -3,7 +3,6 @@ import { TileJsonPlugin } from "@navaramap/three-plugins";
 
 import { initializeExample } from "../../../../helpers/initialize";
 
-// The summit of Mount Everest.
 const EVEREST = { lng: 86.925, lat: 27.9881 };
 
 const view = new ThreeView();
@@ -13,8 +12,6 @@ view.addPlugin(tilejson);
 
 await view.init();
 
-// Register a Google Font from its stylesheet; glyph files load lazily as
-// labels first need them.
 view.addFontFamily(
   await fetchFontFamilyFromCss(
     "Arsenal",
@@ -22,8 +19,6 @@ view.addFontFamily(
   ),
 );
 
-// `distance` frames the summit at the view center. Close enough that the
-// basemap's own summit labels drop out and the text layer stands alone.
 view.setCamera({
   lng: EVEREST.lng,
   lat: EVEREST.lat,
@@ -34,12 +29,10 @@ view.setCamera({
 
 const basemap = await tilejson.addSource({
   type: "raster-tile",
-  url: "https://papers.reearth.land/styles/white/tilejson.json",
+  url: "https://papers.reearth.land/styles/papers-light/tilejson.json",
 });
 view.addLayer({ type: "raster", source: basemap });
 
-// A single point labeled with a fixed string — `text` on the material sets
-// the same label for every feature in the layer.
 const source = view.addSource({
   type: "geojson",
   data: {

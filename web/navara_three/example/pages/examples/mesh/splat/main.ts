@@ -12,7 +12,8 @@ import { TileJsonPlugin } from "@navaramap/three-plugins";
 
 import { initializeExample } from "../../../../helpers/initialize";
 
-const SPLAT_URL = "/splat/Sunny%20Meadow.sog";
+const SPLAT_URL =
+  "https://assets.cms.reearth.io/assets/e2/e8e117-8059-4450-adde-7fa7a3c5908a/Sunny Meadow/Sunny Meadow.sog";
 
 const CENTER = { lng: 11.6, lat: 46.543, height: 2 };
 
@@ -65,7 +66,8 @@ const splat = view.addMesh<SplatMeshDesc>({
 view.attribution?.add([
   {
     attribution: "Sunny Meadow by Jeremias Kieferle - CC BY 4.0",
-    attributionUrl: "https://superspl.at/scene/3aacb9d5",
+    attributionUrl:
+      "https://assets.cms.reearth.io/assets/e2/e8e117-8059-4450-adde-7fa7a3c5908a/Sunny Meadow/LICENSE",
   },
   {
     attributionHtml:
