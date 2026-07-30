@@ -1,9 +1,12 @@
 import { Object3D } from "three";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-import type { FeatureHandler } from "../event";
+import type { FeatureHandler } from "../event/context";
 
 import { FeatureEvaluator, type GeometryType } from "./FeatureEvaluator";
+
+// Mock worker module to avoid os.cpus() error in test environment
+vi.mock("@navaramap/worker", () => ({}));
 
 describe("FeatureEvaluator", () => {
   let mockHandler: FeatureHandler;

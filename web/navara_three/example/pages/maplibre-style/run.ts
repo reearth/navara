@@ -1,4 +1,7 @@
-import { MapLibreStylePlugin } from "@navaramap/maplibre-style";
+import {
+  MapLibreStylePlugin,
+  RustStyleEngine,
+} from "@navaramap/maplibre-style";
 import ThreeView from "@navaramap/three";
 import {
   DefaultPlugin,
@@ -28,7 +31,8 @@ export async function run() {
 
   // Add the MapLibre Style plugin
   const maplibrePlugin = new MapLibreStylePlugin(
-    "/example/public/maplibre-style.json",
+    "/maplibre-style.json",
+    new RustStyleEngine(),
   );
   view.addPlugin(maplibrePlugin);
 

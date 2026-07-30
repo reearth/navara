@@ -6,5 +6,6 @@
  */
 
 export { MapLibreStylePlugin } from "./MapLibreStylePlugin";
-
+export { JsStyleEngine } from "./engine/JsStyleEngine";
+export { RustStyleEngine } from "./engine/RustStyleEngine";
 export type { StyleSpecification } from "@maplibre/maplibre-gl-style-spec";

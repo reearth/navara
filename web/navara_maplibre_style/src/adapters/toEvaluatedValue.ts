@@ -420,7 +420,7 @@ function processSymbolLayer(
           ? "missing meshGeomType"
           : `invalid meshGeomType "${meshGeomType}"`;
       console.warn(
-        `Symbol layer "${layerId}": ${reason}. Expected "billboard" or "text" from mesh.getGeometryType(). Symbol will not render.`,
+        `Symbol layer "${layerId}": ${reason}. Expected "billboard" or "text" from mesh.getGeometryType(). Skipping symbol evaluation (falling back to layer defaults).`,
       );
     }
     return;

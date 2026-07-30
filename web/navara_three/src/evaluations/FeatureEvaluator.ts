@@ -14,7 +14,7 @@ import { BufferGeometry, Mesh, Object3D } from "three";
 import type { NormalBufferAttributes } from "three";
 
 import { Color } from "../Color";
-import type { FeatureHandler } from "../event";
+import type { FeatureHandler } from "../event/context";
 import {
   InstancedMesh,
   isFeatureMesh,
