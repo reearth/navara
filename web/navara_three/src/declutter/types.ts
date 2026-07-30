@@ -31,7 +31,7 @@ export type DeclutterCandidate = {
   isShown: boolean;
   /** Participant that owns this candidate; receives the placement result. */
   owner: DeclutterParticipant;
-  /** Participant-defined id (mesh index for text batches, instance index for
+  /** Participant-defined id (label slot for text batches, instance index for
    *  sprites) passed back to `applyDeclutter`. */
   handle: number;
 };

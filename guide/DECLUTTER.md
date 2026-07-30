@@ -88,7 +88,7 @@ graph TD
     Place["declutterPlace()<br/>project + horizon cull + sort + grid"]
   end
   WasmK -->|"@navaramap/engine-api (WASM)"| Place
-  Text["Text batches<br/>(sdfText.ts)"] -->|"register() / collectDeclutterCandidates()"| DM
+  Text["Text batches<br/>(mesh/sdfText/)"] -->|"register() / collectDeclutterCandidates()"| DM
   Sprites["Instanced sprites"] -->|"register() / collectDeclutterCandidates()"| DM
 ```
 
@@ -113,7 +113,7 @@ export type DeclutterCandidate = {
   priority: number;    // higher wins an overlap
   isShown: boolean;    // currently visible — feeds hysteresis
   owner: DeclutterParticipant;
-  handle: number;      // mesh index (text) or instance index (sprites)
+  handle: number;      // label slot (text) or instance index (sprites)
 };
 ```
 
@@ -349,14 +349,20 @@ A placement decision is applied as a fade **target**, not an instant
 visibility flip: `applyDeclutter(handle, hidden)` sets the target, and
 `stepDeclutterFade(deltaMs)` advances the actual hide-factor toward it by
 `deltaMs / DECLUTTER_FADE_MS` (300ms, `types.ts:40`) every call. This runs
-through a channel separate from user-driven `show` — a `uDeclutterHide`
-shader uniform for text, an `instanceDeclutterHide` attribute for sprites —
-so a label a user explicitly hid via `evaluate()` and one temporarily hidden
-by decluttering are independent and don't fight each other.
+through a channel separate from user-driven `show` — the `declutterHide`
+channel of the per-label data texture for text (see
+[TEXT_BATCHING.md](TEXT_BATCHING.md)), an `instanceDeclutterHide` attribute for
+sprites — so a label a user explicitly hid via `evaluate()` and one temporarily
+hidden by decluttering are independent and don't fight each other.
+
+Because both participants store the factor per label rather than per material,
+a fade step is a handful of float writes regardless of how many glyphs or
+instances the label spans.
 
 Fades are stepped on **every** `update()` call, whether or not a placement
 pass ran that frame — placement only ever sets *where the fade is heading*;
-the animation itself is a separate, continuous process.
+the animation itself is a separate, continuous process. Both participants
+short-circuit the walk entirely once nothing is mid-fade.
 
 ## Running in the frame loop
 
