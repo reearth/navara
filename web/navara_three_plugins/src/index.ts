@@ -28,8 +28,12 @@ export {
 export {
   TileJsonPlugin,
   type TileJson,
+  type TileJsonDemEncoding,
   type TileJsonSourceType,
   type TileJsonSourceDescription,
+  type TileJsonRasterTileSourceDescription,
+  type TileJsonVectorTileSourceDescription,
+  type TileJsonRasterDemSourceDescription,
   type TileJsonLoadedEvent,
   type TileJsonPluginEventMap,
 } from "./TileJsonPlugin";

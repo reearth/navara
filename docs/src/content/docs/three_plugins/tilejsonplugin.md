@@ -9,12 +9,11 @@ sidebar:
 
 `TileJsonPlugin` fetches a [TileJSON 3.0.0](https://github.com/mapbox/tilejson-spec/tree/master/3.0.0) document and registers it as a single Navara source. Instead of hand-copying a tile URL template, zoom range, and attribution into `view.addSource()`, you point the plugin at the document URL and it derives those fields for you.
 
-`addSource()` mirrors [`ThreeView.addSource`](../../three/source/about/): you pass a discriminated `type` plus an optional `id`, with `url` pointing at the TileJSON document rather than at a tile template. The plugin then:
+`addSource()` mirrors [`ThreeView.addSource`](../../three/source/about/): you pass a discriminated `type` plus an optional `id`, with `url` pointing at the TileJSON document rather than at a tile template.
 
-- reads the first tile endpoint, `minzoom` / `maxzoom`, and `scheme` from the document and forwards them to the source;
-- surfaces the document's `attribution` credit through the view's built-in attribution UI ([`view.attribution`](../../three/plugins/attributionplugin/)) automatically.
+The document's `attribution` credit is surfaced through the view's built-in attribution UI ([`view.attribution`](../../three/plugins/attributionplugin/)) automatically.
 
-TileJSON has no field that reliably distinguishes raster imagery from vector tiles, so the target source `type` (`"raster-tile"` or `"vector-tile"`) is declared by the caller.
+TileJSON has no field that reliably distinguishes raster imagery from vector or elevation tiles, so the target source `type` (`"raster-tile"`, `"vector-tile"`, or `"raster-dem"`) is declared by the caller.
 
 To build a custom credit UI instead, opt out of the built-in one (`new ThreeView({ defaultAttribution: false })`) and read each document's attribution from the [`loaded`](#events) event.
 
@@ -44,8 +43,14 @@ const source = await tilejson.addSource({
 
 // Reference the source by the returned handle...
 view.addLayer({ type: "raster", source });
-// ...or directly by the id passed above.
+// ...or directly by id.
 view.addLayer({ type: "raster", source: "basemap" });
+
+const dem = await tilejson.addSource({
+  type: "raster-dem",
+  url: "https://example.com/terrain.json",
+});
+view.addLayer({ type: "terrain", source: dem });
 ```
 
 ## Constructor
@@ -68,13 +73,17 @@ Fetches the TileJSON document at `desc.url`, then creates one source of the requ
 
 The mapping from the document to the created source is:
 
-| TileJSON field  | `raster-tile` source         | `vector-tile` source         |
-| --------------- | ---------------------------- | ---------------------------- |
-| `tiles[0]`      | `url`                        | `url`                        |
-| `minzoom`       | `minZoom`                    | — (engine has no field)      |
-| `maxzoom`       | `maxZoom`                    | `maxZoom`                    |
-| `scheme: "tms"` | `tms: true`                  | — (engine has no field)      |
-| `attribution`   | shown via `view.attribution` | shown via `view.attribution` |
+| TileJSON field  | `raster-tile` source         | `raster-dem` source          | `vector-tile` source         |
+| --------------- | ---------------------------- | ---------------------------- | ---------------------------- |
+| `tiles[0]`      | `url`                        | `url`                        | `url`                        |
+| `minzoom`       | `minZoom`                    | `minZoom`                    | — (engine has no field)      |
+| `maxzoom`       | `maxZoom`                    | `maxZoom`                    | `maxZoom`                    |
+| `scheme: "tms"` | `tms: true`                  | `tms: true`                  | — (engine has no field)      |
+| `tileSize`      | —                            | `tileSize` (default `512`)   | —                            |
+| `encoding`      | —                            | `elevationDecoder` (default `"mapbox"`) | —                 |
+| `attribution`   | shown via `view.attribution` | shown via `view.attribution` | shown via `view.attribution` |
+
+Every field in the table except `tiles[0]` and `attribution` can also be set on `desc` under the same name; a field set there takes precedence over the fetched document. For `raster-dem`, `encoding` selects the elevation decoder — `"mapbox"` or `"terrarium"` — and an unknown encoding rejects the call rather than creating a source with a wrong decoder.
 
 A TileJSON `tiles` array may list several mirror endpoints for the same tileset. Navara sources take a single URL, so only the first endpoint is used; any extra endpoints are ignored with a `console.warn`.
 
@@ -132,18 +141,45 @@ tilejson.on("loaded", ({ source, attribution }) => {
 ### TileJsonSourceType
 
 ```typescript
-type TileJsonSourceType = "raster-tile" | "vector-tile";
+type TileJsonSourceType = "raster-tile" | "vector-tile" | "raster-dem";
 ```
 
-Which Navara source type a TileJSON document is materialized into. Declared by the caller because TileJSON has no field that reliably distinguishes raster imagery from vector tiles.
+Which Navara source type a TileJSON document is materialized into. Declared by the caller because TileJSON has no field that reliably distinguishes raster imagery from vector or elevation tiles.
 
 ### TileJsonSourceDescription
 
-| Property | Type                  | Description                                                                                                                                                         |
-| -------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `type`   | `TileJsonSourceType`  | Navara source type to create, as in `addSource`.                                                                                                                    |
-| `url`    | `string`              | URL of the TileJSON 3.0.0 document to fetch and expand (not a tile template).                                                                                       |
-| `id`     | `string \| undefined` | Optional caller-provided source id. Handy for referencing the source from layers by id without holding the returned handle. When omitted, the engine generates one. |
+```typescript
+type TileJsonSourceDescription =
+  | TileJsonRasterTileSourceDescription
+  | TileJsonVectorTileSourceDescription
+  | TileJsonRasterDemSourceDescription;
+```
+
+A discriminated union over `type`. Every variant shares the fields below; a field marked "overrides the document" is optional and, when set, takes precedence over the fetched document's value of the same name.
+
+| Property   | Type                  | Description                                                                                                                                                         |
+| ---------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `type`     | `TileJsonSourceType`  | Navara source type to create, as in `addSource`.                                                                                                                    |
+| `url`      | `string`              | URL of the TileJSON 3.0.0 document to fetch and expand (not a tile template).                                                                                       |
+| `id`       | `string \| undefined` | Optional caller-provided source id. Handy for referencing the source from layers by id without holding the returned handle. When omitted, the engine generates one. |
+| `minzoom`  | `number \| undefined` | Overrides the document's `minzoom`.                                                                                                                                 |
+| `maxzoom`  | `number \| undefined` | Overrides the document's `maxzoom`.                                                                                                                                 |
+| `scheme`   | `"xyz" \| "tms" \| undefined` | Overrides the document's `scheme`.                                                                                                                          |
+
+The `raster-dem` variant (`TileJsonRasterDemSourceDescription`) additionally accepts:
+
+| Property   | Type                                | Description                                                     |
+| ---------- | ----------------------------------- | --------------------------------------------------------------- |
+| `tileSize` | `number \| undefined`               | Overrides the document's `tileSize`. Defaults to `512`.         |
+| `encoding` | `TileJsonDemEncoding \| undefined`  | Overrides the document's `encoding`. Defaults to `"mapbox"`.    |
+
+### TileJsonDemEncoding
+
+```typescript
+type TileJsonDemEncoding = "mapbox" | "terrarium";
+```
+
+How a `raster-dem` document's RGB tiles encode elevation, matching MapLibre's `encoding` values. MapLibre's `"custom"` (free-form decode factors) is not supported.
 
 ### TileJsonLoadedEvent
 
@@ -161,18 +197,22 @@ The subset of a TileJSON 3.0.0 document this plugin consumes. Other spec fields 
 | `minzoom`     | `number \| undefined` | `0`     | Minimum zoom level. Applied to raster sources only.                             |
 | `maxzoom`     | `number \| undefined` | `30`    | Maximum zoom level.                                                             |
 | `scheme`      | `"xyz" \| "tms"`      | `"xyz"` | Tiling scheme. `"tms"` flips the Y axis (raster sources only).                  |
+| `tileSize`    | `number \| undefined` | `512`   | Tile size in pixels. Not part of the TileJSON spec, but emitted by MapLibre-oriented tile servers; applied to `raster-dem` sources only. |
+| `encoding`    | `TileJsonDemEncoding \| undefined` | `"mapbox"` | Elevation encoding of DEM tiles. Not part of the TileJSON spec, but emitted by MapLibre-oriented tile servers; applied to `raster-dem` sources only. |
 
 The document is validated when fetched: `addSource()` rejects if `tilejson` is missing or is not a `major.minor.patch` version, or if `tiles` is missing or empty.
 
 ## Notes
 
 - **The document URL, not a tile template.** `desc.url` is the address of the TileJSON JSON document. The tile URL template comes from the document's `tiles` field — don't pass a `{z}/{x}/{y}` template here.
-- **The source `type` is your choice.** TileJSON does not mark a tileset as raster or vector, so pick `"raster-tile"` or `"vector-tile"` to match the tiles the document serves.
+- **The source `type` is your choice.** TileJSON does not mark a tileset as raster imagery, vector, or elevation data, so pick `"raster-tile"`, `"vector-tile"`, or `"raster-dem"` to match the tiles the document serves.
 - **Vector sources ignore `minzoom` and `scheme`.** The engine's vector-tile source has no `minZoom` or `tms` field, so only `maxzoom` carries over for `"vector-tile"`.
+- **`tileSize` and `encoding` are MapLibre extensions.** They are not part of the TileJSON spec, but MapLibre-oriented DEM tile servers commonly include them, and the defaults (`512` / `"mapbox"`) match MapLibre's. An `encoding` other than `"mapbox"` or `"terrarium"` rejects `addSource()`.
 
 ## Related Resources
 
 - [AttributionPlugin](../../three/plugins/attributionplugin/) — the built-in attribution (credit) UI reached via `view.attribution`, which this plugin feeds by default
 - [About three_plugins](../about/) — Package overview
 - [Raster Layer](../../three/layer/raster-layer/) — Raster layer reference
+- [Terrain Layer](../../three/layer/terrain-layer/) — Terrain layer reference, which renders a `raster-dem` source
 

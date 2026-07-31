@@ -3,13 +3,17 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { TileJsonPlugin, type TileJson } from "./TileJsonPlugin";
 
 // Importing the real @navaramap/three touches WASM/os at module load, which fails
-// in the test environment. TileJsonPlugin only needs `Plugin` and `EventHandler`
-// as runtime values (everything else it imports from there is type-only), so
-// stub the module. The EventHandler stub mirrors the real on/once/off/emit/clear.
+// in the test environment. TileJsonPlugin only needs `Plugin`, `EventHandler`,
+// and the elevation decoder factories as runtime values (everything else it
+// imports from there is type-only), so stub the module. The decoder factories
+// return sentinels the tests can assert on; the EventHandler stub mirrors the
+// real on/once/off/emit/clear.
 /* eslint-disable @typescript-eslint/no-extraneous-class */
 vi.mock("@navaramap/three", () => ({
   default: class ThreeView {},
   Plugin: class Plugin {},
+  MAPBOX_ELEVATION_DECODER: () => ({ decoder: "mapbox" }),
+  TERRARIUM_ELEVATION_DECODER: () => ({ decoder: "terrarium" }),
   EventHandler: class EventHandler {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private listeners = new Map<string, Set<(...a: any[]) => void>>();
@@ -190,6 +194,118 @@ describe("TileJsonPlugin.addSource", () => {
     });
     expect(desc).not.toHaveProperty("minZoom");
     expect(desc).not.toHaveProperty("tms");
+  });
+
+  it("creates a raster-dem source with MapLibre defaults (tileSize 512, mapbox encoding)", async () => {
+    const { view } = makeFakeView();
+    const plugin = initPlugin(view);
+    stubTileJson({
+      tilejson: "3.0.0",
+      tiles: ["https://a/{z}/{x}/{y}.png"],
+      minzoom: 2,
+      maxzoom: 12,
+    } satisfies TileJson);
+
+    await plugin.addSource({ type: "raster-dem", id: "dem", url: DOC_URL });
+
+    expect(view.addSource).toHaveBeenCalledWith({
+      type: "raster-dem",
+      url: "https://a/{z}/{x}/{y}.png",
+      id: "dem",
+      minZoom: 2,
+      maxZoom: 12,
+      tileSize: 512,
+      elevationDecoder: { decoder: "mapbox" },
+    });
+  });
+
+  it("honors the document's MapLibre-compatible tileSize/encoding for raster-dem", async () => {
+    const { view } = makeFakeView();
+    const plugin = initPlugin(view);
+    stubTileJson({
+      tilejson: "3.0.0",
+      tiles: ["https://a/{z}/{x}/{y}.png"],
+      tileSize: 256,
+      encoding: "terrarium",
+    } satisfies TileJson);
+
+    await plugin.addSource({ type: "raster-dem", url: DOC_URL });
+
+    expect(view.addSource).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tileSize: 256,
+        elevationDecoder: { decoder: "terrarium" },
+      }),
+    );
+  });
+
+  it("rejects an unsupported raster-dem encoding", async () => {
+    const { view } = makeFakeView();
+    const plugin = initPlugin(view);
+    stubTileJson({
+      tilejson: "3.0.0",
+      tiles: ["https://a/{z}/{x}/{y}.png"],
+      encoding: "custom" as never,
+    } satisfies TileJson);
+
+    await expect(
+      plugin.addSource({ type: "raster-dem", url: DOC_URL }),
+    ).rejects.toThrow(/unsupported raster-dem encoding/);
+    expect(view.addSource).not.toHaveBeenCalled();
+  });
+
+  it("prefers description-level fields over the fetched document", async () => {
+    const { view } = makeFakeView();
+    const plugin = initPlugin(view);
+    stubTileJson({
+      tilejson: "3.0.0",
+      tiles: ["https://a/{z}/{x}/{y}.png"],
+      minzoom: 0,
+      maxzoom: 10,
+      scheme: "xyz",
+      tileSize: 512,
+      encoding: "mapbox",
+    } satisfies TileJson);
+
+    await plugin.addSource({
+      type: "raster-dem",
+      url: DOC_URL,
+      minzoom: 3,
+      maxzoom: 15,
+      scheme: "tms",
+      tileSize: 256,
+      encoding: "terrarium",
+    });
+
+    expect(view.addSource).toHaveBeenCalledWith({
+      type: "raster-dem",
+      url: "https://a/{z}/{x}/{y}.png",
+      minZoom: 3,
+      maxZoom: 15,
+      tms: true,
+      tileSize: 256,
+      elevationDecoder: { decoder: "terrarium" },
+    });
+  });
+
+  it("applies description-level fields even when the document omits them", async () => {
+    const { view } = makeFakeView();
+    const plugin = initPlugin(view);
+    stubTileJson({
+      tilejson: "3.0.0",
+      tiles: ["https://a/{z}/{x}/{y}.png"],
+    } satisfies TileJson);
+
+    await plugin.addSource({
+      type: "raster-tile",
+      url: DOC_URL,
+      minzoom: 4,
+      maxzoom: 8,
+    });
+
+    expect(view.addSource).toHaveBeenCalledWith(
+      expect.objectContaining({ minZoom: 4, maxZoom: 8 }),
+    );
   });
 
   it("throws when the TileJSON fetch fails", async () => {
