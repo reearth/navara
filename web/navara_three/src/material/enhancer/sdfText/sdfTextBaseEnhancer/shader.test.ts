@@ -115,6 +115,9 @@ describe("sdfTextBaseEnhancer shader", () => {
       expect(sdfTextFragmentShader).not.toContain(
         "mix(uOutlineColor, vColor, fillAlpha)",
       );
+      expect(sdfTextFragmentShader).toMatch(
+        /alpha \*= opacity;\s*if \(alpha <= 0\.0\) discard;/,
+      );
     });
   });
 

@@ -274,6 +274,9 @@ void main() {
             ) / alpha
             : vColor;
         alpha *= opacity;
+        // A fully faded label (or a transparent outline outside the fill)
+        // must not occlude later geometry when depthWrite is enabled.
+        if (alpha <= 0.0) discard;
         // Pull the FILL toward the camera (SMALLER depth = nearer). Outline pixels
         // (fillAlpha≈0) get no pull and stay at the base label depth — coplanar with
         // the background quad. Net effect, with depthWrite enabled:
