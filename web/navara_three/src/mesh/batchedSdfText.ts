@@ -12,6 +12,7 @@ import type {
 } from "../declutter/types";
 import type { EventContext } from "../event/context";
 
+import { GEOMETRY_TYPES } from "./constants";
 import { InstancedMesh, type InstancedMeshOptions } from "./instanced";
 import type { PickableMesh } from "./pickableMesh";
 import { SDFTextMesh } from "./sdfText";
@@ -153,7 +154,7 @@ export class BatchedSdfTextMesh
   /**
    * Geometry type of this mesh.
    */
-  readonly geometryType = "text" as const;
+  readonly geometryType = GEOMETRY_TYPES.Text;
 
   /**
    * After an atlas eviction, re-prepare and force-rebuild any visible mesh whose

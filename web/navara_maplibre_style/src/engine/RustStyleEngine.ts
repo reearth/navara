@@ -11,7 +11,6 @@ import { CompiledExpression, CompiledFilter } from "@navaramap/engine";
 
 import type { StyleEngine } from "./StyleEngine";
 import {
-  filterNavaraExtensionErrors,
   getLayoutSpec,
   getPaintSpec,
   getTypeDefault,
@@ -33,15 +32,8 @@ export class RustStyleEngine implements StyleEngine {
     const errors = validateStyleMin(raw as StyleSpecification);
 
     if (errors && errors.length > 0) {
-      // Filter out errors related to Navara extensions and relaxed validation
-      const relevantErrors = filterNavaraExtensionErrors(errors);
-
-      if (relevantErrors.length > 0) {
-        const errorMessages = relevantErrors.map(
-          (e: { message: string }) => e.message,
-        );
-        throw new Error(`Invalid MapLibre Style: ${errorMessages.join(", ")}`);
-      }
+      const errorMessages = errors.map((e: { message: string }) => e.message);
+      throw new Error(`Invalid MapLibre Style: ${errorMessages.join(", ")}`);
     }
 
     return raw as ParsedStyle;

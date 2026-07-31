@@ -24,6 +24,7 @@ import type {
   BatchTextureRowKey,
   DefaultBatchAttributeValues,
 } from "./batchTexture";
+import { GEOMETRY_TYPES } from "./constants";
 import { releaseGeometryArraysAfterUpload } from "./releaseGeometryArrays";
 import { setupRTECallback } from "./rtcRteHelper";
 
@@ -68,7 +69,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
   /**
    * Geometry type of this mesh.
    */
-  readonly geometryType = "polyline" as const;
+  readonly geometryType = GEOMETRY_TYPES.Polyline;
 
   init(mesh: NavaraPolylineMesh) {
     this.batchLength = mesh.batch_length;

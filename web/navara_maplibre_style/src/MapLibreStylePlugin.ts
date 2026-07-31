@@ -114,8 +114,6 @@ export class MapLibreStylePlugin extends Plugin<ThreeView, ViewContext> {
    *
    * In MapLibre Style Spec:
    * - `tiles`: Array of tile URL templates (e.g., "https://example.com/{z}/{x}/{y}.png")
-   * - `url`: TileJSON resource URL (e.g., "https://example.com/tiles.json" or "mapbox://...")
-   *          that contains metadata including tile URLs, but requires fetching and parsing
    *
    * This method ONLY returns direct tile URL templates from the `tiles` array.
    * Sources with only `url` (TileJSON) are not supported and will return undefined,
@@ -136,7 +134,6 @@ export class MapLibreStylePlugin extends Plugin<ThreeView, ViewContext> {
       return sourceSpec.tiles[0];
     }
 
-    // Do NOT use url field - it points to TileJSON which needs fetching/parsing
     return undefined;
   }
 

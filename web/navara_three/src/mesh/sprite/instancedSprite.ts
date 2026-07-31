@@ -23,19 +23,24 @@ import {
   type DeclutterCandidate,
   type DeclutterParticipant,
 } from "../../declutter/types";
-import type { GeometryType } from "../../evaluations";
 import type { EventContext } from "../../event/context";
 import { createInstancedSpriteMaterialEnhancer } from "../../material/enhancer";
 import type { CustomObject3DEventMap } from "../../object3DEvent";
+import { GEOMETRY_TYPES, type GeometryType } from "../constants";
 import { PickableMesh } from "../pickableMesh";
 
 import { BillboardAtlas, type AtlasRect } from "./billboardAtlas";
 import { loadAtlasImageFromUrl } from "./billboardAtlasImageLoader";
 
+type SpriteGeometryType = Extract<
+  GeometryType,
+  typeof GEOMETRY_TYPES.Point | typeof GEOMETRY_TYPES.Billboard
+>;
+
 export type InstancedSpriteOptions = {
   renderOrder?: number;
   ctx: EventContext;
-  geometryType: Extract<GeometryType, "point" | "billboard">;
+  geometryType: SpriteGeometryType;
 };
 
 type PositionsInfo = {
@@ -60,7 +65,7 @@ export class InstancedSpriteMesh
   extends Mesh<BufferGeometry, Material | Material[], CustomObject3DEventMap>
   implements PickableMesh, DeclutterParticipant
 {
-  private _geometryType: Extract<GeometryType, "point" | "billboard"> = "point";
+  private _geometryType: SpriteGeometryType = GEOMETRY_TYPES.Point;
   private _batchIdToInstance = new Map<number, number>();
   private _initialColor: Color = new Color(0xffffff);
   private _initialHeight = 0.0;
@@ -132,15 +137,15 @@ export class InstancedSpriteMesh
    * feature evaluations, but does NOT automatically trigger re-evaluation.
    * Call layer.forceUpdate() if you need to re-evaluate existing features.
    */
-  setGeometryType(type: Extract<GeometryType, "point" | "billboard">): void {
+  setGeometryType(type: SpriteGeometryType): void {
     this._geometryType = type;
   }
 
   /**
    * Get the geometry type of this mesh.
-   * Defaults to "point" if not explicitly set.
+   * Defaults to GEOMETRY_TYPES.Point if not explicitly set.
    */
-  get geometryType(): Extract<GeometryType, "point" | "billboard"> {
+  get geometryType(): SpriteGeometryType {
     return this._geometryType;
   }
 

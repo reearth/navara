@@ -126,10 +126,6 @@ All [MapLibre expression operators](https://maplibre.org/maplibre-style-spec/exp
 - **Zoom:** `zoom` ⚠️ currently returns 0 (zoom-based styling not fully implemented)
 - **Geometry:** `geometry-type`, `id`, `properties`
 
-### Navara Extensions
-
-Navara is compatible with the standard MapLibre Style Spec without custom extensions.
-
 ## Usage
 
 Pass the style JSON to the plugin and add it before `view.init()`:

@@ -32,6 +32,7 @@ import type {
   BatchTextureRowKey,
   DefaultBatchAttributeValues,
 } from "./batchTexture";
+import { GEOMETRY_TYPES } from "./constants";
 import { releaseGeometryArraysAfterUpload } from "./releaseGeometryArrays";
 import { setupRTECallback } from "./rtcRteHelper";
 
@@ -88,7 +89,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
   /**
    * Geometry type of this mesh.
    */
-  readonly geometryType = "polygon" as const;
+  readonly geometryType = GEOMETRY_TYPES.Polygon;
 
   init(mesh: NavaraPolygonMesh, tileHandle: TileHandle | undefined) {
     this.batchLength = mesh.batch_length;

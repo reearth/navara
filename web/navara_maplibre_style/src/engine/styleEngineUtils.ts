@@ -7,19 +7,6 @@ import { PAINT_SPECS_BY_TYPE } from "./paintSpecs";
 import type { LayerType, PropertySpec, StyleValue } from "./types";
 
 /**
- * Filter validation errors to ignore Navara-specific extensions.
- *
- * Currently returns all errors as-is (no Navara extensions implemented yet).
- * This function is kept for future extensibility.
- */
-export function filterNavaraExtensionErrors(
-  errors: { message: string }[],
-): { message: string }[] {
-  // No Navara extensions currently - return all errors
-  return errors;
-}
-
-/**
  * Get paint property spec for a layer type.
  */
 export function getPaintSpec(
