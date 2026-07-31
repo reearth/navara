@@ -1,6 +1,7 @@
 import {
   COLOR_GLYPH_PX_SIZE,
   GlyphCharClass,
+  SDF_PX_SIZE,
   type GlyphMetrics,
   type ShapedGlyph,
   type ShapeTextResult,
@@ -13,9 +14,6 @@ import {
  * Nothing here touches three.js or WASM, which is what makes the layout rules
  * — the part with all the edge cases — unit-testable without a GL context.
  */
-
-/** Must match Rust `SDF_PX_SIZE` in `crates/navara_wasm_font_worker/src/atlas.rs`. */
-export const SDF_PX_SIZE = 64.0;
 
 /** Horizontal alignment of lines within a multi-line block, as the fraction
  *  of leftover width placed before each line. */

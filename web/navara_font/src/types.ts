@@ -5,6 +5,13 @@
 export const COLOR_GLYPH_PX_SIZE = 64.0;
 
 /**
+ * Pixel size at which monochrome SDF/MTSDF glyphs are rasterized.
+ * Must match `SDF_PX_SIZE` in
+ * `crates/navara_wasm_font_worker/src/atlas.rs`.
+ */
+export const SDF_PX_SIZE = 64.0;
+
+/**
  * Pixel range over which a quality's atlas distance field ramps from
  * "outside" to "inside" (i.e. the value covered by `d - 0.5` in the shader).
  * Converts an outline-thickness expressed in pixels into a delta on the

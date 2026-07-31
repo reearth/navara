@@ -66,6 +66,11 @@ uniform bool uShowBackground;
 
 // Varyings
 varying vec2 vAtlasUv;
+// Bounds of the current glyph's atlas rectangle. Small-text supersampling in
+// the fragment shader clamps taps to these bounds so they cannot read a
+// neighboring packed glyph.
+flat varying vec2 vAtlasUvMin;
+flat varying vec2 vAtlasUvMax;
 varying float vFragDepth;
 flat varying int vBackGroundSprite; // Whether this vertex belongs to the background sprite (1) or a glyph (0)
 flat varying float vBackGroundRatio;
@@ -195,7 +200,9 @@ void main() {
         // resizing the atlas only requires updating the size uniform — geometry
         // attributes stay valid.
         vec2 atlasSize = vIsColor == 1 ? uColorAtlasSize : uSdfAtlasSize;
-        vAtlasUv = mix(glyphUvRect.xy, glyphUvRect.zw, uv) / atlasSize;
+        vAtlasUvMin = glyphUvRect.xy / atlasSize;
+        vAtlasUvMax = glyphUvRect.zw / atlasSize;
+        vAtlasUv = mix(vAtlasUvMin, vAtlasUvMax, uv);
     }
 
     vFragDepth = gl_Position.w + 1.0;

@@ -1,7 +1,17 @@
+import { SDF_PX_SIZE, atlasRangePx } from "@navaramap/font";
 import sdfTextFragmentShader from "@shaders/glsl/sdfText.frag.glsl";
 import sdfTextVertexShader from "@shaders/glsl/sdfText.vert.glsl";
 import { describe, expect, it } from "vitest";
 
+import {
+  MSDF_FULL_DETAIL_PPEM,
+  MSDF_TRUE_SDF_END_PPEM,
+  SMALL_TEXT_SUPERSAMPLE_END_PPEM,
+  SMALL_TEXT_SUPERSAMPLE_FULL_PPEM,
+  SMALL_TEXT_STEM_DARKEN_END_PPEM,
+  SMALL_TEXT_STEM_DARKEN_FULL_PPEM,
+  SMALL_TEXT_STEM_DARKEN_MAX_PX,
+} from "./coverage";
 import { LABEL_ROWS, LabelRow } from "./types";
 
 import { createSdfTextBaseEnhancer, type SupportedMaterial } from ".";
@@ -44,6 +54,65 @@ describe("sdfTextBaseEnhancer shader", () => {
   it("should set USE_MSDF define only when useMsdf=true", () => {
     expect(transform({ useMsdf: true }).defines.USE_MSDF).toBe(1);
     expect(transform({ useMsdf: false }).defines.USE_MSDF).toBeUndefined();
+  });
+
+  describe("small-text coverage contract", () => {
+    it("injects the SDF raster size and quality-specific distance range", () => {
+      expect(transform({ useMsdf: false }).defines).toMatchObject({
+        NVR_SDF_PX_SIZE: SDF_PX_SIZE,
+        NVR_SDF_PX_RANGE: atlasRangePx(false),
+      });
+      expect(transform({ useMsdf: true }).defines).toMatchObject({
+        NVR_SDF_PX_SIZE: SDF_PX_SIZE,
+        NVR_SDF_PX_RANGE: atlasRangePx(true),
+      });
+    });
+
+    it("injects ordered supersampling and MTSDF transition thresholds", () => {
+      expect(SMALL_TEXT_SUPERSAMPLE_FULL_PPEM).toBeLessThan(
+        SMALL_TEXT_SUPERSAMPLE_END_PPEM,
+      );
+      expect(MSDF_TRUE_SDF_END_PPEM).toBeLessThan(MSDF_FULL_DETAIL_PPEM);
+      expect(SMALL_TEXT_STEM_DARKEN_FULL_PPEM).toBeLessThan(
+        SMALL_TEXT_STEM_DARKEN_END_PPEM,
+      );
+      expect(SMALL_TEXT_STEM_DARKEN_MAX_PX).toBeGreaterThan(0);
+      expect(transform({}).defines).toMatchObject({
+        NVR_SMALL_TEXT_SS_FULL_PPEM: SMALL_TEXT_SUPERSAMPLE_FULL_PPEM,
+        NVR_SMALL_TEXT_SS_END_PPEM: SMALL_TEXT_SUPERSAMPLE_END_PPEM,
+        NVR_SMALL_TEXT_DARKEN_MAX_PX: SMALL_TEXT_STEM_DARKEN_MAX_PX,
+        NVR_SMALL_TEXT_DARKEN_FULL_PPEM: SMALL_TEXT_STEM_DARKEN_FULL_PPEM,
+        NVR_SMALL_TEXT_DARKEN_END_PPEM: SMALL_TEXT_STEM_DARKEN_END_PPEM,
+        NVR_MSDF_TRUE_SDF_END_PPEM: MSDF_TRUE_SDF_END_PPEM,
+        NVR_MSDF_FULL_DETAIL_PPEM: MSDF_FULL_DETAIL_PPEM,
+      });
+    });
+
+    it("uses UV-derived coverage and clamps supersamples to the glyph rect", () => {
+      expect(sdfTextFragmentShader).toContain("nvr_screenPxRange()");
+      expect(sdfTextFragmentShader).toContain("nvr_edgeCoverage(");
+      expect(sdfTextFragmentShader).toContain("vAtlasUvMin + halfTexel");
+      expect(sdfTextFragmentShader).toContain("vAtlasUvMax - halfTexel");
+      expect(sdfTextVertexShader).toContain(
+        "vAtlasUvMin = glyphUvRect.xy / atlasSize",
+      );
+      expect(sdfTextVertexShader).toContain(
+        "vAtlasUvMax = glyphUvRect.zw / atlasSize",
+      );
+      expect(sdfTextFragmentShader).not.toContain("fwidth(dist)");
+    });
+
+    it("composites translucent outlines behind partially covered fills", () => {
+      expect(sdfTextFragmentShader).toContain(
+        "float behindFill = outlineLayer * (1.0 - fillAlpha)",
+      );
+      expect(sdfTextFragmentShader).toContain(
+        "float alpha = fillAlpha + behindFill",
+      );
+      expect(sdfTextFragmentShader).not.toContain(
+        "mix(uOutlineColor, vColor, fillAlpha)",
+      );
+    });
   });
 
   // The shader indexes the label data texture as `slot * LABEL_ROWS + row`.
