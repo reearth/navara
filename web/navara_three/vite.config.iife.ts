@@ -5,6 +5,8 @@ import glsl from "vite-plugin-glsl";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 import tsconfig from "vite-tsconfig-paths";
 
+import { assetFileNamesPreservingAssetsDir } from "../vite.config.common";
+
 const plugins = [tsconfig({ configNames: ["tsconfig.build.json"] }), glsl()];
 
 export default defineConfig({
@@ -68,6 +70,7 @@ export default defineConfig({
       output: {
         inlineDynamicImports: true,
         exports: "named",
+        assetFileNames: assetFileNamesPreservingAssetsDir,
       },
     },
     sourcemap: false,
