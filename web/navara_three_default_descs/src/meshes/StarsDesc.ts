@@ -41,7 +41,12 @@ export class StarsDesc extends MeshDesc<StarsConfig, StarsUpdate, Stars> {
     const stars = Stars.fromUrl(assetsUrl, starsOptions);
     this._stars = stars;
 
-    this.view.atmosphere.onTexturesReady((t) => stars.setTextures(t));
+    // The stars shader never samples the irradiance texture.
+    this.view.atmosphere.onTexturesReady((t) => stars.setTextures(t), {
+      transmittance: true,
+      scattering: true,
+      higherOrderScattering: true,
+    });
 
     stars.on("needsUpdate", () => this.emit("needsUpdate"));
 

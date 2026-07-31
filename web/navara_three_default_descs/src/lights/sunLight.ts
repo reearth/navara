@@ -178,7 +178,9 @@ export class SunLight extends EventHandler<SunLightEvents> {
 
   setTransmittanceTexture(texture: Texture) {
     this.transmittanceTexture = texture;
-    this.raw.transmittanceTexture = texture;
+    // The texture may arrive after applyColor was toggled on; keep it
+    // detached until applyColor is turned off again.
+    this.raw.transmittanceTexture = this.applyColor ? null : texture;
   }
 
   clearTransmittanceTexture() {
