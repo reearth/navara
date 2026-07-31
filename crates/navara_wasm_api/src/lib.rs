@@ -1,12 +1,14 @@
 use navara_wasm_utils::set_panic_hook;
 use wasm_bindgen::prelude::*;
 
+mod css_font_family;
 mod declutter;
 mod ellipsoid;
 mod intersection;
 mod rte;
 mod transform;
 
+pub use css_font_family::*;
 pub use declutter::*;
 pub use ellipsoid::*;
 pub use intersection::*;

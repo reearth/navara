@@ -6,19 +6,19 @@ import {
 import type {
   RainMeshConfig,
   CloudsConfig,
-} from "@navaramap/three_default_descs";
+} from "@navaramap/three-default-descs";
 import type {
   DefaultPlugin,
   DefaultEffectDescription,
   DefaultLightDescription,
-} from "@navaramap/three_default_plugin";
+} from "@navaramap/three-default-plugin";
 import {
   Layer,
   MeshDesc,
   LightDesc,
   EffectDesc,
   useViewContext,
-} from "@navaramap/three_react";
+} from "@navaramap/three-react";
 import { useEffect, useMemo, type FC } from "react";
 import { SphericalHarmonics3, Vector2 } from "three";
 

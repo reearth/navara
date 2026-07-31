@@ -332,7 +332,7 @@ view.globe.color = new Color().setStyle("#1a1a2e");
 
 ```typescript
 import ThreeView, { Color } from "@navaramap/three";
-import { SunLightDesc } from "@navaramap/three_default_descs";
+import { SunLightDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();

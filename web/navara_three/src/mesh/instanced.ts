@@ -53,7 +53,7 @@ export class InstancedMesh<M extends Object3D>
     return this.allMeshes;
   }
 
-  getMeshByBatchIndex(batchIndex: number) {
+  getMeshByBatchIndex(batchIndex: number): M | undefined {
     return this.meshes()[batchIndex];
   }
 

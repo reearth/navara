@@ -15,8 +15,8 @@ The plugin handles only the projection math. Rendering the actual HTML elements 
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
-import { OverlayPlugin, moveOverlayElement } from "@navaramap/three_plugins";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
+import { OverlayPlugin, moveOverlayElement } from "@navaramap/three-plugins";
 
 const view = new ThreeView({ container, animation: true });
 const defaultPlugin = new DefaultPlugin();

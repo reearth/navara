@@ -137,11 +137,7 @@ pub fn transfer_mesh(
                 material: material.clone(),
                 transform,
                 feature_id: entity,
-                render_info: ModelRenderInformation {
-                    current_terrain_height: 0.,
-                    is_rendered: false,
-                    should_recalculate_height: material.clamp_to_ground,
-                },
+                render_info: ModelRenderInformation { is_rendered: false },
                 bin: bin.cloned(),
                 geometry: TransferableModelGeometry {
                     batch_ids: Some(TransferableFloatAttribute {

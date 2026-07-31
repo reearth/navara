@@ -346,8 +346,8 @@ import { Color } from "@navaramap/three";
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { SunLightDesc } from "@navaramap/three_default_descs";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { SunLightDesc } from "@navaramap/three-default-descs";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 
 const view = new ThreeView({
   shadow: true  // Enable shadows

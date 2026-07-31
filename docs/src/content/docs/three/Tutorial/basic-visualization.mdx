@@ -18,7 +18,7 @@ This tutorial assumes a TypeScript project with a bundler such as [Vite](https:/
 <TabItem label="npm">
 
 ```bash
-npm install @navaramap/three @navaramap/three_default_plugin three postprocessing
+npm install @navaramap/three @navaramap/three-default-plugin three postprocessing
 ```
 
 </TabItem>
@@ -26,7 +26,7 @@ npm install @navaramap/three @navaramap/three_default_plugin three postprocessin
 <TabItem label="yarn">
 
 ```bash
-yarn add @navaramap/three @navaramap/three_default_plugin three postprocessing
+yarn add @navaramap/three @navaramap/three-default-plugin three postprocessing
 ```
 
 </TabItem>
@@ -34,7 +34,7 @@ yarn add @navaramap/three @navaramap/three_default_plugin three postprocessing
 <TabItem label="pnpm">
 
 ```bash
-pnpm add @navaramap/three @navaramap/three_default_plugin three postprocessing
+pnpm add @navaramap/three @navaramap/three-default-plugin three postprocessing
 ```
 
 </TabItem>
@@ -65,7 +65,7 @@ Next, create `src/main.ts` with the following content:
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three-default-plugin";
 
 // Create a ThreeView instance
 const plugin = new DefaultPlugin();
@@ -151,7 +151,7 @@ Add a map layer using OpenStreetMap raster tiles.
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three-default-plugin";
 
 // Create a ThreeView instance
 const plugin = new DefaultPlugin();
@@ -209,7 +209,7 @@ You can set the camera position and orientation using the `view.setCamera()` met
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three-default-plugin";
 
 // Create a ThreeView instance
 const plugin = new DefaultPlugin();
@@ -333,7 +333,7 @@ For details, see [Terrain Layer](../../../three/layer/terrain-layer/).
 
 ```typescript
 import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navaramap/three";
-import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three-default-plugin";
 
 // Create a ThreeView instance
 const plugin = new DefaultPlugin();
@@ -454,7 +454,7 @@ A complete example combining everything:
 
 ```typescript
 import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navaramap/three";
-import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three-default-plugin";
 
 const plugin = new DefaultPlugin();
 const view = new ThreeView<DefaultDescriptions>({});

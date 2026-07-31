@@ -13,6 +13,7 @@ export async function renderBillboard(
   const mesh = new InstancedSpriteMesh({
     renderOrder: FEATURE_RENDER_ORDER,
     ctx,
+    geometryType: "billboard",
   });
   await mesh._init(m);
   mesh.setActive(m.active);

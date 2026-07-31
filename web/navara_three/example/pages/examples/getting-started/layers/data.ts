@@ -17,8 +17,8 @@ import type { FeatureCollection, Position } from "geojson";
 
 /** Center of the exhibit row — just north of the Azusa river and Taisho pond. */
 const ROW = { lng: 137.6495, lat: 36.2445 };
-/** Distance between exhibit centers, in degrees of longitude (~315 m). */
-const SPACING = 0.0035;
+/** Distance between exhibit centers, in degrees of longitude (~240 m). */
+const SPACING = 0.0027;
 /** Exhibits span ROW.lat ± HALF_NS (~200 m north-south in total). */
 const HALF_NS = 0.0009;
 /** Half-width of the squares, scaled so they render square at this latitude. */

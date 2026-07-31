@@ -43,7 +43,7 @@ view.addPlugin(plugin);   // Register before init()
 await view.init();        // Calls plugin.init(view) for each registered plugin
 ```
 
-Light, effect, and mesh descriptors are registered through the plugin system (e.g., `@navaramap/three_default_plugin`). Core effect descriptors (MRT, selective effects, final copy) are registered by `@navaramap/three` itself.
+Light, effect, and mesh descriptors are registered through the plugin system (e.g., `@navaramap/three-default-plugin`). Core effect descriptors (MRT, selective effects, final copy) are registered by `@navaramap/three` itself.
 
 Multiple plugins can be composed together:
 
@@ -313,13 +313,13 @@ class MyPlugin extends Plugin {
 }
 ```
 
-## `@navaramap/three_default_plugin`
+## `@navaramap/three-default-plugin`
 
-`@navaramap/three_default_plugin` is a plugin that registers the default descriptors from `@navaramap/three_default_descs`. It also exports `DefaultDescriptions` — a structured type with `mesh`, `light`, and `effect` fields for type-safe descriptions.
+`@navaramap/three-default-plugin` is a plugin that registers the default descriptors from `@navaramap/three-default-descs`. It also exports `DefaultDescriptions` — a structured type with `mesh`, `light`, and `effect` fields for type-safe descriptions.
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three-default-plugin";
 
 const view = new ThreeView<DefaultDescriptions>({ /* options */ });
 view.addPlugin(new DefaultPlugin());

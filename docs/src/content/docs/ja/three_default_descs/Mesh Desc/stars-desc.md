@@ -105,7 +105,7 @@ sidebar:
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { StarsDesc } from "@navaramap/three_default_descs";
+import { StarsDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 view.registerMesh("stars", StarsDesc);

@@ -1,5 +1,5 @@
 {
-  "name": "@navaramap/three_react",
+  "name": "@navaramap/three-react",
   "type": "module",
   "version": "0.0.0",
   "main": "dist/index.umd.cjs",

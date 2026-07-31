@@ -237,7 +237,7 @@ import { Color } from "@navaramap/three";
 
 ```typescript
 import ThreeView, { Color } from "@navaramap/three";
-import { PlaneMeshDesc } from "@navaramap/three_default_descs";
+import { PlaneMeshDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 view.registerMesh("plane", PlaneMeshDesc);

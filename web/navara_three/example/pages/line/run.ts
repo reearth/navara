@@ -2,15 +2,15 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   Color,
 } from "@navaramap/three";
-import { CloudsEffectDesc } from "@navaramap/three_default_descs";
+import { CloudsEffectDesc } from "@navaramap/three-default-descs";
 import type {
   ArclineMeshDesc,
   SmoothLineMeshDesc,
-} from "@navaramap/three_default_descs";
+} from "@navaramap/three-default-descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
+} from "@navaramap/three-default-plugin";
 import { Vector3 } from "three";
 import { Pane } from "tweakpane";
 

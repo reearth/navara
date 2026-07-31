@@ -66,7 +66,7 @@ import {
   SunLightDesc,
   AmbientLightDesc,
   FXAAEffectDesc,
-} from "@navaramap/three_default_descs";
+} from "@navaramap/three-default-descs";
 
 class MyScenePlugin extends Plugin<ThreeView, ViewContext> {
   async init(view: ThreeView, _ctx: ViewContext) {
@@ -108,7 +108,7 @@ import {
   AmbientLightDesc,
   ToneMappingEffectDesc,
   FXAAEffectDesc,
-} from "@navaramap/three_default_descs";
+} from "@navaramap/three-default-descs";
 
 class MyScenePlugin extends Plugin<ThreeView, ViewContext> {
   private view?: ThreeView;

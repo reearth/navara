@@ -1,12 +1,16 @@
 import type { Nullable } from "@navaramap/core";
 import {
   type Atmosphere,
-  CLOUD_ASSETS_URL,
+  CLOUD_LOCAL_WEATHER_URL,
+  CLOUD_SHAPE_URL,
+  CLOUD_SHAPE_DETAIL_URL,
+  CLOUD_TURBULENCE_URL,
   STBN_URL,
   CustomEffectPass,
   Pass,
   type EffectOptions,
 } from "@navaramap/three";
+import { type PrecomputedTextures } from "@takram/three-atmosphere";
 import {
   CLOUD_SHAPE_DETAIL_TEXTURE_SIZE,
   CLOUD_SHAPE_TEXTURE_SIZE,
@@ -33,14 +37,18 @@ import {
   Vector3,
   type Camera,
 } from "three";
-import invariant from "tiny-invariant";
 
 import { CloudLayer, type CloudOptions } from "./layer";
 
 export type * from "@takram/three-clouds";
 
 export type CloudsOptions = {
-  assetsUrl?: string;
+  /**
+   * URL of a directory to load cloud textures from. The directory must keep
+   * the original filenames (`local_weather.png` etc.). When omitted, the
+   * assets bundled with the package are used.
+   */
+  assetsUrl?: string | undefined;
   stbnUrl?: string;
   qualityPreset?: CloudsQualityPreset;
   localWeatherVelocity?: Vector2;
@@ -91,10 +99,17 @@ export type CloudsOptions = {
   cloudLayers?: Nullable<CloudOptions[]>;
 } & EffectOptions;
 
+/**
+ * {@link CloudsOptions} with every field present. `assetsUrl` may still be
+ * `undefined`, meaning the assets bundled with the package.
+ */
+export type ResolvedCloudsOptions = Required<Omit<CloudsOptions, "assetsUrl">> &
+  Pick<CloudsOptions, "assetsUrl">;
+
 // Default value is based on the medium preset.
-export const DEFAULT_CLOUDS_OPTIONS: Required<CloudsOptions> = {
+export const DEFAULT_CLOUDS_OPTIONS: ResolvedCloudsOptions = {
   enabled: false,
-  assetsUrl: CLOUD_ASSETS_URL,
+  assetsUrl: undefined,
   stbnUrl: STBN_URL,
   qualityPreset: "medium",
   localWeatherVelocity: new Vector2(),
@@ -142,7 +157,7 @@ export const DEFAULT_CLOUDS_OPTIONS: Required<CloudsOptions> = {
 export class Clouds extends Pass<
   CustomEffectPass,
   CloudsEffect,
-  Required<CloudsOptions>
+  ResolvedCloudsOptions
 > {
   atmosphere: Atmosphere;
   private _cloudLayers: CloudLayer[] = [];
@@ -248,14 +263,14 @@ export class Clouds extends Pass<
       },
     );
 
-    this.atmosphere.onTexturesReady(() => this.onTextureLoaded());
+    // Cloud lighting genuinely samples all four precomputed textures.
+    this.atmosphere.onTexturesReady((t) => this.onTextureLoaded(t));
 
     this.atmosphere.on("disposed", this.onDisposed);
   }
 
-  private onTextureLoaded = () => {
-    invariant(this.atmosphere.textures);
-    Object.assign(this.rawEffect, this.atmosphere.textures);
+  private onTextureLoaded = (textures: PrecomputedTextures) => {
+    Object.assign(this.rawEffect, textures);
   };
 
   private onDisposed = () => {
@@ -300,27 +315,37 @@ export class Clouds extends Pass<
     return this.rawEffect;
   }
 
+  /**
+   * Resolves an asset filename against `options.assetsUrl`. The bundled
+   * default assets are emitted under bundler-hashed names, so the
+   * directory-plus-filename form only applies to a user-provided URL.
+   */
+  private assetUrl(file: string, defaultUrl: string): string {
+    const { assetsUrl } = this.options;
+    return assetsUrl == null ? defaultUrl : `${assetsUrl}/${file}`;
+  }
+
   loadAll() {
     return Promise.all([
       new TextureLoader()
-        .loadAsync(`${this.options.assetsUrl}/local_weather.png`)
+        .loadAsync(this.assetUrl("local_weather.png", CLOUD_LOCAL_WEATHER_URL))
         .then(this.onLocalWeatherLoad),
       new DataTextureLoader(Data3DTexture, parseUint8Array, {
         width: CLOUD_SHAPE_TEXTURE_SIZE,
         height: CLOUD_SHAPE_TEXTURE_SIZE,
         depth: CLOUD_SHAPE_TEXTURE_SIZE,
       })
-        .loadAsync(`${this.options.assetsUrl}/shape.bin`)
+        .loadAsync(this.assetUrl("shape.bin", CLOUD_SHAPE_URL))
         .then(this.onShapeLoad),
       new DataTextureLoader(Data3DTexture, parseUint8Array, {
         width: CLOUD_SHAPE_DETAIL_TEXTURE_SIZE,
         height: CLOUD_SHAPE_DETAIL_TEXTURE_SIZE,
         depth: CLOUD_SHAPE_DETAIL_TEXTURE_SIZE,
       })
-        .loadAsync(`${this.options.assetsUrl}/shape_detail.bin`)
+        .loadAsync(this.assetUrl("shape_detail.bin", CLOUD_SHAPE_DETAIL_URL))
         .then(this.onShapeDetailLoad),
       new TextureLoader()
-        .loadAsync(`${this.options.assetsUrl}/turbulence.png`)
+        .loadAsync(this.assetUrl("turbulence.png", CLOUD_TURBULENCE_URL))
         .then(this.onTurbulenceLoad),
       new STBNLoader().loadAsync(this.options.stbnUrl).then(this.onSTBNLoad),
     ]);

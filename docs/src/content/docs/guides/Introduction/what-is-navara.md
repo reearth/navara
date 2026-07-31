@@ -19,7 +19,7 @@ This is all it takes to display satellite imagery on the globe — here with the
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 
 const view = new ThreeView({ useNormal: true });
 
@@ -70,7 +70,7 @@ Ready-made [plugins](../../../three_plugins/about/) bundle purpose-built feature
 
 ### Low-level API
 
-When config objects and ready-made plugins are not enough, drop down one tier: style individual features by their attributes with [`FeatureEvaluator`](../../../three/api/feature-evaluator/) — color-code buildings by height, or filter features by attribute values — pick features and query terrain interactively through the `pick` event and terrain sampling, and compute coordinate transforms and geodesic distances with the geodetic/ECEF math utilities. The GIS math is also available as a [standalone package](../../../three/api/navara_three_api/) (`@navaramap/three_api`) that works without the map engine.
+When config objects and ready-made plugins are not enough, drop down one tier: style individual features by their attributes with [`FeatureEvaluator`](../../../three/api/feature-evaluator/) — color-code buildings by height, or filter features by attribute values — pick features and query terrain interactively through the `pick` event and terrain sampling, and compute coordinate transforms and geodesic distances with the geodetic/ECEF math utilities. The GIS math is also available as a [standalone package](../../../three/api/navara_three_api/) (`@navaramap/three-api`) that works without the map engine.
 
 ### Custom Descriptors
 

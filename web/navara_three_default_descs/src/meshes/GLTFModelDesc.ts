@@ -98,6 +98,7 @@ export type AnimationState = {
 
 export type GLTFModelEvent = {
   load: () => void;
+  error: (error: unknown) => void;
   animationReady: () => void;
   needsUpdate: () => void;
 };
@@ -251,6 +252,7 @@ export class GLTFModelDesc extends MeshDesc<
       this.emit("load");
     } catch (error) {
       console.warn("Failed to load GLTF model:", error);
+      this.emit("error", error);
     }
   }
 

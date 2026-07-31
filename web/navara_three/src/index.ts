@@ -23,7 +23,7 @@ import {
   type FontWorkerMemoryStats,
 } from "@navaramap/font";
 import FontWorkerURL from "@navaramap/font/fontWorker?worker&url";
-import { initNavaraApi } from "@navaramap/three_api";
+import { initNavaraApi } from "@navaramap/three-api";
 import {
   initializeWorkerPool,
   probeWorkerPoolHeap,
@@ -158,7 +158,7 @@ export type {
 } from "@navaramap/core";
 export { CameraDirection } from "@navaramap/engine";
 // CSM exports for advanced users
-export { CascadedShadowMaps, CSMHelper } from "@navaramap/three_csm";
+export { CascadedShadowMaps, CSMHelper } from "@navaramap/three-csm";
 
 export * from "./type";
 export * from "./constants";
@@ -176,7 +176,7 @@ export * from "./layers";
 export * from "./passes";
 export * from "./evaluations";
 export { SKY_RENDER_ORDER, STARS_RENDER_ORDER } from "./renderOrder";
-export * from "@navaramap/three_api";
+export * from "@navaramap/three-api";
 export * from "./Color";
 export { type BlendMode, blendFunction, createReplacer } from "./utils";
 export { Atmosphere, type AtmosphereOptions } from "./atmosphere";
@@ -1044,6 +1044,9 @@ export default class ThreeView<
       this._camera,
     );
     this._atmosphere.on("needsUpdate", this.forceUpdate);
+    // Textures load lazily, kicked off by the first consumer registering via
+    // onTexturesReady(); re-render whenever they arrive.
+    this._atmosphere.on("textureLoaded", this.forceUpdate);
 
     this.on("layer", (e, id, ...args) => {
       this.layersManager.emitById(e, id, ...args);
@@ -1327,14 +1330,9 @@ export default class ThreeView<
         budgets.maxWorkerHeapBytes,
     });
 
-    // 1. Pre-fetch atmosphere resources. Non-blocking: consumers receive
-    // the textures through onTexturesReady() once they arrive.
-    this._atmosphere._init().then(
-      () => this.forceUpdate(),
-      (e) => console.error("Failed to load atmosphere textures:", e),
-    );
-
-    // 2. Fetch WASM resources.
+    // Fetch WASM resources. Atmosphere textures are not fetched here: they
+    // load lazily once a consumer (sky, sun light, aerial perspective, ...)
+    // registers via atmosphere.onTexturesReady().
     await Promise.all([initCore(), initNavaraApi()]);
 
     this._core = new Core(newId());
@@ -1480,7 +1478,7 @@ export default class ThreeView<
 
     this.viewContext._setRenderPass(this.renderPass);
 
-    // 3. Warm up workers. Non-blocking: warms one worker, the rest follow
+    // Warm up workers. Non-blocking: warms one worker, the rest follow
     // in the background off the HTTP cache; tasks dispatched to a still-cold
     // worker just await WASM inside the task.
     warmUpWorkerPool().catch((e) =>

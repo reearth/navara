@@ -43,10 +43,12 @@ export class SunLightDesc extends LightDesc<
       ...(color ? { color } : {}),
     } as SunLightOptions);
 
-    // Set up atmosphere integration
-    this.view.atmosphere.onTexturesReady((t) =>
-      sunLight.setTransmittanceTexture(t.transmittanceTexture),
-    );
+    // Set up atmosphere integration. The transmittance texture is only
+    // needed to compute the sun color from the atmosphere, so skip the
+    // request entirely while `applyColor` uses the configured color.
+    if (!sunLight.applyColor) {
+      this.requestTransmittanceTexture(sunLight);
+    }
 
     sunLight.on("needsUpdate", () => this.emit("needsUpdate"));
     sunLight.on("_csmChanged", this.updateSceneLights.bind(this));
@@ -72,6 +74,11 @@ export class SunLightDesc extends LightDesc<
 
       if (updates.sun.applyColor !== undefined) {
         this._instance.applyColor = updates.sun.applyColor;
+        // Turning applyColor off makes the sun color depend on the
+        // atmosphere again; fetch the texture then (no-op if already loaded).
+        if (!updates.sun.applyColor) {
+          this.requestTransmittanceTexture(this._instance);
+        }
       }
 
       // Shadow
@@ -112,6 +119,13 @@ export class SunLightDesc extends LightDesc<
         this._instance.debugCSMHelper = updates.sun.debugCSMHelper;
       }
     }
+  }
+
+  private requestTransmittanceTexture(sunLight: SunLight): void {
+    this.view.atmosphere.onTexturesReady(
+      (t) => sunLight.setTransmittanceTexture(t.transmittanceTexture),
+      { transmittance: true },
+    );
   }
 
   onCreate() {

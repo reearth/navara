@@ -44,7 +44,7 @@ MeshDescは、Descriptorクラスを登録した後、`view.addMesh()`メソッ�
 
 ```typescript
 import ThreeView, { Color } from "@navaramap/three";
-import { BoxMeshDesc } from "@navaramap/three_default_descs";
+import { BoxMeshDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 

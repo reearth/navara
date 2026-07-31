@@ -5,5 +5,5 @@ internal rendering pipeline (MRT passes, transparent pass, final copy, selective
 effects).
 
 Independent, self-contained effect descriptors should be implemented as external
-packages (e.g., `@navaramap/three_default_descs`) using the public
+packages (e.g., `@navaramap/three-default-descs`) using the public
 `EffectDesc` API and registered via plugins.

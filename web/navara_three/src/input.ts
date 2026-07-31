@@ -15,6 +15,21 @@ export function registerInputEvents(
 
   let lastTerrainDistance: number | undefined;
 
+  // Mousedown and mousemove must share the same coordinate space: the engine
+  // re-anchors its cursor position from the mousedown coordinates so the first
+  // drag delta is never computed against a stale position (e.g. after the
+  // window lost focus while the OS cursor kept moving).
+  const normalizePosition = (event: MouseEvent) => {
+    const rect = element.getBoundingClientRect();
+    const width = element.clientWidth;
+    const height = element.clientHeight;
+    const aspectRatio = width / height;
+    return {
+      x: ((event.clientX - rect.left) / width) * aspectRatio,
+      y: (event.clientY - rect.top) / height,
+    };
+  };
+
   const mousedown = (event: MouseEvent) => {
     mouseEvent = {
       type: "mousedown",
@@ -22,7 +37,11 @@ export function registerInputEvents(
     };
     const terrainDistance = getTerrainDistance?.() ?? undefined;
     lastTerrainDistance = terrainDistance;
-    core.input({ ...mouseEvent, terrain_distance: terrainDistance });
+    core.input({
+      ...mouseEvent,
+      ...normalizePosition(event),
+      terrain_distance: terrainDistance,
+    });
   };
   const mouseup = () => {
     core.input({
@@ -33,13 +52,9 @@ export function registerInputEvents(
   };
 
   const mousemove = (event: MouseEvent) => {
-    const width = element.clientWidth;
-    const height = element.clientHeight;
-    const aspectRatio = width / height;
     core.input({
       type: "mousemove",
-      x: (event.clientX / width) * aspectRatio,
-      y: event.clientY / height,
+      ...normalizePosition(event),
     });
   };
 
@@ -109,36 +124,54 @@ export function registerInputEvents(
       key: event?.key,
     });
   };
-  // This is used to emit a key up event without any params.
-  const keyupEmpty = () => {
-    core.input({
-      type: "keyup",
-    });
+
+  // Releases every pressed button and modifier key. When the window loses
+  // focus or visibility the matching mouseup/keyup fires in another window, so
+  // without this the engine would keep acting on stale pressed state after the
+  // user comes back.
+  const releaseInputs = () => {
+    for (const button of [0, 1, 2]) {
+      core.input({ type: "mouseup", button });
+    }
+    mouseEvent = undefined;
+    core.input({ type: "keyup", key_code: "ControlLeft", key: "Control" });
+    core.input({ type: "keyup", key_code: "ControlRight", key: "Control" });
+  };
+  const visibilitychange = () => {
+    if (document.visibilityState === "hidden") {
+      releaseInputs();
+    }
   };
 
   element.addEventListener("mousedown", mousedown);
   element.addEventListener("mouseup", mouseup);
-  element.addEventListener("mouseleave", mouseup);
-  element.addEventListener("mouseleave", keyupEmpty);
+  element.addEventListener("mouseleave", releaseInputs);
   element.addEventListener("mousemove", mousemove);
   element.addEventListener("touchstart", touchstart);
   element.addEventListener("touchend", touchend);
+  // The browser cancels active touches on app switches and system gestures;
+  // treat them as ended so no stale touch stays in the engine.
+  element.addEventListener("touchcancel", touchend);
   element.addEventListener("touchmove", touchmove);
   element.addEventListener("wheel", wheel);
   document.addEventListener("keydown", keydown);
   document.addEventListener("keyup", keyup);
+  window.addEventListener("blur", releaseInputs);
+  document.addEventListener("visibilitychange", visibilitychange);
 
   return () => {
     element.removeEventListener("mousedown", mousedown);
     element.removeEventListener("mouseup", mouseup);
-    element.removeEventListener("mouseleave", mouseup);
-    element.removeEventListener("mouseleave", keyupEmpty);
+    element.removeEventListener("mouseleave", releaseInputs);
     element.removeEventListener("mousemove", mousemove);
     element.removeEventListener("touchstart", touchstart);
     element.removeEventListener("touchend", touchend);
+    element.removeEventListener("touchcancel", touchend);
     element.removeEventListener("touchmove", touchmove);
     element.removeEventListener("wheel", wheel);
     document.removeEventListener("keydown", keydown);
     document.removeEventListener("keyup", keyup);
+    window.removeEventListener("blur", releaseInputs);
+    document.removeEventListener("visibilitychange", visibilitychange);
   };
 }

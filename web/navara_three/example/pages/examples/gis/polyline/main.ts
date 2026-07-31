@@ -1,5 +1,7 @@
 import ThreeView, { Color } from "@navaramap/three";
-import { TileJsonPlugin } from "@navaramap/three_plugins";
+import { TileJsonPlugin } from "@navaramap/three-plugins";
+
+import { initializeExample } from "../../../../helpers/initialize";
 
 const view = new ThreeView();
 
@@ -8,24 +10,21 @@ view.addPlugin(tilejson);
 
 await view.init();
 
-// Straight-down view over the historic center of Venice.
 view.setCamera({
   lng: 12.334,
   lat: 45.438,
-  height: 4200,
-  heading: 0,
-  pitch: -90,
+  distance: 3400,
+  heading: 35,
+  pitch: -35,
   roll: 0,
 });
 
 const basemap = await tilejson.addSource({
   type: "raster-tile",
-  url: "https://papers.reearth.land/styles/white/tilejson.json",
+  url: "https://papers.reearth.land/styles/papers-light/tilejson.json",
 });
 view.addLayer({ type: "raster", source: basemap });
 
-// Venice's canal network (OpenStreetMap waterways) as one GeoJSON source;
-// every line shares the same fixed color and width.
 const source = view.addSource({
   type: "geojson",
   url: "/venice_canals.geojson",
@@ -47,3 +46,5 @@ view.attribution?.add([
     attributionUrl: "https://www.openstreetmap.org/copyright",
   },
 ]);
+
+initializeExample(view);

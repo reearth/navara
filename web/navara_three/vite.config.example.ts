@@ -165,19 +165,19 @@ export default defineConfig((env) => {
               "@navaramap/core": normalizePath(
                 path.resolve(__dirname, "../navara_core/src"),
               ),
-              "@navaramap/three_api": normalizePath(
+              "@navaramap/three-api": normalizePath(
                 path.resolve(__dirname, "../navara_three_api/src"),
               ),
-              "@navaramap/three_csm": normalizePath(
+              "@navaramap/three-csm": normalizePath(
                 path.resolve(__dirname, "../navara_three_csm/src"),
               ),
-              "@navaramap/three_default_plugin": normalizePath(
+              "@navaramap/three-default-plugin": normalizePath(
                 path.resolve(__dirname, "../navara_three_default_plugin/src"),
               ),
-              "@navaramap/three_react": normalizePath(
+              "@navaramap/three-react": normalizePath(
                 path.resolve(__dirname, "../navara_three_react/src"),
               ),
-              "@navaramap/maplibre_style": normalizePath(
+              "@navaramap/maplibre-style": normalizePath(
                 path.resolve(__dirname, "../navara_maplibre_style/src"),
               ),
               "@navaramap/worker": normalizePath(

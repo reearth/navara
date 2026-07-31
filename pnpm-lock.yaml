@@ -168,10 +168,10 @@ importers:
       '@navaramap/three':
         specifier: workspace:*
         version: link:../../navara_three
-      '@navaramap/three_default_descs':
+      '@navaramap/three-default-descs':
         specifier: workspace:*
         version: link:../../navara_three_default_descs
-      '@navaramap/three_default_plugin':
+      '@navaramap/three-default-plugin':
         specifier: workspace:*
         version: link:../../navara_three_default_plugin
       postprocessing:
@@ -199,13 +199,13 @@ importers:
       '@navaramap/three':
         specifier: workspace:*
         version: link:../../navara_three
-      '@navaramap/three_default_descs':
+      '@navaramap/three-default-descs':
         specifier: workspace:*
         version: link:../../navara_three_default_descs
-      '@navaramap/three_default_plugin':
+      '@navaramap/three-default-plugin':
         specifier: workspace:*
         version: link:../../navara_three_default_plugin
-      '@navaramap/three_react':
+      '@navaramap/three-react':
         specifier: workspace:*
         version: link:../../navara_three_react
       three:
@@ -228,6 +228,9 @@ importers:
 
   web/navara_font:
     dependencies:
+      '@navaramap/engine-api':
+        specifier: workspace:*
+        version: link:../wasm/navara_engine_api
       '@navaramap/engine-font-worker':
         specifier: workspace:*
         version: link:../wasm/navara_font_worker
@@ -275,10 +278,10 @@ importers:
       '@navaramap/font':
         specifier: workspace:*
         version: link:../navara_font
-      '@navaramap/three_api':
+      '@navaramap/three-api':
         specifier: workspace:*
         version: link:../navara_three_api
-      '@navaramap/three_csm':
+      '@navaramap/three-csm':
         specifier: workspace:*
         version: link:../navara_three_csm
       '@navaramap/worker':
@@ -306,16 +309,16 @@ importers:
         specifier: 2.36.1
         version: 2.36.1(three@0.185.1)
     devDependencies:
-      '@navaramap/three_default_descs':
+      '@navaramap/three-default-descs':
         specifier: workspace:*
         version: link:../navara_three_default_descs
-      '@navaramap/three_default_plugin':
+      '@navaramap/three-default-plugin':
         specifier: workspace:*
         version: link:../navara_three_default_plugin
-      '@navaramap/three_plugins':
+      '@navaramap/three-plugins':
         specifier: workspace:*
         version: link:../navara_three_plugins
-      '@navaramap/three_react':
+      '@navaramap/three-react':
         specifier: workspace:*
         version: link:../navara_three_react
       '@playwright/test':
@@ -470,7 +473,7 @@ importers:
       '@navaramap/three':
         specifier: workspace:*
         version: link:../navara_three
-      '@navaramap/three_csm':
+      '@navaramap/three-csm':
         specifier: workspace:*
         version: link:../navara_three_csm
       '@types/three':
@@ -488,7 +491,7 @@ importers:
 
   web/navara_three_default_plugin:
     dependencies:
-      '@navaramap/three_default_descs':
+      '@navaramap/three-default-descs':
         specifier: workspace:*
         version: link:../navara_three_default_descs
     devDependencies:
@@ -501,7 +504,7 @@ importers:
       '@navaramap/three':
         specifier: workspace:*
         version: link:../navara_three
-      '@navaramap/three_default_plugin':
+      '@navaramap/three-default-plugin':
         specifier: workspace:*
         version: link:../navara_three_default_plugin
       '@types/three':

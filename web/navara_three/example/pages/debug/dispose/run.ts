@@ -2,7 +2,7 @@ import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navaramap/three";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
+} from "@navaramap/three-default-plugin";
 
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 

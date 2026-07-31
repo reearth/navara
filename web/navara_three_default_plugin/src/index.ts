@@ -87,7 +87,7 @@ import {
   type AmbientLightConfig,
   type SkyLightProbeConfig,
   type LightProbeConfig,
-} from "@navaramap/three_default_descs";
+} from "@navaramap/three-default-descs";
 
 export class DefaultPlugin extends Plugin<
   ThreeView<DefaultDescriptions>,

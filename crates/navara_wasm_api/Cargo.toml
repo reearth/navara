@@ -12,6 +12,9 @@ debug = ["navara_wasm_utils/console_error_panic_hook"]
 
 [dependencies]
 wasm-bindgen.workspace = true
+serde.workspace = true
+serde-wasm-bindgen.workspace = true
+url.workspace = true
 navara_core.workspace = true
 navara_math.workspace = true
 navara_wasm_types.workspace = true

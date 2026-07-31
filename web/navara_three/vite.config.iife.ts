@@ -5,6 +5,8 @@ import glsl from "vite-plugin-glsl";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 import tsconfig from "vite-tsconfig-paths";
 
+import { assetFileNamesPreservingAssetsDir } from "../vite.config.common";
+
 const plugins = [tsconfig({ configNames: ["tsconfig.build.json"] }), glsl()];
 
 export default defineConfig({
@@ -28,7 +30,7 @@ export default defineConfig({
     dedupe: ["three"],
     alias: [
       // Redirect @navaramap/three to source so workspace packages that import it
-      // (e.g. @navaramap/three_default_plugin/dist/index.js → @navaramap/three) use
+      // (e.g. @navaramap/three-default-plugin/dist/index.js → @navaramap/three) use
       // the same module instance as the IIFE entry, avoiding double init.
       {
         find: /^@navaramap\/three$/,
@@ -68,6 +70,7 @@ export default defineConfig({
       output: {
         inlineDynamicImports: true,
         exports: "named",
+        assetFileNames: assetFileNamesPreservingAssetsDir,
       },
     },
     sourcemap: false,

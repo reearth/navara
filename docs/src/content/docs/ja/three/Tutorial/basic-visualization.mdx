@@ -18,7 +18,7 @@ import { Tabs, TabItem } from "@astrojs/starlight/components";
 <TabItem label="npm">
 
 ```bash
-npm install @navaramap/three @navaramap/three_default_plugin three postprocessing
+npm install @navaramap/three @navaramap/three-default-plugin three postprocessing
 ```
 
 </TabItem>
@@ -26,7 +26,7 @@ npm install @navaramap/three @navaramap/three_default_plugin three postprocessin
 <TabItem label="yarn">
 
 ```bash
-yarn add @navaramap/three @navaramap/three_default_plugin three postprocessing
+yarn add @navaramap/three @navaramap/three-default-plugin three postprocessing
 ```
 
 </TabItem>
@@ -34,7 +34,7 @@ yarn add @navaramap/three @navaramap/three_default_plugin three postprocessing
 <TabItem label="pnpm">
 
 ```bash
-pnpm add @navaramap/three @navaramap/three_default_plugin three postprocessing
+pnpm add @navaramap/three @navaramap/three-default-plugin three postprocessing
 ```
 
 </TabItem>
@@ -65,7 +65,7 @@ pnpm add @navaramap/three @navaramap/three_default_plugin three postprocessing
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three-default-plugin";
 
 // ThreeView インスタンスを作成
 const plugin = new DefaultPlugin();
@@ -151,7 +151,7 @@ OpenStreetMap のラスタタイルを使用して地図レイヤーを追加し
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three-default-plugin";
 
 // ThreeView インスタンスを作成
 const plugin = new DefaultPlugin();
@@ -209,7 +209,7 @@ view.setCamera({
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three-default-plugin";
 
 // ThreeView インスタンスを作成
 const plugin = new DefaultPlugin();
@@ -333,7 +333,7 @@ terrain: {
 
 ```typescript
 import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navaramap/three";
-import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three-default-plugin";
 
 // ThreeView インスタンスを作成
 const plugin = new DefaultPlugin();
@@ -454,7 +454,7 @@ view.addLayer({
 
 ```typescript
 import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navaramap/three";
-import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three-default-plugin";
 
 const plugin = new DefaultPlugin();
 const view = new ThreeView<DefaultDescriptions>({});

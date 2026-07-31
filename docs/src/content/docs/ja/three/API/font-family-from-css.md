@@ -95,7 +95,7 @@ parseFontFamilyFromCss(
   family: string,
   cssText: string,
   options?: ParseCssFontFamilyOptions,
-): FontFamily
+): Promise<FontFamily>
 ```
 
 **Parameters:**
@@ -106,14 +106,14 @@ parseFontFamilyFromCss(
 
 **Returns:**
 
-パースされた `FontFamily`。
+パースされた `FontFamily` に解決される Promise。パース処理は WebAssembly で実行されるため、初回使用時にモジュールが初期化されます。
 
 **Example:**
 
 ```typescript
 import { parseFontFamilyFromCss } from "@navaramap/three";
 
-const family = parseFontFamilyFromCss(
+const family = await parseFontFamilyFromCss(
   "MapFont",
   `@font-face {
     font-family: "Latin";
@@ -131,7 +131,7 @@ CSS の `unicode-range` ディスクリプタ値を、両端を含むコード�
 **Syntax:**
 
 ```typescript
-parseCssUnicodeRange(value: string): UnicodeRange[]
+parseCssUnicodeRange(value: string): Promise<UnicodeRange[]>
 ```
 
 **Parameters:**
@@ -140,14 +140,14 @@ parseCssUnicodeRange(value: string): UnicodeRange[]
 
 **Returns:**
 
-`{ from, to }` コードポイント範囲（両端を含む）の配列。
+`{ from, to }` コードポイント範囲（両端を含む）の配列に解決される Promise。
 
 **Example:**
 
 ```typescript
 import { parseCssUnicodeRange } from "@navaramap/three";
 
-parseCssUnicodeRange("U+0102-0103, U+20AB");
+await parseCssUnicodeRange("U+0102-0103, U+20AB");
 // [{ from: 0x0102, to: 0x0103 }, { from: 0x20ab, to: 0x20ab }]
 ```
 

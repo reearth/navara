@@ -2,10 +2,11 @@ import ThreeView, { Color } from "@navaramap/three";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
-import { TileJsonPlugin } from "@navaramap/three_plugins";
+} from "@navaramap/three-default-plugin";
+import { TileJsonPlugin } from "@navaramap/three-plugins";
 
 import { addButton } from "../../../../helpers/button";
+import { initializeExample } from "../../../../helpers/initialize";
 
 import { features } from "./data";
 
@@ -18,17 +19,16 @@ view.addPlugin(tilejson);
 
 await view.init();
 
-// Fixed noon sun + ambient fill so the extruded polygon gets shading.
 view.atmosphere.date = new Date("2026-07-16T03:00:00Z");
 view.addLight({ ambient: { intensity: 0.6 } });
 view.addLight({ sun: { intensity: 1.8 } });
 
 view.setCamera({
-  lng: 137.6501,
+  lng: 137.6503,
   lat: 36.2382,
-  height: 820,
+  height: 400,
   heading: 0,
-  pitch: -50,
+  pitch: -26,
   roll: 0,
 });
 
@@ -96,3 +96,5 @@ styleButton.onclick = () => {
     polygon: { color: new Color().setStyle(color) },
   });
 };
+
+initializeExample(view);

@@ -19,7 +19,7 @@ In addition to the properties below, all common properties from the base class (
 
 **Description:** URL of the splat file to load. Required. Provide either the URL of an externally hosted splat with a verified license, or a path to a self-hosted asset placed under your project's `public/splat/` directory (referenced as `/splat/your-asset.ply`).
 
-On fetch failure, a `console.warn` is logged; no exception is thrown and no event is emitted. Implement retry / fallback in the application if needed.
+On fetch failure, a `console.warn` is logged and the `error` event is emitted; no exception is thrown. Implement retry / fallback in the application if needed.
 
 **Example:**
 
@@ -71,17 +71,43 @@ On fetch failure, a `console.warn` is logged; no exception is thrown and no even
 
 > `url`, `lod`, and `originCellSize` are fixed at construction time. Calling `handle.update()` with a different value logs a warning; recreate the descriptor instead.
 
+## Events
+
+### load
+
+**Description:** Fired when the splat file has been fetched and parsed. Not fired on a failed load (the `error` event fires instead).
+
+**Example:**
+
+```typescript
+splat.ref.on("load", () => {
+  console.log("Splat loaded!");
+});
+```
+
+### error
+
+**Description:** Fired when fetching or parsing the splat file fails.
+
+**Example:**
+
+```typescript
+splat.ref.on("error", (error) => {
+  console.warn("Splat failed to load:", error);
+});
+```
+
 ## Usage Examples
 
 ### Basic Usage
 
 ```typescript
 import ThreeView, { geodeticToVector3, degreeToRadian } from "@navaramap/three";
-import type { SplatMeshDesc } from "@navaramap/three_default_descs";
+import type { SplatMeshDesc } from "@navaramap/three-default-descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
+} from "@navaramap/three-default-plugin";
 
 const view = new ThreeView<DefaultDescriptions>();
 view.addPlugin(new DefaultPlugin()); // registers "splat" → SplatMeshDesc

@@ -1,8 +1,8 @@
-# @navaramap/three_default_descs
+# @navaramap/three-default-descs
 
 The built-in mesh, light, and effect descriptors for `@navaramap/three`. Meshes range from primitives (box, sphere, cylinder, plane, tube, lines) to GLTF models, Gaussian splats, instanced variants, and atmosphere-related meshes (sky, stars). Lights cover the sun, ambient light, and light probes. Effects include aerial perspective, clouds, SSAO, SSR, selective bloom/outline, depth of field, tone mapping, and antialiasing (SMAA/FXAA).
 
-Most applications don't depend on this package directly: `@navaramap/three_default_plugin` registers everything here under standard keys and re-exports all classes and config types. Depend on this package directly when you want to register only a subset of descriptors yourself, or when you need the descriptor classes and config types without the plugin:
+Most applications don't depend on this package directly: `@navaramap/three-default-plugin` registers everything here under standard keys and re-exports all classes and config types. Depend on this package directly when you want to register only a subset of descriptors yourself, or when you need the descriptor classes and config types without the plugin:
 
 ```typescript
 import ThreeView, {
@@ -13,7 +13,7 @@ import ThreeView, {
 import {
   BoxMeshDesc,
   type BoxMeshConfig,
-} from "@navaramap/three_default_descs";
+} from "@navaramap/three-default-descs";
 
 const view = new ThreeView<{ mesh: BoxMeshConfig }>();
 view.registerMesh("box", BoxMeshDesc); // before init()

@@ -114,7 +114,7 @@ import ThreeView, { Color } from "@navaramap/three";
 import {
   BoxMeshDesc,
   SelectiveBloomEffectDesc,
-} from "@navaramap/three_default_descs";
+} from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();
@@ -147,8 +147,8 @@ const cubeDesc = view.addMesh<BoxMeshDesc>({
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { SelectiveBloomEffectDesc } from "@navaramap/three_default_descs";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { SelectiveBloomEffectDesc } from "@navaramap/three-default-descs";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 
 const view = new ThreeView();
 const plugin = new DefaultPlugin();
@@ -171,7 +171,7 @@ const bloomDesc = view.addEffect<SelectiveBloomEffectDesc>({
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { SelectiveBloomEffectDesc } from "@navaramap/three_default_descs";
+import { SelectiveBloomEffectDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();
@@ -191,7 +191,7 @@ const bloomDesc = view.addEffect<SelectiveBloomEffectDesc>({
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { SelectiveBloomEffectDesc } from "@navaramap/three_default_descs";
+import { SelectiveBloomEffectDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();
@@ -215,7 +215,7 @@ bloomDesc.update({
 
 ```typescript
 import ThreeView, { Color } from "@navaramap/three";
-import { SelectiveBloomEffectDesc } from "@navaramap/three_default_descs";
+import { SelectiveBloomEffectDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();
@@ -250,7 +250,7 @@ const buildingsLayer = view.addLayer({
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { SelectiveBloomEffectDesc } from "@navaramap/three_default_descs";
+import { SelectiveBloomEffectDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();

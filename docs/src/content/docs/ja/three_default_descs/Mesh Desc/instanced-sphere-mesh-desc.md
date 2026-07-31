@@ -239,7 +239,7 @@ const index = handle.ref.add({
 
 ```typescript
 import ThreeView, { Color } from "@navaramap/three";
-import { InstancedSphereMeshDesc } from "@navaramap/three_default_descs";
+import { InstancedSphereMeshDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 view.registerMesh("spheres", InstancedSphereMeshDesc);

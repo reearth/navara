@@ -41,7 +41,7 @@ sidebar:
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 
 const view = new ThreeView();
 const plugin = new DefaultPlugin();
@@ -59,7 +59,7 @@ view.toneMappingExposure = 10;
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { ToneMappingEffectDesc, ToneMappingMode } from "@navaramap/three_default_descs";
+import { ToneMappingEffectDesc, ToneMappingMode } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();
@@ -90,8 +90,8 @@ view.addEffect<ToneMappingEffectDesc>({
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { ToneMappingMode } from "@navaramap/three_default_descs";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { ToneMappingMode } from "@navaramap/three-default-descs";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 
 const view = new ThreeView();
 const plugin = new DefaultPlugin();
@@ -119,7 +119,7 @@ view.toneMappingExposure = 5;
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { ToneMappingEffectDesc, SMAAEffectDesc, ToneMappingMode } from "@navaramap/three_default_descs";
+import { ToneMappingEffectDesc, SMAAEffectDesc, ToneMappingMode } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();

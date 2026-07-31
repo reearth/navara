@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Integration test for @navaramap/three_react - uses built library files",
+  "description": "Integration test for @navaramap/three-react - uses built library files",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
@@ -20,9 +20,9 @@
     "@navaramap/engine-api": "workspace:*",
     "@navaramap/engine-worker": "workspace:*",
     "@navaramap/three": "workspace:*",
-    "@navaramap/three_default_descs": "workspace:*",
-    "@navaramap/three_default_plugin": "workspace:*",
-    "@navaramap/three_react": "workspace:*",
+    "@navaramap/three-default-descs": "workspace:*",
+    "@navaramap/three-default-plugin": "workspace:*",
+    "@navaramap/three-react": "workspace:*",
     "three": "0.185.1"
   },
   "devDependencies": {

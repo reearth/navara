@@ -72,7 +72,11 @@ describe("createPaintEvaluators", () => {
     expect(evaluators["fill-opacity"]).toBeDefined();
 
     // Test evaluation - MapLibre returns Color object
-    const color = evaluators["fill-color"]({ properties: {} }) as any;
+    const color = evaluators["fill-color"]({ properties: {} }) as {
+      r: number;
+      g: number;
+      b: number;
+    };
     expect(color.r).toBeCloseTo(1, 2);
     expect(color.g).toBeCloseTo(0, 2);
     expect(color.b).toBeCloseTo(0, 2);
@@ -94,7 +98,11 @@ describe("createPaintEvaluators", () => {
     const evaluators = createPaintEvaluators(layer, engine, "Polygon");
 
     const colorEvaluator = evaluators["fill-color"];
-    const color = colorEvaluator({ properties: { color: "#00ff00" } }) as any;
+    const color = colorEvaluator({ properties: { color: "#00ff00" } }) as {
+      r: number;
+      g: number;
+      b: number;
+    };
     expect(color.r).toBeCloseTo(0, 2);
     expect(color.g).toBeCloseTo(1, 2);
     expect(color.b).toBeCloseTo(0, 2);
@@ -114,7 +122,11 @@ describe("createPaintEvaluators", () => {
 
     expect(evaluators["fill-color"]).toBeDefined();
     // Default fill-color is black
-    const color = evaluators["fill-color"]({ properties: {} }) as any;
+    const color = evaluators["fill-color"]({ properties: {} }) as {
+      r: number;
+      g: number;
+      b: number;
+    };
     expect(color.r).toBeCloseTo(0, 2);
     expect(color.g).toBeCloseTo(0, 2);
     expect(color.b).toBeCloseTo(0, 2);
@@ -292,5 +304,234 @@ describe("toEvaluatedValue", () => {
     const result = toEvaluatedValue(layer, paintValues);
 
     expect(result.opacity).toBeCloseTo(1.0, 2);
+  });
+
+  describe("symbol layer geometryType requirement", () => {
+    it("should warn and skip processing when geometryType is undefined", () => {
+      const consoleWarnSpy = vi
+        .spyOn(console, "warn")
+        .mockImplementation(() => {});
+
+      const layer: StyleLayer = {
+        id: "test",
+        type: "symbol",
+        source: "test",
+      };
+
+      const paintValues = {
+        "icon-color": { r: 1, g: 0, b: 0, a: 1 },
+        "text-color": { r: 0, g: 0, b: 1, a: 1 },
+      };
+
+      const layoutValues = {
+        "icon-image": "/icons/marker.svg",
+        "text-field": "Label",
+      };
+
+      // geometryType is undefined - should warn and skip
+      const warnedLayers = new Set<string>();
+      const result = toEvaluatedValue(
+        layer,
+        paintValues,
+        layoutValues,
+        undefined,
+        warnedLayers,
+      );
+
+      // Should have logged a warning (once per layer)
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Symbol layer "test": missing meshGeomType'),
+      );
+
+      // Should not process any symbol properties
+      expect(result.image).toBeUndefined();
+      expect(result.text).toBeUndefined();
+      expect(result.size).toBeUndefined();
+
+      // But should still set show flag
+      expect(result.show).toBe(true);
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it("should only process icon when geometryType is billboard", () => {
+      const layer: StyleLayer = {
+        id: "test",
+        type: "symbol",
+        source: "test",
+      };
+
+      const paintValues = {
+        "icon-color": { r: 1, g: 0, b: 0, a: 1 },
+        "text-color": { r: 0, g: 0, b: 1, a: 1 },
+      };
+
+      const layoutValues = {
+        "icon-image": "/icons/marker.svg",
+        "text-field": "Label",
+      };
+
+      // geometryType is explicitly "billboard"
+      const result = toEvaluatedValue(
+        layer,
+        paintValues,
+        layoutValues,
+        "billboard",
+      );
+
+      // Only icon should be processed
+      expect(result.image).toBe("/icons/marker.svg");
+      expect(result.text).toBeUndefined();
+    });
+
+    it("should only process text when geometryType is text", () => {
+      const layer: StyleLayer = {
+        id: "test",
+        type: "symbol",
+        source: "test",
+      };
+
+      const paintValues = {
+        "icon-color": { r: 1, g: 0, b: 0, a: 1 },
+        "text-color": { r: 0, g: 0, b: 1, a: 1 },
+      };
+
+      const layoutValues = {
+        "icon-image": "/icons/marker.svg",
+        "text-field": "Label",
+      };
+
+      // geometryType is explicitly "text"
+      const result = toEvaluatedValue(layer, paintValues, layoutValues, "text");
+
+      // Only text should be processed
+      expect(result.text).toBe("Label");
+      expect(result.image).toBeUndefined();
+    });
+
+    it("should warn and skip when geometryType is invalid (not billboard or text)", () => {
+      const consoleWarnSpy = vi
+        .spyOn(console, "warn")
+        .mockImplementation(() => {});
+
+      const layer: StyleLayer = {
+        id: "test",
+        type: "symbol",
+        source: "test",
+      };
+
+      const paintValues = {
+        "icon-color": { r: 1, g: 0, b: 0, a: 1 },
+        "text-color": { r: 0, g: 0, b: 1, a: 1 },
+      };
+
+      const layoutValues = {
+        "icon-image": "/icons/marker.svg",
+        "text-field": "Label",
+      };
+
+      // meshGeomType is "point" (wiring mistake - should be "billboard" or "text")
+      const warnedLayers = new Set<string>();
+      const result = toEvaluatedValue(
+        layer,
+        paintValues,
+        layoutValues,
+        "point" as any,
+        warnedLayers,
+      );
+
+      // Should warn about invalid meshGeomType
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('invalid meshGeomType "point"'),
+      );
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Expected "billboard" or "text"'),
+      );
+
+      // Should not process any symbol properties
+      expect(result.image).toBeUndefined();
+      expect(result.text).toBeUndefined();
+      expect(result.size).toBeUndefined();
+
+      // But should still set show flag
+      expect(result.show).toBe(true);
+
+      consoleWarnSpy.mockRestore();
+    });
+  });
+
+  describe("fill-extrusion layer conversion", () => {
+    it("should convert base=0, top>0 to height=0 and extrudedHeight=top", () => {
+      const layer: StyleLayer = {
+        id: "test",
+        type: "fill-extrusion",
+        source: "test",
+      };
+
+      const paintValues = {
+        "fill-extrusion-base": 0,
+        "fill-extrusion-height": 50,
+      };
+
+      const result = toEvaluatedValue(layer, paintValues);
+
+      expect(result.height).toBe(0);
+      expect(result.extrudedHeight).toBe(50);
+    });
+
+    it("should convert base>0, top>base to height=base and extrudedHeight=(top-base)", () => {
+      const layer: StyleLayer = {
+        id: "test",
+        type: "fill-extrusion",
+        source: "test",
+      };
+
+      const paintValues = {
+        "fill-extrusion-base": 20,
+        "fill-extrusion-height": 80,
+      };
+
+      const result = toEvaluatedValue(layer, paintValues);
+
+      expect(result.height).toBe(20);
+      expect(result.extrudedHeight).toBe(60); // 80 - 20
+    });
+
+    it("should clamp negative delta when base>top (height=base, no extrudedHeight)", () => {
+      const layer: StyleLayer = {
+        id: "test",
+        type: "fill-extrusion",
+        source: "test",
+      };
+
+      const paintValues = {
+        "fill-extrusion-base": 100,
+        "fill-extrusion-height": 50,
+      };
+
+      const result = toEvaluatedValue(layer, paintValues);
+
+      // Base is still set to height
+      expect(result.height).toBe(100);
+      // But extrudedHeight should not be set (delta clamped to 0, then filtered by > 0 check)
+      expect(result.extrudedHeight).toBeUndefined();
+    });
+
+    it("should use defaults (0) when values are missing", () => {
+      const layer: StyleLayer = {
+        id: "test",
+        type: "fill-extrusion",
+        source: "test",
+      };
+
+      // Missing both base and height
+      const paintValues = {};
+
+      const result = toEvaluatedValue(layer, paintValues);
+
+      expect(result.height).toBe(0);
+      // extrudedHeight not set because delta = max(0, 0 - 0) = 0, which fails > 0 check
+      expect(result.extrudedHeight).toBeUndefined();
+    });
   });
 });

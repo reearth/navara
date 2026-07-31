@@ -5,10 +5,10 @@ Navara is a 3D globe map engine. Reusable GIS logic (tiling, terrain, styling, c
 ## Install
 
 ```bash
-pnpm add @navaramap/three @navaramap/three_default_plugin three postprocessing
+pnpm add @navaramap/three @navaramap/three-default-plugin three postprocessing
 ```
 
-`three` and `postprocessing` are peer dependencies. Most apps also want `@navaramap/three_default_plugin`, which registers the built-in mesh/effect/light descriptors.
+`three` and `postprocessing` are peer dependencies. Most apps also want `@navaramap/three-default-plugin`, which registers the built-in mesh/effect/light descriptors.
 
 ## Quick Start
 
@@ -19,7 +19,7 @@ import ThreeView from "@navaramap/three";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
+} from "@navaramap/three-default-plugin";
 
 const view = new ThreeView<DefaultDescriptions>({ shadow: true }); // 1. construct
 const defaultPlugin = new DefaultPlugin();
@@ -56,10 +56,10 @@ Beyond the declarative Source/Layer API, `ThreeView` exposes per-feature styling
 
 ## Related packages
 
-- [`@navaramap/three_default_plugin`](../navara_three_default_plugin) — registers all built-in descriptors at once
-- [`@navaramap/three_default_descs`](../navara_three_default_descs) — the individual descriptor classes and their config types
-- [`@navaramap/three_plugins`](../navara_three_plugins) — optional feature plugins (first-person walk, DOM overlays, Cesium ion, TileJSON)
-- [`@navaramap/three_react`](../navara_three_react) — React bindings
+- [`@navaramap/three-default-plugin`](../navara_three_default_plugin) — registers all built-in descriptors at once
+- [`@navaramap/three-default-descs`](../navara_three_default_descs) — the individual descriptor classes and their config types
+- [`@navaramap/three-plugins`](../navara_three_plugins) — optional feature plugins (first-person walk, DOM overlays, Cesium ion, TileJSON)
+- [`@navaramap/three-react`](../navara_three_react) — React bindings
 
 ## Documentation
 

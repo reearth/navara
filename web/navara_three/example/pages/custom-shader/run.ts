@@ -8,11 +8,11 @@ import ThreeView, {
   eastNorthUpToFixedFrame,
   geodeticToVector3,
 } from "@navaramap/three";
-import type { CloudsEffectDesc } from "@navaramap/three_default_descs";
+import type { CloudsEffectDesc } from "@navaramap/three-default-descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
+} from "@navaramap/three-default-plugin";
 import {
   Color,
   ShaderLib,

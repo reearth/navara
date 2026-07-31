@@ -178,7 +178,7 @@ sidebar:
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 
 const view = new ThreeView();
 const plugin = new DefaultPlugin();
@@ -202,8 +202,8 @@ defaultLayers.aerialPerspective.update({
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { CloudsEffectDesc } from "@navaramap/three_default_descs";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { CloudsEffectDesc } from "@navaramap/three-default-descs";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 
 const view = new ThreeView();
 const plugin = new DefaultPlugin();

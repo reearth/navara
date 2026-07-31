@@ -108,7 +108,7 @@ import ThreeView, { Color } from "@navaramap/three";
 import {
   BoxMeshDesc,
   SelectiveOutlineEffectDesc,
-} from "@navaramap/three_default_descs";
+} from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();
@@ -139,8 +139,8 @@ const cubeDesc = view.addMesh<BoxMeshDesc>({
 
 ```typescript
 import ThreeView, { Color } from "@navaramap/three";
-import { SelectiveOutlineEffectDesc } from "@navaramap/three_default_descs";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { SelectiveOutlineEffectDesc } from "@navaramap/three-default-descs";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 
 const view = new ThreeView();
 const plugin = new DefaultPlugin();
@@ -163,7 +163,7 @@ const outlineDesc = view.addEffect<SelectiveOutlineEffectDesc>({
 
 ```typescript
 import ThreeView, { Color } from "@navaramap/three";
-import { SelectiveOutlineEffectDesc } from "@navaramap/three_default_descs";
+import { SelectiveOutlineEffectDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();
@@ -183,7 +183,7 @@ const outlineDesc = view.addEffect<SelectiveOutlineEffectDesc>({
 
 ```typescript
 import ThreeView, { Color } from "@navaramap/three";
-import { SelectiveOutlineEffectDesc } from "@navaramap/three_default_descs";
+import { SelectiveOutlineEffectDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();
@@ -208,7 +208,7 @@ outlineDesc.update({
 
 ```typescript
 import ThreeView, { Color } from "@navaramap/three";
-import { SelectiveOutlineEffectDesc } from "@navaramap/three_default_descs";
+import { SelectiveOutlineEffectDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();
@@ -245,7 +245,7 @@ import {
   BoxMeshDesc,
   SelectiveBloomEffectDesc,
   SelectiveOutlineEffectDesc,
-} from "@navaramap/three_default_descs";
+} from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();

@@ -6,7 +6,7 @@ import ThreeView, {
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
+} from "@navaramap/three-default-plugin";
 import { Pane } from "tweakpane";
 
 import {

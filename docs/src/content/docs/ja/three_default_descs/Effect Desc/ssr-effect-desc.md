@@ -17,6 +17,47 @@ sidebar:
 
 **Default:** `true`
 
+### geometryBuffer
+
+**Type:** `Texture | null | undefined`
+
+**Description:** 反射計算に使用するカスタムのジオメトリバッファです。未指定または`null`の場合はエンジンのMRTノーマルバッファが使用され、マテリアルがreflectivityを書き込んだ場所（例: `water: true`のポリゴン）にSSRが適用されます。独自のスクリーンアラインドテクスチャを渡すことで、SSRを適用する場所をアプリケーション側で完全に制御できます — 例えば動的に描画される水たまりなどです。
+
+各テクセルはエンジンのGバッファエンコーディングに従う必要があります:
+
+- `.xy` — octahedralパックされた**ビュー空間**法線（`@takram/three-geospatial/shaders`の`packing`チャンクの`packNormalToVec2`）
+- `.z` — reflectivity/metalnessマスク。値が`0.01`未満のピクセルではSSRがスキップされます。またレイトレーシングシェーダはこの`.z`をroughnessのベース値としても使用します
+- `.w` — roughness。cone tracing有効時（既定）はブラーのコーン角を制御し、cone tracing無効時は`.z`に乗算されてGGXレイジッタのroughness（`.z * .w`）になります
+
+テクスチャは正規化スクリーンUVでサンプリングされるため、描画バッファと同じサイズにしてください（パックされた法線は符号付きの値なので`HalfFloatType`を使用します）。リサイズ時にサイズを追従させるのはアプリケーションの責任です。テクスチャの*内容*の更新（毎フレームのrender-to-texture）は自動的に反映されます。`update()`呼び出しが必要なのはテクスチャ*オブジェクト*を差し替える場合のみです。オプションを`null`に戻すとMRTノーマルバッファにリセットされます:
+
+```typescript
+ssrDesc.update({ ssr: { geometryBuffer: null } });
+```
+
+シーン自身の法線の上に合成する場合は、SSRディスクリプタのハンドル経由でMRTノーマルバッファを読み取れます:
+
+```typescript
+import { type MRTPassEffectDesc } from "@navaramap/three";
+
+const mrtPass = ssrDesc.ref.find<MRTPassEffectDesc>("mrt");
+const sceneNormals = mrtPass?.normalBuffer; // Texture | undefined
+```
+
+**Default:** `null`（エンジンのMRTノーマルバッファ）
+
+**Example:**
+
+```typescript
+{
+  ssr: {
+    geometryBuffer: myRenderTarget.texture,
+  }
+}
+```
+
+アニメーションする水たまりをカスタムジオメトリバッファに描画する完全な動作例は、NavaraリポジトリのExample `example/pages/ssr-puddle/` にあります。
+
 ### resolutionScale
 
 **Type:** `number | undefined`
@@ -375,7 +416,7 @@ sidebar:
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { SSREffectDesc } from "@navaramap/three_default_descs";
+import { SSREffectDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();
@@ -390,8 +431,8 @@ const ssrDesc = view.addEffect<SSREffectDesc>({
 
 ```typescript
 import ThreeView, { Color } from "@navaramap/three";
-import { SSREffectDesc } from "@navaramap/three_default_descs";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { SSREffectDesc } from "@navaramap/three-default-descs";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 
 const view = new ThreeView();
 const plugin = new DefaultPlugin();
@@ -448,7 +489,7 @@ view.addLayer({
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { SSREffectDesc } from "@navaramap/three_default_descs";
+import { SSREffectDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();
@@ -467,7 +508,7 @@ const ssrDesc = view.addEffect<SSREffectDesc>({
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { SSREffectDesc } from "@navaramap/three_default_descs";
+import { SSREffectDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();

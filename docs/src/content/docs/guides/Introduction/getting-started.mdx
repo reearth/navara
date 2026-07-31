@@ -17,14 +17,14 @@ You need [Node.js](https://nodejs.org/) (v18 or later) and a package manager suc
 
 ## Install the Packages
 
-Navara is published on npm under the [`@navaramap`](https://www.npmjs.com/org/navaramap) scope. In your project — any bundler setup works; a plain [Vite](https://vite.dev/) TypeScript project is enough — install the Three.js renderer `@navaramap/three`, the default plugin `@navaramap/three_default_plugin`, and the peer dependencies `three` and `postprocessing`:
+Navara is published on npm under the [`@navaramap`](https://www.npmjs.com/org/navaramap) scope. In your project — any bundler setup works; a plain [Vite](https://vite.dev/) TypeScript project is enough — install the Three.js renderer `@navaramap/three`, the default plugin `@navaramap/three-default-plugin`, and the peer dependencies `three` and `postprocessing`:
 
 <Tabs syncKey="pkg">
 
 <TabItem label="npm">
 
 ```bash
-npm install @navaramap/three @navaramap/three_default_plugin three postprocessing
+npm install @navaramap/three @navaramap/three-default-plugin three postprocessing
 ```
 
 </TabItem>
@@ -32,7 +32,7 @@ npm install @navaramap/three @navaramap/three_default_plugin three postprocessin
 <TabItem label="yarn">
 
 ```bash
-yarn add @navaramap/three @navaramap/three_default_plugin three postprocessing
+yarn add @navaramap/three @navaramap/three-default-plugin three postprocessing
 ```
 
 </TabItem>
@@ -40,7 +40,7 @@ yarn add @navaramap/three @navaramap/three_default_plugin three postprocessing
 <TabItem label="pnpm">
 
 ```bash
-pnpm add @navaramap/three @navaramap/three_default_plugin three postprocessing
+pnpm add @navaramap/three @navaramap/three-default-plugin three postprocessing
 ```
 
 </TabItem>
@@ -55,7 +55,7 @@ Here is the core code — the same example shown in [What is Navara?](../what-is
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 
 const view = new ThreeView({ useNormal: true });
 

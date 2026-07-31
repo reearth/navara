@@ -19,8 +19,8 @@ docs/
 ├── guide/                            # Guides for writing and updating docs
 └── src/content/docs/                 # Documentation pages
     ├── three/                        # @navaramap/three
-    ├── three_default_descs/         # @navaramap/three_default_descs
-    ├── three_default_plugin/         # @navaramap/three_default_plugin
+    ├── three_default_descs/         # @navaramap/three-default-descs
+    ├── three_default_plugin/         # @navaramap/three-default-plugin
     ├── engine/                       # WASM engine
     ├── guides/                       # General project guides
     ├── ja/                           # Japanese locale (mirrors root structure)

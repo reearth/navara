@@ -1,5 +1,5 @@
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
-import { ViewProvider } from "@navaramap/three_react";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
+import { ViewProvider } from "@navaramap/three-react";
 // import { StrictMode } from "react";
 import { useMemo } from "react";
 import { createRoot } from "react-dom/client";

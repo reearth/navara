@@ -5,8 +5,8 @@ import ThreeView, {
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
-import { PersonViewPlugin } from "@navaramap/three_plugins";
+} from "@navaramap/three-default-plugin";
+import { PersonViewPlugin } from "@navaramap/three-plugins";
 import { Pane } from "tweakpane";
 
 import {

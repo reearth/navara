@@ -1,5 +1,5 @@
-import type { DefaultPlugin } from "@navaramap/three_default_plugin";
-import { useViewContext } from "@navaramap/three_react";
+import type { DefaultPlugin } from "@navaramap/three-default-plugin";
+import { useViewContext } from "@navaramap/three-react";
 import { useEffect, useState } from "react";
 
 import { FLOOD_RANK_COLOR_MAP } from "../../../helpers/colors";

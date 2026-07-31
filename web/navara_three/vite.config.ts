@@ -6,7 +6,11 @@ import glsl from "vite-plugin-glsl";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 import tsconfig from "vite-tsconfig-paths";
 
-import { commonConfig, composePlugins } from "../vite.config.common";
+import {
+  assetFileNamesPreservingAssetsDir,
+  commonConfig,
+  composePlugins,
+} from "../vite.config.common";
 
 export default defineConfig((env) => {
   const common = commonConfig("Navara", env);
@@ -23,7 +27,7 @@ export default defineConfig((env) => {
             "@navaramap/engine",
             "@navaramap/engine-api",
             "@navaramap/core",
-            "@navaramap/three_api",
+            "@navaramap/three-api",
             "@navaramap/worker",
           ],
         },
@@ -54,6 +58,9 @@ export default defineConfig((env) => {
           ...(common.build.rollupOptions.external as string[]),
           "three",
         ],
+        output: {
+          assetFileNames: assetFileNamesPreservingAssetsDir,
+        },
       },
       watch: undefined,
       sourcemap: true,

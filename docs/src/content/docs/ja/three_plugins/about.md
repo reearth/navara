@@ -33,7 +33,7 @@ import {
   CesiumIonPlugin,
   TileJsonPlugin,
   moveOverlayElement,
-} from "@navaramap/three_plugins";
+} from "@navaramap/three-plugins";
 ```
 
 ## 提供プラグイン
@@ -52,7 +52,7 @@ import {
 
 ### TileJsonPlugin
 
-TileJSON 3.0.0 ドキュメントを取得し、`addSource()` を通じて単一のラスターまたはベクトルタイルソースとして登録するプラグインです。タイル URL、ズーム範囲、スキーム、アトリビューションをドキュメントから導出します。詳細は [TileJsonPlugin](../tilejsonplugin/) を参照してください。
+TileJSON 3.0.0 ドキュメントを取得し、`addSource()` を通じて単一のラスター・ベクトル・raster-DEM（標高）タイルソースとして登録するプラグインです。タイル URL、ズーム範囲、スキーム、アトリビューション、そして raster-DEM では MapLibre 互換の `tileSize` / `encoding` をドキュメントから導出します。詳細は [TileJsonPlugin](../tilejsonplugin/) を参照してください。
 
 ## 使い方
 
@@ -60,8 +60,8 @@ TileJSON 3.0.0 ドキュメントを取得し、`addSource()` を通じて単一
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
-import { PersonViewPlugin, OverlayPlugin } from "@navaramap/three_plugins";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
+import { PersonViewPlugin, OverlayPlugin } from "@navaramap/three-plugins";
 
 const view = new ThreeView({ container, animation: true });
 

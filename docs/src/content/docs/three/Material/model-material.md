@@ -85,24 +85,6 @@ For advanced animation features such as `animationAutoPlay`, `animationClips`, `
 }
 ```
 
-### clampToGround
-
-**Type:** `boolean | undefined`
-
-**Description:** Specifies whether to clamp the model to the ground.
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  model: {
-    clampToGround: true
-  }
-}
-```
-
 ### color
 
 **Type:** `Color | undefined`

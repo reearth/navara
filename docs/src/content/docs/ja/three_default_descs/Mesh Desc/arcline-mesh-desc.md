@@ -300,7 +300,7 @@ import { Color } from "@navaramap/three";
 
 ```typescript
 import ThreeView, { Color } from "@navaramap/three";
-import { ArclineMeshDesc } from "@navaramap/three_default_descs";
+import { ArclineMeshDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 view.registerMesh("arcLines", ArclineMeshDesc);

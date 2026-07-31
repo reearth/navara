@@ -80,7 +80,7 @@ Model features follow a different pattern — they don't use `BatchedFeature` or
 | Component | Description |
 |-----------|-------------|
 | **`ModelGeometry`** | Coordinates and CRS — triggers `transfer_mesh` via `Added<ModelGeometry>` |
-| **`ModelMaterial`** | Visual appearance (size, rotation, clamp_to_ground, etc.) |
+| **`ModelMaterial`** | Visual appearance (size, rotation, etc.) |
 | **`ModelBin`** | Binary model data (GLB) |
 | **`FeatureBatchId`** | Optional batch ID |
 | **`GlobalBatchIds`** | Optional per-vertex batch IDs |

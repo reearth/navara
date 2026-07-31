@@ -19,7 +19,8 @@ pub use resolve::{
 };
 pub use source::{ReadyState, TileSource, VectorTileSource};
 pub use source_cache::{
-    SourceId, TraversalConfig, VectorTileSourceCache, VectorTileSourceResources,
+    CLAMP_TO_GROUND_DYNAMIC_SSE_SCALE, GEOMETRY_DYNAMIC_SSE_SCALE, SourceId, TraversalConfig,
+    VectorTileSourceCache, VectorTileSourceResources,
 };
 pub use tile::render::{OwningVectorTile, RenderedTile, VectorTileGpuCost};
 pub use tile::system::estimate_vector_tile_cost;

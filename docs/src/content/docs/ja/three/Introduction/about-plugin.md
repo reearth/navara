@@ -53,7 +53,7 @@ navara_three はできるだけ汎用性の高いモジュールであること�
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 
 // 1. プラグインインスタンスを作成
 const plugin = new DefaultPlugin();
@@ -79,7 +79,7 @@ const layers = plugin.addDefaultPhotorealScene();
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 
 const plugin = new DefaultPlugin();
 const view = new ThreeView({});
@@ -102,7 +102,7 @@ view.addEffect({ toneMapping: {} });
 - **OverlayPlugin** — ワールド座標からスクリーン座標への HTML オーバーレイ投影
 
 ```typescript
-import { PersonViewPlugin, OverlayPlugin } from "@navaramap/three_plugins";
+import { PersonViewPlugin, OverlayPlugin } from "@navaramap/three-plugins";
 ```
 
 詳細は [three_plugins のドキュメント](../../../three_plugins/about/) を参照してください。

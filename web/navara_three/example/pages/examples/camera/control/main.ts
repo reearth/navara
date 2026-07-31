@@ -1,10 +1,9 @@
 import ThreeView from "@navaramap/three";
-import { TileJsonPlugin } from "@navaramap/three_plugins";
+import { TileJsonPlugin } from "@navaramap/three-plugins";
 
 import { addButton } from "../../../../helpers/button";
+import { initializeExample } from "../../../../helpers/initialize";
 
-// Distance from the airport along the camera forward ray; keeps the airport
-// at the view center regardless of pitch.
 const CAMERA_DISTANCE = 3700;
 const AIRPORTS = [
   { label: "Haneda", lng: 139.7798, lat: 35.5494 },
@@ -22,13 +21,10 @@ await view.init();
 
 const basemap = await tilejson.addSource({
   type: "raster-tile",
-  url: "https://papers.reearth.land/styles/dark/tilejson.json",
+  url: "https://papers.reearth.land/styles/papers-dark/tilejson.json",
 });
 view.addLayer({ type: "raster", source: basemap });
 
-// setCamera places the view instantly. With `distance` the camera is set back
-// from the target lng/lat along its forward ray, so the airport sits at the
-// view center.
 const [haneda] = AIRPORTS;
 view.setCamera({
   lng: haneda.lng,
@@ -41,10 +37,11 @@ view.setCamera({
 
 for (const { label, lng, lat } of AIRPORTS) {
   addButton(label, () => {
-    // flyTo animates to the destination, arcing up high enough to clear the globe.
     view.flyTo(
       { lng, lat, distance: CAMERA_DISTANCE, heading: 0, pitch: -60, roll: 0 },
       2000,
     );
   });
 }
+
+initializeExample(view);

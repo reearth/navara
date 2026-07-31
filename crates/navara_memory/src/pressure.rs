@@ -112,6 +112,14 @@ pub struct SsePressure {
     /// evict → refetch reload loop. Closes at `usage >= budget`, reopens at
     /// `usage <= evict_target()` (hysteresis band holds the previous state).
     pub load_gate_closed: bool,
+    /// When `true`, speculative prefetching (e.g. terrain tiles beyond the
+    /// horizon) must not start new loads. Closes as soon as resident usage
+    /// reaches the eviction reopen target — much earlier than
+    /// `load_gate_closed` — so prefetch only ever spends the headroom BELOW
+    /// that target. Eviction drops usage back to exactly the target, where
+    /// this gate is still closed, so evicting speculative meshes can never
+    /// kick off a refetch → re-evict loop.
+    pub prefetch_gate_closed: bool,
 }
 
 impl Default for SsePressure {
@@ -121,6 +129,7 @@ impl Default for SsePressure {
             min: 1.0,
             max: MAX_SSE_MULTIPLIER,
             load_gate_closed: false,
+            prefetch_gate_closed: false,
         }
     }
 }
@@ -196,6 +205,12 @@ pub fn update_sse_pressure(
         if pressure.load_gate_closed != gate {
             pressure.load_gate_closed = gate;
         }
+        // No hysteresis needed: crossing the line only stops NEW speculative
+        // loads, and the write guard keeps change detection quiet.
+        let prefetch_gate = usage >= ledger.evict_target();
+        if pressure.prefetch_gate_closed != prefetch_gate {
+            pressure.prefetch_gate_closed = prefetch_gate;
+        }
         if usage > budget {
             let progressed = ledger.evicted_count != local.last_evicted;
             if progressed {
@@ -248,6 +263,9 @@ pub fn update_sse_pressure(
         multiplier = min;
         if pressure.load_gate_closed {
             pressure.load_gate_closed = false;
+        }
+        if pressure.prefetch_gate_closed {
+            pressure.prefetch_gate_closed = false;
         }
     }
 

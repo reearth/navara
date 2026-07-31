@@ -219,6 +219,7 @@ export class SSREffect extends Effect {
 
   set geometryBuffer(value: Texture | null) {
     this.ssrMaterial.geometryBuffer = value;
+    this.coneTracingPass.coneTracingMaterial.normalBuffer = value;
   }
 
   get iterations(): number {

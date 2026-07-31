@@ -192,7 +192,7 @@ The `FogLightEffectDesc` class is a Descriptor that generates volumetric lightin
 
 ```typescript
 import ThreeView, { Color } from "@navaramap/three";
-import { FogLightEffectDesc } from "@navaramap/three_default_descs";
+import { FogLightEffectDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();
@@ -218,7 +218,7 @@ view.addEffect<FogLightEffectDesc>({
 
 ```typescript
 import ThreeView, { Color, type LayerDescription } from "@navaramap/three";
-import { FogLightEffectDesc } from "@navaramap/three_default_descs";
+import { FogLightEffectDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();
@@ -248,7 +248,7 @@ view.addEffect<FogLightEffectDesc>(fogEffectDesc);
 
 ```typescript
 import ThreeView, { Color } from "@navaramap/three";
-import { FogLightEffectDesc, type FogLightDefinition } from "@navaramap/three_default_descs";
+import { FogLightEffectDesc, type FogLightDefinition } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();
@@ -289,7 +289,7 @@ function addLight(x: number, y: number, z: number) {
 
 ```typescript
 import ThreeView, { Color } from "@navaramap/three";
-import { FogLightEffectDesc } from "@navaramap/three_default_descs";
+import { FogLightEffectDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();

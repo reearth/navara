@@ -29,7 +29,7 @@ If a change touches only `web/`, the pnpm equivalents are faster: `pnpm run buil
 
 ## Skills
 
-`.claude/skills/` holds distilled best practices for working with Navara: [navara-usage](.claude/skills/navara-usage/SKILL.md) (how to use `@navaramap/three` — for application code, examples, and docs snippets), [navara-add-example](.claude/skills/navara-add-example/SKILL.md), and [navara-add-docs-example](.claude/skills/navara-add-docs-example/SKILL.md).
+`skills/` holds distilled best practices for working with Navara: [navara-usage](skills/navara-usage/SKILL.md) (how to use `@navaramap/three` — for application code, examples, and docs snippets), [navara-add-example](skills/navara-add-example/SKILL.md), and [navara-add-docs-example](skills/navara-add-docs-example/SKILL.md), and [navara-lp](skills/navara-lp/SKILL.md) (building and maintaining the marketing landing page; its `references/scene-tiers.md` covers the fixed-camera "API tier" scene stills).
 
 **When to record knowledge in a skill vs. docs:**
 

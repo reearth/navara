@@ -399,7 +399,7 @@ console.log("Instance count:", handle.ref.count);
 
 ```typescript
 import ThreeView, { Color } from "@navaramap/three";
-import { InstancedBoxMeshDesc } from "@navaramap/three_default_descs";
+import { InstancedBoxMeshDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 view.registerMesh("boxes", InstancedBoxMeshDesc);

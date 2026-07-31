@@ -53,7 +53,7 @@ Plugins operate in the following order:
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 
 // 1. Create a plugin instance
 const plugin = new DefaultPlugin();
@@ -79,7 +79,7 @@ The `DefaultPlugin` provided by the [three_default_plugin](../../../three_defaul
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 
 const plugin = new DefaultPlugin();
 const view = new ThreeView({});
@@ -102,7 +102,7 @@ The [three_plugins](../../../three_plugins/about/) package provides a collection
 - **OverlayPlugin** — Projects world coordinates to screen coordinates for HTML overlays
 
 ```typescript
-import { PersonViewPlugin, OverlayPlugin } from "@navaramap/three_plugins";
+import { PersonViewPlugin, OverlayPlugin } from "@navaramap/three-plugins";
 ```
 
 For details, see the [three_plugins documentation](../../../three_plugins/about/).

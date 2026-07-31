@@ -253,7 +253,7 @@ sidebar:
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { SmoothLineMeshDesc } from "@navaramap/three_default_descs";
+import { SmoothLineMeshDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 view.registerMesh("smoothLines", SmoothLineMeshDesc);

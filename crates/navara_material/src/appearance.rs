@@ -63,6 +63,18 @@ impl Appearance {
             _ => {}
         }
     }
+
+    /// Clone the first model material in `appearances`, falling back to the
+    /// default material. Layers can be added without an explicit `model`
+    /// material, so consumers must not assume the appearance list contains one.
+    pub fn clone_model_or_default(appearances: &[Appearance]) -> ModelMaterial {
+        for appearance in appearances {
+            if let Appearance::Model(material) = appearance {
+                return material.clone();
+            }
+        }
+        ModelMaterial::default()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Component)]
@@ -455,7 +467,6 @@ pub struct ModelMaterial {
     pub url: String,
     pub size: f32,
     pub height: f32,
-    pub clamp_to_ground: bool,
     pub should_rotate_in_default: bool,
     pub max_sse: f32,
     pub color: u32,
@@ -502,7 +513,6 @@ impl Default for ModelMaterial {
             cast_shadow: false,
             receive_shadow: false,
             size: 1.,
-            clamp_to_ground: true,
             height: 1.,
             url: "".to_string(),
             should_rotate_in_default: true,
@@ -661,5 +671,37 @@ impl Default for TerrainMaterial {
             skirt: true,
             skirt_exaggeration: 1.0,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn clone_model_or_default_returns_the_model_material() {
+        let material = ModelMaterial {
+            max_sse: 42.,
+            ..Default::default()
+        };
+        let appearances = vec![
+            Appearance::Point(PointMaterial::default()),
+            Appearance::Model(material.clone()),
+        ];
+        assert_eq!(Appearance::clone_model_or_default(&appearances), material);
+    }
+
+    #[test]
+    fn clone_model_or_default_falls_back_when_model_is_missing() {
+        // A layer added without an explicit `model` material has an empty
+        // appearance list; consumers must get the default instead of panicking.
+        assert_eq!(
+            Appearance::clone_model_or_default(&[]),
+            ModelMaterial::default()
+        );
+        assert_eq!(
+            Appearance::clone_model_or_default(&[Appearance::Point(PointMaterial::default())]),
+            ModelMaterial::default()
+        );
     }
 }

@@ -6,7 +6,7 @@ This document explains how DrapedMesh works and how to use it in custom descript
 
 DrapedMesh projects a 3D mesh onto terrain using a stencil-buffer technique. Instead of floating above or clipping through the ground, a draped mesh paints its shape directly onto the terrain surface, similar to how a decal is applied to a surface.
 
-This is a purely Three.js construct with no WASM dependency, so it can be used in any layer package including `@navaramap/three_default_descs`.
+This is a purely Three.js construct with no WASM dependency, so it can be used in any layer package including `@navaramap/three-default-descs`.
 
 ## How It Works
 
@@ -187,7 +187,7 @@ layer.update({ myBox: { draped: false } });
 
 ## Built-in Support
 
-The default descriptors `BoxMeshDesc` and `CylinderMeshDesc` in `@navaramap/three_default_descs` support the `draped` option out of the box:
+The default descriptors `BoxMeshDesc` and `CylinderMeshDesc` in `@navaramap/three-default-descs` support the `draped` option out of the box:
 
 ```typescript
 const layer = view.addLayer<BoxMeshDesc>({

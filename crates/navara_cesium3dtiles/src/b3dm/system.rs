@@ -76,10 +76,7 @@ pub fn construct_model_by_b3dm_layer(
             Ok(l) => l,
             Err(_) => unreachable!(),
         };
-        let mut appearance = match &layer.appearances[0] {
-            Appearance::Model(m) => m.clone(),
-            _ => unimplemented!(),
-        };
+        let mut appearance = Appearance::clone_model_or_default(&layer.appearances);
         appearance.should_rotate_in_default = false;
 
         let (center, glb_bin_handle, batch_table, batch_length) =

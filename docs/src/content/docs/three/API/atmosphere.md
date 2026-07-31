@@ -148,6 +148,78 @@ if (isNight) {
 }
 ```
 
+### getSunElevation()
+
+Returns the sun's elevation angle in degrees above the local horizon at a location, for the current `date`. Positive values are above the horizon, negative below (night). Atmospheric refraction is included.
+
+**Syntax:**
+
+```typescript
+getSunElevation(location: { lat: number; lng: number }): number
+```
+
+**Parameters:**
+
+- `location`: Geographic coordinates in degrees. Only `lat` and `lng` are used.
+
+**Returns:**
+
+The sun elevation in degrees.
+
+**Example:**
+
+```typescript
+const elevation = view.atmosphere.getSunElevation(view.camera.positionGeographic);
+if (elevation < 0) {
+  console.log("The sun has set.");
+}
+```
+
+### getSolarTime()
+
+Returns the local apparent solar time at a longitude, for the current `date`, in hours in the range `[0, 24)` where `12` is solar noon. It is derived from the sun's hour angle, so it accounts for the equation of time.
+
+**Syntax:**
+
+```typescript
+getSolarTime(location: { lng: number }): number
+```
+
+**Parameters:**
+
+- `location`: Only `lng` (degrees) affects the result.
+
+**Returns:**
+
+The local solar time in hours (e.g. `6.3` = 06:18).
+
+**Example:**
+
+```typescript
+const hours = view.atmosphere.getSolarTime({ lng: 139.69 });
+```
+
+### setSolarTime()
+
+Adjusts `date` so the local apparent solar time at a longitude equals `hours` (0–24), keeping the same solar day. It is the inverse of [`getSolarTime()`](#getsolartime) and is convenient for driving a time-of-day slider whose centre lands on daytime regardless of the viewer's timezone.
+
+**Syntax:**
+
+```typescript
+setSolarTime(location: { lng: number }, hours: number): void
+```
+
+**Parameters:**
+
+- `location`: Only `lng` (degrees) affects the result.
+- `hours`: Target local solar time in hours (0–24).
+
+**Example:**
+
+```typescript
+view.atmosphere.setSolarTime({ lng: 139.69 }, 6.3); // sunrise over Tokyo
+```
+
 ### setDateAt()
 
 Adjusts `atmosphere.date` so that the local solar time at `to` matches the local solar time at `from`.

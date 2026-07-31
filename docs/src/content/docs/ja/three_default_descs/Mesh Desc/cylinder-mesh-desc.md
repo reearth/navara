@@ -311,7 +311,7 @@ import { Color } from "@navaramap/three";
 
 ```typescript
 import ThreeView, { Color } from "@navaramap/three";
-import { CylinderMeshDesc } from "@navaramap/three_default_descs";
+import { CylinderMeshDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 view.registerMesh("cylinder", CylinderMeshDesc);
@@ -333,7 +333,7 @@ const cylinderDesc = view.addMesh<CylinderMeshDesc>({
 
 ```typescript
 import ThreeView, { Color } from "@navaramap/three";
-import { CylinderMeshDesc } from "@navaramap/three_default_descs";
+import { CylinderMeshDesc } from "@navaramap/three-default-descs";
 
 const coneDesc = view.addMesh<CylinderMeshDesc>({
   cylinder: {

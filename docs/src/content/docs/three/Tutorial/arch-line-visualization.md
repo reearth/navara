@@ -24,8 +24,8 @@ First, create the base view. Set a dark background color and add a starfield and
 
 ```typescript
 import ThreeView, { Color } from "@navaramap/three";
-import { ToneMappingMode } from "@navaramap/three_default_descs";
-import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
+import { ToneMappingMode } from "@navaramap/three-default-descs";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three-default-plugin";
 
 const plugin = new DefaultPlugin();
 const view = new ThreeView<DefaultDescriptions>({
@@ -122,7 +122,7 @@ You need to convert NASA Earth at Night imagery to XYZ tile format. Download fro
 Using `GlowGlobeMeshDesc`, you can add a beautiful glow effect around the globe.
 
 ```typescript
-import type { GlowGlobeMeshDesc } from "@navaramap/three_default_descs";
+import type { GlowGlobeMeshDesc } from "@navaramap/three-default-descs";
 
 // Add globe glow effect
 view.addMesh<GlowGlobeMeshDesc>({
@@ -255,7 +255,7 @@ For details on `ColorMap` class methods (`linear()`, `quantize()`, etc.), see th
 Add the arch line definitions as an object.
 
 ```typescript
-import type { ArclineMeshDesc } from "@navaramap/three_default_descs";
+import type { ArclineMeshDesc } from "@navaramap/three-default-descs";
 
 const arcLineHandle = view.addMesh<ArclineMeshDesc>({
   arcLines,
@@ -310,8 +310,8 @@ import {
   ToneMappingMode,
   type ArclineMeshDesc,
   type GlowGlobeMeshDesc,
-} from "@navaramap/three_default_descs";
-import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three_default_plugin";
+} from "@navaramap/three-default-descs";
+import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three-default-plugin";
 import type { FeatureCollection, MultiLineString } from "geojson";
 
 // Type definition for air traffic volume data

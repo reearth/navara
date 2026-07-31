@@ -7,7 +7,7 @@ sidebar:
 
 ![Result](@assets/tutorial/model-animation.png)
 
-Learn how to explore the interior of 3D Tiles buildings while controlling a character with [PersonViewPlugin](../../../three_plugins/personviewplugin/) from `@navaramap/three_plugins`. The plugin lets you wire up character controls with minimal code.
+Learn how to explore the interior of 3D Tiles buildings while controlling a character with [PersonViewPlugin](../../../three_plugins/personviewplugin/) from `@navaramap/three-plugins`. The plugin lets you wire up character controls with minimal code.
 
 **What you will learn in this tutorial:**
 
@@ -26,8 +26,8 @@ import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navaramap/three"
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
-import { PersonViewPlugin } from "@navaramap/three_plugins";
+} from "@navaramap/three-default-plugin";
+import { PersonViewPlugin } from "@navaramap/three-plugins";
 
 const plugin = new DefaultPlugin();
 const view = new ThreeView<DefaultDescriptions>({
@@ -231,8 +231,8 @@ import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navaramap/three"
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
-import { PersonViewPlugin } from "@navaramap/three_plugins";
+} from "@navaramap/three-default-plugin";
+import { PersonViewPlugin } from "@navaramap/three-plugins";
 
 const plugin = new DefaultPlugin();
 const view = new ThreeView<DefaultDescriptions>({

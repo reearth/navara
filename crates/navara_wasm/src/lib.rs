@@ -176,6 +176,17 @@ impl Core {
             self.app.set_terrain_pick_distance(input.terrain_distance);
         }
 
+        // Re-anchor the cursor position on mousedown: while the window is
+        // unfocused or hidden no mousemove reaches the page, so the first drag
+        // delta would otherwise be computed against a stale position.
+        if input.r#type == InputType::MouseDown
+            && let (Some(x), Some(y)) = (input.x, input.y)
+        {
+            self.app.trigger_event(navara_input::Input::MouseAnchor(
+                navara_input::MouseMoveInput { x, y },
+            ));
+        }
+
         let Some(input) = input.into_ecs_input() else {
             return;
         };

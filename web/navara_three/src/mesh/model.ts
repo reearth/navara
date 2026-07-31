@@ -39,6 +39,7 @@ import {
   updateBatchAttribute,
   type BatchTextureConfig,
 } from "./batchTexture";
+import { GEOMETRY_TYPES } from "./constants";
 import type { FeatureMesh } from "./featureMesh";
 import type { PickableMesh } from "./pickableMesh";
 import { releaseGeometryArraysAfterUpload } from "./releaseGeometryArrays";
@@ -95,6 +96,11 @@ export class ModelMesh
       this.dispose();
     });
   }
+
+  /**
+   * Geometry type of this mesh.
+   */
+  readonly geometryType = GEOMETRY_TYPES.Model;
 
   get water(): boolean {
     for (const enhancer of this._enhancers.values()) {

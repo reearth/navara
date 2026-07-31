@@ -8,7 +8,7 @@ import ThreeView, {
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
+} from "@navaramap/three-default-plugin";
 import { VignetteEffect, VignetteTechnique } from "postprocessing";
 import type { Camera } from "three";
 import { Pane } from "tweakpane";

@@ -122,6 +122,17 @@ impl DynamicSseTerm {
     pub fn relaxation(&self, distance: FloatType) -> FloatType {
         crate::fog(distance, self.density) * self.sse_factor
     }
+
+    /// This term with its relaxation strength scaled by `scale` (linear on the
+    /// SSE-pixel amount): `0.0` disables it, `1.0` is full strength. Used to
+    /// dial the horizon relaxation down per layer for content that coarsens
+    /// poorly (draped geometry, discrete features) versus space-filling raster.
+    pub fn scaled(&self, scale: FloatType) -> Self {
+        Self {
+            density: self.density,
+            sse_factor: self.sse_factor * scale,
+        }
+    }
 }
 
 /// Buffered [`DynamicSse`] parameters, written by `Core.setDynamicSse` before
@@ -170,6 +181,18 @@ mod dynamic_sse_tests {
         let d = DynamicSse::disabled();
         let term = term_at(&d, Vec3::new(0., 1., 0.), 100.);
         assert_eq!(term.relaxation(50_000.), 0.);
+    }
+
+    #[test]
+    fn scaled_dials_relaxation_strength_linearly() {
+        let d = DynamicSse::default();
+        let full = term_at(&d, Vec3::new(0., 1., 0.), 100.);
+        let base = full.relaxation(50_000.);
+        assert!(base > 0.);
+
+        // Half strength halves the SSE pixels; zero disables it entirely.
+        assert!((full.scaled(0.5).relaxation(50_000.) - base * 0.5).abs() < 1e-9);
+        assert_eq!(full.scaled(0.0).relaxation(50_000.), 0.);
     }
 }
 

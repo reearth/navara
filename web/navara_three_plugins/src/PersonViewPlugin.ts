@@ -11,8 +11,8 @@
  *
  * ```ts
  * import ThreeView from "@navaramap/three";
- * import { DefaultPlugin } from "@navaramap/three_default_plugin";
- * import { PersonViewPlugin } from "@navaramap/three_plugins";
+ * import { DefaultPlugin } from "@navaramap/three-default-plugin";
+ * import { PersonViewPlugin } from "@navaramap/three-plugins";
  *
  * const view = new ThreeView({ container, animation: true });
  * const defaultPlugin = new DefaultPlugin();
@@ -60,8 +60,8 @@ import ThreeView, {
   radianToDegree,
   type ViewContext,
 } from "@navaramap/three";
-import type { GLTFModelDesc } from "@navaramap/three_default_descs";
-import type { DefaultDescriptions } from "@navaramap/three_default_plugin";
+import type { GLTFModelDesc } from "@navaramap/three-default-descs";
+import type { DefaultDescriptions } from "@navaramap/three-default-plugin";
 import { Vector3, Matrix4 } from "three";
 
 type View = ThreeView<DefaultDescriptions>;

@@ -134,7 +134,7 @@ GLTF の内容に基づき、2 つの内部レンダリングパスのいずれ�
 
 ## イベント
 
-`handle.on(event, handler)` で購読します。
+`handle.ref.on(event, handler)` で購読します。
 
 ### load
 
@@ -144,6 +144,16 @@ GLTF の内容に基づき、2 つの内部レンダリングパスのいずれ�
 
 ```typescript
 () => void
+```
+
+### error
+
+**Description:** GLTF の読み込みに失敗したときに発火します。
+
+**Handler Type:**
+
+```typescript
+(error: unknown) => void
 ```
 
 ### needsUpdate
@@ -200,7 +210,7 @@ handle.ref.updateAt(0, {
 読み込まれた GLTF に含まれるアニメーションクリップ名の読み取り専用リスト。`load` イベント発火までは空です。
 
 ```typescript
-handle.on("load", () => {
+handle.ref.on("load", () => {
   console.log("Available clips:", handle.ref.animationClips);
 });
 ```
@@ -223,7 +233,7 @@ handle.ref.playAnimation("Fly");
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { InstancedGltfModelMeshDesc } from "@navaramap/three_default_descs";
+import { InstancedGltfModelMeshDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 view.registerMesh("gltfModels", InstancedGltfModelMeshDesc);
@@ -262,7 +272,7 @@ const handle = view.addMesh<InstancedGltfModelMeshDesc>({
   position: { x: 0, y: 0, z: 6378137 },
 });
 
-handle.on("load", () => {
+handle.ref.on("load", () => {
   console.log("Clips:", handle.ref.animationClips);
 });
 ```

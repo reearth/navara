@@ -9,11 +9,11 @@ import {
   ToneMappingMode,
   type BoxChildConfig,
   type InstancedBoxMeshDesc,
-} from "@navaramap/three_default_descs";
+} from "@navaramap/three-default-descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
+} from "@navaramap/three-default-plugin";
 import { Pane } from "tweakpane";
 
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";

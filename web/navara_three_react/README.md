@@ -1,11 +1,11 @@
-# @navaramap/three_react
+# @navaramap/three-react
 
 React bindings for Navara Three. It provides a small set of components and hooks to use `@navaramap/three` declaratively from React apps.
 
 ## Install
 
 ```bash
-pnpm add @navaramap/three @navaramap/three_react react react-dom three
+pnpm add @navaramap/three @navaramap/three-react react react-dom three
 ```
 
 ## Quick Start
@@ -14,7 +14,7 @@ Wrap your app with `ViewProvider`, then add layers with the `Layer` component.
 
 ```tsx
 // App.tsx
-import { ViewProvider } from "@navaramap/three_react";
+import { ViewProvider } from "@navaramap/three-react";
 import { Layers } from "./Layers";
 
 export default function App() {
@@ -34,7 +34,7 @@ import {
   type TilesLayer,
   Layer as NavaraLayer,
 } from "@navaramap/three";
-import { useViewContext, Layer } from "@navaramap/three_react";
+import { useViewContext, Layer } from "@navaramap/three-react";
 import { useEffect, useMemo } from "react";
 
 export function Layers() {
@@ -103,7 +103,7 @@ If you want to host the canvas inside your own layout, pass a ref to `ViewProvid
 
 ```tsx
 import { useRef } from "react";
-import { ViewProvider } from "@navaramap/three_react";
+import { ViewProvider } from "@navaramap/three-react";
 
 export function AppWithCanvas() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);

@@ -85,24 +85,6 @@ sidebar:
 }
 ```
 
-### clampToGround
-
-**Type:** `boolean | undefined`
-
-**Description:** 地面に張り付けるかどうかを指定します。
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  model: {
-    clampToGround: true
-  }
-}
-```
-
 ### color
 
 **Type:** `Color | undefined`

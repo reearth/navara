@@ -1,5 +1,5 @@
 {
-  "name": "@navaramap/three_csm",
+  "name": "@navaramap/three-csm",
   "type": "module",
   "version": "0.0.0",
   "main": "dist/index.umd.cjs",

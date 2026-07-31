@@ -1,23 +1,25 @@
 import ThreeView, {
+  Color,
   degreeToRadian,
   geodeticSurfaceNormal,
   geodeticToVector3,
 } from "@navaramap/three";
-import type { GLTFModelDesc } from "@navaramap/three_default_descs";
+import type { GLTFModelDesc } from "@navaramap/three-default-descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
-import { TileJsonPlugin } from "@navaramap/three_plugins";
+} from "@navaramap/three-default-plugin";
+import { TileJsonPlugin } from "@navaramap/three-plugins";
 import { Euler, Quaternion, Vector3 } from "three";
 
-// A point on the Nagano Expressway (E19) mountain stretch near the Shiojiri
-// pass (lng/lat in degrees, height in meters), and the road's bearing there
-// (degrees clockwise from north) so the car can be aligned with the lane.
+import { initializeExample } from "../../../../helpers/initialize";
+
 const CAR = { lng: 138.036142, lat: 36.085621, height: 1 };
 const ROAD_BEARING = 321;
 
-const view = new ThreeView<DefaultDescriptions>();
+const view = new ThreeView<DefaultDescriptions>({
+  backgroundColor: new Color().setStyle("#0f1118"),
+});
 
 const defaultPlugin = new DefaultPlugin();
 view.addPlugin(defaultPlugin);
@@ -26,21 +28,20 @@ view.addPlugin(tilejson);
 
 await view.init();
 
-// Fixed afternoon sun + ambient fill so the body paint reads on the dark map.
 view.atmosphere.date = new Date("2026-07-16T03:00:00Z");
 view.addLight({ ambient: { intensity: 1.2 } });
 view.addLight({ sun: { intensity: 2 } });
 
-// `distance` sets the camera back from the target along its forward ray, so
-// the car sits at the view center; a shallow pitch gives the oblique view.
 view.setCamera({
   lng: CAR.lng,
   lat: CAR.lat,
-  distance: 30,
-  heading: ROAD_BEARING - 60,
-  pitch: -35,
+  height: 2,
+  distance: 26,
+  heading: ROAD_BEARING + 90,
+  pitch: -8,
   roll: 0,
 });
+view.camera.fov = 25;
 
 const basemap = await tilejson.addSource({
   type: "raster-tile",
@@ -48,17 +49,12 @@ const basemap = await tilejson.addSource({
 });
 view.addLayer({ type: "raster", source: basemap });
 
-// The GLTF model layer renders relative-to-eye and ignores matrixWorld, so
-// place it with an ECEF position, and align its up axis with the surface
-// normal so it stands upright at the coordinate.
 const carGeodetic = {
   lng: degreeToRadian(CAR.lng),
   lat: degreeToRadian(CAR.lat),
   height: CAR.height,
 };
 const position = geodeticToVector3(carGeodetic);
-// Align up with the surface normal, then yaw the model around its own up axis
-// to point it down the road.
 const rotation = new Euler().setFromQuaternion(
   new Quaternion()
     .setFromUnitVectors(
@@ -73,7 +69,7 @@ const rotation = new Euler().setFromQuaternion(
     ),
 );
 
-view.addMesh<GLTFModelDesc>({
+const car = view.addMesh<GLTFModelDesc>({
   gltfModel: { url: "/glTF/car/scene.gltf" },
   position: { x: position.x, y: position.y, z: position.z },
   rotation: { x: rotation.x, y: rotation.y, z: rotation.z },
@@ -87,3 +83,5 @@ view.attribution?.add([
       "https://sketchfab.com/3d-models/classic-muscle-car-641efc889e5f4543bae51d0922e6f4b3",
   },
 ]);
+
+initializeExample(view, [car]);

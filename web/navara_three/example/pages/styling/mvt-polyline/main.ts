@@ -1,8 +1,8 @@
 import ThreeView, {
   Color,
-  JAPAN_GSI_ELEVATION_DECODER,
+  TERRARIUM_ELEVATION_DECODER,
 } from "@navaramap/three";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 import { Pane } from "tweakpane";
 
 import {
@@ -45,25 +45,27 @@ const run = async () => {
   view.addLayer({
     type: "terrain",
     data: {
-      url: TERRAIN_DATASETS.gsi.url,
+      url: TERRAIN_DATASETS.mapterhorn.url,
     },
     rasterTerrain: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+      elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
       maxZoom: 15,
+      minZoom: 5,
       castShadow: true,
       receiveShadow: true,
+      tileSize: 512,
     },
   });
 
   view.addLayer({
     type: "tiles",
-    data: { url: TERRAIN_DATASETS.gsi.url },
+    data: { url: TERRAIN_DATASETS.mapterhorn.url },
     rasterTile: {
       maxZoom: 15,
       show: false, // Don't render DEM as color
     },
     hillshade: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+      elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
     },
   });
 
@@ -157,7 +159,7 @@ const run = async () => {
 
   attribution?.add([
     TILE_DATASETS.openstreetmap,
-    TERRAIN_DATASETS.gsi,
+    TERRAIN_DATASETS.mapterhorn,
     MVT_DATASETS.plateauGifuTran,
   ]);
 };

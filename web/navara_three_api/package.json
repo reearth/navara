@@ -1,5 +1,5 @@
 {
-  "name": "@navaramap/three_api",
+  "name": "@navaramap/three-api",
   "type": "module",
   "version": "0.0.0",
   "main": "dist/index.umd.cjs",

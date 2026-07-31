@@ -11,7 +11,38 @@ import type { Mutates } from "../../MaterialEnhancer";
 export const sdfRadiusFor = (useMsdf: boolean): number => atlasRangePx(useMsdf);
 
 /**
+ * Layout of the per-label data texture (`uLabelData`).
+ *
+ * This is a contract between three places: the vertex shader's `nvr_readLabel`
+ * (`shaders/glsl/sdfText.vert.glsl`), which receives {@link LABEL_ROWS} as a
+ * define so it can't drift; the CPU-side writer
+ * (`mesh/sdfText/labelData.ts`); and the mesh that fills the rows. It lives
+ * here because the enhancer owns the shader.
+ */
+export const LabelRow = {
+  /** xyz = anchor high (RTE) or RTC-relative anchor, w = fontSize. */
+  POSITION_HIGH_SIZE: 0,
+  /** xyz = anchor low (RTE only), w = addHeight. */
+  POSITION_LOW_HEIGHT: 1,
+  /** rgb = colour, a = opacity. */
+  COLOR_OPACITY: 2,
+  /** x = textWidth, y = textHeight, z = bgMinY, w = bgMaxY (all in ems). */
+  BOX: 3,
+  /** x = declutterHide, y = batchId, z = show, w = reserved. */
+  STATE: 4,
+} as const;
+
+/** Texels per label. Derived from {@link LabelRow} so the two can't disagree. */
+export const LABEL_ROWS = Object.keys(LabelRow).length;
+
+/**
  * Props for the sdfText base enhancer.
+ *
+ * Everything here is **batch-wide**: one material draws every label in a
+ * tile-layer. Per-label values (position, colour, opacity, font size, height,
+ * block metrics, batch id, declutter fade) live in the label data texture
+ * owned by `BatchedSdfTextMesh`, not in this state — see
+ * `web/navara_three/src/mesh/sdfText/labelData.ts`.
  */
 export type SdfTextBaseProps = {
   // Immutable after mount
@@ -21,12 +52,8 @@ export type SdfTextBaseProps = {
   useMsdf?: boolean;
 
   // Mutable state
-  color?: number; // hex color
-  opacity?: number;
-  fontSize?: number;
   center?: [number, number];
   sizeInMeters?: boolean;
-  addHeight?: number;
   offsetDepth?: boolean;
   outlineWidth?: number; // raw width, converted in state via sdfRadiusFor(useMsdf)
   outlineColor?: number; // hex
@@ -55,12 +82,8 @@ export type SdfTextBaseState = Readonly<{
   useMsdf: boolean;
 
   // Mutable
-  color: Color;
-  opacity: number;
-  fontSize: number;
   center: [number, number];
   sizeInMeters: boolean;
-  addHeight: number;
   offsetDepth: boolean;
   outlineWidth: number; // pre-converted: raw / sdfRadiusFor(useMsdf)
   outlineColor: Color;
@@ -82,12 +105,8 @@ export type SdfTextBaseState = Readonly<{
  * Internal type - not exposed externally.
  */
 export type SdfTextBaseRefs = {
-  uColor: UniformValue<Color>;
-  uOpacity: UniformValue<number>;
-  uFontSize: UniformValue<number>;
   uCenter: UniformValue<Vector2>;
   uSizeInMeters: UniformValue<boolean>;
-  uAddHeight: UniformValue<number>;
   uOffsetDepth: UniformValue<boolean>;
   uSdfThreshold: UniformValue<number>;
   uOutlineWidth: UniformValue<number>;
@@ -100,20 +119,12 @@ export type SdfTextBaseRefs = {
   uFovRad: UniformValue<number>;
   uScreenHeightPx: UniformValue<number>;
   uFarPlane: UniformValue<number>;
-  uTextWidth: UniformValue<number>;
-  uTextHeight: UniformValue<number>;
-  uBgYBounds: UniformValue<Vector2>;
-  /** Screen-space declutter hide factor (0 = shown … 1 = hidden), animated
-   *  by the declutter fade. Driven by the declutter pass, not by material
-   *  style updates. */
-  uDeclutterHide: UniformValue<number>;
   uRTCCenter: UniformValue<Vector3>;
   uRTCCenterView: UniformValue<Vector3>;
   uEyeRTELow: UniformValue<Vector3>;
   uEyeRTEHigh: UniformValue<Vector3>;
   /** Always 1.0 — blocks fast-math reassociation of the RTE recombination. */
   u_rteOne?: UniformValue<number>;
-  nvr_uBatchId: UniformValue<number>;
   nvr_uPickable: UniformValue<number>;
   uAtlas: UniformValue<DataTexture | null>;
   /** COLRv1 RGBA atlas. `null` when the font has no color glyphs. */
@@ -122,11 +133,12 @@ export type SdfTextBaseRefs = {
   uSdfAtlasSize: UniformValue<Vector2>;
   /** Current color atlas pixel dimensions; updated when the color atlas grows. */
   uColorAtlasSize: UniformValue<Vector2>;
-
-  // Conditional RTE/RTC position uniforms
-  uRTEPositionLOW?: UniformValue<Vector3>;
-  uRTEPositionHIGH?: UniformValue<Vector3>;
-  uRTCPosition?: UniformValue<Vector3>;
+  /** Per-label state, indexed by the `labelIndex` instance attribute. Owned by
+   *  the mesh and swapped wholesale when it outgrows its capacity. */
+  uLabelData: UniformValue<DataTexture | null>;
+  /** Dimensions of `uLabelData` in texels, for the shader's index-to-texel
+   *  math. Read as an `ivec2`. */
+  uLabelTexSize: UniformValue<Vector2>;
 };
 
 export type SdfTextBaseUniforms = Partial<SdfTextBaseRefs>;
@@ -152,15 +164,6 @@ export type SdfTextBaseMutates = Mutates<
       state: SdfTextBaseState,
     ) => void;
     /**
-     * Update text dimension uniforms after text shaping.
-     */
-    updateTextDimensions: (
-      textWidth: number,
-      textHeight: number,
-      bgMinY: number,
-      bgMaxY: number,
-    ) => void;
-    /**
      * Set the SDF atlas texture external ref.
      */
     setAtlasTexture: (texture: UniformValue<DataTexture | null>) => void;
@@ -175,23 +178,18 @@ export type SdfTextBaseMutates = Mutates<
      */
     updateAtlasSizes: () => void;
     /**
-     * Update position uniforms (RTE or RTC).
+     * Point the shader at the mesh's per-label data texture. Must be re-called
+     * whenever the mesh grows it, since growing allocates a new texture.
      */
-    setPosition: (
-      position: Float32Array | { high: Float32Array; low: Float32Array },
-      useRTE: boolean,
-      rtcCenter?: [number, number, number],
+    setLabelDataTexture: (
+      texture: DataTexture | null,
+      width: number,
+      height: number,
     ) => void;
     /**
-     * Set the batch ID uniform (immutable after mount, but needed for batch creation).
+     * Update the batch's RTC center (the tile transform). Only meaningful in
+     * RTC mode; in RTE mode anchors carry their own high/low split.
      */
-    setBatchId: (batchId: number) => void;
-    /**
-     * Set the declutter hide factor (0 = shown … 1 = hidden); the fragment
-     * shader scales opacity by `1 - value` and the vertex shader hard-culls
-     * at 1. Kept separate from `show`/`opacity` so user-driven visibility and
-     * declutter results compose instead of clobbering each other.
-     */
-    setDeclutterHide: (value: number) => void;
+    setRtcCenter: (center: [number, number, number]) => void;
   }
 >;

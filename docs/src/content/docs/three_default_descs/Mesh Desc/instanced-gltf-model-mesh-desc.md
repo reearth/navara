@@ -134,7 +134,7 @@ Properties for each individual model instance, specified in the `children` array
 
 ## Events
 
-Subscribe via `handle.on(event, handler)`.
+Subscribe via `handle.ref.on(event, handler)`.
 
 ### load
 
@@ -144,6 +144,16 @@ Subscribe via `handle.on(event, handler)`.
 
 ```typescript
 () => void
+```
+
+### error
+
+**Description:** Emitted when loading the GLTF fails.
+
+**Handler Type:**
+
+```typescript
+(error: unknown) => void
 ```
 
 ### needsUpdate
@@ -204,7 +214,7 @@ Gets the number of active instances.
 Read-only list of animation clip names found in the loaded GLTF. Empty until the `load` event fires.
 
 ```typescript
-handle.on("load", () => {
+handle.ref.on("load", () => {
   console.log("Available clips:", handle.ref.animationClips);
 });
 ```
@@ -227,7 +237,7 @@ Stops the currently playing animation on all instances.
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { InstancedGltfModelMeshDesc } from "@navaramap/three_default_descs";
+import { InstancedGltfModelMeshDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 view.registerMesh("gltfModels", InstancedGltfModelMeshDesc);
@@ -266,7 +276,7 @@ const handle = view.addMesh<InstancedGltfModelMeshDesc>({
   position: { x: 0, y: 0, z: 6378137 },
 });
 
-handle.on("load", () => {
+handle.ref.on("load", () => {
   console.log("Clips:", handle.ref.animationClips);
 });
 ```

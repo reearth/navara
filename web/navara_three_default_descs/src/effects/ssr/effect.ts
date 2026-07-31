@@ -7,7 +7,22 @@ import {
 } from "./SSREffect";
 
 export type SSROptions = {
-  /** Texture containing geometry information (normals, depth) for reflection calculations */
+  /**
+   * Geometry buffer used for reflection calculations. When unset or `null`,
+   * the engine's MRT normal buffer is used. Supplying a custom screen-aligned
+   * texture lets applications control where SSR applies (e.g. puddles).
+   *
+   * Each texel must follow the engine's G-buffer encoding:
+   * `.xy` = octahedral-packed view-space normal (`packNormalToVec2` from
+   * `@takram/three-geospatial/shaders` `packing`);
+   * `.z` = reflectivity/metalness mask — SSR is skipped where `.z < 0.01`,
+   * and the ray-tracing shader also uses `.z` as its roughness base;
+   * `.w` = roughness — with cone tracing (default) it drives the blur cone
+   * angle, without cone tracing it multiplies `.z` for the GGX ray jitter.
+   *
+   * Updating the *contents* of the texture (render-to-texture) takes effect
+   * automatically; only swapping the texture *object* requires an update call.
+   */
   geometryBuffer?: Texture | null;
   /** Resolution scale factor for SSR rendering (0-1, lower values improve performance) */
   resolutionScale?: number;

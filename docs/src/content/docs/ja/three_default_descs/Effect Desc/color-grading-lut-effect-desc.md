@@ -105,7 +105,7 @@ sidebar:
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { ColorGradingLUTEffectDesc } from "@navaramap/three_default_descs";
+import { ColorGradingLUTEffectDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();
@@ -120,8 +120,8 @@ const colorGradingDesc = view.addEffect<ColorGradingLUTEffectDesc>({
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { ColorGradingLUTEffectDesc } from "@navaramap/three_default_descs";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { ColorGradingLUTEffectDesc } from "@navaramap/three-default-descs";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 
 const view = new ThreeView();
 const plugin = new DefaultPlugin();
@@ -145,7 +145,7 @@ const colorGradingDesc = view.addEffect<ColorGradingLUTEffectDesc>({
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { ColorGradingLUTEffectDesc } from "@navaramap/three_default_descs";
+import { ColorGradingLUTEffectDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();

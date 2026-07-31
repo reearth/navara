@@ -39,6 +39,11 @@ pub struct RenderedTileCache {
     pub mesh_prepared: bool,
     /// Flag indicating this tile needs material update (e.g., hillshade parent reuse, UV transforms)
     pub needs_material_update: bool,
+    /// Spawned speculatively for a horizon-occluded tile (see
+    /// `prefetch_occluded_tile`) and never shown yet, so it is the first
+    /// candidate when the memory budget forces eviction. Cleared as soon as
+    /// the visible path spawns/updates this tile.
+    pub prefetched: bool,
 }
 
 // Manage the tiles that are going to be rendered.

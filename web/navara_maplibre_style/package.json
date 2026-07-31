@@ -1,5 +1,5 @@
 {
-  "name": "@navaramap/maplibre_style",
+  "name": "@navaramap/maplibre-style",
   "type": "module",
   "version": "0.0.0",
   "main": "dist/index.umd.cjs",

@@ -26,7 +26,7 @@ export class SkyLightProbe extends EventHandler<SkyLightProbeEvents> {
     }
   }
 
-  setTextures(textures: PrecomputedTextures) {
+  setTextures(textures: Pick<PrecomputedTextures, "irradianceTexture">) {
     this.raw.irradianceTexture = textures.irradianceTexture;
   }
 

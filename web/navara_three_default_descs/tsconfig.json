@@ -3,10 +3,10 @@
   "compilerOptions": {
     "noEmit": true,
     "paths": {
-      "@navaramap/three_default_descs": ["./src"],
+      "@navaramap/three-default-descs": ["./src"],
       "@navaramap/three": ["../navara_three/src"],
-      "@navaramap/three_api": ["../navara_three_api/src"],
-      "@navaramap/three_csm": ["../navara_three_csm/src"],
+      "@navaramap/three-api": ["../navara_three_api/src"],
+      "@navaramap/three-csm": ["../navara_three_csm/src"],
       "@navaramap/core": ["../navara_core/src"],
       "@navaramap/worker": ["../navara_worker/src"],
       "@shaders/*": ["../../shaders"]

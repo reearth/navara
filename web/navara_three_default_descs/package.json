@@ -1,5 +1,5 @@
 {
-  "name": "@navaramap/three_default_descs",
+  "name": "@navaramap/three-default-descs",
   "type": "module",
   "version": "0.0.0",
   "module": "dist/index.js",
@@ -52,7 +52,7 @@
   "devDependencies": {
     "@navaramap/core": "workspace:*",
     "@navaramap/three": "workspace:*",
-    "@navaramap/three_csm": "workspace:*",
+    "@navaramap/three-csm": "workspace:*",
     "@types/three": "0.185.1",
     "postprocessing": "6.39.3",
     "three": "0.185.1",

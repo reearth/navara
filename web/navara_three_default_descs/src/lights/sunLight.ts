@@ -1,5 +1,5 @@
 import { EventHandler } from "@navaramap/core";
-import { CascadedShadowMaps, CSMHelper } from "@navaramap/three_csm";
+import { CascadedShadowMaps, CSMHelper } from "@navaramap/three-csm";
 import { SunDirectionalLight } from "@takram/three-atmosphere";
 import { Color, Texture, Vector3, Material, PerspectiveCamera } from "three";
 
@@ -178,7 +178,9 @@ export class SunLight extends EventHandler<SunLightEvents> {
 
   setTransmittanceTexture(texture: Texture) {
     this.transmittanceTexture = texture;
-    this.raw.transmittanceTexture = texture;
+    // The texture may arrive after applyColor was toggled on; keep it
+    // detached until applyColor is turned off again.
+    this.raw.transmittanceTexture = this.applyColor ? null : texture;
   }
 
   clearTransmittanceTexture() {

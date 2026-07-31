@@ -78,8 +78,8 @@ Descriptor作成後に`update()`メソッドで変更できるプロパティは
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { SkyLightProbeDesc } from "@navaramap/three_default_descs";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { SkyLightProbeDesc } from "@navaramap/three-default-descs";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 
 const view = new ThreeView();
 const plugin = new DefaultPlugin();

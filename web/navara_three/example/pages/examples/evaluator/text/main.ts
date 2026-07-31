@@ -1,5 +1,7 @@
 import ThreeView, { Color, fetchFontFamilyFromCss } from "@navaramap/three";
-import { TileJsonPlugin } from "@navaramap/three_plugins";
+import { TileJsonPlugin } from "@navaramap/three-plugins";
+
+import { initializeExample } from "../../../../helpers/initialize";
 
 import { oceans } from "./data";
 
@@ -19,11 +21,10 @@ view.addFontFamily(
   ),
 );
 
-// Overhead view of the Atlantic.
 view.setCamera({
   lng: -25,
   lat: 8,
-  height: 13_000_000,
+  height: 8_200_000,
   heading: 0,
   pitch: -90,
   roll: 0,
@@ -35,8 +36,6 @@ const basemap = await tilejson.addSource({
 });
 view.addLayer({ type: "raster", source: basemap });
 
-// One fixed style for every label — white fill with a black outline so the
-// names stay readable over the ocean-floor relief.
 const source = view.addSource({ type: "geojson", data: oceans });
 const layer = view.addLayer({
   type: "vector",
@@ -44,7 +43,7 @@ const layer = view.addLayer({
   text: {
     font: "Arsenal",
     color: new Color().setStyle("#ffffff"),
-    size: 20,
+    size: 32,
     sizeInMeters: false,
     clampToGround: true,
     center: { x: 0.5, y: 0 },
@@ -53,8 +52,6 @@ const layer = view.addLayer({
   },
 });
 
-// Each label's string comes from the feature's `name` property. A label set
-// through the evaluator must also return `show: true` to become visible.
 layer.on("featureUpdated", ({ evaluator }) => {
   evaluator.evaluate(
     ({ properties }) => {
@@ -64,3 +61,5 @@ layer.on("featureUpdated", ({ evaluator }) => {
     { filters: ["name"] },
   );
 });
+
+initializeExample(view);

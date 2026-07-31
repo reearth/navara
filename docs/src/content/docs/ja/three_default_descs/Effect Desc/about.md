@@ -8,7 +8,7 @@ sidebar:
 `EffectDesc`は、レンダリングパイプラインにポストプロセッシングエフェクトを適用するためのDescriptorタイプです。アンチエイリアシング、被写界深度、トーンマッピングなど、様々なビジュアルエフェクトを追加できます。
 
 :::note
-このページでは `@navaramap/three_default_descs` が提供するエフェクトを扱います。レンダリングパイプラインと密結合した一部のエフェクト（`SkyEnvMapEffectDesc` など）は `@navaramap/three` コアに含まれます。[Effect Descriptor（three コア）](../../../three/effect-desc/about/) を参照してください。
+このページでは `@navaramap/three-default-descs` が提供するエフェクトを扱います。レンダリングパイプラインと密結合した一部のエフェクト（`SkyEnvMapEffectDesc` など）は `@navaramap/three` コアに含まれます。[Effect Descriptor（three コア）](../../../three/effect-desc/about/) を参照してください。
 :::
 
 ## 利用可能なEffectDescタイプ
@@ -38,7 +38,7 @@ EffectDescは、Descriptorクラスを登録した後、`view.addEffect()`メソ
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { AerialPerspectiveEffectDesc } from "@navaramap/three_default_descs";
+import { AerialPerspectiveEffectDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 

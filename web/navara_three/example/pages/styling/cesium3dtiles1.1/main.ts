@@ -4,7 +4,7 @@ import ThreeView, {
   type Nullable,
   type PickedFeature,
 } from "@navaramap/three";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 import { Pane } from "tweakpane";
 
 import { PLATEAU_COLOR_MAP, YlGnBu_COLOR_MAP } from "../../../helpers/colors";

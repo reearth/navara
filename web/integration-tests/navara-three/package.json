@@ -20,8 +20,8 @@
     "@navaramap/engine-api": "workspace:*",
     "@navaramap/engine-worker": "workspace:*",
     "@navaramap/three": "workspace:*",
-    "@navaramap/three_default_descs": "workspace:*",
-    "@navaramap/three_default_plugin": "workspace:*",
+    "@navaramap/three-default-descs": "workspace:*",
+    "@navaramap/three-default-plugin": "workspace:*",
     "postprocessing": "6.39.3",
     "three": "0.185.1"
   },

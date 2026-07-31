@@ -2,7 +2,7 @@ import {
   PointMesh as NavaraPointMesh,
   BillboardMesh as NavaraBillboardMesh,
 } from "@navaramap/engine";
-import { degreeToRadian } from "@navaramap/three_api";
+import { degreeToRadian } from "@navaramap/three-api";
 import {
   InstancedBufferAttribute,
   InstancedBufferGeometry,
@@ -26,14 +26,21 @@ import {
 import type { EventContext } from "../../event/context";
 import { createInstancedSpriteMaterialEnhancer } from "../../material/enhancer";
 import type { CustomObject3DEventMap } from "../../object3DEvent";
+import { GEOMETRY_TYPES, type GeometryType } from "../constants";
 import { PickableMesh } from "../pickableMesh";
 
 import { BillboardAtlas, type AtlasRect } from "./billboardAtlas";
 import { loadAtlasImageFromUrl } from "./billboardAtlasImageLoader";
 
+type SpriteGeometryType = Extract<
+  GeometryType,
+  typeof GEOMETRY_TYPES.Point | typeof GEOMETRY_TYPES.Billboard
+>;
+
 export type InstancedSpriteOptions = {
   renderOrder?: number;
   ctx: EventContext;
+  geometryType: SpriteGeometryType;
 };
 
 type PositionsInfo = {
@@ -58,6 +65,7 @@ export class InstancedSpriteMesh
   extends Mesh<BufferGeometry, Material | Material[], CustomObject3DEventMap>
   implements PickableMesh, DeclutterParticipant
 {
+  private _geometryType: SpriteGeometryType = GEOMETRY_TYPES.Point;
   private _batchIdToInstance = new Map<number, number>();
   private _initialColor: Color = new Color(0xffffff);
   private _initialHeight = 0.0;
@@ -103,6 +111,7 @@ export class InstancedSpriteMesh
     super();
     this.renderOrder = options.renderOrder ?? this.renderOrder;
     this.ctx = options.ctx;
+    this._geometryType = options.geometryType;
     this.ctx.declutter?.register(this);
     // `processObjectRemoved` dispatches this for every removed mesh; it is the
     // reliable teardown signal (this class's dispose() is not called there).
@@ -115,6 +124,29 @@ export class InstancedSpriteMesh
     this._active = active;
     this.updateVisibility();
     this.ctx.declutter?.markDirty();
+  }
+
+  /**
+   * Set the geometry type for this mesh.
+   *
+   * This affects how FeatureEvaluator provides meshGeomType to evaluators,
+   * which is used by MapLibreStylePlugin to determine which properties to apply
+   * (e.g., billboard vs text rendering for symbol layers).
+   *
+   * Changing this after initialization is supported and will affect subsequent
+   * feature evaluations, but does NOT automatically trigger re-evaluation.
+   * Call layer.forceUpdate() if you need to re-evaluate existing features.
+   */
+  setGeometryType(type: SpriteGeometryType): void {
+    this._geometryType = type;
+  }
+
+  /**
+   * Get the geometry type of this mesh.
+   * Defaults to GEOMETRY_TYPES.Point if not explicitly set.
+   */
+  get geometryType(): SpriteGeometryType {
+    return this._geometryType;
   }
 
   // --- DeclutterParticipant ---

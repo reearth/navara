@@ -7,7 +7,7 @@ import ThreeView, {
   geodeticSurfaceNormal,
   eastNorthUpToFixedFrame,
 } from "@navaramap/three";
-import type { GLTFModelDesc } from "@navaramap/three_default_descs";
+import type { GLTFModelDesc } from "@navaramap/three-default-descs";
 import { Vector3, Quaternion, Euler, Matrix4 } from "three";
 
 export type ModelControlParams = {

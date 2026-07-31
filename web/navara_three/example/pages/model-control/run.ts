@@ -8,11 +8,11 @@ import ThreeView, {
 import {
   ToneMappingMode,
   type GLTFModelDesc,
-} from "@navaramap/three_default_descs";
+} from "@navaramap/three-default-descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
+} from "@navaramap/three-default-plugin";
 import { Vector3, Quaternion, Euler } from "three";
 import { Pane } from "tweakpane";
 

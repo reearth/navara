@@ -1,5 +1,5 @@
 import type { Nullable, XYZ } from "@navaramap/core";
-import { convertScreenToWorld } from "@navaramap/three_api";
+import { convertScreenToWorld } from "@navaramap/three-api";
 import { Vector2 } from "three";
 
 import type ThreeView from "../index";

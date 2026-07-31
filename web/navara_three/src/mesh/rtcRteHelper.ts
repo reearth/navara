@@ -1,5 +1,5 @@
 import type { Transform } from "@navaramap/engine";
-import { calcCameraPosition, calcModelMatrixRTE } from "@navaramap/three_api";
+import { calcCameraPosition, calcModelMatrixRTE } from "@navaramap/three-api";
 import { Camera, Matrix4, Object3D, Vector3 } from "three";
 
 import { setTransform } from "../event";

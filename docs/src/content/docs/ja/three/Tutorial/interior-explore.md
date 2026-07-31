@@ -7,7 +7,7 @@ sidebar:
 
 ![実行結果](@assets/tutorial/model-animation.png)
 
-`@navaramap/three_plugins` の [PersonViewPlugin](../../../three_plugins/personviewplugin/) を使って、3D Tiles の建物内をキャラクター操作で探索する方法を学びます。キャラクター操作処理をプラグインを使用することで簡単に実装できます。
+`@navaramap/three-plugins` の [PersonViewPlugin](../../../three_plugins/personviewplugin/) を使って、3D Tiles の建物内をキャラクター操作で探索する方法を学びます。キャラクター操作処理をプラグインを使用することで簡単に実装できます。
 
 **このチュートリアルで学べること:**
 
@@ -26,8 +26,8 @@ import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navaramap/three"
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
-import { PersonViewPlugin } from "@navaramap/three_plugins";
+} from "@navaramap/three-default-plugin";
+import { PersonViewPlugin } from "@navaramap/three-plugins";
 
 const plugin = new DefaultPlugin();
 const view = new ThreeView<DefaultDescriptions>({
@@ -231,8 +231,8 @@ import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navaramap/three"
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
-import { PersonViewPlugin } from "@navaramap/three_plugins";
+} from "@navaramap/three-default-plugin";
+import { PersonViewPlugin } from "@navaramap/three-plugins";
 
 const plugin = new DefaultPlugin();
 const view = new ThreeView<DefaultDescriptions>({

@@ -83,7 +83,7 @@ import { Color } from "@navaramap/three";
 
 ```typescript
 import ThreeView, { Color } from "@navaramap/three";
-import { SkyBoxMeshDesc } from "@navaramap/three_default_descs";
+import { SkyBoxMeshDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 view.registerMesh("skyBox", SkyBoxMeshDesc);
@@ -99,7 +99,7 @@ const skyBox = view.addMesh<SkyBoxMeshDesc>({
 
 ```typescript
 import ThreeView, { Color } from "@navaramap/three";
-import { SkyBoxMeshDesc } from "@navaramap/three_default_descs";
+import { SkyBoxMeshDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 view.registerMesh("skyBox", SkyBoxMeshDesc);

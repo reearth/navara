@@ -13,7 +13,7 @@ Users/Application
    Application ←→ GPU (WebGL rendering)
        ↓
 Rendering Engine Layer
-├─ API Library (@navaramap/three_api)
+├─ API Library (@navaramap/three-api)
 ├─ Core Library (@navaramap/three) 
 └─ Rendering Engine (Three.js)
        ↑
@@ -69,7 +69,7 @@ GIS Processing Modules
   - Receives comprehensive processed data from `navara_wasm`
   - Handles complex layer management and stateful operations
   - Manages event-driven rendering updates and buffer transfers
-- **`@navaramap/three_api`** (Utility Bridge)
+- **`@navaramap/three-api`** (Utility Bridge)
   - Provides lightweight bridge to `navara_wasm_api` utilities
   - Handles simple coordinate transformations and geometric calculations
   - Used for specific operations like screen-to-world coordinate conversion
@@ -132,7 +132,7 @@ The project implements a sophisticated multi-language architecture:
 │  ├─ @navaramap/three     - Main 3D rendering engine          │
 │  ├─ @navaramap/core      - Core utilities and types          │
 │  ├─ @navaramap/worker    - Web Worker coordination           │
-│  └─ @navaramap/three_api - API bridge utilities              │
+│  └─ @navaramap/three-api - API bridge utilities              │
 ├─────────────────────────────────────────────────────────────┤
 │  WebAssembly Interface Layer                               │
 │  ├─ navara_wasm        - Main engine (40+ crates)         │
@@ -154,7 +154,7 @@ The project implements a sophisticated multi-language architecture:
 - **`@navaramap/core`** (`web/navara_core/`) - Core utilities, event management, type definitions
 - **`@navaramap/three`** (`web/navara_three/`) - Main Three.js integration with comprehensive 3D engine
 - **`@navaramap/worker`** (`web/navara_worker/`) - Web Worker abstraction with task queuing
-- **`@navaramap/three_api`** (`web/navara_three_api/`) - Bridge between Three.js and WASM API
+- **`@navaramap/three-api`** (`web/navara_three_api/`) - Bridge between Three.js and WASM API
 
 ### **WASM Integration** (`web/wasm/`)
 - **`navara_engine`** - Main engine functionality (generated from `navara_wasm`)

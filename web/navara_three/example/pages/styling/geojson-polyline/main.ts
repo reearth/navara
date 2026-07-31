@@ -2,7 +2,7 @@ import ThreeView, {
   Color,
   JAPAN_GSI_ELEVATION_DECODER,
 } from "@navaramap/three";
-import { DefaultPlugin } from "@navaramap/three_default_plugin";
+import { DefaultPlugin } from "@navaramap/three-default-plugin";
 import { Pane } from "tweakpane";
 
 import {

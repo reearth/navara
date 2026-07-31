@@ -246,7 +246,7 @@ const index = handle.ref.add({
 
 ```typescript
 import ThreeView, { Color } from "@navaramap/three";
-import { InstancedCylinderMeshDesc } from "@navaramap/three_default_descs";
+import { InstancedCylinderMeshDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 view.registerMesh("cylinders", InstancedCylinderMeshDesc);

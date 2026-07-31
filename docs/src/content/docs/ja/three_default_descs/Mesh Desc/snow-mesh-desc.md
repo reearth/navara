@@ -279,7 +279,7 @@ import { Color } from "@navaramap/three";
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { SnowMeshDesc } from "@navaramap/three_default_descs";
+import { SnowMeshDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 view.registerMesh("snow", SnowMeshDesc);
@@ -305,7 +305,7 @@ const snowDesc = view.addMesh<SnowMeshDesc>({
 
 ```typescript
 import ThreeView, { Color, geodeticToVector3, degreeToRadian, LLE } from "@navaramap/three";
-import { SnowMeshDesc } from "@navaramap/three_default_descs";
+import { SnowMeshDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView({ animation: true });
 view.registerMesh("snow", SnowMeshDesc);

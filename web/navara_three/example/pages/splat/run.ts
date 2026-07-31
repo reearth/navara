@@ -3,11 +3,11 @@ import ThreeView, {
   degreeToRadian,
   northUpEastToFixedFrame,
 } from "@navaramap/three";
-import type { SplatMeshDesc } from "@navaramap/three_default_descs";
+import type { SplatMeshDesc } from "@navaramap/three-default-descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
+} from "@navaramap/three-default-plugin";
 import { Pane } from "tweakpane";
 
 import { SPLAT_DATASETS, TILE_DATASETS } from "../../helpers/constants";

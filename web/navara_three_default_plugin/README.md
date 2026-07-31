@@ -1,6 +1,6 @@
-# @navaramap/three_default_plugin
+# @navaramap/three-default-plugin
 
-The default plugin for `@navaramap/three`. It registers all built-in mesh, light, and effect descriptors from `@navaramap/three_default_descs` (boxes, GLTF models, sky, stars, sun, ambient light, SSAO, bloom, tone mapping, and so on) under their standard keys, so they can be used through `view.addMesh()`, `view.addLight()`, and `view.addEffect()`.
+The default plugin for `@navaramap/three`. It registers all built-in mesh, light, and effect descriptors from `@navaramap/three-default-descs` (boxes, GLTF models, sky, stars, sun, ambient light, SSAO, bloom, tone mapping, and so on) under their standard keys, so they can be used through `view.addMesh()`, `view.addLight()`, and `view.addEffect()`.
 
 ## Usage
 
@@ -15,7 +15,7 @@ import ThreeView, {
 import {
   DefaultPlugin,
   type DefaultDescriptions,
-} from "@navaramap/three_default_plugin";
+} from "@navaramap/three-default-plugin";
 
 const view = new ThreeView<DefaultDescriptions>();
 const defaultPlugin = new DefaultPlugin();
@@ -80,7 +80,7 @@ view.attribution?.add([
 scene.sun.update({ sun: { castShadow: true } });
 ```
 
-The package also re-exports every descriptor class and config type from `@navaramap/three_default_descs`, so typed `addMesh<T>` / `addEffect<T>` / `addLight<T>` calls need only this one import.
+The package also re-exports every descriptor class and config type from `@navaramap/three-default-descs`, so typed `addMesh<T>` / `addEffect<T>` / `addLight<T>` calls need only this one import.
 
 ## Documentation
 
