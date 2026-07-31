@@ -10,7 +10,6 @@ import type {
   DeclutterCandidate,
   DeclutterParticipant,
 } from "../declutter/types";
-import type { GeometryType } from "../evaluations";
 import type { EventContext } from "../event/context";
 
 import { InstancedMesh, type InstancedMeshOptions } from "./instanced";
@@ -152,11 +151,9 @@ export class BatchedSdfTextMesh
   }
 
   /**
-   * Get the geometry type of this mesh.
+   * Geometry type of this mesh.
    */
-  getGeometryType(): Extract<GeometryType, "text"> {
-    return "text";
-  }
+  readonly geometryType = "text" as const;
 
   /**
    * After an atlas eviction, re-prepare and force-rebuild any visible mesh whose

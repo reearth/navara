@@ -54,50 +54,6 @@ describe("JsStyleEngine", () => {
         "Invalid MapLibre Style",
       );
     });
-
-    it("should filter Navara extension errors - gsi encoding", async () => {
-      const styleWithGsiEncoding = {
-        version: 8,
-        sources: {
-          dem: {
-            type: "raster-dem",
-            tiles: ["https://example.com/{z}/{x}/{y}.png"],
-            encoding: "gsi", // Navara extension
-          },
-        },
-        layers: [],
-      };
-
-      // Should not throw - gsi encoding errors are filtered
-      const parsed = await engine.parseStyle(styleWithGsiEncoding);
-      expect(parsed).toBeDefined();
-    });
-
-    it("should filter Navara extension errors - hillshade-exaggeration", async () => {
-      const styleWithHillshadeExaggeration = {
-        version: 8,
-        sources: {
-          dem: {
-            type: "raster-dem",
-            tiles: ["https://example.com/{z}/{x}/{y}.png"],
-          },
-        },
-        layers: [
-          {
-            id: "hillshade",
-            type: "hillshade",
-            source: "dem",
-            paint: {
-              "hillshade-exaggeration": 2.0, // > 1.0 is Navara extension
-            },
-          },
-        ],
-      };
-
-      // Should not throw - hillshade-exaggeration > 1.0 errors are filtered
-      const parsed = await engine.parseStyle(styleWithHillshadeExaggeration);
-      expect(parsed).toBeDefined();
-    });
   });
 
   describe("createFilter", () => {

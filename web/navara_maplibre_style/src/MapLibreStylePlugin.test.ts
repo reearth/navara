@@ -27,7 +27,6 @@ vi.mock("@navaramap/three", () => {
     default: MockThreeView, // Default export for ThreeView
     TERRARIUM_ELEVATION_DECODER: () => ({ type: "terrarium" }),
     MAPBOX_ELEVATION_DECODER: () => ({ type: "mapbox" }),
-    JAPAN_GSI_ELEVATION_DECODER: () => ({ type: "gsi" }),
   };
 });
 
@@ -58,41 +57,6 @@ function createMockView(): ThreeView {
 describe("MapLibreStylePlugin", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  describe("URL security", () => {
-    it("should reject unsafe protocol URLs", async () => {
-      const testCases = [
-        { url: "file:///etc/passwd", protocol: "file:" },
-        { url: "data:text/plain,test", protocol: "data:" },
-      ];
-
-      for (const { url, protocol } of testCases) {
-        const plugin = new MapLibreStylePlugin(url);
-        const view = createMockView();
-
-        await expect(plugin.init(view, mockViewContext)).rejects.toThrow(
-          `Unsafe URL protocol "${protocol}"`,
-        );
-      }
-    });
-
-    it("should reject URL-based styles in SSR/Node environments", async () => {
-      // Simulate SSR environment by hiding window
-      const originalWindow = globalThis.window;
-      // @ts-expect-error - Simulating SSR environment
-      delete globalThis.window;
-
-      const plugin = new MapLibreStylePlugin("https://example.com/style.json");
-      const view = createMockView();
-
-      await expect(plugin.init(view, mockViewContext)).rejects.toThrow(
-        /server-side.*SSRF/i,
-      );
-
-      // Restore window
-      globalThis.window = originalWindow;
-    });
   });
 
   describe("Sources", () => {
@@ -188,7 +152,6 @@ describe("MapLibreStylePlugin", () => {
       const encodings = [
         { encoding: "terrarium" as const, decoder: { type: "terrarium" } },
         { encoding: "mapbox" as const, decoder: { type: "mapbox" } },
-        { encoding: "gsi" as const, decoder: { type: "gsi" } },
       ];
 
       for (const { encoding, decoder } of encodings) {
@@ -362,93 +325,7 @@ describe("MapLibreStylePlugin", () => {
     });
   });
 
-  describe("Hillshade layers", () => {
-    it("should apply valid hillshade exaggeration", async () => {
-      const style: StyleSpecification = {
-        version: 8,
-        sources: {
-          dem: {
-            type: "raster-dem",
-            tiles: ["https://example.com/dem/{z}/{x}/{y}.png"],
-            encoding: "terrarium",
-          },
-        },
-        layers: [
-          {
-            id: "hillshade",
-            type: "hillshade",
-            source: "dem",
-            paint: { "hillshade-exaggeration": 2.0 },
-          },
-        ],
-      };
-
-      const plugin = new MapLibreStylePlugin(style);
-      await plugin.init(createMockView(), mockViewContext);
-
-      expect(mockAddLayer).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: "raster",
-          hillshade: expect.objectContaining({ exaggeration: 2.0 }),
-        }),
-      );
-    });
-
-    it("should fall back to spec default (0.5) for invalid exaggeration", async () => {
-      const testCases = [
-        {
-          layer: {
-            id: "hillshade",
-            type: "hillshade",
-            source: "dem",
-            paint: { "hillshade-exaggeration": ["get", "nonexistent"] },
-          } as LayerSpecification,
-          name: "evaluator fails",
-        },
-        {
-          layer: {
-            id: "hillshade",
-            type: "hillshade",
-            source: "dem",
-            paint: { "hillshade-exaggeration": ["/", 1, 0] },
-          } as LayerSpecification,
-          name: "NaN/Infinity",
-        },
-        {
-          layer: {
-            id: "hillshade",
-            type: "hillshade",
-            source: "dem",
-          } as LayerSpecification,
-          name: "not specified",
-        },
-      ];
-
-      for (const { layer } of testCases) {
-        vi.clearAllMocks();
-        const style: StyleSpecification = {
-          version: 8,
-          sources: {
-            dem: {
-              type: "raster-dem",
-              tiles: ["https://example.com/dem/{z}/{x}/{y}.png"],
-              encoding: "terrarium",
-            },
-          },
-          layers: [layer],
-        };
-
-        const plugin = new MapLibreStylePlugin(style);
-        await plugin.init(createMockView(), mockViewContext);
-
-        expect(mockAddLayer).toHaveBeenCalledWith(
-          expect.objectContaining({
-            hillshade: expect.objectContaining({ exaggeration: 0.5 }),
-          }),
-        );
-      }
-    });
-  });
+  describe("Hillshade layers", () => {});
 
   describe("Feature geometry type mapping", () => {
     it.each([
@@ -522,10 +399,7 @@ describe("MapLibreStylePlugin", () => {
       expect(mockAddLayer).toHaveBeenCalledWith({
         type: "terrain",
         source: { delete: mockSourceDelete },
-        terrain: {
-          castShadow: true,
-          receiveShadow: true,
-        },
+        terrain: {},
       });
     });
 

@@ -14,7 +14,6 @@ import ThreeView, {
   type FeatureInfo,
   TERRARIUM_ELEVATION_DECODER,
   MAPBOX_ELEVATION_DECODER,
-  JAPAN_GSI_ELEVATION_DECODER,
 } from "@navaramap/three";
 
 import {
@@ -52,40 +51,12 @@ export class MapLibreStylePlugin extends Plugin<ThreeView, ViewContext> {
   async init(view: ThreeView, _ctx: ViewContext): Promise<void> {
     let styleData: unknown;
     if (typeof this.style === "string") {
-      // In SSR/Node environments, disable URL fetching to prevent SSRF attacks
-      // Callers should fetch and pass StyleSpecification objects instead
-      if (typeof window === "undefined") {
-        throw new Error(
-          "URL-based styles are not supported in server-side/Node environments. " +
-            "Please fetch the style JSON and pass it as a StyleSpecification object to prevent SSRF vulnerabilities.",
-        );
-      }
-
-      // Validate URL protocol (http/https only) and normalize URL
-      let validatedUrl: URL;
+      // Fetch style from URL
       try {
-        validatedUrl = new URL(this.style, window.location.href);
-        if (
-          validatedUrl.protocol !== "http:" &&
-          validatedUrl.protocol !== "https:"
-        ) {
-          throw new Error(
-            `Unsafe URL protocol "${validatedUrl.protocol}". Only http: and https: are allowed.`,
-          );
-        }
-      } catch (err) {
-        if (err instanceof TypeError) {
-          console.error(`Invalid style URL: ${this.style}`);
-        }
-        throw err;
-      }
-
-      // Fetch using the validated and normalized URL
-      try {
-        const response = await fetch(validatedUrl.href);
+        const response = await fetch(this.style);
         if (!response.ok) {
           throw new Error(
-            `Failed to fetch style from ${validatedUrl.href}: ${response.status} ${response.statusText}`,
+            `Failed to fetch style from ${this.style}: ${response.status} ${response.statusText}`,
           );
         }
         styleData = await response.json();
@@ -190,15 +161,7 @@ export class MapLibreStylePlugin extends Plugin<ThreeView, ViewContext> {
     const layer = view.addLayer({
       type: "terrain",
       source,
-      terrain: {
-        // castShadow and receiveShadow are hardcoded to true
-        // These are Navara-specific properties not part of MapLibre Style Spec
-        // To keep the plugin spec-compliant, we use sensible defaults here
-        castShadow: true,
-        receiveShadow: true,
-        // TODO: Map terrain.exaggeration to Navara terrain properties
-        // Currently, exaggeration is not directly supported in Navara's terrain layer API
-      },
+      terrain: {},
     });
     this.layers.push(layer);
   }
@@ -240,31 +203,19 @@ export class MapLibreStylePlugin extends Plugin<ThreeView, ViewContext> {
 
       if (sourceUrl) {
         // Select elevation decoder based on encoding field
-        // Supports: terrarium, mapbox, gsi (Navara extension)
-        // Note: "custom" encoding is not supported - requires external decoder configuration
+        // Supports: terrarium, mapbox
         const encoding = sourceSpec.encoding || "mapbox";
         let elevationDecoder;
 
-        if (encoding === "custom") {
-          // Custom encoding requires external decoder configuration
-          // which is not supported in declarative style specs
-          console.warn(
-            `Raster-DEM source ${sourceId} has encoding="custom" which requires ` +
-              `external decoder configuration. Skipping source. ` +
-              `Use "terrarium", "mapbox", or "gsi" encoding instead.`,
-          );
-          return;
-        } else if (encoding === "gsi") {
-          elevationDecoder = JAPAN_GSI_ELEVATION_DECODER();
-        } else if (encoding === "terrarium") {
+        if (encoding === "terrarium") {
           elevationDecoder = TERRARIUM_ELEVATION_DECODER();
         } else if (encoding === "mapbox") {
           elevationDecoder = MAPBOX_ELEVATION_DECODER();
         } else {
-          // Unknown encoding value - warn and skip
+          // Unknown or unsupported encoding - warn and skip
           console.warn(
-            `Raster-DEM source ${sourceId} has unknown encoding="${encoding}". ` +
-              `Supported values: "terrarium", "mapbox", "gsi". Skipping source.`,
+            `Raster-DEM source ${sourceId} has encoding="${encoding}" which is not supported. ` +
+              `Supported values: "terrarium", "mapbox". Skipping source.`,
           );
           return;
         }
@@ -362,31 +313,6 @@ export class MapLibreStylePlugin extends Plugin<ThreeView, ViewContext> {
     // Skip unsupported layers (toLayerDescription returns null for unsupported types)
     if (!layerDesc) {
       return;
-    }
-
-    // Handle hillshade exaggeration separately (layer-level property)
-    if (styleLayer.type === "hillshade") {
-      const paintEvaluators = createPaintEvaluators(styleLayer, this.engine);
-
-      // Evaluate exaggeration with minimal context
-      const evaluatedValue = paintEvaluators["hillshade-exaggeration"]?.({
-        properties: undefined,
-      });
-
-      // Use evaluated value if it's a valid finite number, otherwise use spec default (0.5)
-      // The evaluator already falls back to spec.default on error, but we validate here
-      // to handle edge cases like expression returning NaN/Infinity
-      let exaggeration = 0.5; // MapLibre Style Spec default
-      if (
-        typeof evaluatedValue === "number" &&
-        Number.isFinite(evaluatedValue)
-      ) {
-        exaggeration = evaluatedValue;
-      }
-
-      if (layerDesc.type === "raster" && layerDesc.hillshade) {
-        layerDesc.hillshade.exaggeration = exaggeration;
-      }
     }
 
     // Add layer

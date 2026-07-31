@@ -35,6 +35,7 @@ import { loadAtlasImageFromUrl } from "./billboardAtlasImageLoader";
 export type InstancedSpriteOptions = {
   renderOrder?: number;
   ctx: EventContext;
+  geometryType: Extract<GeometryType, "point" | "billboard">;
 };
 
 type PositionsInfo = {
@@ -105,6 +106,7 @@ export class InstancedSpriteMesh
     super();
     this.renderOrder = options.renderOrder ?? this.renderOrder;
     this.ctx = options.ctx;
+    this._geometryType = options.geometryType;
     this.ctx.declutter?.register(this);
     // `processObjectRemoved` dispatches this for every removed mesh; it is the
     // reliable teardown signal (this class's dispose() is not called there).
@@ -138,7 +140,7 @@ export class InstancedSpriteMesh
    * Get the geometry type of this mesh.
    * Defaults to "point" if not explicitly set.
    */
-  getGeometryType(): Extract<GeometryType, "point" | "billboard"> {
+  get geometryType(): Extract<GeometryType, "point" | "billboard"> {
     return this._geometryType;
   }
 

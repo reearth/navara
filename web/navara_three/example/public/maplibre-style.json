@@ -1,7 +1,7 @@
 {
   "version": 8,
   "terrain": {
-    "source": "gsi-dem"
+    "source": "mapterhorn-dem"
   },
   "sources": {
     "osm": {
@@ -10,12 +10,12 @@
       "tileSize": 256,
       "maxzoom": 19
     },
-    "gsi-dem": {
+    "mapterhorn-dem": {
       "type": "raster-dem",
-      "tiles": ["https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png"],
+      "tiles": ["https://tiles.mapterhorn.com/{z}/{x}/{y}.webp"],
       "tileSize": 256,
       "maxzoom": 15,
-      "encoding": "gsi"
+      "encoding": "terrarium"
     },
     "mvt-fire-prevention": {
       "type": "vector",
@@ -189,9 +189,9 @@
       }
     },
     {
-      "id": "gsi-hillshade",
+      "id": "mapterhorn-hillshade",
       "type": "hillshade",
-      "source": "gsi-dem",
+      "source": "mapterhorn-dem",
       "paint": {
         "hillshade-exaggeration": 1.0
       }

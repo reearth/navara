@@ -18,7 +18,6 @@ import {
 } from "three";
 
 import { PolygonOutlineMesh } from "..";
-import type { GeometryType } from "../evaluations";
 import type { EventContext } from "../event/context";
 import type { PolygonMaterialProps } from "../material/enhancer/polygon";
 import { createPolygonMaterialEnhancer } from "../material/enhancer/polygon/polygonMaterialEnhancer";
@@ -87,11 +86,9 @@ export class PolygonMesh extends BatchedFeatureMesh<
   }
 
   /**
-   * Get the geometry type of this mesh.
+   * Geometry type of this mesh.
    */
-  getGeometryType(): Extract<GeometryType, "polygon"> {
-    return "polygon";
-  }
+  readonly geometryType = "polygon" as const;
 
   init(mesh: NavaraPolygonMesh, tileHandle: TileHandle | undefined) {
     this.batchLength = mesh.batch_length;

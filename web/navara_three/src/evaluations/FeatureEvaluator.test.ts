@@ -38,9 +38,10 @@ describe("FeatureEvaluator", () => {
     it("should pass through valid geometry type literals", () => {
       // Test representative types: billboard and text (critical for symbol layers)
       const mockMesh = new Object3D();
-      (
-        mockMesh as Object3D & { getGeometryType(): GeometryType }
-      ).getGeometryType = () => "billboard";
+      Object.defineProperty(mockMesh, "geometryType", {
+        get: () => "billboard",
+        configurable: true,
+      });
 
       const evaluator = new FeatureEvaluator(
         mockHandler,
@@ -60,8 +61,10 @@ describe("FeatureEvaluator", () => {
 
     it("should return undefined and warn once for invalid values", () => {
       const mockMesh = new Object3D();
-      (mockMesh as Object3D & { getGeometryType(): string }).getGeometryType =
-        () => "invalid-type";
+      Object.defineProperty(mockMesh, "geometryType", {
+        get: () => "invalid-type",
+        configurable: true,
+      });
 
       const evaluator = new FeatureEvaluator(
         mockHandler,
@@ -80,7 +83,7 @@ describe("FeatureEvaluator", () => {
       expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
       expect(consoleWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining(
-          'Invalid geometry type returned from getGeometryType(): "invalid-type"',
+          'Invalid geometry type returned from geometryType getter: "invalid-type"',
         ),
       );
 
@@ -94,9 +97,9 @@ describe("FeatureEvaluator", () => {
       expect(consoleWarnSpy).not.toHaveBeenCalled(); // No additional warnings
     });
 
-    it("should return undefined without warning when getGeometryType is not present", () => {
+    it("should return undefined without warning when geometryType is not present", () => {
       const mockMesh = new Object3D();
-      // No getGeometryType method
+      // No geometryType getter
 
       const evaluator = new FeatureEvaluator(
         mockHandler,
@@ -117,9 +120,10 @@ describe("FeatureEvaluator", () => {
     it("should read geometryType dynamically on each evaluation (critical for symbol layers)", () => {
       const mockMesh = new Object3D();
       let currentType: GeometryType = "billboard";
-      (
-        mockMesh as Object3D & { getGeometryType(): GeometryType }
-      ).getGeometryType = () => currentType;
+      Object.defineProperty(mockMesh, "geometryType", {
+        get: () => currentType,
+        configurable: true,
+      });
 
       const evaluator = new FeatureEvaluator(
         mockHandler,

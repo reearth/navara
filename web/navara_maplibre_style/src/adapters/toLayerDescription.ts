@@ -112,14 +112,6 @@ let transparentPlaceholder: string | null = null;
 function getTransparentPlaceholder(): string {
   if (transparentPlaceholder) return transparentPlaceholder;
 
-  // Check for browser environment before using DOM APIs
-  if (typeof document === "undefined") {
-    // Non-browser environment (SSR/Node) - cache and return static fallback
-    transparentPlaceholder =
-      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1' height='1'/%3E";
-    return transparentPlaceholder;
-  }
-
   try {
     // Create a 1x1 transparent canvas
     const canvas = document.createElement("canvas");

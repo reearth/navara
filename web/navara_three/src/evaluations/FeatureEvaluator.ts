@@ -25,6 +25,8 @@ import {
   type BatchedAttributeName,
   InstancedSpriteMesh,
   BatchedSdfTextMesh,
+  type GeometryType,
+  VALID_GEOMETRY_TYPES,
 } from "../mesh";
 
 type AvailableMaterialProperty = ExtractProperties<
@@ -87,11 +89,11 @@ export type EvaluatedValue = {
 };
 
 /**
+ * Re-export GeometryType from mesh constants for convenience.
  * Geometry type for feature evaluation context.
  * Tells the evaluator which geometry type is being rendered.
  */
-export type GeometryType =
-  "billboard" | "text" | "point" | "polyline" | "polygon" | "model";
+export type { GeometryType };
 
 /**
  * Information about a feature batch, passed to evaluation callbacks.
@@ -195,58 +197,42 @@ export class FeatureEvaluator {
   }
 
   /**
-   * Valid geometry type literals for runtime validation.
-   */
-  private static readonly VALID_GEOMETRY_TYPES = new Set<GeometryType>([
-    "billboard",
-    "text",
-    "point",
-    "polyline",
-    "polygon",
-    "model",
-  ]);
-
-  /**
    * Track objects we've already warned about to avoid log spam.
    * Uses WeakSet so objects can be garbage collected.
    */
   private static readonly warnedObjects = new WeakSet<Object3D>();
 
   /**
-   * Type guard to check if an Object3D has a getGeometryType method.
+   * Type guard to check if an Object3D has a geometryType getter.
    */
-  private hasGetGeometryType(
+  private hasGeometryType(
     obj: Object3D,
-  ): obj is Object3D & { getGeometryType(): unknown } {
-    const objRecord = obj as unknown as Record<string, unknown>;
-    return (
-      "getGeometryType" in obj &&
-      typeof objRecord["getGeometryType"] === "function"
-    );
+  ): obj is Object3D & { geometryType: unknown } {
+    return "geometryType" in obj;
   }
 
   /**
    * Determine geometry type from the mesh object.
-   * Calls getGeometryType() method if available on the mesh.
+   * Reads geometryType getter if available on the mesh.
    * Validates that the returned value is a valid GeometryType literal.
    */
   private determineGeometryType(obj: Object3D): GeometryType | undefined {
-    if (this.hasGetGeometryType(obj)) {
-      const value = obj.getGeometryType();
+    if (this.hasGeometryType(obj)) {
+      const value = obj.geometryType;
 
       // Runtime validation: ensure the returned value is a valid GeometryType
       if (
         typeof value === "string" &&
-        FeatureEvaluator.VALID_GEOMETRY_TYPES.has(value as GeometryType)
+        VALID_GEOMETRY_TYPES.includes(value as GeometryType)
       ) {
         return value as GeometryType;
       }
 
-      // Invalid value from getGeometryType() - warn once per object to avoid log spam
+      // Invalid value from geometryType - warn once per object to avoid log spam
       if (!FeatureEvaluator.warnedObjects.has(obj)) {
         FeatureEvaluator.warnedObjects.add(obj);
         console.warn(
-          `Invalid geometry type returned from getGeometryType(): "${value}". Expected one of: ${Array.from(FeatureEvaluator.VALID_GEOMETRY_TYPES).join(", ")}`,
+          `Invalid geometry type returned from geometryType getter: "${value}". Expected one of: ${VALID_GEOMETRY_TYPES.join(", ")}`,
         );
       }
     }

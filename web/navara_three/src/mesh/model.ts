@@ -23,7 +23,6 @@ import {
 } from "three";
 import invariant from "tiny-invariant";
 
-import type { GeometryType } from "../evaluations";
 import type { EventContext } from "../event/context";
 import {
   createModelMaterialEnhancer,
@@ -98,11 +97,9 @@ export class ModelMesh
   }
 
   /**
-   * Get the geometry type of this mesh.
+   * Geometry type of this mesh.
    */
-  getGeometryType(): Extract<GeometryType, "model"> {
-    return "model";
-  }
+  readonly geometryType = "model" as const;
 
   get water(): boolean {
     for (const enhancer of this._enhancers.values()) {

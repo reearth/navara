@@ -49,11 +49,10 @@ export type RasterSource = RasterSourceSpecification;
 
 /**
  * Raster DEM source from MapLibre Style Spec (for terrain/hillshade).
- * Extended to support Navara-specific encoding values (e.g., "gsi" for Japan GSI tiles).
  * @see https://maplibre.org/maplibre-style-spec/sources/#raster-dem
  */
 export type RasterDemSource = Omit<RasterDEMSourceSpecification, "encoding"> & {
-  encoding?: "terrarium" | "mapbox" | "custom" | "gsi";
+  encoding?: "terrarium" | "mapbox" | "custom";
 };
 
 /**

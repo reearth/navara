@@ -9,39 +9,14 @@ import type { LayerType, PropertySpec, StyleValue } from "./types";
 /**
  * Filter validation errors to ignore Navara-specific extensions.
  *
- * Navara extends the MapLibre Style Spec with:
- * - "gsi" encoding for raster-dem sources (Japanese GSI terrain tiles)
- * - Relaxed hillshade-exaggeration range (allows > 1.0 for artistic effects)
- * - Data expressions for hillshade properties (even if spec doesn't officially support)
+ * Currently returns all errors as-is (no Navara extensions implemented yet).
+ * This function is kept for future extensibility.
  */
 export function filterNavaraExtensionErrors(
   errors: { message: string }[],
 ): { message: string }[] {
-  return errors.filter((e) => {
-    const msg = e.message.toLowerCase();
-
-    // Skip validation errors for raster-dem sources with "gsi" encoding (Navara extension)
-    if (msg.includes("encoding") && msg.includes("gsi")) {
-      return false;
-    }
-
-    // Skip hillshade-exaggeration range validation
-    // MapLibre spec restricts to 0-1, but we allow higher values for artistic effects
-    if (
-      msg.includes("hillshade-exaggeration") &&
-      (msg.includes("greater than") || msg.includes("maximum"))
-    ) {
-      return false;
-    }
-
-    // Skip data expression restrictions for hillshade properties
-    // We want to support expressions even if MapLibre spec doesn't officially support them
-    if (msg.includes("hillshade") && msg.includes("data expressions")) {
-      return false;
-    }
-
-    return true;
-  });
+  // No Navara extensions currently - return all errors
+  return errors;
 }
 
 /**

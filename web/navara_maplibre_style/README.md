@@ -38,11 +38,9 @@ Only the properties listed below are actually implemented and functional. Other 
   - Text rendering uses SDF (signed distance field)
   - No text rotation, collision detection, or symbol sorting
 
-#### ✅ `hillshade`
+#### ⚠️ `hillshade`
 
-- **Paint:** `hillshade-exaggeration` only
-- **Note:**
-  - Navara allows `hillshade-exaggeration` > 1.0 for artistic effects
+- **Paint:** No paint properties are processed
 
 #### ⚠️ `raster`
 
@@ -103,11 +101,11 @@ or
 {
   "type": "raster-dem",
   "tiles": ["https://example.com/{z}/{x}/{y}.png"],
-  "encoding": "terrarium" | "mapbox" | "gsi"
+  "encoding": "terrarium" | "mapbox"
 }
 ```
 
-- Supports `terrarium`, `mapbox`, and `gsi` (Navara extension) encodings
+- Supports `terrarium` and `mapbox` encodings
 - Can be used with `terrain` property for 3D terrain rendering
 
 #### ❌ Not Supported
@@ -130,23 +128,7 @@ All [MapLibre expression operators](https://maplibre.org/maplibre-style-spec/exp
 
 ### Navara Extensions
 
-Navara extends the MapLibre Style Spec with:
-
-- **`gsi` encoding** for `raster-dem` sources - Supports Japanese GSI terrain tiles
-
-  ```json
-  {
-    "type": "raster-dem",
-    "tiles": ["https://cyberjapandata.gsi.go.jp/xyz/dem5a/{z}/{x}/{y}.txt"],
-    "encoding": "gsi"
-  }
-  ```
-
-- **Relaxed `hillshade-exaggeration`** - Allows values > 1.0 for artistic effects (MapLibre spec restricts to 0-1)
-
-- **Data expressions for hillshade** - Supports data-driven expressions for hillshade properties
-
-- **Font path literals** - Supports font file paths like `["/fonts/custom.ttf"]` in addition to font names
+Navara is compatible with the standard MapLibre Style Spec without custom extensions.
 
 ## Usage
 
