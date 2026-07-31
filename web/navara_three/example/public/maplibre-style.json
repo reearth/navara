@@ -13,7 +13,7 @@
     "mapterhorn-dem": {
       "type": "raster-dem",
       "tiles": ["https://tiles.mapterhorn.com/{z}/{x}/{y}.webp"],
-      "tileSize": 256,
+      "tileSize": 512,
       "maxzoom": 15,
       "encoding": "terrarium"
     },

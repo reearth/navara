@@ -13,13 +13,13 @@ import {
   MVT_DATASETS,
   TERRAIN_DATASETS,
   TILE_DATASETS,
-} from "../../helpers/constants";
-import { addCameraControl } from "../../helpers/control";
+} from "../../../helpers/constants";
+import { addCameraControl } from "../../../helpers/control";
 
 export type CustomDescriptions = DefaultDescriptions;
 
 /**
- * Simple MapLibre Style example with a polygon layer.
+ * Simple MapLibre Style example.
  * This demonstrates the basic functionality of the MapLibreStylePlugin.
  */
 export async function run() {
@@ -60,7 +60,7 @@ export async function run() {
 
   attribution?.add([
     TILE_DATASETS.openstreetmap,
-    TERRAIN_DATASETS.gsi,
+    TERRAIN_DATASETS.mapterhorn,
     MVT_DATASETS.plateauTokyoFirePrevention,
     MVT_DATASETS.plateauGifuTran,
     MVT_DATASETS.plateauWakayamaGen,

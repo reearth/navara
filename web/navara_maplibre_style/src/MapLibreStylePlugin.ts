@@ -221,6 +221,7 @@ export class MapLibreStylePlugin extends Plugin<ThreeView, ViewContext> {
           type: "raster-dem",
           url: sourceUrl,
           elevationDecoder,
+          tileSize: sourceSpec.tileSize,
         });
         this.sources.set(sourceId, source);
       } else {
