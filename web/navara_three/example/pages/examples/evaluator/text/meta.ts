@@ -6,7 +6,7 @@ export default {
   title: { en: "Text Labels", ja: "Text Labels" },
   description: {
     en: "Label features from their properties with an auto-loaded Google Font.",
-    ja: "フィーチャの属性からラベルを生成し、Google Font を自動読み込みで使う。",
+    ja: "地物の属性からラベルを生成し、Google Font を自動読み込みで使う。",
   },
   docs: "three/material/text-material",
 } satisfies ExampleMeta;

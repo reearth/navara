@@ -52,7 +52,7 @@ import {
 
 ### TileJsonPlugin
 
-TileJSON 3.0.0 ドキュメントを取得し、`addSource()` を通じて単一のラスターまたはベクトルタイルソースとして登録するプラグインです。タイル URL、ズーム範囲、スキーム、アトリビューションをドキュメントから導出します。詳細は [TileJsonPlugin](../tilejsonplugin/) を参照してください。
+TileJSON 3.0.0 ドキュメントを取得し、`addSource()` を通じて単一のラスター・ベクトル・raster-DEM（標高）タイルソースとして登録するプラグインです。タイル URL、ズーム範囲、スキーム、アトリビューション、そして raster-DEM では MapLibre 互換の `tileSize` / `encoding` をドキュメントから導出します。詳細は [TileJsonPlugin](../tilejsonplugin/) を参照してください。
 
 ## 使い方
 

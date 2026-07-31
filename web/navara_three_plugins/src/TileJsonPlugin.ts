@@ -6,7 +6,10 @@
  * document and registers it as a single Navara source. {@link TileJsonPlugin.addSource}
  * mirrors {@link ThreeView.addSource}: a discriminated `type` plus an optional
  * `id`, with `url` pointing at the TileJSON document. The plugin derives the tile
- * URL, `minzoom`/`maxzoom`, and `scheme` from the document.
+ * URL, `minzoom`/`maxzoom`, and `scheme` from the document, plus — for
+ * `raster-dem` sources — the MapLibre-compatible `tileSize` and `encoding`
+ * fields. Each derived field can also be set on the description itself, which
+ * takes precedence over the document.
  *
  * Each document's `attribution` is surfaced automatically through the view's
  * built-in attribution UI (`view.attribution`). Callers who want a custom credit
@@ -36,6 +39,16 @@
  * view.addLayer({ type: "raster", source });
  * // ...or directly by the id passed above.
  * view.addLayer({ type: "raster", source: "basemap" });
+ *
+ * // Raster-DEM terrain. The MapLibre-compatible `tileSize`/`encoding` fields
+ * // are honored from the document (or the description below), defaulting to
+ * // MapLibre's 512 / "mapbox".
+ * const dem = await tilejson.addSource({
+ *   type: "raster-dem",
+ *   url: "https://example.com/terrain.json",
+ *   encoding: "terrarium", // takes precedence over the document
+ * });
+ * view.addLayer({ type: "terrain", source: dem, terrain: {} });
  * ```
  *
  * ### Custom attribution UI
@@ -55,6 +68,8 @@
 import ThreeView, {
   Plugin,
   EventHandler,
+  MAPBOX_ELEVATION_DECODER,
+  TERRARIUM_ELEVATION_DECODER,
   type Source,
   type ViewContext,
 } from "@navaramap/three";
@@ -64,6 +79,17 @@ type View = ThreeView<DefaultDescriptions>;
 
 /** Matches a TileJSON version such as "3.0.0" (major.minor.patch). */
 const TILEJSON_VERSION = /^3\.\d+\.\d+$/;
+
+/** MapLibre's raster-dem defaults, applied when neither the description nor the document sets them. */
+const DEFAULT_DEM_TILE_SIZE = 512;
+const DEFAULT_DEM_ENCODING: TileJsonDemEncoding = "mapbox";
+
+/**
+ * How a `raster-dem` document's RGB tiles encode elevation, matching MapLibre's
+ * `encoding` values. MapLibre's `"custom"` (free-form decode factors) is not
+ * supported.
+ */
+export type TileJsonDemEncoding = "mapbox" | "terrarium";
 
 /**
  * The subset of a TileJSON 3.0.0 document this plugin consumes. Other spec
@@ -82,24 +108,34 @@ export type TileJson = {
   maxzoom?: number;
   /** Tiling scheme. `"tms"` flips the Y axis (raster sources only). @defaultValue "xyz" */
   scheme?: "xyz" | "tms";
+  /**
+   * Tile size in pixels. Not part of the TileJSON spec, but emitted by
+   * MapLibre-oriented tile servers; applied to `raster-dem` sources only.
+   * @defaultValue 512
+   */
+  tileSize?: number;
+  /**
+   * Elevation encoding of DEM tiles. Not part of the TileJSON spec, but
+   * emitted by MapLibre-oriented tile servers; applied to `raster-dem` sources
+   * only.
+   * @defaultValue "mapbox"
+   */
+  encoding?: TileJsonDemEncoding;
 };
 
 /**
  * Which Navara source type a TileJSON document is materialized into. Declared by
  * the caller because TileJSON has no field that reliably distinguishes raster
- * imagery from vector tiles.
+ * imagery from vector or elevation tiles.
  */
-export type TileJsonSourceType = "raster-tile" | "vector-tile";
+export type TileJsonSourceType = "raster-tile" | "vector-tile" | "raster-dem";
 
 /**
- * Describes a TileJSON tile source to register via {@link TileJsonPlugin.addSource}.
- * Mirrors the shape of {@link ThreeView.addSource}, except `url` is the TileJSON
- * document URL (not a tile template) — the plugin fetches it and derives the tile
- * URL, zoom range, and attribution from the document.
+ * Fields shared by every {@link TileJsonSourceDescription} variant. Alongside
+ * `url` and `id`, it accepts the same optional fields the TileJSON document
+ * carries; a field set here takes precedence over the fetched document's value.
  */
-export type TileJsonSourceDescription = {
-  /** Navara source type to create, as in `addSource`. */
-  type: TileJsonSourceType;
+type TileJsonSourceDescriptionBase = {
   /** URL of the TileJSON 3.0.0 document to fetch and expand. */
   url: string;
   /**
@@ -108,7 +144,48 @@ export type TileJsonSourceDescription = {
    * handle. When omitted, the engine generates one.
    */
   id?: string;
+  /** Overrides the document's `minzoom` when set. */
+  minzoom?: number;
+  /** Overrides the document's `maxzoom` when set. */
+  maxzoom?: number;
+  /** Overrides the document's `scheme` when set. */
+  scheme?: "xyz" | "tms";
 };
+
+/** Registers a TileJSON document as a `raster-tile` (imagery) source. */
+export type TileJsonRasterTileSourceDescription =
+  TileJsonSourceDescriptionBase & {
+    type: "raster-tile";
+  };
+
+/** Registers a TileJSON document as a `vector-tile` (MVT) source. */
+export type TileJsonVectorTileSourceDescription =
+  TileJsonSourceDescriptionBase & {
+    type: "vector-tile";
+  };
+
+/** Registers a TileJSON document as a `raster-dem` (elevation) source. */
+export type TileJsonRasterDemSourceDescription =
+  TileJsonSourceDescriptionBase & {
+    type: "raster-dem";
+    /** Overrides the document's `tileSize` when set. @defaultValue 512 */
+    tileSize?: number;
+    /** Overrides the document's `encoding` when set. @defaultValue "mapbox" */
+    encoding?: TileJsonDemEncoding;
+  };
+
+/**
+ * Describes a TileJSON tile source to register via {@link TileJsonPlugin.addSource}.
+ * Mirrors the shape of {@link ThreeView.addSource}, except `url` is the TileJSON
+ * document URL (not a tile template) — the plugin fetches it and derives the tile
+ * URL, zoom range, and attribution from the document. Document-derived fields
+ * (`minzoom`, `maxzoom`, `scheme` — plus `tileSize` and `encoding` for
+ * `raster-dem`) can also be set here to take precedence over the document.
+ */
+export type TileJsonSourceDescription =
+  | TileJsonRasterTileSourceDescription
+  | TileJsonVectorTileSourceDescription
+  | TileJsonRasterDemSourceDescription;
 
 /** Detail passed to the {@link TileJsonPlugin} `loaded` event. */
 export type TileJsonLoadedEvent = {
@@ -150,6 +227,26 @@ function validateTileJson(doc: TileJson): void {
     throw new Error(
       'TileJsonPlugin: "tiles" must be a non-empty array of URL templates.',
     );
+  }
+}
+
+/**
+ * Map a MapLibre `encoding` value to the engine's elevation decoder. Throws for
+ * unknown encodings (including MapLibre's `"custom"`, whose free-form decode
+ * factors have no TileJSON representation) so a raster-dem source is never
+ * silently created with a wrong decoder.
+ */
+function resolveElevationDecoder(encoding: TileJsonDemEncoding) {
+  switch (encoding) {
+    case "mapbox":
+      return MAPBOX_ELEVATION_DECODER();
+    case "terrarium":
+      return TERRARIUM_ELEVATION_DECODER();
+    default:
+      throw new Error(
+        `TileJsonPlugin: unsupported raster-dem encoding ${JSON.stringify(encoding)}. ` +
+          'Supported encodings: "mapbox", "terrarium".',
+      );
   }
 }
 
@@ -195,9 +292,13 @@ export class TileJsonPlugin extends Plugin<View, ViewContext> {
    *
    * `desc.url` is the TileJSON document URL; the plugin fetches it, then creates
    * one source of the requested `desc.type` using the document's first tile
-   * endpoint, `minzoom`/`maxzoom`, and `scheme`. The document's `attribution` is
-   * surfaced through the view's built-in attribution UI (`view.attribution`), and
-   * a `loaded` event is emitted carrying the source, document, and attribution.
+   * endpoint, `minzoom`/`maxzoom`, and `scheme` — plus, for `raster-dem`, the
+   * MapLibre-compatible `tileSize` and `encoding` fields (defaulting to
+   * MapLibre's 512 and `"mapbox"`). Each of those fields can also be set on
+   * `desc` itself, taking precedence over the document. The document's
+   * `attribution` is surfaced through the view's built-in attribution UI
+   * (`view.attribution`), and a `loaded` event is emitted carrying the source,
+   * document, and attribution.
    *
    * A TileJSON `tiles` array lists mirror endpoints for the same tileset (as in
    * MapLibre, which shards requests across them). Navara sources take a single
@@ -228,26 +329,38 @@ export class TileJsonPlugin extends Plugin<View, ViewContext> {
       );
     }
 
-    const { minzoom, maxzoom, scheme } = doc;
+    // Description-level fields take precedence over the fetched document.
+    const minzoom = desc.minzoom ?? doc.minzoom;
+    const maxzoom = desc.maxzoom ?? doc.maxzoom;
+    const scheme = desc.scheme ?? doc.scheme;
     const id = desc.id;
-    const source =
-      desc.type === "raster-tile"
-        ? view.addSource({
-            type: "raster-tile",
-            url,
-            ...(id !== undefined ? { id } : {}),
-            ...(minzoom !== undefined ? { minZoom: minzoom } : {}),
-            ...(maxzoom !== undefined ? { maxZoom: maxzoom } : {}),
-            ...(scheme === "tms" ? { tms: true } : {}),
-          })
-        : // vector-tile sources have no minZoom / tms fields in the engine, so
-          // only maxzoom carries over.
-          view.addSource({
-            type: "vector-tile",
-            url,
-            ...(id !== undefined ? { id } : {}),
-            ...(maxzoom !== undefined ? { maxZoom: maxzoom } : {}),
-          });
+    const shared = {
+      url,
+      ...(id !== undefined ? { id } : {}),
+      ...(maxzoom !== undefined ? { maxZoom: maxzoom } : {}),
+    };
+    const rasterShared = {
+      ...shared,
+      ...(minzoom !== undefined ? { minZoom: minzoom } : {}),
+      ...(scheme === "tms" ? { tms: true } : {}),
+    };
+    let source: Source;
+    if (desc.type === "raster-tile") {
+      source = view.addSource({ type: "raster-tile", ...rasterShared });
+    } else if (desc.type === "raster-dem") {
+      source = view.addSource({
+        type: "raster-dem",
+        ...rasterShared,
+        tileSize: desc.tileSize ?? doc.tileSize ?? DEFAULT_DEM_TILE_SIZE,
+        elevationDecoder: resolveElevationDecoder(
+          desc.encoding ?? doc.encoding ?? DEFAULT_DEM_ENCODING,
+        ),
+      });
+    } else {
+      // vector-tile sources have no minZoom / tms fields in the engine, so
+      // only maxzoom carries over.
+      source = view.addSource({ type: "vector-tile", ...shared });
+    }
 
     if (doc.attribution) {
       this.addCredit(doc.attribution);

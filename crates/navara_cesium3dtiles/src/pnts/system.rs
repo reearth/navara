@@ -73,12 +73,8 @@ pub fn construct_model_by_pnts_layer(
             Ok(l) => l,
             Err(_) => unreachable!(),
         };
-        let mut appearance = match &layer.appearances[0] {
-            Appearance::Model(m) => m.clone(),
-            _ => unimplemented!(),
-        };
+        let mut appearance = Appearance::clone_model_or_default(&layer.appearances);
         appearance.should_rotate_in_default = false;
-        appearance.clamp_to_ground = false;
 
         let (draco_compressed, positions_center, positions_handle) =
             match get_geometry_info_from_pnts(&mut buf, req.handle) {

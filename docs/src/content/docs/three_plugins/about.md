@@ -52,7 +52,7 @@ Resolves a Cesium Ion asset endpoint at `init()` time and registers it as a quan
 
 ### TileJsonPlugin
 
-Fetches a TileJSON 3.0.0 document and registers it as a single raster or vector tile source via `addSource()`, deriving the tile URL, zoom range, scheme, and attribution from the document. See [TileJsonPlugin](../tilejsonplugin/) for details.
+Fetches a TileJSON 3.0.0 document and registers it as a single raster, vector, or raster-DEM (elevation) tile source via `addSource()`, deriving the tile URL, zoom range, scheme, attribution — and, for raster-DEM, the MapLibre-compatible `tileSize` / `encoding` — from the document. See [TileJsonPlugin](../tilejsonplugin/) for details.
 
 ## Usage
 

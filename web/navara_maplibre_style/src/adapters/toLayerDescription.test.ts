@@ -1,39 +1,16 @@
-import invariant from "tiny-invariant";
+import type { Source } from "@navaramap/three";
 import { describe, it, expect, vi } from "vitest";
 
-import type { ParsedStyle, StyleLayer } from "../engine/types";
+import type { StyleLayer } from "../engine/types";
 
 import { toLayerDescription } from "./toLayerDescription";
 
-// Mock @navaramap/three to avoid importing Three.js in tests
-vi.mock("@navaramap/three", () => ({
-  Color: class Color {
-    r = 0;
-    g = 0;
-    b = 0;
-    setHex() {
-      return this;
-    }
-  },
-}));
-
 describe("toLayerDescription", () => {
-  describe("GeoJSON source", () => {
-    it("should convert fill layer with inline GeoJSON data", () => {
-      const style: ParsedStyle = {
-        version: 8,
-        sources: {
-          test: {
-            type: "geojson",
-            data: {
-              type: "FeatureCollection",
-              features: [],
-            },
-          },
-        },
-        layers: [],
-      };
+  // Mock source object
+  const mockSource = {} as Source;
 
+  describe("vector layers", () => {
+    it("should convert fill layer", () => {
       const layer: StyleLayer = {
         id: "test-layer",
         type: "fill",
@@ -43,86 +20,187 @@ describe("toLayerDescription", () => {
         },
       };
 
-      const result = toLayerDescription(layer, style);
-      invariant(result.type === "geojson");
+      const result = toLayerDescription(mockSource, layer);
 
-      expect(result.type).toBe("geojson");
-      expect(result.data).toEqual({
-        type: "FeatureCollection",
-        features: [],
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe("vector");
+      expect(result).toMatchObject({
+        type: "vector",
+        source: mockSource,
+        polygon: {
+          clampToGround: true,
+        },
       });
-      expect(result.polygon).toBeDefined();
-      expect(result.polygon?.color).toBeDefined();
     });
 
-    it("should convert fill layer with URL data", () => {
-      const style: ParsedStyle = {
-        version: 8,
-        sources: {
-          test: {
-            type: "geojson",
-            data: "https://example.com/data.geojson",
-          },
-        },
-        layers: [],
-      };
-
+    it("should convert fill-extrusion layer", () => {
       const layer: StyleLayer = {
         id: "test-layer",
-        type: "fill",
+        type: "fill-extrusion",
         source: "test",
+        paint: {
+          "fill-extrusion-color": "#ff0000",
+          "fill-extrusion-height": 100,
+        },
       };
 
-      const result = toLayerDescription(layer, style);
-      invariant(result.type === "geojson");
+      const result = toLayerDescription(mockSource, layer);
 
-      expect(result.type).toBe("geojson");
-      expect(result.data).toEqual({
-        url: "https://example.com/data.geojson",
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe("vector");
+      expect(result).toMatchObject({
+        type: "vector",
+        source: mockSource,
+        polygon: {
+          clampToGround: false,
+        },
+      });
+    });
+
+    it("should convert line layer", () => {
+      const layer: StyleLayer = {
+        id: "test-layer",
+        type: "line",
+        source: "test",
+        paint: {
+          "line-color": "#ff0000",
+          "line-width": 2,
+        },
+      };
+
+      const result = toLayerDescription(mockSource, layer);
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe("vector");
+      expect(result).toMatchObject({
+        type: "vector",
+        source: mockSource,
+        polyline: {
+          clampToGround: true,
+        },
+      });
+    });
+
+    it("should convert circle layer", () => {
+      const layer: StyleLayer = {
+        id: "test-layer",
+        type: "circle",
+        source: "test",
+        paint: {
+          "circle-color": "#ff0000",
+          "circle-radius": 5,
+        },
+      };
+
+      const result = toLayerDescription(mockSource, layer);
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe("vector");
+      expect(result).toMatchObject({
+        type: "vector",
+        source: mockSource,
+        point: {
+          clampToGround: true,
+          center: { x: 0, y: -0.5 },
+        },
       });
     });
   });
 
-  describe("error handling", () => {
-    it("should throw error for missing source", () => {
-      const style: ParsedStyle = {
-        version: 8,
-        sources: {},
-        layers: [],
-      };
-
+  describe("raster layers", () => {
+    it("should convert raster layer", () => {
       const layer: StyleLayer = {
         id: "test-layer",
-        type: "fill",
-        source: "nonexistent",
-      };
-
-      expect(() => toLayerDescription(layer, style)).toThrow(
-        'Source "nonexistent" not found in style',
-      );
-    });
-
-    it("should throw error for unsupported source type", () => {
-      const style: ParsedStyle = {
-        version: 8,
-        sources: {
-          test: {
-            type: "vector",
-            tiles: ["https://example.com/{z}/{x}/{y}.pbf"],
-          },
-        },
-        layers: [],
-      };
-
-      const layer: StyleLayer = {
-        id: "test-layer",
-        type: "fill",
+        type: "raster",
         source: "test",
       };
 
-      expect(() => toLayerDescription(layer, style)).toThrow(
-        "Unsupported source type: vector",
+      const result = toLayerDescription(mockSource, layer);
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe("raster");
+      expect(result).toMatchObject({
+        type: "raster",
+        source: mockSource,
+      });
+    });
+
+    it("should convert hillshade layer (paint properties not included in layer description)", () => {
+      const layer: StyleLayer = {
+        id: "test-layer",
+        type: "hillshade",
+        source: "test",
+        paint: {
+          "hillshade-exaggeration": 2.0,
+        },
+      };
+
+      const result = toLayerDescription(mockSource, layer);
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe("raster");
+      expect(result).toMatchObject({
+        type: "raster",
+        source: mockSource,
+        hillshade: {}, // Paint properties are handled during evaluation, not in layer description
+      });
+    });
+  });
+
+  describe("unsupported and misconfigured layers", () => {
+    it("should warn and return null for unsupported layer type", () => {
+      const consoleWarnSpy = vi
+        .spyOn(console, "warn")
+        .mockImplementation(() => {});
+
+      const layer = {
+        id: "test-layer",
+        type: "unsupported",
+        source: "test",
+      } as unknown as StyleLayer;
+
+      const result = toLayerDescription(mockSource, layer);
+
+      // Should return null instead of throwing
+      expect(result).toBeNull();
+
+      // Should log a warning with layer context
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Layer "test-layer"'),
       );
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Unsupported layer type "unsupported"'),
+      );
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it("should warn and return null for misconfigured symbol layer", () => {
+      const consoleWarnSpy = vi
+        .spyOn(console, "warn")
+        .mockImplementation(() => {});
+
+      const layer: StyleLayer = {
+        id: "empty-symbol",
+        type: "symbol",
+        source: "test",
+        // No layout with icon-image or text-field
+      };
+
+      const result = toLayerDescription(mockSource, layer);
+
+      // Should return null instead of throwing
+      expect(result).toBeNull();
+
+      // Should log a warning
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Symbol layer "empty-symbol"'),
+      );
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("no icon-image or text-field"),
+      );
+
+      consoleWarnSpy.mockRestore();
     });
   });
 });

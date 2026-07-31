@@ -1,4 +1,4 @@
-import ThreeView from "@navaramap/three";
+import ThreeView, { Color } from "@navaramap/three";
 import type { SmoothLineMeshDesc } from "@navaramap/three-default-descs";
 import {
   DefaultPlugin,
@@ -11,7 +11,9 @@ import { initializeExample } from "../../../../helpers/initialize";
 
 import { CENTER, MID_HEIGHT, loopTrajectory } from "./data";
 
-const view = new ThreeView<DefaultDescriptions>();
+const view = new ThreeView<DefaultDescriptions>({
+  backgroundColor: new Color().setStyle("#cccccc"),
+});
 
 const defaultPlugin = new DefaultPlugin();
 view.addPlugin(defaultPlugin);
@@ -60,8 +62,6 @@ let prevTime: number | undefined;
 const drawUpTo = (count: number) =>
   trail.update({ smoothLines: { points: loopTrajectory.slice(0, count) } });
 
-// Advance by elapsed wall-clock time (capped across tab suspensions), so the
-// reveal speed is the same on every display refresh rate.
 const step = (time: number) => {
   const elapsed =
     prevTime === undefined ? 0 : Math.min(time - prevTime, 100) / 1000;

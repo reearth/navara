@@ -35,13 +35,13 @@ export type StyleEngine = {
    *
    * @param expr - MapLibre filter expression (e.g., ["==", "type", "park"])
    * @param layerType - Layer type for context-specific filtering
-   * @param geometryType - Geometry type (Polygon, LineString, Point)
+   * @param featureGeometryType - MapLibre/GeoJSON feature geometry type (e.g., "Polygon", "LineString", "Point")
    * @returns Function that evaluates to true/false for each feature
    */
   createFilter(
     expr: FilterExpression,
     layerType: LayerType,
-    geometryType: string,
+    featureGeometryType: string,
   ): (feature: FeatureContext) => boolean;
 
   /**
@@ -50,13 +50,13 @@ export type StyleEngine = {
    *
    * @param expr - MapLibre expression (e.g., ["get", "height"] or "#ff0000")
    * @param spec - Property specification for type info and defaults
-   * @param geometryType - Geometry type (Polygon, LineString, Point)
+   * @param featureGeometryType - MapLibre/GeoJSON feature geometry type (e.g., "Polygon", "LineString", "Point")
    * @returns Function that evaluates the expression for a given context
    */
   createValueFn<T extends StyleValue>(
     expr: ValueExpression,
     spec: PropertySpec,
-    geometryType?: string,
+    featureGeometryType?: string,
   ): (ctx: EvaluationContext) => T;
 
   /**
@@ -69,6 +69,20 @@ export type StyleEngine = {
    * @returns Property specification with type, default, and constraints, or undefined if not found
    */
   getPaintSpec(
+    layerType: LayerType,
+    propertyName: string,
+  ): PropertySpec | undefined;
+
+  /**
+   * Get the property specification for a layout property.
+   * This allows adapters to access layout specs without directly importing
+   * from the style-spec library, maintaining the StyleEngine abstraction.
+   *
+   * @param layerType - Layer type (symbol, line, etc.)
+   * @param propertyName - Layout property name (e.g., "text-field", "icon-image", "text-size")
+   * @returns Property specification with type, default, and constraints, or undefined if not found
+   */
+  getLayoutSpec(
     layerType: LayerType,
     propertyName: string,
   ): PropertySpec | undefined;

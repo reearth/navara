@@ -1,5 +1,18 @@
 import { Color, ColorMap, type ColorTuple } from "@navaramap/three";
 
+// Ref: https://colorbrewer2.org/#type=sequential&scheme=Oranges&n=9
+export const ORANGES_COLOR_MAP = new ColorMap("sequential", "Oranges", [
+  [255 / 255, 245 / 255, 235 / 255], // #fff5eb
+  [254 / 255, 230 / 255, 206 / 255], // #fee6ce
+  [253 / 255, 208 / 255, 162 / 255], // #fdd0a2
+  [253 / 255, 174 / 255, 107 / 255], // #fdae6b
+  [253 / 255, 141 / 255, 60 / 255], // #fd8d3c
+  [241 / 255, 105 / 255, 19 / 255], // #f16913
+  [217 / 255, 72 / 255, 1 / 255], // #d94801
+  [166 / 255, 54 / 255, 3 / 255], // #a63603
+  [127 / 255, 39 / 255, 4 / 255], // #7f2704
+]);
+
 // Ref: https://github.com/eukarya-inc/PLATEAU-VIEW/blob/26c98fa36e6cfe5776c04d1d2cbf77cc69eb264d/extension/src/prototypes/color-maps/colorMaps/plateau.ts
 export const PLATEAU_COLOR_MAP = new ColorMap("sequential", "Plateau", [
   [76 / 255, 57 / 255, 105 / 255], // #4c3969

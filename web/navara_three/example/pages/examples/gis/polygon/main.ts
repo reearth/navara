@@ -6,8 +6,6 @@ const view = new ThreeView();
 
 await view.init();
 
-// Close enough that the globe slightly overflows the frame, so the draped
-// polygons are the subject rather than the space around the sphere.
 view.setCamera({
   lng: 20,
   lat: 5,
@@ -17,13 +15,9 @@ view.setCamera({
   roll: 0,
 });
 
-// No basemap: a plain ellipsoid surface gives the clamp-to-ground polygons
-// something to drape onto, and the globe base color plays the ocean.
 view.addLayer({ type: "terrain", ellipsoid: {} });
 view.globe.color = new Color().setStyle("#0b1420");
 
-// World countries as one GeoJSON source; `clampToGround` drapes each polygon
-// onto the ellipsoid surface so the shapes curve with the globe.
 const source = view.addSource({ type: "geojson", url: "/globe.geojson" });
 view.addLayer({
   type: "vector",

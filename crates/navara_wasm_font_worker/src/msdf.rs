@@ -22,15 +22,21 @@ use image::RgbaImage;
 use nalgebra::{Affine2, Similarity2, Vector2};
 pub use ttf_parser::Face;
 
-/// Number of pixels around the glyph reserved for the distance ramp.
-/// Acts as MSDF's equivalent of [`crate::atlas::SDF_BUFFER`] — small values
-/// give crisper edges; larger values let the shader render thicker outlines.
+/// Physical pixels reserved around the glyph outline.
 ///
-/// 8 px is a middle-ground default: tight enough to keep the atlas compact,
-/// loose enough that bilinear sampling near the edge still lands on a valid
-/// distance ramp. Anything ≤ 4 starts producing visible artifacts on curved
-/// glyphs because `fwidth(dist)` saturates too quickly past the edge.
-pub const MSDF_RANGE_PX: f64 = 8.0;
+/// This controls bitmap dimensions and atlas use. Keep it separate from
+/// [`MSDF_RANGE_PX`]: fdsm's range is the *full* signed interval, so using 8
+/// for both values saturates the field after only 4 px of exterior distance
+/// and leaves the outer half of this padding unable to fade thick outlines.
+pub const MSDF_PADDING_PX: f64 = 8.0;
+
+/// Full encoded distance interval, spanning `-range / 2..range / 2`.
+///
+/// Twice the physical padding encodes the complete 8 px exterior margin while
+/// keeping glyph bitmaps exactly the same size. This gives outlined small text
+/// enough distance and antialiasing headroom to reach zero coverage before the
+/// quad boundary.
+pub const MSDF_RANGE_PX: f64 = MSDF_PADDING_PX * 2.0;
 
 /// Bytes per pixel for the MSDF atlas: R, G, B = MSDF channels; A = true SDF.
 pub const MSDF_CHANNELS: usize = 4;
@@ -76,18 +82,18 @@ pub fn rasterize_msdf(face: &Face<'_>, glyph_id: u16, px_size: f32) -> Option<Ms
 
     let x_extent = (bbox.x_max as f64 - bbox.x_min as f64) / shrinkage;
     let y_extent = (bbox.y_max as f64 - bbox.y_min as f64) / shrinkage;
-    let width = (x_extent + 2.0 * MSDF_RANGE_PX).ceil() as u32;
-    let height = (y_extent + 2.0 * MSDF_RANGE_PX).ceil() as u32;
+    let width = (x_extent + 2.0 * MSDF_PADDING_PX).ceil() as u32;
+    let height = (y_extent + 2.0 * MSDF_PADDING_PX).ceil() as u32;
     if width == 0 || height == 0 {
         return None;
     }
 
-    // Map font-unit space to pixel space: bbox.min lands at (RANGE, RANGE),
-    // leaving MSDF_RANGE_PX of padding on every side for the distance ramp.
+    // Map font-unit space to pixel space: bbox.min lands at (PADDING, PADDING),
+    // leaving MSDF_PADDING_PX around every side for the distance ramp.
     let transformation = nalgebra::convert::<_, Affine2<f64>>(Similarity2::new(
         Vector2::new(
-            MSDF_RANGE_PX - bbox.x_min as f64 / shrinkage,
-            MSDF_RANGE_PX - bbox.y_min as f64 / shrinkage,
+            MSDF_PADDING_PX - bbox.x_min as f64 / shrinkage,
+            MSDF_PADDING_PX - bbox.y_min as f64 / shrinkage,
         ),
         0.0,
         1.0 / shrinkage,
@@ -116,7 +122,48 @@ pub fn rasterize_msdf(face: &Face<'_>, glyph_id: u16, px_size: f32) -> Option<Ms
         height,
         // bbox.x_min in pixels, then subtract padding so atlas code lands the
         // glyph at the right place relative to the cursor.
-        bearing_x: (bbox.x_min as f64 / shrinkage - MSDF_RANGE_PX) as f32,
-        bearing_y: (bbox.y_min as f64 / shrinkage - MSDF_RANGE_PX) as f32,
+        bearing_x: (bbox.x_min as f64 / shrinkage - MSDF_PADDING_PX) as f32,
+        bearing_y: (bbox.y_min as f64 / shrinkage - MSDF_PADDING_PX) as f32,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const TEST_FONT: &[u8] = include_bytes!("../tests/fixtures/demo_monochrome.ttf");
+
+    #[test]
+    fn mtsdf_encodes_the_complete_exterior_padding() {
+        let face = Face::parse(TEST_FONT, 0).expect("fixture font should parse");
+        let glyph_id = face
+            .glyph_index('A')
+            .expect("fixture font should contain A")
+            .0;
+        let glyph =
+            rasterize_msdf(&face, glyph_id, 64.0).expect("A should produce an MTSDF bitmap");
+
+        // Alpha is the true SDF. Every perimeter texel is almost fully outside
+        // because the encoded half-range reaches the physical padding edge.
+        // With range == padding this was around 64/255 instead, which gave a
+        // small outlined glyph visible coverage across its rectangular quad.
+        let alpha_at = |x: u32, y: u32| {
+            let i = ((y * glyph.width + x) * MSDF_CHANNELS as u32 + 3) as usize;
+            glyph.pixels[i]
+        };
+        let mut perimeter_max = 0;
+        for x in 0..glyph.width {
+            perimeter_max = perimeter_max.max(alpha_at(x, 0));
+            perimeter_max = perimeter_max.max(alpha_at(x, glyph.height - 1));
+        }
+        for y in 0..glyph.height {
+            perimeter_max = perimeter_max.max(alpha_at(0, y));
+            perimeter_max = perimeter_max.max(alpha_at(glyph.width - 1, y));
+        }
+
+        assert!(
+            perimeter_max <= 16,
+            "MTSDF perimeter must be deep outside, got alpha {perimeter_max}"
+        );
+    }
 }

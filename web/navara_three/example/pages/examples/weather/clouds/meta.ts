@@ -5,8 +5,8 @@ export default {
   order: 20,
   title: { en: "Clouds", ja: "雲" },
   description: {
-    en: "Volumetric clouds drift over Mt. Fuji; cycle the coverage from a few puffs to overcast.",
-    ja: "富士山の上を漂うボリュメトリック雲。被覆率を切り替えて量を変える。",
+    en: "Add volumetric clouds.",
+    ja: "雲を追加する。",
   },
   docs: "three_default_descs/effect-desc/clouds-effect-desc",
 } satisfies ExampleMeta;

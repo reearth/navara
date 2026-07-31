@@ -6,8 +6,8 @@ import { sdfRadiusFor } from "./types";
 describe("sdfTextBaseEnhancer / state", () => {
   describe("updateState", () => {
     it("initializes state from props with defaults", () => {
-      const state = updateState({ fontSize: 24 }, DEFAULT_BASE_STATE);
-      expect(state.fontSize).toBe(24);
+      const state = updateState({ offsetDepth: false }, DEFAULT_BASE_STATE);
+      expect(state.offsetDepth).toBe(false);
       expect(state.center).toEqual([0.5, 0.0]);
       expect(state.sizeInMeters).toBe(true);
     });
@@ -18,16 +18,6 @@ describe("sdfTextBaseEnhancer / state", () => {
       expect(state.useRTE).toBe(true);
     });
 
-    it("updates color from hex to RGB tuple", () => {
-      const state = updateState({ color: 0xff0000 }, DEFAULT_BASE_STATE);
-      expect(state.color.getHex()).toBe(0xff0000);
-    });
-
-    it("updates fontSize", () => {
-      const state = updateState({ fontSize: 32 }, DEFAULT_BASE_STATE);
-      expect(state.fontSize).toBe(32);
-    });
-
     it("updates center", () => {
       const state = updateState({ center: [0.0, 0.5] }, DEFAULT_BASE_STATE);
       expect(state.center).toEqual([0.0, 0.5]);
@@ -36,11 +26,6 @@ describe("sdfTextBaseEnhancer / state", () => {
     it("updates sizeInMeters", () => {
       const state = updateState({ sizeInMeters: true }, DEFAULT_BASE_STATE);
       expect(state.sizeInMeters).toBe(true);
-    });
-
-    it("updates addHeight", () => {
-      const state = updateState({ addHeight: 100 }, DEFAULT_BASE_STATE);
-      expect(state.addHeight).toBe(100);
     });
 
     it("updates offsetDepth", () => {
@@ -99,6 +84,17 @@ describe("sdfTextBaseEnhancer / state", () => {
       expect(state.pickable).toBe(true);
     });
 
+    // Colour, opacity, font size and height moved into the per-label data
+    // texture when text became a single batched draw call, so they must not
+    // reappear as batch-wide state.
+    it("carries no per-label style", () => {
+      const state = updateState({}, DEFAULT_BASE_STATE);
+      expect(state).not.toHaveProperty("color");
+      expect(state).not.toHaveProperty("opacity");
+      expect(state).not.toHaveProperty("fontSize");
+      expect(state).not.toHaveProperty("addHeight");
+    });
+
     it("updates depthTest", () => {
       const state = updateState({ depthTest: false }, DEFAULT_BASE_STATE);
       expect(state.depthTest).toBe(false);
@@ -107,11 +103,11 @@ describe("sdfTextBaseEnhancer / state", () => {
     it("falls back to currentState for missing props", () => {
       const currentState = {
         ...DEFAULT_BASE_STATE,
-        fontSize: 42,
+        outlineOpacity: 0.25,
         center: [1, 2] as [number, number],
       };
       const state = updateState({}, currentState);
-      expect(state.fontSize).toBe(42);
+      expect(state.outlineOpacity).toBe(0.25);
       expect(state.center).toEqual([1, 2]);
     });
   });

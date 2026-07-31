@@ -21,7 +21,6 @@ view.addFontFamily(
   ),
 );
 
-// Overhead view of the Atlantic.
 view.setCamera({
   lng: -25,
   lat: 8,
@@ -37,8 +36,6 @@ const basemap = await tilejson.addSource({
 });
 view.addLayer({ type: "raster", source: basemap });
 
-// One fixed style for every label — white fill with a black outline so the
-// names stay readable over the ocean-floor relief.
 const source = view.addSource({ type: "geojson", data: oceans });
 const layer = view.addLayer({
   type: "vector",
@@ -55,8 +52,6 @@ const layer = view.addLayer({
   },
 });
 
-// Each label's string comes from the feature's `name` property. A label set
-// through the evaluator must also return `show: true` to become visible.
 layer.on("featureUpdated", ({ evaluator }) => {
   evaluator.evaluate(
     ({ properties }) => {

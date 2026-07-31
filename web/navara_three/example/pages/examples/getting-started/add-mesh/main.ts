@@ -19,7 +19,6 @@ import { TileJsonPlugin } from "@navaramap/three-plugins";
 import { addButton } from "../../../../helpers/button";
 import { initializeExample } from "../../../../helpers/initialize";
 
-// Quiet mountain stage shared with the Layers example.
 const STAGE = { lng: 137.6495, lat: 36.2445 };
 
 const view = new ThreeView<DefaultDescriptions>();
@@ -31,7 +30,6 @@ view.addPlugin(tilejson);
 
 await view.init();
 
-// Fixed afternoon sun + ambient fill so each mesh gets distinct shading.
 view.atmosphere.date = new Date("2026-07-16T03:00:00Z");
 view.addLight({ ambient: { intensity: 0.6 } });
 view.addLight({ sun: { intensity: 1.8 } });
@@ -62,9 +60,6 @@ const frame = northUpEastToFixedFrame(
   }),
 );
 
-// One row of meshes, spread along the east axis with the same spacing as the
-// Layers example's exhibits. Primitives are centered on their origin, so each
-// is lifted to sit on the ground.
 const SPACING = 240;
 const rowZ = (index: number) => (index - 1.5) * SPACING;
 
@@ -126,8 +121,6 @@ styleButton.onclick = () => {
   if (!meshes) return;
   color = color === "#0091ff" ? "#ff6b2c" : "#0091ff";
   const accent = new Color().setStyle(color);
-  // The textured GLTF car keeps its own materials; only the primitives are
-  // restyled.
   meshes.box.update({ box: { color: accent } });
   meshes.sphere.update({ sphere: { color: accent } });
   meshes.cylinder.update({ cylinder: { color: accent } });

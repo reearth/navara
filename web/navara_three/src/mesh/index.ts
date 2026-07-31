@@ -1,3 +1,4 @@
+export * from "./constants";
 export * from "./model";
 export * from "./polygon";
 export * from "./polyline";
@@ -12,5 +13,4 @@ export * from "./pickableMeshWrapper";
 export * from "./rtcRteHelper";
 export * from "./sprite";
 export * from "./sdfText";
-export * from "./batchedSdfText";
 export * from "./DrapedMesh";

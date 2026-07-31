@@ -7,6 +7,9 @@
 import type {
   GeoJSONSourceSpecification,
   VectorSourceSpecification,
+  RasterSourceSpecification,
+  RasterDEMSourceSpecification,
+  TerrainSpecification,
 } from "@maplibre/maplibre-gl-style-spec";
 
 /**
@@ -17,14 +20,14 @@ export type ParsedStyle = {
   version: 8;
   sources: Record<string, StyleSource>;
   layers: StyleLayer[];
+  terrain?: TerrainSpecification;
 };
 
 /**
  * Source types from MapLibre Style Spec.
- * Currently only GeoJSON sources are supported in the PoC implementation.
- * Vector sources are defined for type completeness but will throw at runtime.
  */
-export type StyleSource = VectorSource | GeoJSONSource;
+export type StyleSource =
+  VectorSource | GeoJSONSource | RasterSource | RasterDemSource;
 
 /**
  * GeoJSON source from MapLibre Style Spec.
@@ -39,11 +42,46 @@ export type GeoJSONSource = GeoJSONSourceSpecification;
 export type VectorSource = VectorSourceSpecification;
 
 /**
- * Layer types supported in PoC: fill, line, circle.
+ * Raster tile source from MapLibre Style Spec.
+ * @see https://maplibre.org/maplibre-style-spec/sources/#raster
  */
-export type StyleLayer = FillLayer | LineLayer | CircleLayer;
+export type RasterSource = RasterSourceSpecification;
 
-export type LayerType = "fill" | "line" | "circle";
+/**
+ * Raster DEM source from MapLibre Style Spec (for terrain/hillshade).
+ * @see https://maplibre.org/maplibre-style-spec/sources/#raster-dem
+ */
+export type RasterDemSource = Omit<RasterDEMSourceSpecification, "encoding"> & {
+  encoding?: "terrarium" | "mapbox" | "custom";
+};
+
+/**
+ * Layer types supported: fill, fill-extrusion, line, circle, symbol, raster, hillshade.
+ *
+ * Note: We define our own simplified layer types instead of using the official MapLibre
+ * LayerSpecification types because:
+ * 1. Official types use complex DataDrivenPropertyValueSpecification wrappers that make
+ *    property access difficult (requires type narrowing for every access)
+ * 2. We need a simpler interface for our style engine abstraction
+ * 3. Our types are compatible with MapLibre at runtime, just more lenient at compile time
+ */
+export type StyleLayer =
+  | FillLayer
+  | FillExtrusionLayer
+  | LineLayer
+  | CircleLayer
+  | SymbolLayer
+  | RasterLayer
+  | HillshadeLayer;
+
+export type LayerType =
+  | "fill"
+  | "fill-extrusion"
+  | "line"
+  | "circle"
+  | "symbol"
+  | "raster"
+  | "hillshade";
 
 export type BaseLayer = {
   id: string;
@@ -67,6 +105,18 @@ export type FillPaint = {
   "fill-outline-color"?: ValueExpression;
 };
 
+export type FillExtrusionLayer = {
+  type: "fill-extrusion";
+  paint?: FillExtrusionPaint;
+} & BaseLayer;
+
+export type FillExtrusionPaint = {
+  "fill-extrusion-color"?: ValueExpression;
+  "fill-extrusion-opacity"?: ValueExpression;
+  "fill-extrusion-base"?: ValueExpression;
+  "fill-extrusion-height"?: ValueExpression;
+};
+
 export type LineLayer = {
   type: "line";
   paint?: LinePaint;
@@ -87,6 +137,49 @@ export type CirclePaint = {
   "circle-color"?: ValueExpression;
   "circle-radius"?: ValueExpression;
   "circle-opacity"?: ValueExpression;
+};
+
+export type RasterLayer = {
+  type: "raster";
+  paint?: RasterPaint;
+} & BaseLayer;
+
+export type RasterPaint = {
+  "raster-opacity"?: ValueExpression;
+};
+
+export type HillshadeLayer = {
+  type: "hillshade";
+  paint?: HillshadePaint;
+} & BaseLayer;
+
+export type HillshadePaint = {
+  "hillshade-exaggeration"?: ValueExpression;
+};
+
+export type SymbolLayer = {
+  type: "symbol";
+  layout?: SymbolLayout;
+  paint?: SymbolPaint;
+} & BaseLayer;
+
+export type SymbolLayout = {
+  "icon-image"?: ValueExpression;
+  "icon-size"?: ValueExpression;
+  "icon-offset"?: ValueExpression;
+  "icon-anchor"?: ValueExpression;
+  "text-field"?: ValueExpression;
+  "text-size"?: ValueExpression;
+  "text-offset"?: ValueExpression;
+  "text-anchor"?: ValueExpression;
+  "text-font"?: ValueExpression;
+};
+
+export type SymbolPaint = {
+  "icon-color"?: ValueExpression;
+  "icon-opacity"?: ValueExpression;
+  "text-color"?: ValueExpression;
+  "text-opacity"?: ValueExpression;
 };
 
 /**

@@ -1,4 +1,5 @@
 import ThreeView, {
+  Color,
   degreeToRadian,
   eastNorthUpToFixedFrame,
   geodeticToVector3,
@@ -17,7 +18,9 @@ import { initializeExample } from "../../../../helpers/initialize";
 const FOX = { lng: 137.6479, lat: 36.2517 };
 const FOX_HEADING = 100;
 
-const view = new ThreeView<DefaultDescriptions>();
+const view = new ThreeView<DefaultDescriptions>({
+  backgroundColor: new Color().setStyle("#cccccc"),
+});
 
 const defaultPlugin = new DefaultPlugin();
 view.addPlugin(defaultPlugin);
@@ -29,12 +32,10 @@ await view.init();
 // The animation clips only advance while the view keeps rendering.
 view.animation = true;
 
-// Fixed sun + ambient fill so the model reads on the neutral basemap.
 view.atmosphere.date = new Date("2026-07-16T02:00:00Z");
 view.addLight({ ambient: { intensity: 0.6 } });
 view.addLight({ sun: { intensity: 1.6 } });
 
-// Front three-quarter view, close enough that the fox fills the frame.
 view.setCamera({
   lng: FOX.lng,
   lat: FOX.lat,

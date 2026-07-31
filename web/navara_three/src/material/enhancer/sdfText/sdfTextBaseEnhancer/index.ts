@@ -21,15 +21,18 @@ import type {
 /**
  * Factory function to create an sdfText base enhancer.
  *
- * This enhancer handles:
- * - Text color, font size, centering
- * - Outline (width, color, opacity)
+ * One enhancer drives the whole tile-layer batch, so it owns only batch-wide
+ * state:
+ * - Anchor centering, outline (width, color, opacity)
  * - Background quad (color, border)
- * - Height offset, depth offset
- * - Picking
+ * - Depth offset and picking mode
  * - RTE (Relative-To-Eye) support for high-precision coordinates
  * - Billboard scaling by distance
- * - SDF atlas texture management
+ * - SDF atlas and per-label data texture management
+ *
+ * Per-label values (position, colour, opacity, font size, height, block
+ * metrics, batch id, declutter fade) are not here — they live in the label
+ * data texture the mesh owns.
  *
  * Supports ShaderMaterial with custom sdfText shaders.
  *
@@ -71,7 +74,7 @@ export function createSdfTextBaseEnhancer(
       };
       state = updateState(mergedProps, initialState);
       // Create mutates (refs are created inside with default values)
-      mutates = createBaseMutates(mergedProps.useRTE, mergedProps.rtcCenter);
+      mutates = createBaseMutates(mergedProps.rtcCenter);
       mutates.update(state);
 
       // Set atlas texture external ref if provided

@@ -1,3 +1,23 @@
+## v0.0.5 - 2026-07-31
+
+### 🚀 Features
+
+- Support maplibre style's line, circle, symbol (#741)
+- Batch text labels (#748)
+- Support raster dem in TileJSON (#753)
+
+### 🐛 Bug Fixes
+
+- Improve atmosphere assets handling (#747)
+- Load atmosphere assets on demand (#749)
+- Avoid panic when model material is none (#750)
+- Remove unused clamp to ground from the model material (#751)
+- Incorrect tileSize on page maplibre-style (#752)
+
+### 🔨 Refactoring
+
+- Update decluttering logic to improve label visibility handling (#742)
+
 ## v0.0.4 - 2026-07-28
 
 ### 🚀 Features

@@ -19,13 +19,10 @@ view.addPlugin(tilejson);
 
 await view.init();
 
-// Fixed noon sun + ambient fill so the extruded polygon gets shading.
 view.atmosphere.date = new Date("2026-07-16T03:00:00Z");
 view.addLight({ ambient: { intensity: 0.6 } });
 view.addLight({ sun: { intensity: 1.8 } });
 
-// Slightly east of the row center so the tall extruded block on the right
-// reads visually balanced.
 view.setCamera({
   lng: 137.6503,
   lat: 36.2382,
