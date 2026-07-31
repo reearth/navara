@@ -21,8 +21,6 @@ pub struct PointRenderInformation {
 }
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct ModelRenderInformation {
-    pub current_terrain_height: FloatType,
-    pub should_recalculate_height: bool,
     pub is_rendered: bool,
 }
 

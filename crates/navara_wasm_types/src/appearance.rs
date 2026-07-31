@@ -1107,9 +1107,6 @@ pub struct ModelMaterial {
     #[wasm_bindgen(js_name = maxSse)]
     #[serde(rename = "maxSse")]
     pub max_sse: Option<f32>,
-    #[wasm_bindgen(js_name = clampToGround)]
-    #[serde(rename = "clampToGround")]
-    pub clamp_to_ground: Option<bool>,
     #[wasm_bindgen(js_name = shouldRotateInDefault)]
     #[serde(rename = "shouldRotateInDefault")]
     pub should_rotate_in_default: Option<bool>,
@@ -1198,7 +1195,6 @@ impl From<ModelMaterial> for navara_material::ModelMaterial {
             size: val.size.unwrap_or(default.size),
             height: val.height.unwrap_or(default.height),
             max_sse: val.max_sse.unwrap_or(default.max_sse),
-            clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
             should_rotate_in_default: val
                 .should_rotate_in_default
                 .unwrap_or(default.should_rotate_in_default),
@@ -1242,7 +1238,6 @@ impl<'a> From<&'a navara_material::ModelMaterial> for ModelMaterial {
             size: Some(value.size),
             height: Some(value.height),
             max_sse: Some(value.max_sse),
-            clamp_to_ground: Some(value.clamp_to_ground),
             should_rotate_in_default: Some(value.should_rotate_in_default),
             color: Some(value.color),
             metalness: Some(value.metalness),
@@ -1284,7 +1279,6 @@ impl ModelMaterial {
             size: self.size.unwrap_or(other.size),
             height: self.height.unwrap_or(other.height),
             max_sse: self.max_sse.unwrap_or(other.max_sse),
-            clamp_to_ground: self.clamp_to_ground.unwrap_or(other.clamp_to_ground),
             should_rotate_in_default: self
                 .should_rotate_in_default
                 .unwrap_or(other.should_rotate_in_default),
