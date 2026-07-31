@@ -65,7 +65,7 @@ export class SkyMesh extends EventHandler<SkyMeshEvents> {
     this.setupMoonProperties();
   }
 
-  setTextures(textures: PrecomputedTextures) {
+  setTextures(textures: Partial<PrecomputedTextures>) {
     Object.assign(this.raw.material, textures);
   }
 

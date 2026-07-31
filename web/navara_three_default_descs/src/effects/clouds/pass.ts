@@ -10,6 +10,7 @@ import {
   Pass,
   type EffectOptions,
 } from "@navaramap/three";
+import { type PrecomputedTextures } from "@takram/three-atmosphere";
 import {
   CLOUD_SHAPE_DETAIL_TEXTURE_SIZE,
   CLOUD_SHAPE_TEXTURE_SIZE,
@@ -36,7 +37,6 @@ import {
   Vector3,
   type Camera,
 } from "three";
-import invariant from "tiny-invariant";
 
 import { CloudLayer, type CloudOptions } from "./layer";
 
@@ -263,14 +263,14 @@ export class Clouds extends Pass<
       },
     );
 
-    this.atmosphere.onTexturesReady(() => this.onTextureLoaded());
+    // Cloud lighting genuinely samples all four precomputed textures.
+    this.atmosphere.onTexturesReady((t) => this.onTextureLoaded(t));
 
     this.atmosphere.on("disposed", this.onDisposed);
   }
 
-  private onTextureLoaded = () => {
-    invariant(this.atmosphere.textures);
-    Object.assign(this.rawEffect, this.atmosphere.textures);
+  private onTextureLoaded = (textures: PrecomputedTextures) => {
+    Object.assign(this.rawEffect, textures);
   };
 
   private onDisposed = () => {

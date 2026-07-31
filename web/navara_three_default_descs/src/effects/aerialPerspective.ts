@@ -9,9 +9,9 @@ import {
   type AtmosphereOverlay,
   type AtmosphereShadow,
   type AtmosphereShadowLength,
+  type PrecomputedTextures,
 } from "@takram/three-atmosphere";
 import { type PerspectiveCamera, Texture } from "three";
-import invariant from "tiny-invariant";
 
 export type AerialPerspectiveOptions = {
   inscatter?: boolean;
@@ -91,7 +91,14 @@ export class AerialPerspective extends Pass<
       this.options.useNormalBuffer ??
       DEFAULT_AERIAL_PERSPECTIVE_OPTIONS.useNormalBuffer;
 
-    this.atmosphere.onTexturesReady(() => this.onTextureLoaded());
+    // The effect samples the irradiance texture only when the `irradiance`
+    // option lights geometry from the atmosphere; the `irradiance` setter
+    // requests it when enabled.
+    this.atmosphere.onTexturesReady((t) => this.onTextureLoaded(t), {
+      transmittance: true,
+      scattering: true,
+      higherOrderScattering: true,
+    });
 
     this.atmosphere.overlay.on("changed", this.onOverlayChanged);
     this.atmosphere.shadow.on("changed", this.onShadowChanged);
@@ -99,9 +106,8 @@ export class AerialPerspective extends Pass<
     this.atmosphere.enableShadows.on("changed", this.onEnableShadowChanged);
   }
 
-  onTextureLoaded = () => {
-    invariant(this.atmosphere.textures);
-    Object.assign(this.rawEffect, this.atmosphere.textures);
+  onTextureLoaded = (textures: Partial<PrecomputedTextures>) => {
+    Object.assign(this.rawEffect, textures);
   };
 
   onOverlayChanged = (v: AtmosphereOverlay | null) => {
@@ -171,6 +177,13 @@ export class AerialPerspective extends Pass<
     this.options.irradiance = v;
     this.rawEffect.sunLight = v;
     this.rawEffect.skyLight = v;
+    if (v) {
+      // Lighting from the atmosphere needs the irradiance texture, which is
+      // not part of the base set; fetch it on demand (no-op once loaded).
+      this.atmosphere.onTexturesReady((t) => this.onTextureLoaded(t), {
+        irradiance: true,
+      });
+    }
     this.onUpdate();
   }
 
