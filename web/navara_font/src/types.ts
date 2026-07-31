@@ -18,10 +18,10 @@ export const SDF_PX_SIZE = 64.0;
  * sampled distance value.
  *
  * SDF: `SDF_RADIUS` (35) in `crates/navara_wasm_font_worker/src/atlas.rs`.
- * MSDF: `MSDF_RANGE_PX` (8) in `crates/navara_wasm_font_worker/src/msdf.rs`.
+ * MSDF: `MSDF_RANGE_PX` (16) in `crates/navara_wasm_font_worker/src/msdf.rs`.
  */
 export const atlasRangePx = (highQuality: boolean): number =>
-  highQuality ? 8.0 : 35.0;
+  highQuality ? 16.0 : 35.0;
 
 /** Glyph metrics from either the SDF or the color atlas. */
 export type GlyphMetrics = {

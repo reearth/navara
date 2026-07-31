@@ -88,11 +88,14 @@ describe("sdfTextBaseEnhancer shader", () => {
       });
     });
 
-    it("uses UV-derived coverage and clamps supersamples to the glyph rect", () => {
+    it("uses UV-derived coverage and clamps supersamples to the padded glyph boundary", () => {
       expect(sdfTextFragmentShader).toContain("nvr_screenPxRange()");
       expect(sdfTextFragmentShader).toContain("nvr_edgeCoverage(");
-      expect(sdfTextFragmentShader).toContain("vAtlasUvMin + halfTexel");
-      expect(sdfTextFragmentShader).toContain("vAtlasUvMax - halfTexel");
+      expect(sdfTextFragmentShader).toContain(
+        "clamp(atlasUv, vAtlasUvMin, vAtlasUvMax)",
+      );
+      expect(sdfTextFragmentShader).not.toContain("vAtlasUvMin + halfTexel");
+      expect(sdfTextFragmentShader).not.toContain("vAtlasUvMax - halfTexel");
       expect(sdfTextVertexShader).toContain(
         "vAtlasUvMin = glyphUvRect.xy / atlasSize",
       );

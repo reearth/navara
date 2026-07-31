@@ -77,12 +77,13 @@ float nvr_screenPxRange() {
 // corners when large enough, then falls back to alpha's topology-safe true SDF
 // as the glyph becomes too small for independent color edges to survive.
 vec2 nvr_sampleDistances(vec2 atlasUv, float msdfDetail) {
-    vec2 halfTexel = 0.5 / max(uSdfAtlasSize, vec2(1.0));
-    vec2 clampedUv = clamp(
-        atlasUv,
-        vAtlasUvMin + halfTexel,
-        vAtlasUvMax - halfTexel
-    );
+    // The worker packs one zero-valued texel around every SDF glyph and the
+    // glyph bounds identify the inner edge of that padding ring. Clamp to the
+    // boundary itself: bilinear filtering then mixes with the transparent
+    // padding texel while still being unable to reach a neighbouring glyph.
+    // Moving the clamp half a texel inward would instead repeat the outermost
+    // distance texel, making the rectangular glyph quad faintly visible.
+    vec2 clampedUv = clamp(atlasUv, vAtlasUvMin, vAtlasUvMax);
 
     #ifdef USE_MSDF
         vec4 sampleValue = texture2D(uAtlas, clampedUv);
