@@ -8,6 +8,7 @@ export async function renderPoint(ctx: EventContext, m: NavaraPointMesh) {
   const mesh = new InstancedSpriteMesh({
     renderOrder: FEATURE_RENDER_ORDER,
     ctx,
+    geometryType: "point",
   });
   await mesh._init(m);
   mesh.setActive(m.active);

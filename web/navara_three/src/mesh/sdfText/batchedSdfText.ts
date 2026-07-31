@@ -27,6 +27,7 @@ import {
   type SdfTextBaseProps,
   type SdfTextBaseState,
 } from "../../material/enhancer/sdfText";
+import { GEOMETRY_TYPES } from "../constants";
 import { InstancedMesh, type InstancedMeshOptions } from "../instanced";
 import type { PickableMesh } from "../pickableMesh";
 
@@ -135,6 +136,11 @@ export class BatchedSdfTextMesh
   extends InstancedMesh<Object3D>
   implements PickableMesh, DeclutterParticipant
 {
+  /**
+   * Geometry type of this mesh.
+   */
+  readonly geometryType = GEOMETRY_TYPES.Text;
+
   readonly ctx: EventContext;
   /** The font identifier from material — may be a family name or a URL. */
   private _fontIdentifier: string;

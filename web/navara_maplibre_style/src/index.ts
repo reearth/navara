@@ -6,22 +6,6 @@
  */
 
 export { MapLibreStylePlugin } from "./MapLibreStylePlugin";
-export type { StyleEngine } from "./engine/StyleEngine";
 export { JsStyleEngine } from "./engine/JsStyleEngine";
 export { RustStyleEngine } from "./engine/RustStyleEngine";
-export {
-  isMapLibreColor,
-  type ParsedStyle,
-  type StyleSource,
-  type VectorSource,
-  type GeoJSONSource,
-  type StyleLayer,
-  type FillLayer,
-  type LineLayer,
-  type CircleLayer,
-  type LayerType,
-  type EvaluationContext,
-  type FeatureContext,
-  type StyleValue,
-  type MapLibreColor,
-} from "./engine/types";
+export type { StyleSpecification } from "@maplibre/maplibre-gl-style-spec";
