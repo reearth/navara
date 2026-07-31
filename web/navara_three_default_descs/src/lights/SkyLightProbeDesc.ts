@@ -34,7 +34,9 @@ export class SkyLightProbeDesc extends LightDesc<
     const skyLightProbe = new SkyLightProbe(skyLightProbeConfig);
 
     // Set up atmosphere integration
-    this.view.atmosphere.onTexturesReady((t) => skyLightProbe.setTextures(t));
+    this.view.atmosphere.onTexturesReady((t) => skyLightProbe.setTextures(t), {
+      irradiance: true,
+    });
 
     skyLightProbe.on("needsUpdate", () => this.emit("needsUpdate"));
 

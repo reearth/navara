@@ -42,8 +42,13 @@ export class SkyMeshDesc extends MeshDesc<
     const skyMesh = new SkyMesh(skyOptions);
     this._skyMesh = skyMesh;
 
-    // Set up atmosphere integration
-    this.view.atmosphere.onTexturesReady((t) => skyMesh.setTextures(t));
+    // Set up atmosphere integration. The sky shader samples the irradiance
+    // texture only when a ground albedo is set, which SkyMesh never does.
+    this.view.atmosphere.onTexturesReady((t) => skyMesh.setTextures(t), {
+      transmittance: true,
+      scattering: true,
+      higherOrderScattering: true,
+    });
     skyMesh.setShadowLengthHandler(this.view.atmosphere.shadowLength);
 
     skyMesh.on("needsUpdate", () => this.emit("needsUpdate"));

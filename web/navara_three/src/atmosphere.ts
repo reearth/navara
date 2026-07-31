@@ -3,14 +3,35 @@ import {
   getECIToECEFRotationMatrix,
   getMoonDirectionECEF,
   getSunDirectionECEF,
-  PrecomputedTexturesLoader,
+  IRRADIANCE_TEXTURE_HEIGHT,
+  IRRADIANCE_TEXTURE_WIDTH,
+  SCATTERING_TEXTURE_DEPTH,
+  SCATTERING_TEXTURE_HEIGHT,
+  SCATTERING_TEXTURE_WIDTH,
+  TRANSMITTANCE_TEXTURE_HEIGHT,
+  TRANSMITTANCE_TEXTURE_WIDTH,
   type AtmosphereOverlay,
   type AtmosphereShadow,
   type AtmosphereShadowLength,
   type PrecomputedTextures,
 } from "@takram/three-atmosphere";
-import { Vector3, Matrix4, LoadingManager, type WebGLRenderer } from "three";
-import invariant from "tiny-invariant";
+import {
+  EXR3DTextureLoader,
+  EXRTextureLoader,
+  Float16Array,
+  isFloatLinearSupported,
+  reinterpretType,
+} from "@takram/three-geospatial";
+import {
+  FloatType,
+  HalfFloatType,
+  LinearFilter,
+  Matrix4,
+  Vector3,
+  type DataTextureImageData,
+  type Texture,
+  type WebGLRenderer,
+} from "three";
 
 import { type ThreeViewCamera } from "./camera";
 import { ATMOSPHERE_TEXTURE_URLS, STBN_URL } from "./constants";
@@ -28,13 +49,59 @@ import {
 export type AtmosphereEvents = {
   /** Emitted when the atmosphere needs to trigger a re-render. */
   needsUpdate: () => void;
-  /** Emitted when precomputed atmosphere textures have been loaded. */
+  /** Emitted each time a precomputed atmosphere texture finishes loading. */
   textureLoaded: () => void;
   /** Emitted when the atmosphere is disposed. */
   disposed: () => void;
   /** Emitted when the sun direction changes. */
   sunChanged: (sunDirection: Vector3) => void;
 };
+
+/**
+ * Names of the precomputed atmosphere textures that can be loaded
+ * individually.
+ */
+export type AtmosphereTextureName =
+  "transmittance" | "scattering" | "irradiance" | "higherOrderScattering";
+
+/**
+ * Which precomputed textures a consumer needs, e.g.
+ * `{ transmittance: true }`. Only `true` is allowed as a value so that every
+ * listed texture is guaranteed to be loaded.
+ */
+export type AtmosphereTextureNeeds = Partial<
+  Record<AtmosphereTextureName, true>
+>;
+
+const ATMOSPHERE_TEXTURE_KEYS = {
+  transmittance: "transmittanceTexture",
+  scattering: "scatteringTexture",
+  irradiance: "irradianceTexture",
+  higherOrderScattering: "higherOrderScatteringTexture",
+} as const satisfies Record<AtmosphereTextureName, keyof PrecomputedTextures>;
+
+const ATMOSPHERE_TEXTURE_FILES: Record<AtmosphereTextureName, string> = {
+  transmittance: "transmittance.exr",
+  scattering: "scattering.exr",
+  irradiance: "irradiance.exr",
+  higherOrderScattering: "higher_order_scattering.exr",
+};
+
+const ALL_ATMOSPHERE_TEXTURE_NAMES = Object.keys(
+  ATMOSPHERE_TEXTURE_KEYS,
+) as AtmosphereTextureName[];
+
+/**
+ * The textures guaranteed to be present in an {@link Atmosphere.onTexturesReady}
+ * callback for a given needs declaration.
+ */
+export type LoadedAtmosphereTextures<N extends AtmosphereTextureNeeds> =
+  Required<
+    Pick<
+      PrecomputedTextures,
+      `${Extract<keyof N, AtmosphereTextureName>}Texture`
+    >
+  >;
 
 /**
  * Configuration options for the {@link Atmosphere} class.
@@ -92,10 +159,11 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
   private rotationMatrix = new Matrix4();
 
   /**
-   * Precomputed atmosphere textures used for rendering.
-   * Loaded asynchronously via {@link initTextures}.
+   * Precomputed atmosphere textures used for rendering. Each texture is
+   * loaded lazily when a consumer declares a need for it via
+   * {@link onTexturesReady}, so the object may hold any subset at a time.
    */
-  textures?: PrecomputedTextures;
+  textures: Partial<PrecomputedTextures> = {};
 
   // Variables that come from Clouds.
   overlay = new Observed<AtmosphereOverlay | null>(null);
@@ -119,11 +187,11 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
   private _camera: ThreeViewCamera | undefined;
 
   /**
-   * In-flight texture loading promise, shared across concurrent
-   * {@link initTextures} calls so the assets are fetched only once.
+   * In-flight per-texture loading promises, shared across consumers so each
+   * asset is fetched only once.
    * @private
    */
-  private texturesPromise: Promise<void> | undefined;
+  private texturePromises = new Map<AtmosphereTextureName, Promise<void>>();
 
   /**
    * Creates a new Atmosphere instance.
@@ -155,76 +223,155 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
   };
 
   /**
-   * Loads precomputed atmosphere textures asynchronously.
-   * If textures are already loaded, this method returns immediately.
-   * @returns A promise that resolves when textures are loaded.
+   * Loads all precomputed atmosphere textures asynchronously.
+   *
+   * Each texture loads automatically once a consumer declares a need for it
+   * via {@link onTexturesReady}; call this manually only to prefetch every
+   * texture ahead of time.
+   *
+   * @returns A promise that resolves when all textures are loaded.
    */
-  // TODO: Add an option to disable loading textures.
   async initTextures() {
-    if (this.textures) return;
-
-    const assetsUrl = this.options.atmosphereAssetsUrl;
-    // PrecomputedTexturesLoader appends fixed filenames to the directory URL,
-    // but bundlers emit the bundled default assets under hashed names. When no
-    // directory is provided, remap each requested filename to its
-    // statically-resolved URL.
-    let manager: LoadingManager | undefined;
-    if (assetsUrl == null) {
-      manager = new LoadingManager();
-      manager.setURLModifier((url) => {
-        const file = url.slice(url.lastIndexOf("/") + 1);
-        return ATMOSPHERE_TEXTURE_URLS[file] ?? url;
-      });
-    }
-    this.texturesPromise ??= new PrecomputedTexturesLoader(undefined, manager)
-      .setType(this.renderer)
-      .loadAsync(assetsUrl ?? "")
-      .then((textures) => {
-        this.textures = textures;
-        this.emit("textureLoaded");
-      })
-      .finally(() => {
-        // Allow retrying after a failed load instead of caching the rejection.
-        this.texturesPromise = undefined;
-      });
-
-    await this.texturesPromise;
+    await Promise.all(
+      ALL_ATMOSPHERE_TEXTURE_NAMES.map((name) => this.loadTexture(name)),
+    );
   }
 
   /**
+   * Loads a single precomputed texture, sharing in-flight loads and caching
+   * the result. A failed load is forgotten so the next request retries it.
    * @private
    */
-  async _init() {
-    await this.initTextures();
+  private loadTexture(name: AtmosphereTextureName): Promise<void> {
+    let promise = this.texturePromises.get(name);
+    if (promise == null) {
+      const assetsUrl = this.options.atmosphereAssetsUrl;
+      const file = ATMOSPHERE_TEXTURE_FILES[name];
+      const url =
+        assetsUrl == null
+          ? ATMOSPHERE_TEXTURE_URLS[file]
+          : `${assetsUrl.replace(/\/+$/, "")}/${file}`;
+      promise = this.fetchTexture(name, url)
+        .then((texture) => {
+          const type = isFloatLinearSupported(this.renderer)
+            ? FloatType
+            : HalfFloatType;
+          texture.type = type;
+          // EXR data is parsed to Uint16Array, which must be converted to
+          // Float32Array when FloatType is used.
+          if (type === FloatType) {
+            reinterpretType<DataTextureImageData>(texture.image);
+            if (texture.image.data != null) {
+              texture.image.data = new Float32Array(
+                new Float16Array(texture.image.data.buffer),
+              );
+            }
+          }
+          texture.minFilter = LinearFilter;
+          texture.magFilter = LinearFilter;
+          Object.assign(this.textures, {
+            [ATMOSPHERE_TEXTURE_KEYS[name]]: texture,
+          });
+          this.emit("textureLoaded");
+        })
+        .catch((e: unknown) => {
+          // Allow retrying after a failed load instead of caching the
+          // rejection.
+          this.texturePromises.delete(name);
+          throw e;
+        });
+      this.texturePromises.set(name, promise);
+    }
+    return promise;
+  }
+
+  private fetchTexture(
+    name: AtmosphereTextureName,
+    url: string,
+  ): Promise<Texture> {
+    switch (name) {
+      case "transmittance":
+        return new EXRTextureLoader({
+          width: TRANSMITTANCE_TEXTURE_WIDTH,
+          height: TRANSMITTANCE_TEXTURE_HEIGHT,
+        }).loadAsync(url);
+      case "irradiance":
+        return new EXRTextureLoader({
+          width: IRRADIANCE_TEXTURE_WIDTH,
+          height: IRRADIANCE_TEXTURE_HEIGHT,
+        }).loadAsync(url);
+      case "scattering":
+      case "higherOrderScattering":
+        return new EXR3DTextureLoader({
+          width: SCATTERING_TEXTURE_WIDTH,
+          height: SCATTERING_TEXTURE_HEIGHT,
+          depth: SCATTERING_TEXTURE_DEPTH,
+        }).loadAsync(url);
+    }
   }
 
   /**
    * @private
    */
   _dispose() {
-    if (this.textures) {
-      this.textures.irradianceTexture.dispose();
-      this.textures.scatteringTexture.dispose();
-      this.textures.transmittanceTexture.dispose();
-      this.textures.singleMieScatteringTexture?.dispose();
-      this.textures.higherOrderScatteringTexture?.dispose();
-      this.textures = undefined;
+    for (const texture of Object.values(this.textures)) {
+      texture?.dispose();
     }
+    this.textures = {};
+    this.texturePromises.clear();
     this.emit("disposed");
   }
 
   /**
-   * Invokes the callback with precomputed textures immediately if already loaded,
-   * or registers a one-time listener to invoke it once textures are ready.
+   * Invokes the callback once every needed precomputed texture is loaded —
+   * immediately if they already are.
+   *
+   * Registering also starts loading the needed textures if they aren't loaded
+   * yet, so a texture is only fetched once something that needs it exists.
+   *
+   * @param callback - Receives the textures; the ones listed in `needs` are
+   * guaranteed to be present.
+   * @param needs - The textures the caller needs, e.g.
+   * `{ transmittance: true }`. Omit to load all of them.
+   *
+   * @example
+   * atmosphere.onTexturesReady(
+   *   (t) => light.setTransmittanceTexture(t.transmittanceTexture),
+   *   { transmittance: true },
+   * );
    */
-  onTexturesReady(callback: (textures: PrecomputedTextures) => void): void {
-    if (this.textures) {
-      callback(this.textures);
-    } else {
-      this.once("textureLoaded", () => {
-        invariant(this.textures);
-        callback(this.textures);
+  onTexturesReady<
+    N extends AtmosphereTextureNeeds = Record<AtmosphereTextureName, true>,
+  >(
+    callback: (textures: LoadedAtmosphereTextures<N>) => void,
+    needs?: N,
+  ): void {
+    const names =
+      needs == null
+        ? ALL_ATMOSPHERE_TEXTURE_NAMES
+        : ALL_ATMOSPHERE_TEXTURE_NAMES.filter((name) => needs[name]);
+    for (const name of names) {
+      this.loadTexture(name).catch((e: unknown) => {
+        console.error("Failed to load atmosphere textures:", e);
       });
+    }
+
+    const isReady = () =>
+      names.every(
+        (name) => this.textures[ATMOSPHERE_TEXTURE_KEYS[name]] != null,
+      );
+    const invoke = () => {
+      callback(this.textures as LoadedAtmosphereTextures<N>);
+    };
+    if (isReady()) {
+      invoke();
+    } else {
+      const listener = () => {
+        if (!isReady()) return;
+        this.off("textureLoaded", listener);
+        invoke();
+      };
+      this.on("textureLoaded", listener);
     }
   }
 

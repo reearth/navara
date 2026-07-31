@@ -67,7 +67,7 @@ export class Stars extends EventHandler<StarsEvents> {
     return new Stars(arrayBuffer, options);
   }
 
-  setTextures(textures: PrecomputedTextures) {
+  setTextures(textures: Partial<PrecomputedTextures>) {
     Object.assign(this.raw.material, textures);
   }
 
