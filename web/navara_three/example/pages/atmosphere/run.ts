@@ -214,6 +214,9 @@ const addTileControl = (view: ThreeView<CustomDescriptions>, pane: Pane) => {
     })
     .on("change", (v) => {
       layer.delete();
+      // The layer referencing this source is gone, so free the old source
+      // before creating the replacement to avoid leaving an orphan behind.
+      source.delete();
       source = createTileSource(v.value);
       layer = view.addLayer({
         type: "raster",
