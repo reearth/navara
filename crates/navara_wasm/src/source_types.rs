@@ -554,8 +554,8 @@ impl SourceDescription {
                 let data = if let Some(url) = desc.url.clone() {
                     Some(GeoJsonData::Url(url))
                 } else {
-                    let js_data: SourceData = serde_wasm_bindgen::from_value(value)
-                        .unwrap_or_else(|_e| SourceData {
+                    let js_data: SourceData =
+                        serde_wasm_bindgen::from_value(value).unwrap_or_else(|_e| SourceData {
                             data: JsValue::NULL,
                         });
                     if !js_data.data.is_null() && !js_data.data.is_undefined() {
