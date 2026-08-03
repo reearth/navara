@@ -35,33 +35,32 @@ const run = async () => {
   });
 
   // Base tiles layer
-  view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.openstreetmap.url },
-    rasterTile: { maxZoom: 19 },
+  const osm = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.openstreetmap.url,
+    maxZoom: 19,
+  });
+  view.addLayer({ type: "raster", source: osm });
+
+  const gsiTerrain = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.gsi.url,
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    maxZoom: 15,
   });
   view.addLayer({
     type: "terrain",
-    data: {
-      url: TERRAIN_DATASETS.gsi.url,
-    },
-    rasterTerrain: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-      maxZoom: 15,
+    source: gsiTerrain,
+    terrain: {
       castShadow: true,
       receiveShadow: true,
     },
   });
 
   view.addLayer({
-    type: "tiles",
-    data: { url: TERRAIN_DATASETS.gsi.url },
-    rasterTile: {
-      maxZoom: 15,
-    },
-    hillshade: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
+    type: "raster",
+    source: gsiTerrain,
+    hillshade: {},
   });
 
   // Track updated features to prevent duplicate evaluations
@@ -73,11 +72,13 @@ const run = async () => {
   const addGeoJsonLayer = () => {
     updatedFeatures = new Set<bigint>();
 
-    const layer = view.addLayer({
+    const railwaysSource = view.addSource({
       type: "geojson",
-      data: {
-        url: LOCAL_DATASETS.railwaysTimeSeries.url,
-      },
+      url: LOCAL_DATASETS.railwaysTimeSeries.url,
+    });
+    const layer = view.addLayer({
+      type: "vector",
+      source: railwaysSource,
       billboard: {
         color: new Color().setStyle("#ffffff"),
         size: params.size,

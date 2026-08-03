@@ -4,7 +4,6 @@ import ThreeView, {
   type MeshHandle,
   type LightHandle,
   type EffectHandle,
-  type LayerDescription,
   degreeToRadian,
   geodeticToVector3,
   Color,
@@ -80,39 +79,37 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   });
 
   // Add raster tiles
+  const seamlessphoto = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.gsiSeamlessphoto.url,
+    maxZoom: 23,
+  });
   view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
-    rasterTile: {
-      maxZoom: 23,
-    },
+    type: "raster",
+    source: seamlessphoto,
   });
 
   // Add terrain
+  const gsiTerrainDem = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.gsi.url,
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    maxZoom: 15,
+    minZoom: 6,
+  });
   view.addLayer({
     type: "terrain",
-    data: {
-      url: TERRAIN_DATASETS.gsi.url,
-    },
-    rasterTerrain: {
-      maxZoom: 15,
-      minZoom: 6,
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    source: gsiTerrainDem,
+    terrain: {
       receiveShadow: true,
       castShadow: true,
     },
   });
 
   view.addLayer({
-    type: "tiles",
-    data: { url: TERRAIN_DATASETS.gsi.url },
-    rasterTile: {
-      maxZoom: 15,
-      minZoom: 6,
-    },
-    hillshade: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
+    type: "raster",
+    source: gsiTerrainDem,
+    hillshade: {},
   });
 
   // Create controls panel
@@ -368,13 +365,17 @@ const add3DTilesSceneControl = (
   // Create event handler for scene changes
   const sceneChangeHandler = new EventHandler();
 
-  // Track current layers
+  // Track current layers and their sources
   let currentLayers: ReturnType<typeof view.addLayer>[] = [];
+  let currentSources: ReturnType<typeof view.addSource>[] = [];
 
   // Function to clear current 3D tiles
   const clearCurrentTiles = () => {
     currentLayers.forEach((layer) => layer.delete());
+    // Sources are reference-counted; free them alongside their layers.
+    currentSources.forEach((source) => source.delete());
     currentLayers = [];
+    currentSources = [];
   };
 
   // Function to load new scene
@@ -383,11 +384,14 @@ const add3DTilesSceneControl = (
 
     const sceneData = SCENES[sceneName];
     sceneData.tiles.forEach((tile) => {
-      const description: LayerDescription = {
-        type: "cesium3dtiles",
-        data: {
-          url: tile.url,
-        },
+      const source = view.addSource({
+        type: "3d-tiles",
+        url: tile.url,
+      });
+      currentSources.push(source);
+      const layer = view.addLayer({
+        type: "3d-tiles",
+        source,
         model: {
           show: true,
           color: new Color().setStyle("#ffffff"),
@@ -397,8 +401,7 @@ const add3DTilesSceneControl = (
           castShadow: true,
           receiveShadow: true,
         },
-      };
-      const layer = view.addLayer(description);
+      });
       currentLayers.push(layer);
     });
   };

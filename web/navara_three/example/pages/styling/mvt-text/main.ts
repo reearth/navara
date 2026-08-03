@@ -69,34 +69,34 @@ const run = async () => {
   });
 
   // Base tiles layer
+  const osmSource = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.openstreetmap.url,
+    maxZoom: 19,
+  });
   view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.openstreetmap.url },
-    rasterTile: { maxZoom: 19 },
+    type: "raster",
+    source: osmSource,
+  });
+  const gsiTerrainDem = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.gsi.url,
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    maxZoom: 15,
   });
   view.addLayer({
     type: "terrain",
-    data: {
-      url: TERRAIN_DATASETS.gsi.url,
-    },
-    rasterTerrain: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-      maxZoom: 15,
+    source: gsiTerrainDem,
+    terrain: {
       castShadow: true,
       receiveShadow: true,
     },
   });
 
   view.addLayer({
-    type: "tiles",
-    data: { url: TERRAIN_DATASETS.gsi.url },
-    rasterTile: {
-      maxZoom: 15,
-      show: false, // Don't render DEM as color
-    },
-    hillshade: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
+    type: "raster",
+    source: gsiTerrainDem,
+    hillshade: {},
   });
 
   // Track updated features to prevent duplicate evaluations
@@ -108,9 +108,15 @@ const run = async () => {
   const addMvtLayer = () => {
     updatedFeatures = new Set<bigint>();
 
+    const gsiVectorSource = view.addSource({
+      type: "vector-tile",
+      url: VECTOR_DATASETS.gsiExperimentalVector.url,
+      maxZoom: 16,
+    });
     const layer = view.addLayer({
-      type: "mvt",
-      data: { url: VECTOR_DATASETS.gsiExperimentalVector.url },
+      type: "vector",
+      source: gsiVectorSource,
+      sourceLayers: ["symbol", "label"],
       text: {
         lang: "ja",
         font: FONT_DATASETS.LineSeedJP.url,
@@ -123,10 +129,6 @@ const run = async () => {
         outlineWidth: 2,
         // Hide labels whose screen boxes overlap a higher-priority one
         declutter: params.declutter,
-      },
-      vectorTile: {
-        maxZoom: 16,
-        layers: ["symbol", "label"],
       },
     });
 

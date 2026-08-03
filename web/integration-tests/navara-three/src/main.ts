@@ -48,27 +48,29 @@ async function main() {
   });
 
   // Add terrain layer - tests terrain system
+  const demSource = view.addSource({
+    type: "raster-dem",
+    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    maxZoom: 15,
+    minZoom: 6,
+  });
   view.addLayer({
     type: "terrain",
-    data: {
-      url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
-    },
-    rasterTerrain: {
-      maxZoom: 15,
-      minZoom: 6,
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
+    source: demSource,
   });
 
   // Add tile layer - tests tile system
+  const seamlessphotoSource = view.addSource({
+    type: "raster-tile",
+    url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
+    maxZoom: 18,
+  });
   view.addLayer({
-    type: "tiles",
-    data: {
-      url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
-    },
-    rasterTile: {
+    type: "raster",
+    source: seamlessphotoSource,
+    raster: {
       color: new Color().setStyle("#ffffff"),
-      maxZoom: 18,
       opacity: 1,
     },
   });

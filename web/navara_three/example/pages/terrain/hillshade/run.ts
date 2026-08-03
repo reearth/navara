@@ -47,43 +47,38 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
     },
   });
 
+  const osmSource = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.openstreetmap.url,
+    maxZoom: 23,
+  });
   view.addLayer({
-    type: "tiles",
-    data: {
-      url: TILE_DATASETS.openstreetmap.url,
-    },
-    rasterTile: {
-      maxZoom: 23,
-    },
+    type: "raster",
+    source: osmSource,
   });
 
   // Add terrain layer for 3D surface
+  const mapterhornTerrainDem = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.mapterhorn.url,
+    elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
+    tileSize: 512,
+    maxZoom: 17,
+    minZoom: 5,
+  });
   view.addLayer({
     type: "terrain",
-    data: {
-      url: TERRAIN_DATASETS.mapterhorn.url,
-    },
-    rasterTerrain: {
-      maxZoom: 15,
-      minZoom: 5,
-      elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
-      tileSize: 512,
+    source: mapterhornTerrainDem,
+    terrain: {
       castShadow: false,
       receiveShadow: false,
     },
   });
 
   const layerDef: LayerDescription = {
-    type: "tiles",
-    data: {
-      url: TERRAIN_DATASETS.mapterhorn.url,
-    },
-    rasterTile: {
-      maxZoom: 17,
-      minZoom: 5,
-    },
+    type: "raster",
+    source: mapterhornTerrainDem,
     hillshade: {
-      elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
       exaggeration: 0.5,
     },
   };

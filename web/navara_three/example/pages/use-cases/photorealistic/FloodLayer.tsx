@@ -4,7 +4,7 @@ import type {
   Layer as NavaraLayer,
   FeatureUpdatedParams,
 } from "@navaramap/three";
-import { Layer } from "@navaramap/three-react";
+import { Layer, useViewContext } from "@navaramap/three-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { czmlToGeoJSON } from "./czml";
@@ -47,9 +47,23 @@ export function FloodLayer({
   onSimulationStartDateCalculated,
   onCurrentDateChange,
 }: FloodLayerProps) {
+  const { view } = useViewContext();
   const [fc, setFc] = useState<GeoJSONFC | null>(null);
   const layerRef = useRef<NavaraLayer | null>(null);
   const currentTimeRef = useRef<string>("");
+
+  // Wrap the loaded CZML-derived GeoJSON in a source. Recreated whenever the
+  // data changes; the null case keeps the hook order stable before load.
+  const floodSource = useMemo(
+    () => (fc ? view.addSource({ type: "geojson", data: fc }) : null),
+    [view, fc],
+  );
+  useEffect(
+    () => () => {
+      floodSource?.delete();
+    },
+    [floodSource],
+  );
 
   // Load CZML once
   useEffect(() => {
@@ -167,10 +181,10 @@ export function FloodLayer({
   };
 
   const layerDesc = useMemo((): LayerDescription | null => {
-    if (!fc || !visible) return null;
+    if (!floodSource || !visible) return null;
     return {
-      type: "geojson",
-      data: fc,
+      type: "vector",
+      source: floodSource,
       polygon: {
         color: DEFAULT_POLY_COLOR,
         clampToGround: false,
@@ -187,7 +201,7 @@ export function FloodLayer({
         receiveShadow: true,
       },
     };
-  }, [fc, visible, waterSurface, transparent]);
+  }, [floodSource, visible, waterSurface, transparent]);
 
   // Re-evaluate show/color without replacing data when the current time changes
   useEffect(() => {

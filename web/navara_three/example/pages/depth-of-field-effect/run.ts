@@ -49,19 +49,23 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     visible: true,
   });
 
+  const osmSource = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.openstreetmap.url,
+    maxZoom: 23,
+  });
   view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.openstreetmap.url },
-    rasterTile: {
-      maxZoom: 23,
-    },
+    type: "raster",
+    source: osmSource,
   });
 
+  const chiyodaSource = view.addSource({
+    type: "3d-tiles",
+    url: TILES_3D_DATASETS.plateauChiyoda.url,
+  });
   view.addLayer({
-    type: "cesium3dtiles",
-    data: {
-      url: TILES_3D_DATASETS.plateauChiyoda.url,
-    },
+    type: "3d-tiles",
+    source: chiyodaSource,
     model: {
       show: true,
       color: new Color().setStyle("#ffffff"),

@@ -10,8 +10,8 @@ import { TILE_DATASETS, VECTOR_DATASETS } from "../../helpers/constants";
 import { addCameraControl, addDateControl } from "../../helpers/control";
 import { addCtrlPanel, type MaterialDesc } from "../../helpers/panel";
 
-const layers: MaterialDesc[] = [
-  {
+const createLayers = (view: ThreeView<DefaultDescriptions>): MaterialDesc[] => {
+  const poiSource = view.addSource({
     type: "geojson",
     data: {
       type: "FeatureCollection",
@@ -58,41 +58,48 @@ const layers: MaterialDesc[] = [
         },
       ],
     },
-    billboard: {
-      color: new Color().setStyle("#ffffff"),
-      size: 10000,
-      height: 1,
-      sizeInMeters: true,
-      clampToGround: true,
-      depthTest: true,
-      alphaTest: 0.5,
-      center: { x: 0.0, y: -0.5 },
-      transparent: true,
-      url: "/example.png",
-      offsetDepth: true,
+  });
+  const vectorSource = view.addSource({
+    type: "vector-tile",
+    url: VECTOR_DATASETS.gsiExperimentalVector.url,
+    maxZoom: 6,
+  });
+
+  return [
+    {
+      type: "vector",
+      source: poiSource,
+      billboard: {
+        color: new Color().setStyle("#ffffff"),
+        size: 10000,
+        height: 1,
+        sizeInMeters: true,
+        clampToGround: true,
+        depthTest: true,
+        alphaTest: 0.5,
+        center: { x: 0.0, y: -0.5 },
+        transparent: true,
+        url: "/example.png",
+        offsetDepth: true,
+      },
     },
-  },
-  {
-    type: "mvt",
-    data: {
-      url: VECTOR_DATASETS.gsiExperimentalVector.url,
+    {
+      type: "vector",
+      source: vectorSource,
+      point: {
+        size: 10000,
+        sizeInMeters: true,
+        clampToGround: true,
+        color: new Color().setStyle("#991f3d"),
+        center: { x: 0.0, y: 0.0 },
+        height: 1,
+        offsetDepth: true,
+        depthTest: true,
+        transparent: true,
+      },
     },
-    point: {
-      size: 10000,
-      sizeInMeters: true,
-      clampToGround: true,
-      color: new Color().setStyle("#991f3d"),
-      center: { x: 0.0, y: 0.0 },
-      height: 1,
-      offsetDepth: true,
-      depthTest: true,
-      transparent: true,
-    },
-    vectorTile: {
-      maxZoom: 6,
-    },
-  },
-];
+  ];
+};
 
 export const run = async (view: ThreeView<DefaultDescriptions>) => {
   view.addPlugin(new DefaultPlugin());
@@ -111,12 +118,14 @@ export const run = async (view: ThreeView<DefaultDescriptions>) => {
     },
   });
 
+  const osmSource = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.openstreetmap.url,
+    maxZoom: 23,
+  });
   view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.openstreetmap.url },
-    rasterTile: {
-      maxZoom: 23,
-    },
+    type: "raster",
+    source: osmSource,
   });
 
   view.setCamera({
@@ -133,6 +142,7 @@ export const run = async (view: ThreeView<DefaultDescriptions>) => {
     expanded: true,
   });
 
+  const layers = createLayers(view);
   const layerInstances = addCtrlPanel(layers, view, pane);
   addCameraControl(view, pane);
   addDateControl(view, pane);

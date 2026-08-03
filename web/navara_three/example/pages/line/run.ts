@@ -243,36 +243,31 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
 
   await view.init();
 
+  const gsiTerrainDem = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.gsi.url,
+    maxZoom: 15,
+    minZoom: 5,
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  });
   view.addLayer({
     type: "terrain",
-    data: {
-      url: TERRAIN_DATASETS.gsi.url,
-    },
-    rasterTerrain: {
-      maxZoom: 15,
-      minZoom: 5,
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
+    source: gsiTerrainDem,
   });
 
   view.addLayer({
-    type: "tiles",
-    data: { url: TERRAIN_DATASETS.gsi.url },
-    rasterTile: {
-      maxZoom: 15,
-      minZoom: 5,
-    },
-    hillshade: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
+    type: "raster",
+    source: gsiTerrainDem,
+    hillshade: {},
   });
 
+  const osmSource = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.openstreetmap.url,
+  });
   view.addLayer({
-    type: "tiles",
-    data: {
-      url: TILE_DATASETS.openstreetmap.url,
-    },
-    rasterTile: {},
+    type: "raster",
+    source: osmSource,
   });
 
   view.addMesh({

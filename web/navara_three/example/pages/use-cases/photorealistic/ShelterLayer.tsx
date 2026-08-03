@@ -24,6 +24,22 @@ export const ShelterLayer: FC<{ visible?: boolean }> = ({
   const textLayerRef = useRef<NavaraLayer | null>(null);
   const { isNight } = useNightContext();
 
+  const shelterTextSource = useMemo(
+    () =>
+      view.addSource({
+        type: "vector-tile",
+        url: "https://assets.cms.reearth.io/assets/02/6ac75f-8d71-4a9e-b42c-cf9a6ac1b067/11100_saitama-shi_city_2024_shelter_mvt/{z}/{x}/{y}.pbf",
+        maxZoom: 16,
+      }),
+    [view],
+  );
+  useEffect(
+    () => () => {
+      shelterTextSource.delete();
+    },
+    [shelterTextSource],
+  );
+
   // Load shelter GeoJSON
   useEffect(() => {
     let mounted = true;
@@ -82,10 +98,8 @@ export const ShelterLayer: FC<{ visible?: boolean }> = ({
 
   const textLayerDesc = useMemo((): LayerDescription | null => {
     return {
-      type: "mvt",
-      data: {
-        url: "https://assets.cms.reearth.io/assets/02/6ac75f-8d71-4a9e-b42c-cf9a6ac1b067/11100_saitama-shi_city_2024_shelter_mvt/{z}/{x}/{y}.pbf",
-      },
+      type: "vector",
+      source: shelterTextSource,
       // Render labels using instanced text anchored at point positions.
       text: {
         color: new Color().setStyle("#ffffff"),
@@ -99,11 +113,8 @@ export const ShelterLayer: FC<{ visible?: boolean }> = ({
         outlineColor: new Color().setStyle("#111111"),
         show: visible,
       },
-      vectorTile: {
-        maxZoom: 16,
-      },
     };
-  }, [visible]);
+  }, [shelterTextSource, visible]);
 
   const fogLayerDesc = useMemo((): FogLightConfig | null => {
     if (!view || fogLights.length === 0) return null;

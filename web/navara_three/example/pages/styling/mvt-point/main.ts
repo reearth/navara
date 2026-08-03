@@ -37,33 +37,32 @@ const run = async () => {
   });
 
   // Base tiles layer
-  view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.openstreetmap.url },
-    rasterTile: { maxZoom: 19 },
+  const osm = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.openstreetmap.url,
+    maxZoom: 19,
+  });
+  view.addLayer({ type: "raster", source: osm });
+
+  const gsiTerrain = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.gsi.url,
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    maxZoom: 15,
   });
   view.addLayer({
     type: "terrain",
-    data: {
-      url: TERRAIN_DATASETS.gsi.url,
-    },
-    rasterTerrain: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-      maxZoom: 15,
+    source: gsiTerrain,
+    terrain: {
       castShadow: true,
       receiveShadow: true,
     },
   });
 
   view.addLayer({
-    type: "tiles",
-    data: { url: TERRAIN_DATASETS.gsi.url },
-    rasterTile: {
-      maxZoom: 15,
-    },
-    hillshade: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
+    type: "raster",
+    source: gsiTerrain,
+    hillshade: {},
   });
 
   // Track updated features to prevent duplicate evaluations
@@ -75,18 +74,20 @@ const run = async () => {
   const addMvtLayer = () => {
     updatedFeatures = new Set<bigint>();
 
+    const heliportsSource = view.addSource({
+      type: "vector-tile",
+      url: MVT_DATASETS.plateauWakayamaGen.url,
+      maxZoom: 16,
+    });
     const layer = view.addLayer({
-      type: "mvt",
-      data: { url: MVT_DATASETS.plateauWakayamaGen.url },
+      type: "vector",
+      source: heliportsSource,
       point: {
         size: params.size,
         sizeInMeters: true,
         clampToGround: true,
         color: new Color().setStyle("#ff0000"),
         center: { x: 0, y: -0.5 },
-      },
-      vectorTile: {
-        maxZoom: 16,
       },
     });
 

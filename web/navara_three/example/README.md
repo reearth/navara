@@ -78,9 +78,13 @@ const run = async () => {
   });
 
   // Add your layers here
-  const layer = view.addLayer({
+  const source = view.addSource({
     type: "geojson",
     data: {/* your data */},
+  });
+  const layer = view.addLayer({
+    type: "vector",
+    source,
     polygon: {
       color: new Color().setStyle("#00aaff"),
       // ... other properties

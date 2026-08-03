@@ -72,45 +72,48 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     },
   });
 
+  const openstreetmap = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.openstreetmap.url,
+    maxZoom: 23,
+  });
   view.addLayer({
-    type: "tiles",
-    data: {
-      url: TILE_DATASETS.openstreetmap.url,
-    },
-    rasterTile: {
-      maxZoom: 23,
-    },
+    type: "raster",
+    source: openstreetmap,
   });
 
+  const gsiTerrainDem = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.gsi.url,
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    maxZoom: 15,
+    minZoom: 5,
+  });
   view.addLayer({
     type: "terrain",
-    data: {
-      url: TERRAIN_DATASETS.gsi.url,
-    },
-    rasterTerrain: {
-      maxZoom: 15,
-      minZoom: 5,
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
+    source: gsiTerrainDem,
   });
 
+  const gsiHillshadeDem = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.gsi.url,
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    maxZoom: 15,
+    minZoom: 5,
+  });
   view.addLayer({
-    type: "tiles",
-    data: { url: TERRAIN_DATASETS.gsi.url },
-    rasterTile: {
-      maxZoom: 15,
-      minZoom: 5,
-    },
-    hillshade: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
+    type: "raster",
+    source: gsiHillshadeDem,
+    hillshade: {},
   });
 
+  const chiyodaSource = view.addSource({
+    type: "3d-tiles",
+    url: TILES_3D_DATASETS.plateauChiyoda.url,
+  });
   view.addLayer({
-    type: "cesium3dtiles",
-    data: {
-      url: TILES_3D_DATASETS.plateauChiyoda.url,
-    },
+    type: "3d-tiles",
+    source: chiyodaSource,
     model: {
       show: true,
       color: new Color().setStyle("#ffffff"),

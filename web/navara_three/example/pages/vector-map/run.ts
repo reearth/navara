@@ -36,45 +36,42 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     scale: new Vector3().setScalar(1e9),
   });
 
+  const osmSource = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.openstreetmap.url,
+    maxZoom: 23,
+  });
   view.addLayer({
-    type: "tiles",
-    data: {
-      url: TILE_DATASETS.openstreetmap.url,
-    },
-    rasterTile: {
-      maxZoom: 23,
-    },
+    type: "raster",
+    source: osmSource,
   });
 
+  const gsiTerrainDem = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.gsi.url,
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    maxZoom: 15,
+    minZoom: 5,
+  });
   view.addLayer({
     type: "terrain",
-    data: {
-      url: TERRAIN_DATASETS.gsi.url,
-    },
-    rasterTerrain: {
-      maxZoom: 15,
-      minZoom: 5,
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
+    source: gsiTerrainDem,
   });
 
   view.addLayer({
-    type: "tiles",
-    data: { url: TERRAIN_DATASETS.gsi.url },
-    rasterTile: {
-      maxZoom: 15,
-      minZoom: 5,
-    },
-    hillshade: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
+    type: "raster",
+    source: gsiTerrainDem,
+    hillshade: {},
   });
 
+  const gsiVectorSource = view.addSource({
+    type: "vector-tile",
+    url: VECTOR_DATASETS.gsiExperimentalVector.url,
+    maxZoom: 16,
+  });
   view.addLayer({
-    type: "mvt",
-    data: {
-      url: VECTOR_DATASETS.gsiExperimentalVector.url,
-    },
+    type: "vector",
+    source: gsiVectorSource,
     point: {
       size: 10,
       sizeInMeters: false,
@@ -99,9 +96,6 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       extrudedHeight: 0,
       clampToGround: true,
       wireframe: false,
-    },
-    vectorTile: {
-      maxZoom: 16,
     },
   });
 

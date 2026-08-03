@@ -1,12 +1,5 @@
 import type { NormalizeWASMClass, TileHandle } from "@navaramap/core";
 import type {
-  B3dmLayerDescription,
-  PntsLayerDescription,
-  Cesium3dTilesLayerDescription,
-  GeoJsonLayerDescription,
-  TerrainLayerDescription,
-  TileLayerDescription,
-  MvtLayerDescription,
   VectorLayerDescription,
   RasterLayerDescription,
   TerrainSourceLayerDescription,
@@ -56,16 +49,6 @@ export type BuiltInEffectDescription =
   | SkyEnvMapPassConfig
   | TransparentPassConfig;
 
-// export type MVTLayer = {
-//   type: "mvt";
-//   zoom: number;
-//   layers?: string[];
-//   height?: number;
-//   extent?: Extent;
-//   url: string;
-//   color?: number;
-// };
-
 type Layer<LD> = NormalizeWASMClass<LD>;
 
 /**
@@ -87,30 +70,10 @@ type ConvertColorFields<T> = {
 
 /**
  * Helper type to enable Navara Color objects in all color-related fields.
- * This applies to model, point, billboard, text, polyline, polygon, rasterTile, etc.
+ * This applies to model, point, billboard, text, polyline, polygon, raster, etc.
  * Both number and Navara Color objects are accepted for backward compatibility.
  */
 type WithColorSupport<T> = ConvertColorFields<T>;
-
-export type TilesLayer = WithColorSupport<
-  Layer<TileLayerDescription & { type: "tiles" }>
->;
-export type TerrainLayer = Layer<TerrainLayerDescription & { type: "terrain" }>;
-export type GeoJsonLayer = WithColorSupport<
-  Layer<GeoJsonLayerDescription & { type: "geojson" }>
->;
-export type B3dmLayer = WithColorSupport<
-  Layer<B3dmLayerDescription & { type: "b3dm" }>
->;
-export type PntsLayer = WithColorSupport<
-  Layer<PntsLayerDescription & { type: "pnts" }>
->;
-export type Cesium3dTilesLayer = WithColorSupport<
-  Layer<Cesium3dTilesLayerDescription & { type: "cesium3dtiles" }>
->;
-export type MvtLayer = WithColorSupport<
-  Layer<MvtLayerDescription & { type: "mvt" }>
->;
 
 /**
  * A reference to a {@link Source}: either the source handle returned by
@@ -145,9 +108,14 @@ type TerrainSourceLayerBase = WithColorSupport<
 >;
 
 /**
- * A `terrain` layer renders a `raster-dem` or `quantized-mesh` source as the globe surface.
+ * A `terrain` layer renders a `raster-dem` or `quantized-mesh` source as the
+ * globe surface. Alternatively, omit `source` and pass `ellipsoid` to render a
+ * flat ellipsoid surface (e.g. to drape clamp-to-ground data on).
  */
-export type TerrainSourceLayer = SourceLayerBase<TerrainSourceLayerBase>;
+export type TerrainSourceLayer = SourceLayerBase<TerrainSourceLayerBase> & {
+  /** Render a source-less flat ellipsoid surface. Mutually exclusive with `source`. */
+  ellipsoid?: TerrainSourceLayerBase["terrain"];
+};
 
 type Tiles3dLayerBase = WithColorSupport<
   Layer<Tiles3dLayerDescription & { type: "3d-tiles" }>
@@ -157,17 +125,7 @@ type Tiles3dLayerBase = WithColorSupport<
 export type Tiles3dLayer = SourceLayerBase<Tiles3dLayerBase>;
 
 export type LayerDescription =
-  | TilesLayer
-  | TerrainLayer
-  | GeoJsonLayer
-  | B3dmLayer
-  | PntsLayer
-  | Cesium3dTilesLayer
-  | MvtLayer
-  | VectorLayer
-  | RasterLayer
-  | TerrainSourceLayer
-  | Tiles3dLayer;
+  VectorLayer | RasterLayer | TerrainSourceLayer | Tiles3dLayer;
 
 /**
  * Fields common to every source, independent of its `type`.

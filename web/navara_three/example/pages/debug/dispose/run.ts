@@ -82,36 +82,36 @@ export function run() {
 
       plugin.addDefaultPhotorealScene();
 
+      const gsiStd = view.addSource({
+        type: "raster-tile",
+        url: TILE_DATASETS.gsiStd.url,
+        maxZoom: 18,
+      });
       view.addLayer({
-        type: "tiles",
-        data: { url: TILE_DATASETS.gsiStd.url },
-        rasterTile: { maxZoom: 18 },
+        type: "raster",
+        source: gsiStd,
       });
 
+      const gsiDem = view.addSource({
+        type: "raster-dem",
+        url: TERRAIN_DATASETS.gsi.url,
+        maxZoom: 15,
+        minZoom: 6,
+        elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+      });
       view.addLayer({
         type: "terrain",
-        data: {
-          url: TERRAIN_DATASETS.gsi.url,
-        },
-        rasterTerrain: {
-          maxZoom: 15,
-          minZoom: 6,
-          elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+        source: gsiDem,
+        terrain: {
           castShadow: true,
           receiveShadow: true,
         },
       });
 
       view.addLayer({
-        type: "tiles",
-        data: { url: TERRAIN_DATASETS.gsi.url },
-        rasterTile: {
-          maxZoom: 15,
-          minZoom: 6,
-        },
-        hillshade: {
-          elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-        },
+        type: "raster",
+        source: gsiDem,
+        hillshade: {},
       });
 
       view.setCamera({

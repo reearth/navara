@@ -76,34 +76,36 @@ const run = async () => {
   });
 
   // Base layers
+  const gsiTerrainDem = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.gsi.url,
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    maxZoom: 15,
+    minZoom: 5,
+  });
   view.addLayer({
     type: "terrain",
-    data: { url: TERRAIN_DATASETS.gsi.url },
-    rasterTerrain: {
-      maxZoom: 15,
-      minZoom: 5,
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    source: gsiTerrainDem,
+    terrain: {
       castShadow: true,
       receiveShadow: true,
     },
   });
 
   view.addLayer({
-    type: "tiles",
-    data: { url: TERRAIN_DATASETS.gsi.url },
-    rasterTile: {
-      maxZoom: 15,
-      minZoom: 5,
-    },
-    hillshade: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
+    type: "raster",
+    source: gsiTerrainDem,
+    hillshade: {},
   });
 
+  const openstreetmap = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.openstreetmap.url,
+    maxZoom: 23,
+  });
   view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.openstreetmap.url },
-    rasterTile: { maxZoom: 23 },
+    type: "raster",
+    source: openstreetmap,
   });
 
   attribution?.add([TILE_DATASETS.openstreetmap, TERRAIN_DATASETS.gsi]);

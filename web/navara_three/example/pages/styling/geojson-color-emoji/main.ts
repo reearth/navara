@@ -85,11 +85,12 @@ const run = async () => {
     roll: 0,
   });
 
-  view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.openstreetmap.url },
-    rasterTile: { maxZoom: 19 },
+  const osm = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.openstreetmap.url,
+    maxZoom: 19,
   });
+  view.addLayer({ type: "raster", source: osm });
 
   const params: {
     size: number;
@@ -104,9 +105,13 @@ const run = async () => {
   const addCityLayer = () => {
     updatedFeatures = new Set<bigint>();
 
-    const layer = view.addLayer({
+    const citiesSource = view.addSource({
       type: "geojson",
-      data: { url: GEOJSON_DATASETS.worldCities.url },
+      url: GEOJSON_DATASETS.worldCities.url,
+    });
+    const layer = view.addLayer({
+      type: "vector",
+      source: citiesSource,
       text: {
         font: FAMILY_NAME,
         color: new Color().setStyle("#ffffff"),

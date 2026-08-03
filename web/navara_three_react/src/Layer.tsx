@@ -49,12 +49,7 @@ export function Layer({ config, onReady }: PropsWithChildren<LayerProps>) {
 
   useEffect(() => {
     if (handleRef.current) {
-      if ("data" in config) {
-        const { data: _data, ...withoutData } = config;
-        handleRef.current.update(withoutData);
-      } else {
-        handleRef.current.update(config);
-      }
+      handleRef.current.update(config);
     }
   }, [config]);
 

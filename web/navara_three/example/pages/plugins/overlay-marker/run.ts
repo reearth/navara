@@ -79,11 +79,13 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   const googleApiKey = GOOGLE_MAPS_API_KEY;
   const sources: AttributionSource[] = [LOCAL_DATASETS.animatedBirdPigeonGLTF];
   if (googleApiKey) {
+    const tilesSource = view.addSource({
+      type: "3d-tiles",
+      url: `${TILES_3D_DATASETS.googlePhotorealTiles.url}?key=${encodeURIComponent(googleApiKey)}`,
+    });
     const tilesLayer = view.addLayer({
-      type: "cesium3dtiles",
-      data: {
-        url: `${TILES_3D_DATASETS.googlePhotorealTiles.url}?key=${encodeURIComponent(googleApiKey)}`,
-      },
+      type: "3d-tiles",
+      source: tilesSource,
       model: {
         maxSse: 60,
         normals: true,

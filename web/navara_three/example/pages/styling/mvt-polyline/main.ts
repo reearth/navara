@@ -37,36 +37,34 @@ const run = async () => {
   });
 
   // Base tiles layer
-  view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.openstreetmap.url },
-    rasterTile: { maxZoom: 19 },
+  const osm = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.openstreetmap.url,
+    maxZoom: 19,
+  });
+  view.addLayer({ type: "raster", source: osm });
+
+  const mapterhornTerrain = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.mapterhorn.url,
+    elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
+    maxZoom: 15,
+    minZoom: 5,
+    tileSize: 512,
   });
   view.addLayer({
     type: "terrain",
-    data: {
-      url: TERRAIN_DATASETS.mapterhorn.url,
-    },
-    rasterTerrain: {
-      elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
-      maxZoom: 15,
-      minZoom: 5,
+    source: mapterhornTerrain,
+    terrain: {
       castShadow: true,
       receiveShadow: true,
-      tileSize: 512,
     },
   });
 
   view.addLayer({
-    type: "tiles",
-    data: { url: TERRAIN_DATASETS.mapterhorn.url },
-    rasterTile: {
-      maxZoom: 15,
-      show: false, // Don't render DEM as color
-    },
-    hillshade: {
-      elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
-    },
+    type: "raster",
+    source: mapterhornTerrain,
+    hillshade: {},
   });
 
   // Track updated features to prevent duplicate evaluations
@@ -78,15 +76,19 @@ const run = async () => {
   const addMvtLayer = () => {
     updatedFeatures = new Set<bigint>();
 
+    const roadsSource = view.addSource({
+      type: "vector-tile",
+      url: MVT_DATASETS.plateauGifuTran.url,
+      maxZoom: 16,
+    });
     const layer = view.addLayer({
-      type: "mvt",
-      data: { url: MVT_DATASETS.plateauGifuTran.url },
+      type: "vector",
+      source: roadsSource,
       polyline: {
         width: params.width,
         height: 1,
         clampToGround: true,
       },
-      vectorTile: { maxZoom: 16 },
     });
 
     // Feature evaluator: style roads based on tree presence

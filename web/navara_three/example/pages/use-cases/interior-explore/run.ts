@@ -107,13 +107,17 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   const defaultLayers = plugin.addDefaultPhotorealScene();
   defaultLayers.sun.update({ sun: { castShadow: true } });
 
+  const gsiTerrainDem = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.gsi.url,
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    maxZoom: 15,
+    minZoom: 6,
+  });
   view.addLayer({
     type: "terrain",
-    data: { url: TERRAIN_DATASETS.gsi.url },
-    rasterTerrain: {
-      maxZoom: 15,
-      minZoom: 6,
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    source: gsiTerrainDem,
+    terrain: {
       castShadow: true,
       receiveShadow: true,
       skirt: false,
@@ -121,24 +125,31 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   });
 
   view.addLayer({
-    type: "tiles",
-    data: { url: TERRAIN_DATASETS.gsi.url },
-    rasterTile: { maxZoom: 15, minZoom: 6 },
-    hillshade: { elevationDecoder: JAPAN_GSI_ELEVATION_DECODER() },
+    type: "raster",
+    source: gsiTerrainDem,
+    hillshade: {},
   });
 
+  const seamlessphotoSource = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.gsiSeamlessphoto.url,
+    maxZoom: 18,
+  });
   view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
-    rasterTile: {
+    type: "raster",
+    source: seamlessphotoSource,
+    raster: {
       color: new Color().setStyle("#ffffff"),
-      maxZoom: 18,
     },
   });
 
+  const takanawaSource = view.addSource({
+    type: "3d-tiles",
+    url: TAKANAWA_3D_TILES.url,
+  });
   view.addLayer({
-    type: "cesium3dtiles",
-    data: { url: TAKANAWA_3D_TILES.url },
+    type: "3d-tiles",
+    source: takanawaSource,
     model: {
       show: true,
       castShadow: true,

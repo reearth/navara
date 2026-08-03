@@ -55,10 +55,14 @@ const run = async () => {
   await view.init();
 
   // Base map only — no lights needed for the unlit arc / raster tiles.
+  const openstreetmap = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.openstreetmap.url,
+    maxZoom: 19,
+  });
   view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.openstreetmap.url },
-    rasterTile: { maxZoom: 19 },
+    type: "raster",
+    source: openstreetmap,
   });
 
   // --- Reproduction parameters (driven by the UI) ---

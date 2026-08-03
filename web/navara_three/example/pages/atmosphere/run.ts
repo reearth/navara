@@ -104,11 +104,13 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     terrain: { castShadow: true, receiveShadow: true },
   });
 
+  const plateauChiyodaSource = view.addSource({
+    type: "3d-tiles",
+    url: TILES_3D_DATASETS.plateauChiyoda.url,
+  });
   view.addLayer({
-    type: "cesium3dtiles",
-    data: {
-      url: TILES_3D_DATASETS.plateauChiyoda.url,
-    },
+    type: "3d-tiles",
+    source: plateauChiyodaSource,
     model: {
       show: true,
       color: new Color().setStyle("#ffffff"),
@@ -120,11 +122,13 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     },
   });
 
+  const plateauChuoSource = view.addSource({
+    type: "3d-tiles",
+    url: TILES_3D_DATASETS.plateauChuo.url,
+  });
   view.addLayer({
-    type: "cesium3dtiles",
-    data: {
-      url: TILES_3D_DATASETS.plateauChuo.url,
-    },
+    type: "3d-tiles",
+    source: plateauChuoSource,
     model: {
       show: true,
       color: new Color().setStyle("#ffffff"),
@@ -176,18 +180,19 @@ const addTileControl = (view: ThreeView<CustomDescriptions>, pane: Pane) => {
     type: TILE_DATASETS.gsiSeamlessphoto.url,
   };
 
-  const description: LayerDescription = {
-    type: "tiles",
-    data: {
-      url: PARAMS.type,
-    },
-    rasterTile: {
+  const createTileSource = (url: string) =>
+    view.addSource({
+      type: "raster-tile",
+      url,
       maxZoom: 18,
       minZoom: 2,
-    },
-  };
+    });
 
-  let layer = view.addLayer(description);
+  let source = createTileSource(PARAMS.type);
+  let layer = view.addLayer({
+    type: "raster",
+    source,
+  });
 
   // Keep the credit in sync with the active base tile.
   const tileByUrl = (url: string) =>
@@ -209,11 +214,10 @@ const addTileControl = (view: ThreeView<CustomDescriptions>, pane: Pane) => {
     })
     .on("change", (v) => {
       layer.delete();
+      source = createTileSource(v.value);
       layer = view.addLayer({
-        ...description,
-        data: {
-          url: v.value,
-        },
+        type: "raster",
+        source,
       });
       if (tileCredit) view.attribution?.remove([tileCredit]);
       tileCredit = tileByUrl(v.value);
@@ -233,15 +237,17 @@ const addCloudsTilesControl = (
     show: true,
   };
 
+  const cloudsTilesSource = view.addSource({
+    type: "raster-tile",
+    url: LOCAL_DATASETS.blueMarbleClouds.url,
+    maxZoom: 6,
+    minZoom: 2,
+  });
+
   const description: LayerDescription = {
-    type: "tiles",
-    data: {
-      url: LOCAL_DATASETS.blueMarbleClouds.url,
-    },
-    rasterTile: {
-      maxZoom: 6,
-      minZoom: 2,
-    },
+    type: "raster",
+    source: cloudsTilesSource,
+    raster: {},
   };
 
   let cloudsTilesLayer = view.addLayer(description);
@@ -266,14 +272,14 @@ const addCloudsTilesControl = (
       );
 
       if (
-        !description.rasterTile ||
-        (description.rasterTile.opacity != null &&
-          description.rasterTile.opacity <= 0 &&
+        !description.raster ||
+        (description.raster.opacity != null &&
+          description.raster.opacity <= 0 &&
           opacity <= 0)
       )
         return;
 
-      description.rasterTile.opacity = opacity;
+      description.raster.opacity = opacity;
       cloudsTilesLayer.update(description);
     };
 
@@ -285,8 +291,8 @@ const addCloudsTilesControl = (
     {
       name: "show",
       onChange: (v) => {
-        if (!description.rasterTile) return;
-        description.rasterTile.show = v.value;
+        if (!description.raster) return;
+        description.raster.show = v.value;
         cloudsTilesLayer.update(description);
       },
     },

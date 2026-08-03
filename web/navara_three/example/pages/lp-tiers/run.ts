@@ -79,7 +79,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   view.addLayer({
     type: "terrain",
     source: terrain,
-    quantizedMesh: {
+    terrain: {
       receiveShadow: castsShadows,
     },
   });
@@ -97,17 +97,18 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     type: "raster",
     source: basemapSource,
     ...(isPlainScene
-      ? { rasterTile: { color: new Color().setStyle("#9aa2ae") } }
+      ? { raster: { color: new Color().setStyle("#9aa2ae") } }
       : {}),
   });
 
   const buildingLayers = [
     TILES_3D_DATASETS.plateauChiyoda.url,
     TILES_3D_DATASETS.plateauChuo.url,
-  ].map((url) =>
-    view.addLayer({
-      type: "cesium3dtiles",
-      data: { url },
+  ].map((url) => {
+    const buildingsSource = view.addSource({ type: "3d-tiles", url });
+    return view.addLayer({
+      type: "3d-tiles",
+      source: buildingsSource,
       model: {
         show: true,
         // Blue-gray at night so the warm fog lights pop against the towers.
@@ -117,8 +118,8 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
         castShadow: castsShadows,
         receiveShadow: castsShadows,
       },
-    }),
-  );
+    });
+  });
 
   if (isPlainScene) {
     // Plain look (scenes 1 and 3): color-only sun, no shadows, SSAO for

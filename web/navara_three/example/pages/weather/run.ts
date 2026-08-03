@@ -92,44 +92,44 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
 
   view.toneMappingExposure = 10;
 
+  const seamlessphotoSource = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.gsiSeamlessphoto.url,
+    maxZoom: 23,
+  });
   view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
-    rasterTile: {
-      maxZoom: 23,
-    },
+    type: "raster",
+    source: seamlessphotoSource,
   });
 
+  const gsiTerrainDem = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.gsi.url,
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    maxZoom: 15,
+    minZoom: 5,
+  });
   view.addLayer({
     type: "terrain",
-    data: {
-      url: TERRAIN_DATASETS.gsi.url,
-    },
-    rasterTerrain: {
-      maxZoom: 15,
-      minZoom: 5,
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    source: gsiTerrainDem,
+    terrain: {
       receiveShadow: true,
     },
   });
 
   view.addLayer({
-    type: "tiles",
-    data: { url: TERRAIN_DATASETS.gsi.url },
-    rasterTile: {
-      maxZoom: 15,
-      minZoom: 5,
-    },
-    hillshade: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
+    type: "raster",
+    source: gsiTerrainDem,
+    hillshade: {},
   });
 
+  const plateauChiyodaSource = view.addSource({
+    type: "3d-tiles",
+    url: TILES_3D_DATASETS.plateauChiyoda.url,
+  });
   view.addLayer({
-    type: "cesium3dtiles",
-    data: {
-      url: TILES_3D_DATASETS.plateauChiyoda.url,
-    },
+    type: "3d-tiles",
+    source: plateauChiyodaSource,
     model: {
       show: true,
       color: new Color().setStyle("#ffffff"),
@@ -163,11 +163,13 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     visible: false,
   });
 
+  const plateauChuoSource = view.addSource({
+    type: "3d-tiles",
+    url: TILES_3D_DATASETS.plateauChuo.url,
+  });
   view.addLayer({
-    type: "cesium3dtiles",
-    data: {
-      url: TILES_3D_DATASETS.plateauChuo.url,
-    },
+    type: "3d-tiles",
+    source: plateauChuoSource,
     model: {
       show: true,
       color: new Color().setStyle("#ffffff"),
@@ -205,11 +207,13 @@ const addWaterControl = (view: ThreeView<CustomDescriptions>, pane: Pane) => {
     "visible river model": true,
   };
 
+  const floodSource = view.addSource({
+    type: "3d-tiles",
+    url: TILES_3D_DATASETS.plateauTokyoFlood.url,
+  });
   const floodDesc: LayerDescription = {
-    type: "cesium3dtiles",
-    data: {
-      url: TILES_3D_DATASETS.plateauTokyoFlood.url,
-    },
+    type: "3d-tiles",
+    source: floodSource,
     model: {
       show: true,
       color: new Color().setStyle("#ffdcad"),
@@ -225,21 +229,21 @@ const addWaterControl = (view: ThreeView<CustomDescriptions>, pane: Pane) => {
     },
   };
 
+  const riverSource = view.addSource({
+    type: "vector-tile",
+    url: VECTOR_DATASETS.gsiExperimentalVector.url,
+    maxZoom: 16,
+  });
   const riverDesc: LayerDescription = {
-    type: "mvt",
-    data: {
-      url: VECTOR_DATASETS.gsiExperimentalVector.url,
-    },
+    type: "vector",
+    source: riverSource,
+    sourceLayers: ["waterarea"],
     polygon: {
       color: new Color().setStyle("#cef7ff"),
       reflectivity: 0.2,
       clampToGround: true,
       wireframe: false,
       water: true,
-    },
-    vectorTile: {
-      maxZoom: 16,
-      layers: ["waterarea"],
     },
   };
 

@@ -50,28 +50,40 @@ export function Layers() {
     ]);
   }, [view]);
 
+  const baseTilesSource = useMemo(
+    () =>
+      view.addSource({
+        type: "raster-tile",
+        url: "…",
+        minZoom: 2,
+        maxZoom: 18,
+      }),
+    [view],
+  );
+  const demSource = useMemo(
+    () =>
+      view.addSource({
+        type: "raster-dem",
+        url: "…",
+        elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+        minZoom: 6,
+        maxZoom: 15,
+      }),
+    [view],
+  );
+
   const baseTiles = useMemo<LayerDescription>(
-    () => ({
-      type: "tiles",
-      data: { url: "…" },
-      raster_tile: { min_zoom: 2, max_zoom: 18 },
-    }),
-    [],
+    () => ({ type: "raster", source: baseTilesSource }),
+    [baseTilesSource],
   );
 
   const terrain = useMemo<LayerDescription>(
     () => ({
       type: "terrain",
-      data: { url: "…" },
-      raster_terrain: {
-        min_zoom: 6,
-        max_zoom: 15,
-        elevation_decoder: JAPAN_GSI_ELEVATION_DECODER(),
-        cast_shadow: true,
-        receive_shadow: true,
-      },
+      source: demSource,
+      terrain: { castShadow: true, receiveShadow: true },
     }),
-    [],
+    [demSource],
   );
 
   return (

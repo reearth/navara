@@ -1,8 +1,4 @@
-import ThreeView, {
-  Color,
-  type GeoJsonLayer,
-  type Layer,
-} from "@navaramap/three";
+import ThreeView, { Color, type Layer } from "@navaramap/three";
 import type { AmbientLightDesc } from "@navaramap/three-default-descs";
 import {
   DefaultPlugin,
@@ -56,10 +52,14 @@ export const run = async (view: ThreeView<DefaultDescriptions>) => {
     },
   });
 
+  const osmSource = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.openstreetmap.url,
+    maxZoom: 19,
+  });
   view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.openstreetmap.url },
-    rasterTile: { maxZoom: 19 },
+    type: "raster",
+    source: osmSource,
   });
 
   view.setCamera({
@@ -104,22 +104,18 @@ export const run = async (view: ThreeView<DefaultDescriptions>) => {
     return grid;
   };
 
-  const buildDesc = (): GeoJsonLayer => ({
-    type: "geojson",
-    data: gridFor(params.count),
-    billboard: {
-      color: new Color().setStyle("#ffffff"),
-      size: params.size,
-      sizeInMeters: params.sizeInMeters,
-      height: 1,
-      clampToGround: true,
-      depthTest: true,
-      alphaTest: 0.1,
-      transparent: true,
-      url: defaultImageUrl,
-      center: { x: 0.0, y: -0.5 },
-      offsetDepth: true,
-    },
+  const buildBillboardMaterial = () => ({
+    color: new Color().setStyle("#ffffff"),
+    size: params.size,
+    sizeInMeters: params.sizeInMeters,
+    height: 1,
+    clampToGround: true,
+    depthTest: true,
+    alphaTest: 0.1,
+    transparent: true,
+    url: defaultImageUrl,
+    center: { x: 0.0, y: -0.5 },
+    offsetDepth: true,
   });
 
   // Decide each feature's image from the current UI state. `null` clears any
@@ -159,17 +155,30 @@ export const run = async (view: ThreeView<DefaultDescriptions>) => {
     });
   };
 
+  let gridSource: ReturnType<typeof view.addSource> | undefined;
+
   const addBillboardLayer = () => {
-    const l = view.addLayer(buildDesc());
+    gridSource = view.addSource({
+      type: "geojson",
+      data: gridFor(params.count),
+    });
+    const l = view.addLayer({
+      type: "vector",
+      source: gridSource,
+      billboard: buildBillboardMaterial(),
+    });
     attachEvaluator(l);
     return l;
   };
 
   let layer: Layer | undefined = addBillboardLayer();
 
-  // Layer.update replaces the entire configuration, so material tweaks resend
-  // the full descriptor (data included).
-  const rebuildLayer = () => layer?.update(buildDesc());
+  // Count changes re-point the source data; material tweaks update the layer.
+  // Resending both mirrors the old full-descriptor update semantics.
+  const rebuildLayer = () => {
+    gridSource?.update({ type: "geojson", data: gridFor(params.count) });
+    layer?.update({ billboard: buildBillboardMaterial() });
+  };
   const restyle = () => layer?.forceUpdate();
 
   // Click a billboard to toggle a per-instance image reset: the first click
@@ -208,6 +217,9 @@ export const run = async (view: ThreeView<DefaultDescriptions>) => {
   toggleBtn.on("click", () => {
     if (layer) {
       view.deleteLayerById(layer.id);
+      // Source is reference-counted; free it so toggling can't stack orphans.
+      gridSource?.delete();
+      gridSource = undefined;
       layer = undefined;
       toggleBtn.title = "Add layer";
     } else {

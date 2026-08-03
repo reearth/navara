@@ -33,12 +33,14 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     },
   });
 
+  const osmSource = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.openstreetmap.url,
+    maxZoom: 23,
+  });
   view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.openstreetmap.url },
-    rasterTile: {
-      maxZoom: 23,
-    },
+    type: "raster",
+    source: osmSource,
   });
 
   // Enable shadow for raster tile.
@@ -50,11 +52,13 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     },
   });
 
+  const chiyodaSource = view.addSource({
+    type: "3d-tiles",
+    url: TILES_3D_DATASETS.plateauChiyoda.url,
+  });
   view.addLayer({
-    type: "cesium3dtiles",
-    data: {
-      url: TILES_3D_DATASETS.plateauChiyoda.url,
-    },
+    type: "3d-tiles",
+    source: chiyodaSource,
     model: {
       show: true,
       color: new Color().setStyle("#ffffff"),
@@ -66,7 +70,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     },
   });
 
-  view.addLayer({
+  const lineSource = view.addSource({
     type: "geojson",
     data: {
       type: "Feature",
@@ -81,13 +85,17 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
         type: "LineString",
       },
     },
+  });
+  view.addLayer({
+    type: "vector",
+    source: lineSource,
     polyline: {
       color: new Color().setStyle("#ff0000"),
       width: 2,
     },
   });
 
-  view.addLayer({
+  const polygonSource = view.addSource({
     type: "geojson",
     data: {
       type: "Feature",
@@ -105,6 +113,10 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
         type: "Polygon",
       },
     },
+  });
+  view.addLayer({
+    type: "vector",
+    source: polygonSource,
     polygon: {},
   });
 

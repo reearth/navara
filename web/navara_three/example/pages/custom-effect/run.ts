@@ -230,20 +230,24 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   });
 
   // Add base map tiles
+  const openstreetmap = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.openstreetmap.url,
+    maxZoom: 23,
+  });
   view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.openstreetmap.url },
-    rasterTile: {
-      maxZoom: 23,
-    },
+    type: "raster",
+    source: openstreetmap,
   });
 
   // Add 3D buildings
+  const plateauChiyodaSource = view.addSource({
+    type: "3d-tiles",
+    url: TILES_3D_DATASETS.plateauChiyoda.url,
+  });
   view.addLayer({
-    type: "cesium3dtiles",
-    data: {
-      url: TILES_3D_DATASETS.plateauChiyoda.url,
-    },
+    type: "3d-tiles",
+    source: plateauChiyodaSource,
     model: {
       show: true,
       metalness: 0.1,

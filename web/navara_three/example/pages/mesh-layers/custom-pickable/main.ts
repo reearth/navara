@@ -256,10 +256,14 @@ const run = async () => {
     roll: 0,
   });
 
+  const osmSource = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.openstreetmap.url,
+    maxZoom: 18,
+  });
   view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.openstreetmap.url },
-    rasterTile: { maxZoom: 18 },
+    type: "raster",
+    source: osmSource,
   });
 
   const origin = geodeticToVector3({

@@ -29,11 +29,13 @@ export const run = async (view: ThreeView) => {
 };
 
 const addTileLayer = (view: ThreeView, token: string): Layer => {
+  const source = view.addSource({
+    type: "3d-tiles",
+    url: `${TILES_3D_DATASETS.googlePhotorealTiles.url}?key=${encodeURIComponent(token)}`,
+  });
   return view.addLayer({
-    type: "cesium3dtiles",
-    data: {
-      url: `${TILES_3D_DATASETS.googlePhotorealTiles.url}?key=${encodeURIComponent(token)}`,
-    },
+    type: "3d-tiles",
+    source,
     model: {
       maxSse: 60,
     },

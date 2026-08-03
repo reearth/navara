@@ -111,28 +111,22 @@ export const run = async (
 
   gView = view;
 
+  const gsiTerrainDem = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.gsi.url,
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    maxZoom: 15,
+    minZoom: 5,
+  });
   view.addLayer({
     type: "terrain",
-    data: {
-      url: TERRAIN_DATASETS.gsi.url,
-    },
-    rasterTerrain: {
-      maxZoom: 15,
-      minZoom: 5,
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
+    source: gsiTerrainDem,
   });
 
   view.addLayer({
-    type: "tiles",
-    data: { url: TERRAIN_DATASETS.gsi.url },
-    rasterTile: {
-      maxZoom: 15,
-      minZoom: 5,
-    },
-    hillshade: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
+    type: "raster",
+    source: gsiTerrainDem,
+    hillshade: {},
   });
 
   view.on("mousedown", (event: MapMouseEvent) => {
@@ -140,19 +134,22 @@ export const run = async (
     console.log("Screen Position:", event.clientX, event.clientY);
   });
 
+  const osmSource = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.openstreetmap.url,
+  });
   view.addLayer({
-    type: "tiles",
-    data: {
-      url: TILE_DATASETS.openstreetmap.url,
-    },
-    rasterTile: {},
+    type: "raster",
+    source: osmSource,
   });
 
+  const plateauChiyodaSource = view.addSource({
+    type: "3d-tiles",
+    url: TILES_3D_DATASETS.plateauChiyoda.url,
+  });
   view.addLayer({
-    type: "cesium3dtiles",
-    data: {
-      url: TILES_3D_DATASETS.plateauChiyoda.url,
-    },
+    type: "3d-tiles",
+    source: plateauChiyodaSource,
     model: {
       show: true,
       color: new Color().setStyle("#ffffff"),

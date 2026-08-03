@@ -20,6 +20,7 @@ view.setCamera({
 });
 
 const raster = view.addSource({
+  type: "raster-tile",
   url: "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_NextGeneration/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg",
   maxZoom: 8,
 });

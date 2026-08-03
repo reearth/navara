@@ -3,7 +3,7 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   Layer,
   LightHandle,
-  type Cesium3dTilesLayer,
+  type Tiles3dLayer,
   type TerrainSourceLayer,
 } from "@navaramap/three";
 import { SunLightDesc, type ShadowMode } from "@navaramap/three-default-descs";
@@ -34,25 +34,30 @@ export async function run() {
 
   view.toneMappingExposure = 10;
 
+  const hillshadeDem = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.gsi.url,
+    maxZoom: 15,
+    minZoom: 6,
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  });
   view.addLayer({
-    type: "tiles",
-    data: { url: TERRAIN_DATASETS.gsi.url },
-    rasterTile: {
-      maxZoom: 15,
-      minZoom: 6,
-    },
-    hillshade: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
+    type: "raster",
+    source: hillshadeDem,
+    hillshade: {},
   });
 
   // Add tile layer
+  const seamlessphoto = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.gsiSeamlessphoto.url,
+    maxZoom: 18,
+  });
   view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
-    rasterTile: {
+    type: "raster",
+    source: seamlessphoto,
+    raster: {
       color: new Color().setStyle("#ffffff"),
-      maxZoom: 18,
       opacity: 1,
     },
   });
@@ -317,12 +322,18 @@ const addTerrainModelControl = (view: ThreeView, pane: Pane) => {
 };
 
 const addBuildingModelControl = (view: ThreeView, pane: Pane) => {
-  const buildingLayerDescriptions: Cesium3dTilesLayer[] = [
+  const chiyodaSource = view.addSource({
+    type: "3d-tiles",
+    url: TILES_3D_DATASETS.plateauChiyoda.url,
+  });
+  const chuoSource = view.addSource({
+    type: "3d-tiles",
+    url: TILES_3D_DATASETS.plateauChuo.url,
+  });
+  const buildingLayerDescriptions: Tiles3dLayer[] = [
     {
-      type: "cesium3dtiles",
-      data: {
-        url: TILES_3D_DATASETS.plateauChiyoda.url,
-      },
+      type: "3d-tiles",
+      source: chiyodaSource,
       model: {
         show: true,
         castShadow: true,
@@ -333,10 +344,8 @@ const addBuildingModelControl = (view: ThreeView, pane: Pane) => {
       },
     },
     {
-      type: "cesium3dtiles",
-      data: {
-        url: TILES_3D_DATASETS.plateauChuo.url,
-      },
+      type: "3d-tiles",
+      source: chuoSource,
       model: {
         show: true,
         castShadow: true,

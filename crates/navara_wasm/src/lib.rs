@@ -345,52 +345,29 @@ impl Core {
             return layer_id;
         };
 
-        // New source-based layer types resolve their referenced source and build
-        // the legacy internal layer from it. `terrain` keeps its old `data`-based
-        // form too, so it is only treated as new when a `source` is present.
-        let is_source_based = matches!(layer_type.as_str(), "vector" | "raster" | "3d-tiles")
-            || (layer_type == "terrain" && source_types::read_source_ref(layer.clone()).is_some());
-
-        if is_source_based {
-            if let Some(source_id) = source_types::read_source_ref(layer.clone())
-                && let Some(source) = self.app.get_source_description(&source_id)
-                && let Some(l) = source_types::build_source_layer(
-                    &layer_id,
-                    layer_type.as_str(),
-                    layer,
-                    &source,
-                    None,
-                )
-            {
-                self.app.add_layer(layer_id.as_str(), l);
-                self.app.link_layer_source(&layer_id, &source_id);
-            }
-            return layer_id;
-        }
-
-        // TODO: Remove with the legacy layer API (this whole non-source branch).
-        // Legacy layers carry their fetch config inline. Build an implicit
-        // source from it so the loaders resolve the URL through `SourceStore`
-        // exactly like new-API layers (the old API is unified onto sources). The
-        // source is only registered once the layer itself is successfully built,
-        // so a failed `to()` never leaves an orphan source behind.
-        let implicit_id = generate_id();
-        let implicit_source =
-            source_types::legacy_source(&implicit_id, layer_type.as_str(), layer.clone());
-        if let Some(l) = LayerDescription::to(
-            &layer_id,
+        // Source-based layer types build their internal layer from a referenced
+        // source. `terrain` may also be source-less (a flat ellipsoid surface),
+        // in which case it takes the dedicated source-less build path.
+        if matches!(
             layer_type.as_str(),
-            layer,
-            None,
-            implicit_source.as_ref(),
+            "vector" | "raster" | "3d-tiles" | "terrain"
         ) {
-            if let Some(source) = implicit_source {
-                let sid = source.source_id().to_owned();
-                self.app.add_implicit_source(&sid, source);
-                self.app.add_layer(layer_id.as_str(), l);
-                self.app.link_layer_source(&layer_id, &sid);
-            } else {
-                // No implicit source (e.g. inline geojson); add the layer as-is.
+            if let Some(source_id) = source_types::read_source_ref(layer.clone()) {
+                if let Some(source) = self.app.get_source_description(&source_id)
+                    && let Some(l) = source_types::build_source_layer(
+                        &layer_id,
+                        layer_type.as_str(),
+                        layer,
+                        &source,
+                        None,
+                    )
+                {
+                    self.app.add_layer(layer_id.as_str(), l);
+                    self.app.link_layer_source(&layer_id, &source_id);
+                }
+            } else if let Some(l) =
+                source_types::build_sourceless_layer(&layer_id, layer_type.as_str(), layer, None)
+            {
                 self.app.add_layer(layer_id.as_str(), l);
             }
         }

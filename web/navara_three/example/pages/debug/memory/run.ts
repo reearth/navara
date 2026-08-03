@@ -103,9 +103,13 @@ export const run = async () => {
       TILES_3D_DATASETS.plateauChiyoda,
       TILES_3D_DATASETS.plateauChuo,
     ]) {
+      const tilesSource = view.addSource({
+        type: "3d-tiles",
+        url: ds.url,
+      });
       view.addLayer({
-        type: "cesium3dtiles",
-        data: { url: ds.url },
+        type: "3d-tiles",
+        source: tilesSource,
         model: {
           show: true,
           color: new Color().setStyle("#ffffff"),

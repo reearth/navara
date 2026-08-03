@@ -58,36 +58,31 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     roll: 0, // -180 to 180
   });
 
+  const gsiDem = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.gsi.url,
+    maxZoom: 15,
+    minZoom: 5,
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  });
   view.addLayer({
     type: "terrain",
-    data: {
-      url: TERRAIN_DATASETS.gsi.url,
-    },
-    rasterTerrain: {
-      maxZoom: 15,
-      minZoom: 5,
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
+    source: gsiDem,
   });
 
   view.addLayer({
-    type: "tiles",
-    data: { url: TERRAIN_DATASETS.gsi.url },
-    rasterTile: {
-      maxZoom: 15,
-      minZoom: 5,
-    },
-    hillshade: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
+    type: "raster",
+    source: gsiDem,
+    hillshade: {},
   });
 
+  const openstreetmap = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.openstreetmap.url,
+  });
   view.addLayer({
-    type: "tiles",
-    data: {
-      url: TILE_DATASETS.openstreetmap.url,
-    },
-    rasterTile: {},
+    type: "raster",
+    source: openstreetmap,
   });
 
   view.camera.on("movestart", () => {

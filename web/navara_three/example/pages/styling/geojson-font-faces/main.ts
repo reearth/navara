@@ -41,11 +41,12 @@ const run = async () => {
   });
 
   // Base tiles
-  view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.openstreetmap.url },
-    rasterTile: { maxZoom: 19 },
+  const osm = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.openstreetmap.url,
+    maxZoom: 19,
   });
+  view.addLayer({ type: "raster", source: osm });
 
   // Track updated features to prevent duplicate evaluations
   let updatedFeatures = new Set<bigint>();
@@ -62,9 +63,13 @@ const run = async () => {
   const addCityLayer = () => {
     updatedFeatures = new Set<bigint>();
 
-    const layer = view.addLayer({
+    const citiesSource = view.addSource({
       type: "geojson",
-      data: { url: GEOJSON_DATASETS.worldCities.url },
+      url: GEOJSON_DATASETS.worldCities.url,
+    });
+    const layer = view.addLayer({
+      type: "vector",
+      source: citiesSource,
       text: {
         font: "WorldCities", // Uses the registered font family name
         color: new Color().setStyle("#ffffff"),

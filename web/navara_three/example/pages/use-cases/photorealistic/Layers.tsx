@@ -64,44 +64,88 @@ export const Layers: FC<SceneLayerToggles> = ({
 
   const { isNight } = useNightContext();
 
+  // Sources (data fetching split out from rendering)
+  const baseRasterSource = useMemo(
+    () =>
+      view.addSource({
+        type: "raster-tile",
+        url: UC_PHOTOREALISTIC_DATASETS.baseRaster.url,
+        minZoom: 2,
+        maxZoom: 18,
+      }),
+    [view],
+  );
+  useEffect(
+    () => () => {
+      baseRasterSource.delete();
+    },
+    [baseRasterSource],
+  );
+
+  // Terrain and hillshade share the same DEM tiles (same url, zoom range and
+  // elevation decoder), so reference one shared raster-dem source from both.
+  const terrainDemSource = useMemo(
+    () =>
+      view.addSource({
+        type: "raster-dem",
+        url: UC_PHOTOREALISTIC_DATASETS.terrain.url,
+        minZoom: 6,
+        maxZoom: 15,
+        elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+      }),
+    [view],
+  );
+  useEffect(
+    () => () => {
+      terrainDemSource.delete();
+    },
+    [terrainDemSource],
+  );
+
+  const waterSource = useMemo(
+    () =>
+      view.addSource({
+        type: "vector-tile",
+        url: UC_PHOTOREALISTIC_DATASETS.waterMvt.url,
+        maxZoom: 16,
+      }),
+    [view],
+  );
+  useEffect(
+    () => () => {
+      waterSource.delete();
+    },
+    [waterSource],
+  );
+
   // Descriptions
   const baseTiles = useMemo(
     (): LayerDescription => ({
-      type: "tiles",
-      data: { url: UC_PHOTOREALISTIC_DATASETS.baseRaster.url },
-      rasterTile: { minZoom: 2, maxZoom: 18 },
+      type: "raster",
+      source: baseRasterSource,
     }),
-    [],
+    [baseRasterSource],
   );
 
   const terrain = useMemo(
     (): LayerDescription => ({
       type: "terrain",
-      data: { url: UC_PHOTOREALISTIC_DATASETS.terrain.url },
-      rasterTerrain: {
-        minZoom: 6,
-        maxZoom: 15,
-        elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+      source: terrainDemSource,
+      terrain: {
         castShadow: true,
         receiveShadow: true,
       },
     }),
-    [],
+    [terrainDemSource],
   );
 
   const hillshade = useMemo(
     (): LayerDescription => ({
-      type: "tiles",
-      data: { url: UC_PHOTOREALISTIC_DATASETS.terrain.url },
-      rasterTile: {
-        minZoom: 6,
-        maxZoom: 15,
-      },
-      hillshade: {
-        elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-      },
+      type: "raster",
+      source: terrainDemSource,
+      hillshade: {},
     }),
-    [],
+    [terrainDemSource],
   );
 
   const cloudsEffect = useMemo(
@@ -159,10 +203,9 @@ export const Layers: FC<SceneLayerToggles> = ({
 
   const mvtDesc = useMemo(
     (): LayerDescription => ({
-      type: "mvt",
-      data: {
-        url: UC_PHOTOREALISTIC_DATASETS.waterMvt.url,
-      },
+      type: "vector",
+      source: waterSource,
+      sourceLayers: ["waterarea"],
       polygon: {
         color: new Color().setStyle("#72501a"),
         reflectivity: 0.3,
@@ -176,12 +219,8 @@ export const Layers: FC<SceneLayerToggles> = ({
         receiveShadow: true,
         specular: true,
       },
-      vectorTile: {
-        maxZoom: 16,
-        layers: ["waterarea"],
-      },
     }),
-    [waterSurface],
+    [waterSource, waterSurface],
   );
 
   // Night scene tuning inspired by example/pages/night

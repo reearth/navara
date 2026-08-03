@@ -48,29 +48,29 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
   });
 
   // Base raster tile layer (OpenStreetMap)
+  const osmSource = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.openstreetmap.url,
+    maxZoom: 23,
+  });
   view.addLayer({
-    type: "tiles",
-    data: {
-      url: TILE_DATASETS.openstreetmap.url,
-    },
-    rasterTile: {
-      maxZoom: 23,
-    },
+    type: "raster",
+    source: osmSource,
   });
 
   // Hillshade layer without terrain (flat projection)
   // The hillshade will be rendered on top of the flat base map
+  const mapterhornDem = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.mapterhorn.url,
+    elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
+    maxZoom: 17,
+    minZoom: 5,
+  });
   const layerDef: LayerDescription = {
-    type: "tiles",
-    data: {
-      url: TERRAIN_DATASETS.mapterhorn.url,
-    },
-    rasterTile: {
-      maxZoom: 17,
-      minZoom: 5,
-    },
+    type: "raster",
+    source: mapterhornDem,
     hillshade: {
-      elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
       exaggeration: 0.5,
     },
   };

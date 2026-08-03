@@ -51,12 +51,14 @@ export type LayerEvent = {
  *
  * @example
  * ```typescript
- * // Add a GeoJSON layer
- * const geoJsonLayer = view.addLayer({
+ * // Register a GeoJSON source, then render it with a vector layer
+ * const geoJsonSource = view.addSource({
  *   type: "geojson",
- *   data: {
- *     url: "https://example.com/data.geojson",
- *   },
+ *   url: "https://example.com/data.geojson",
+ * });
+ * const geoJsonLayer = view.addLayer({
+ *   type: "vector",
+ *   source: geoJsonSource,
  *   point: { color: 0xff0000 }
  * });
  *

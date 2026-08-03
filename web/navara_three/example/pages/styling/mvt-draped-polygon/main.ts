@@ -36,33 +36,32 @@ const run = async () => {
   });
 
   // Base tiles layer
-  view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
-    rasterTile: { maxZoom: 18 },
+  const seamlessphoto = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.gsiSeamlessphoto.url,
+    maxZoom: 18,
+  });
+  view.addLayer({ type: "raster", source: seamlessphoto });
+
+  const gsiTerrain = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.gsi.url,
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    maxZoom: 15,
   });
   view.addLayer({
     type: "terrain",
-    data: {
-      url: TERRAIN_DATASETS.gsi.url,
-    },
-    rasterTerrain: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-      maxZoom: 15,
+    source: gsiTerrain,
+    terrain: {
       castShadow: true,
       receiveShadow: true,
     },
   });
 
   view.addLayer({
-    type: "tiles",
-    data: { url: TERRAIN_DATASETS.gsi.url },
-    rasterTile: {
-      maxZoom: 15,
-    },
-    hillshade: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
+    type: "raster",
+    source: gsiTerrain,
+    hillshade: {},
   });
 
   // Color parameters for different fire prevention district types
@@ -75,16 +74,20 @@ const run = async () => {
 
   // MVT draped polygon layer: Fire Prevention Districts (flat overlay on terrain)
   const addMvtLayer = () => {
+    const firePreventionSource = view.addSource({
+      type: "vector-tile",
+      url: MVT_DATASETS.plateauTokyoFirePrevention.url,
+      maxZoom: 16,
+    });
     const layer = view.addLayer({
-      type: "mvt",
-      data: { url: MVT_DATASETS.plateauTokyoFirePrevention.url },
+      type: "vector",
+      source: firePreventionSource,
       polygon: {
         height: 0,
         clampToGround: true,
         wireframe: false,
         opacity: 0.6,
       },
-      vectorTile: { maxZoom: 16 },
     });
 
     // Feature evaluator: style polygons based on fire prevention type

@@ -45,47 +45,49 @@ export async function run() {
   });
 
   // Add terrain layer
+  const terrainDem = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.gsi.url,
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    maxZoom: 15,
+    minZoom: 6,
+  });
   view.addLayer({
     type: "terrain",
-    data: {
-      url: TERRAIN_DATASETS.gsi.url,
-    },
-    rasterTerrain: {
-      maxZoom: 15,
-      minZoom: 6,
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    source: terrainDem,
+    terrain: {
       skirt: false,
     },
   });
 
   view.addLayer({
-    type: "tiles",
-    data: { url: TERRAIN_DATASETS.gsi.url },
-    rasterTile: {
-      maxZoom: 15,
-      minZoom: 5,
-    },
-    hillshade: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
+    type: "raster",
+    source: terrainDem,
+    hillshade: {},
   });
 
   // Add tile layer
+  const seamlessphoto = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.gsiSeamlessphoto.url,
+    maxZoom: 18,
+  });
   view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
-    rasterTile: {
+    type: "raster",
+    source: seamlessphoto,
+    raster: {
       color: new Color().setStyle("#ffffff"),
-      maxZoom: 18,
       opacity: 1,
     },
   });
 
+  const chiyodaSubwaySource = view.addSource({
+    type: "3d-tiles",
+    url: TILES_3D_DATASETS.ChiyodaSubway.url,
+  });
   const chiyodaSubway = view.addLayer({
-    type: "cesium3dtiles",
-    data: {
-      url: TILES_3D_DATASETS.ChiyodaSubway.url,
-    },
+    type: "3d-tiles",
+    source: chiyodaSubwaySource,
     model: {
       height: -50,
     },

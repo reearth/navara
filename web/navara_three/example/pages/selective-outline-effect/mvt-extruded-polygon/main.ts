@@ -53,9 +53,14 @@ const run = async () => {
   });
 
   // MVT polygon with outline (Height Control District)
+  const heightControlSource = view.addSource({
+    type: "vector-tile",
+    url: MVT_DATASETS.plateauTokyoHeightControl.url,
+    maxZoom: 16,
+  });
   const layer = view.addLayer({
-    type: "mvt",
-    data: { url: MVT_DATASETS.plateauTokyoHeightControl.url },
+    type: "vector",
+    source: heightControlSource,
     polygon: {
       height: 0,
       extrudedHeight: 0,
@@ -64,7 +69,6 @@ const run = async () => {
       receiveShadow: true,
       effectIds: [outlineEffect.id],
     },
-    vectorTile: { maxZoom: 16 },
   });
 
   layer.on("featureUpdated", ({ evaluator }) => {
@@ -91,34 +95,36 @@ const run = async () => {
   });
 
   // Base layers
+  const terrainDem = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.gsi.url,
+    maxZoom: 15,
+    minZoom: 5,
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  });
   view.addLayer({
     type: "terrain",
-    data: { url: TERRAIN_DATASETS.gsi.url },
-    rasterTerrain: {
-      maxZoom: 15,
-      minZoom: 5,
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    source: terrainDem,
+    terrain: {
       castShadow: true,
       receiveShadow: true,
     },
   });
 
   view.addLayer({
-    type: "tiles",
-    data: { url: TERRAIN_DATASETS.gsi.url },
-    rasterTile: {
-      maxZoom: 15,
-      minZoom: 5,
-    },
-    hillshade: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
+    type: "raster",
+    source: terrainDem,
+    hillshade: {},
   });
 
+  const openstreetmap = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.openstreetmap.url,
+    maxZoom: 23,
+  });
   view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.openstreetmap.url },
-    rasterTile: { maxZoom: 23 },
+    type: "raster",
+    source: openstreetmap,
   });
 
   attribution?.add([

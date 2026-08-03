@@ -72,9 +72,13 @@ const run = async () => {
     ],
   };
 
-  view.addLayer({
+  const odaibaFeatureSource = view.addSource({
     type: "geojson",
     data: odaibaFeature,
+  });
+  view.addLayer({
+    type: "vector",
+    source: odaibaFeatureSource,
     polygon: {
       show: true,
       color: new Color().setHex(0xffa500),
@@ -85,34 +89,36 @@ const run = async () => {
   });
 
   // Base layers
+  const terrainDem = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.gsi.url,
+    maxZoom: 15,
+    minZoom: 5,
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  });
   view.addLayer({
     type: "terrain",
-    data: { url: TERRAIN_DATASETS.gsi.url },
-    rasterTerrain: {
-      maxZoom: 15,
-      minZoom: 5,
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    source: terrainDem,
+    terrain: {
       castShadow: true,
       receiveShadow: true,
     },
   });
 
   view.addLayer({
-    type: "tiles",
-    data: { url: TERRAIN_DATASETS.gsi.url },
-    rasterTile: {
-      maxZoom: 15,
-      minZoom: 5,
-    },
-    hillshade: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
+    type: "raster",
+    source: terrainDem,
+    hillshade: {},
   });
 
+  const openstreetmap = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.openstreetmap.url,
+    maxZoom: 23,
+  });
   view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.openstreetmap.url },
-    rasterTile: { maxZoom: 23 },
+    type: "raster",
+    source: openstreetmap,
   });
 
   attribution?.add([TILE_DATASETS.openstreetmap, TERRAIN_DATASETS.gsi]);

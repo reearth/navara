@@ -39,33 +39,35 @@ const run = async () => {
   });
 
   // Base tiles layer
+  const openstreetmap = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.openstreetmap.url,
+    maxZoom: 19,
+  });
   view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.openstreetmap.url },
-    rasterTile: { maxZoom: 19 },
+    type: "raster",
+    source: openstreetmap,
+  });
+  const terrainDem = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.gsi.url,
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    maxZoom: 15,
+    minZoom: 5,
   });
   view.addLayer({
     type: "terrain",
-    data: {
-      url: TERRAIN_DATASETS.gsi.url,
-    },
-    rasterTerrain: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-      maxZoom: 15,
+    source: terrainDem,
+    terrain: {
       castShadow: true,
       receiveShadow: true,
     },
   });
+
   view.addLayer({
-    type: "tiles",
-    data: { url: TERRAIN_DATASETS.gsi.url },
-    rasterTile: {
-      maxZoom: 15,
-      minZoom: 5,
-    },
-    hillshade: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
+    type: "raster",
+    source: terrainDem,
+    hillshade: {},
   });
 
   // Selective bloom effect
@@ -86,11 +88,13 @@ const run = async () => {
   const addGeoJsonLayer = () => {
     updatedFeatures = new Set<bigint>();
 
-    const layer = view.addLayer({
+    const railwaysSource = view.addSource({
       type: "geojson",
-      data: {
-        url: LOCAL_DATASETS.railways.url,
-      },
+      url: LOCAL_DATASETS.railways.url,
+    });
+    const layer = view.addLayer({
+      type: "vector",
+      source: railwaysSource,
       polyline: {
         show: true,
         color: new Color().setStyle("#ff0000"),

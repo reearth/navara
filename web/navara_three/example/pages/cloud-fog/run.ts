@@ -34,43 +34,40 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     clouds: {},
   });
 
+  const seamlessphoto = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.gsiSeamlessphoto.url,
+  });
   view.addLayer({
-    type: "tiles",
-    data: {
-      url: TILE_DATASETS.gsiSeamlessphoto.url,
-    },
-    rasterTile: {},
+    type: "raster",
+    source: seamlessphoto,
   });
 
+  const gsiDem = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.gsi.url,
+    maxZoom: 15,
+    minZoom: 5,
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  });
   view.addLayer({
     type: "terrain",
-    data: {
-      url: TERRAIN_DATASETS.gsi.url,
-    },
-    rasterTerrain: {
-      maxZoom: 15,
-      minZoom: 5,
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
+    source: gsiDem,
   });
 
   view.addLayer({
-    type: "tiles",
-    data: { url: TERRAIN_DATASETS.gsi.url },
-    rasterTile: {
-      maxZoom: 15,
-      minZoom: 5,
-    },
-    hillshade: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
+    type: "raster",
+    source: gsiDem,
+    hillshade: {},
   });
 
+  const plateauChiyodaSource = view.addSource({
+    type: "3d-tiles",
+    url: TILES_3D_DATASETS.plateauChiyoda.url,
+  });
   view.addLayer({
-    type: "cesium3dtiles",
-    data: {
-      url: TILES_3D_DATASETS.plateauChiyoda.url,
-    },
+    type: "3d-tiles",
+    source: plateauChiyodaSource,
     model: {
       show: true,
       color: new Color().setStyle("#ffffff"),
@@ -79,11 +76,13 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     },
   });
 
+  const plateauChuoSource = view.addSource({
+    type: "3d-tiles",
+    url: TILES_3D_DATASETS.plateauChuo.url,
+  });
   view.addLayer({
-    type: "cesium3dtiles",
-    data: {
-      url: TILES_3D_DATASETS.plateauChuo.url,
-    },
+    type: "3d-tiles",
+    source: plateauChuoSource,
     model: {
       show: true,
       color: new Color().setStyle("#ffffff"),

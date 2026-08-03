@@ -44,41 +44,38 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     },
   });
 
+  const osmSource = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.openstreetmap.url,
+    maxZoom: 23,
+  });
   view.addLayer({
-    type: "tiles",
-    data: {
-      url: TILE_DATASETS.openstreetmap.url,
-    },
-    rasterTile: {
-      maxZoom: 23,
-    },
+    type: "raster",
+    source: osmSource,
   });
 
+  const mapterhornDem = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.mapterhorn.url,
+    maxZoom: 17,
+    minZoom: 5,
+    elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
+    tileSize: 512,
+  });
   view.addLayer({
-    type: "tiles",
-    data: { url: TERRAIN_DATASETS.mapterhorn.url },
-    rasterTile: {
-      maxZoom: 17,
-      minZoom: 5,
-    },
+    type: "raster",
+    source: mapterhornDem,
     hillshade: {
-      elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
       exaggeration: 1.0,
     },
   });
 
   view.addLayer({
     type: "terrain",
-    data: {
-      url: TERRAIN_DATASETS.mapterhorn.url,
-    },
-    rasterTerrain: {
-      maxZoom: 17,
-      minZoom: 5,
-      elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
+    source: mapterhornDem,
+    terrain: {
       castShadow: true,
       receiveShadow: true,
-      tileSize: 512,
     },
   });
 

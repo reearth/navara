@@ -42,12 +42,14 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   plugin.addDefaultPhotorealScene();
 
   // Add base tile layer
+  const osmSource = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.openstreetmap.url,
+    maxZoom: 23,
+  });
   view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.openstreetmap.url },
-    rasterTile: {
-      maxZoom: 23,
-    },
+    type: "raster",
+    source: osmSource,
   });
 
   // Create control panel

@@ -25,16 +25,11 @@ use navara_wasm_types::{
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
 
-use crate::{
-    GeoJsonLayerDescription, LayerDescriptionData, LayerDescriptionUrl, MvtLayerDescription,
-    TerrainLayerDescription, TileLayerDescription,
-};
+use crate::SourceData;
 
 // Defaults shared by tiled sources.
 const DEFAULT_MIN_ZOOM: usize = 0;
 const DEFAULT_MAX_ZOOM: usize = 20;
-/// Historical default max zoom for quantized-mesh terrain (kept for the legacy API).
-const DEFAULT_QUANTIZED_MESH_MAX_ZOOM: usize = 14;
 const DEFAULT_OVERSCALED_MAX_ZOOM: usize = 24;
 const DEFAULT_TILE_SIZE: u32 = 256;
 const DEFAULT_MAX_SSE: f32 = 2.0;
@@ -559,8 +554,8 @@ impl SourceDescription {
                 let data = if let Some(url) = desc.url.clone() {
                     Some(GeoJsonData::Url(url))
                 } else {
-                    let js_data: LayerDescriptionData = serde_wasm_bindgen::from_value(value)
-                        .unwrap_or_else(|_e| LayerDescriptionData {
+                    let js_data: SourceData = serde_wasm_bindgen::from_value(value)
+                        .unwrap_or_else(|_e| SourceData {
                             data: JsValue::NULL,
                         });
                     if !js_data.data.is_null() && !js_data.data.is_undefined() {
@@ -767,11 +762,7 @@ pub struct RasterLayerDescription {
     pub source: Option<String>,
     /// Imagery rendering options for the raster texture. Parallel to `hillshade`
     /// and `elevationHeatmap`; `show`/`color`/etc. apply only to the imagery.
-    /// Accepts the legacy `rasterTile` key too so old-API tile layers can still
-    /// be updated (extra legacy fields like `maxZoom`/`tms` are ignored here —
-    /// they live on the source).
     #[wasm_bindgen(getter_with_clone)]
-    #[serde(alias = "rasterTile")] // TODO: Remove with the legacy layer API.
     pub raster: Option<RasterMaterial>,
     #[wasm_bindgen(getter_with_clone)]
     pub hillshade: Option<HillshadeMaterial>,
@@ -792,12 +783,10 @@ pub struct TerrainSourceLayerDescription {
     pub source: Option<String>,
     /// Terrain mesh rendering options. Nested like the other layers' render
     /// inputs (`raster`, `model`, ...); all fetch/geometry config lives on the
-    /// referenced source. Accepts the legacy terrain material keys too so
-    /// old-API terrain layers can still be updated (extra legacy fetch fields
-    /// are ignored — they live on the source).
+    /// referenced source. A source-less terrain layer (a flat ellipsoid surface
+    /// to drape clamp-to-ground data on) is written with the `ellipsoid` key.
     #[wasm_bindgen(getter_with_clone)]
-    // TODO: Remove with the legacy layer API.
-    #[serde(alias = "rasterTerrain", alias = "quantizedMesh", alias = "ellipsoid")]
+    #[serde(alias = "ellipsoid")]
     pub terrain: Option<TerrainMaterial>,
 }
 
@@ -868,202 +857,6 @@ pub fn build_sourceless_layer(
 /// Deserialize a JS value into a layer description, returning `None` on error.
 fn from_js<T: serde::de::DeserializeOwned>(value: JsValue) -> Option<T> {
     serde_wasm_bindgen::from_value(value).ok()
-}
-
-/// TODO: Remove when all add_layer uses `source`.
-/// Build an implicit [`Source`] for a legacy (old-API) layer description, so the
-/// loaders can resolve its URL through `SourceStore` like new-API layers.
-/// Returns `None` for geojson (handled by its inline data path) and for
-/// descriptions without a usable URL.
-///
-/// All fetch fields (url, zoom range, tms, decoder, tiling scheme, token, ...)
-/// are extracted from the legacy material onto the implicit source, since the
-/// loaders read them live from the source (the render material no longer carries
-/// them).
-pub fn legacy_source(source_id: &str, layer_type: &str, value: JsValue) -> Option<Source> {
-    let url = legacy_data_url(value.clone());
-    match layer_type {
-        "tiles" => {
-            // Carry the real tiling/zoom config from the legacy `rasterTile`
-            // material onto the implicit source (the render material drops them).
-            let layer: TileLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
-            let rt = layer.raster_tile.as_ref();
-            let url = url?;
-            let tms = rt.and_then(|m| m.tms).unwrap_or(false);
-            let min_zoom = rt.and_then(|m| m.min_zoom).unwrap_or(DEFAULT_MIN_ZOOM);
-            let max_zoom = rt.and_then(|m| m.max_zoom).unwrap_or(DEFAULT_MAX_ZOOM);
-            let overscaled_max_zoom = rt
-                .and_then(|m| m.overscaled_max_zoom)
-                .unwrap_or(DEFAULT_OVERSCALED_MAX_ZOOM);
-
-            // A hillshade / elevation-heatmap tiles layer decodes DEM tiles, so it
-            // needs a `raster-dem` source carrying the elevation decoder (mirrors
-            // the new API, where such raster layers reference a raster-dem
-            // source). Plain imagery uses a `raster-tile` source.
-            let decoder = layer
-                .hillshade
-                .as_ref()
-                .and_then(|h| h.elevation_decoder)
-                .or_else(|| {
-                    layer
-                        .elevation_heatmap
-                        .as_ref()
-                        .and_then(|e| e.elevation_decoder)
-                });
-            if let Some(decoder) = decoder {
-                Some(Source::RasterDem(RasterDemSource {
-                    source_id: source_id.to_owned(),
-                    url,
-                    tms,
-                    elevation_decoder: decoder.into(),
-                    tile_size: DEFAULT_TILE_SIZE,
-                    min_zoom,
-                    max_zoom,
-                    overscaled_max_zoom,
-                }))
-            } else {
-                Some(Source::RasterTile(RasterTileSource {
-                    source_id: source_id.to_owned(),
-                    url,
-                    tms,
-                    min_zoom,
-                    max_zoom,
-                    overscaled_max_zoom,
-                }))
-            }
-        }
-        "terrain" => {
-            // Carry the real fetch config from the legacy terrain material (the
-            // raw wasm description, which still has these fields) onto the
-            // implicit source. The render material drops them.
-            let layer: TerrainLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
-            if let Some(m) = layer.raster_terrain {
-                Some(Source::RasterDem(RasterDemSource {
-                    source_id: source_id.to_owned(),
-                    url: url?,
-                    tms: false,
-                    elevation_decoder: m.elevation_decoder.map(Into::into).unwrap_or_default(),
-                    tile_size: m.tile_size.unwrap_or(DEFAULT_TILE_SIZE),
-                    min_zoom: m.min_zoom.unwrap_or(DEFAULT_MIN_ZOOM),
-                    max_zoom: m.max_zoom.unwrap_or(DEFAULT_MAX_ZOOM),
-                    overscaled_max_zoom: m
-                        .overscaled_max_zoom
-                        .unwrap_or(DEFAULT_OVERSCALED_MAX_ZOOM),
-                }))
-            } else if let Some(m) = layer.quantized_mesh {
-                // Historical quantized-mesh defaults: Geographic { tms: true }, max_zoom 14.
-                let tms = m.tms.unwrap_or(true);
-                let geographic = m.geographic.unwrap_or(true);
-                let tiling_scheme = if geographic {
-                    TilingScheme::Geographic { tms }
-                } else {
-                    TilingScheme::WebMercator { tms }
-                };
-                Some(Source::QuantizedMesh(QuantizedMeshSource {
-                    source_id: source_id.to_owned(),
-                    url: url?,
-                    tiling_scheme,
-                    request_vertex_normals: m.request_vertex_normals.unwrap_or(false),
-                    request_water_mask: m.request_water_mask.unwrap_or(false),
-                    token: m.token,
-                    min_zoom: m.min_zoom.unwrap_or(DEFAULT_MIN_ZOOM),
-                    max_zoom: m.max_zoom.unwrap_or(DEFAULT_QUANTIZED_MESH_MAX_ZOOM),
-                    overscaled_max_zoom: m
-                        .overscaled_max_zoom
-                        .unwrap_or(DEFAULT_OVERSCALED_MAX_ZOOM),
-                }))
-            } else {
-                // Ellipsoid terrain is layer-only (render settings, no data), so
-                // it needs no source.
-                None
-            }
-        }
-        "mvt" => {
-            // Carry the real zoom/sse traversal config from the legacy
-            // `vectorTile` material onto the implicit source.
-            let layer: MvtLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
-            let vt = layer.vector_tile.as_ref();
-            Some(Source::VectorTile(VectorTileSource {
-                source_id: source_id.to_owned(),
-                url: url?,
-                min_zoom: vt.and_then(|m| m.min_zoom).unwrap_or(DEFAULT_MIN_ZOOM),
-                max_zoom: vt.and_then(|m| m.max_zoom).unwrap_or(DEFAULT_MAX_ZOOM),
-                overscaled_max_zoom: vt
-                    .and_then(|m| m.overscaled_max_zoom)
-                    .unwrap_or(DEFAULT_OVERSCALED_MAX_ZOOM),
-                max_sse: vt.and_then(|m| m.max_sse).unwrap_or(DEFAULT_MAX_SSE),
-                dynamic_sse_scale: vt.and_then(|m| m.dynamic_sse_scale),
-                crs: None,
-            }))
-        }
-        "cesium3dtiles" => Some(Source::Tiles3d(Tiles3dSource {
-            source_id: source_id.to_owned(),
-            url: url?,
-            crs: None,
-        })),
-        "b3dm" => Some(Source::B3dm(B3dmSource {
-            source_id: source_id.to_owned(),
-            url: url?,
-            crs: None,
-        })),
-        "pnts" => Some(Source::Pnts(PntsSource {
-            source_id: source_id.to_owned(),
-            url: url?,
-            crs: None,
-        })),
-        "geojson" => {
-            // GeoJSON data is inline JSON or a URL; either way it becomes the
-            // implicit source's data (the layer reads it live from the source).
-            let data = legacy_geojson_data(value.clone())?;
-            let crs = serde_wasm_bindgen::from_value::<GeoJsonLayerDescription>(value)
-                .ok()
-                .and_then(|l| l.crs());
-            Some(Source::GeoJson(GeoJsonSource {
-                source_id: source_id.to_owned(),
-                data: Some(data),
-                crs,
-                tiled: false,
-            }))
-        }
-        _ => None,
-    }
-}
-
-/// Parse a legacy geojson layer description's `data` field into [`GeoJsonData`]
-/// (a URL string or inline GeoJSON document), mirroring [`LayerDescription::to`].
-///
-/// TODO: Remove with the legacy layer API.
-fn legacy_geojson_data(value: JsValue) -> Option<GeoJsonData> {
-    let js_data: LayerDescriptionData =
-        serde_wasm_bindgen::from_value(value).unwrap_or(LayerDescriptionData {
-            data: JsValue::NULL,
-        });
-    if js_data.data.is_null() || js_data.data.is_undefined() {
-        return None;
-    }
-    // A `{ url }` object denotes a URL source; otherwise treat it as inline GeoJSON.
-    if let Ok(url) = serde_wasm_bindgen::from_value::<LayerDescriptionUrl>(js_data.data.clone()) {
-        Some(GeoJsonData::Url(url.url))
-    } else {
-        let geojson: GeoJson = serde_wasm_bindgen::from_value(js_data.data).ok()?;
-        Some(GeoJsonData::GeoJson(geojson))
-    }
-}
-
-/// Extract the tile URL template from a legacy layer description's `data` field,
-/// mirroring how [`LayerDescription::to`] reads it.
-///
-/// TODO: Remove with the legacy layer API.
-fn legacy_data_url(value: JsValue) -> Option<String> {
-    let js_data: LayerDescriptionData =
-        serde_wasm_bindgen::from_value(value).unwrap_or(LayerDescriptionData {
-            data: JsValue::NULL,
-        });
-    if js_data.data.is_null() || js_data.data.is_undefined() {
-        return None;
-    }
-    let url: LayerDescriptionUrl = serde_wasm_bindgen::from_value(js_data.data).ok()?;
-    Some(url.url)
 }
 
 #[cfg(test)]

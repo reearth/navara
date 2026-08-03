@@ -50,12 +50,14 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     roll: 360.0,
   });
 
+  const openstreetmap = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.openstreetmap.url,
+    maxZoom: 23,
+  });
   view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.openstreetmap.url },
-    rasterTile: {
-      maxZoom: 23,
-    },
+    type: "raster",
+    source: openstreetmap,
   });
 
   view.addLight<AmbientLightDesc>({

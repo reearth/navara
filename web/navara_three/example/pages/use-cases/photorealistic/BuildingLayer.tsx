@@ -5,7 +5,7 @@ import type {
   ColorTuple,
   FeatureUpdatedParams,
 } from "@navaramap/three";
-import { Layer } from "@navaramap/three-react";
+import { Layer, useViewContext } from "@navaramap/three-react";
 import { useEffect, useMemo, useRef } from "react";
 
 import {
@@ -73,6 +73,7 @@ export function BuildingTilesLayer({
   heightDomain = { min: 0, max: 60 },
   heightOffset = -45,
 }: BuildingLayerProps) {
+  const { view } = useViewContext();
   const layerRef = useRef<NavaraLayer | null>(null);
   const paramsRef = useRef({ colorBy, heightDomain });
 
@@ -82,11 +83,24 @@ export function BuildingTilesLayer({
     paramsRef.current.heightDomain = heightDomain;
   }, [colorBy, heightDomain]);
 
+  // Create the source unconditionally so hooks stay stable across visibility
+  // toggles; the layer below only references it when visible.
+  const buildingsSource = useMemo(
+    () => view.addSource({ type: "3d-tiles", url }),
+    [view, url],
+  );
+  useEffect(
+    () => () => {
+      buildingsSource.delete();
+    },
+    [buildingsSource],
+  );
+
   const layerDesc = useMemo((): LayerDescription | null => {
     if (!visible) return null;
     return {
-      type: "cesium3dtiles",
-      data: { url },
+      type: "3d-tiles",
+      source: buildingsSource,
       model: {
         show: true,
         color: new Color().setStyle("#ffffff"),
@@ -97,7 +111,7 @@ export function BuildingTilesLayer({
         height: heightOffset,
       },
     };
-  }, [url, visible, heightOffset]);
+  }, [buildingsSource, visible, heightOffset]);
 
   const onReady = (layer: NavaraLayer) => {
     layerRef.current = layer;

@@ -40,33 +40,32 @@ const run = async () => {
   });
 
   // Base tiles layer
-  view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
-    rasterTile: { maxZoom: 18 },
+  const seamlessphoto = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.gsiSeamlessphoto.url,
+    maxZoom: 18,
+  });
+  view.addLayer({ type: "raster", source: seamlessphoto });
+
+  const gsiTerrain = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.gsi.url,
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    maxZoom: 15,
   });
   view.addLayer({
     type: "terrain",
-    data: {
-      url: TERRAIN_DATASETS.gsi.url,
-    },
-    rasterTerrain: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-      maxZoom: 15,
+    source: gsiTerrain,
+    terrain: {
       castShadow: true,
       receiveShadow: true,
     },
   });
 
   view.addLayer({
-    type: "tiles",
-    data: { url: TERRAIN_DATASETS.gsi.url },
-    rasterTile: {
-      maxZoom: 15,
-    },
-    hillshade: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
+    type: "raster",
+    source: gsiTerrain,
+    hillshade: {},
   });
 
   // Color parameters for different height categories
@@ -89,9 +88,14 @@ const run = async () => {
 
   // MVT extruded polygon layer: Height Control District
   const addMvtLayer = () => {
+    const heightControlSource = view.addSource({
+      type: "vector-tile",
+      url: MVT_DATASETS.plateauTokyoHeightControl.url,
+      maxZoom: 16,
+    });
     const layer = view.addLayer({
-      type: "mvt",
-      data: { url: MVT_DATASETS.plateauTokyoHeightControl.url },
+      type: "vector",
+      source: heightControlSource,
       polygon: {
         height: 0,
         extrudedHeight: 0,
@@ -100,7 +104,6 @@ const run = async () => {
         castShadow: true,
         receiveShadow: true,
       },
-      vectorTile: { maxZoom: 16 },
     });
 
     // Feature evaluator: style polygons based on height attributes

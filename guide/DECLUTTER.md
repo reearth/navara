@@ -440,11 +440,16 @@ Three material types carry the two config fields consumed by this pass —
 | `declutterPriority` | `number` | `0` | layer-level priority; higher wins an overlap |
 
 ```ts
+const source = view.addSource({
+  type: "vector-tile",
+  url: someVectorTileUrl,
+  maxZoom: 16,
+});
 const layer = view.addLayer({
-  type: "mvt",
-  data: { url: someVectorTileUrl },
+  type: "vector",
+  source,
+  sourceLayers: ["symbol", "label"],
   text: { /* font, color, size, ... */ declutter: true, declutterPriority: 1 },
-  vectorTile: { maxZoom: 16, layers: ["symbol", "label"] },
 });
 ```
 

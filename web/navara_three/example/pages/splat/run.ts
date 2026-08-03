@@ -131,10 +131,14 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
 
   plugin.addDefaultPhotorealScene();
 
+  const openstreetmap = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.openstreetmap.url,
+    maxZoom: 23,
+  });
   view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.openstreetmap.url },
-    rasterTile: { maxZoom: 23 },
+    type: "raster",
+    source: openstreetmap,
   });
 
   attribution?.add([

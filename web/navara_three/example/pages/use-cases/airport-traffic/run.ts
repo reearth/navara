@@ -131,26 +131,30 @@ export async function run() {
     },
   });
 
+  const seamlessphotoSource = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.gsiSeamlessphoto.url,
+    maxZoom: 18,
+    minZoom: 2,
+  });
   view.addLayer({
-    type: "tiles",
-    data: {
-      url: TILE_DATASETS.gsiSeamlessphoto.url,
-    },
-    rasterTile: {
-      maxZoom: 18,
-      minZoom: 2,
+    type: "raster",
+    source: seamlessphotoSource,
+    raster: {
       color: new Color().setHex(0x555555),
     },
   });
 
+  const blueMarbleSource = view.addSource({
+    type: "raster-tile",
+    url: LOCAL_DATASETS.blueMarbleNight.url,
+    maxZoom: 6,
+    minZoom: 2,
+  });
   view.addLayer({
-    type: "tiles",
-    data: {
-      url: LOCAL_DATASETS.blueMarbleNight.url,
-    },
-    rasterTile: {
-      maxZoom: 6,
-      minZoom: 2,
+    type: "raster",
+    source: blueMarbleSource,
+    raster: {
       opacity: 0.8,
     },
   });

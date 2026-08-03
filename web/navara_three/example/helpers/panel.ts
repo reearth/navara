@@ -27,7 +27,7 @@ const addFeatureUpdateHandler = (layerDesc: MaterialDesc, layer: Layer) => {
   const getDefaultColor = (): number | Color => {
     let defaultColor: number | Color = 0xffffff;
 
-    if (layerDesc.type == "geojson") {
+    if (layerDesc.type == "vector") {
       if (layerDesc.point && layerDesc.point.color !== undefined) {
         defaultColor = layerDesc.point.color;
       } else if (
@@ -42,28 +42,9 @@ const addFeatureUpdateHandler = (layerDesc: MaterialDesc, layer: Layer) => {
       } else if (layerDesc.polygon && layerDesc.polygon.color !== undefined) {
         defaultColor = layerDesc.polygon.color;
       }
-    } else if (layerDesc.type == "b3dm") {
+    } else if (layerDesc.type == "3d-tiles") {
       if (layerDesc.model && layerDesc.model.color !== undefined) {
         defaultColor = layerDesc.model.color;
-      }
-    } else if (layerDesc.type == "cesium3dtiles") {
-      if (layerDesc.model && layerDesc.model.color !== undefined) {
-        defaultColor = layerDesc.model.color;
-      }
-    } else if (layerDesc.type == "mvt") {
-      if (layerDesc.point && layerDesc.point.color !== undefined) {
-        defaultColor = layerDesc.point.color;
-      } else if (
-        layerDesc.billboard &&
-        layerDesc.billboard.color !== undefined
-      ) {
-        defaultColor = layerDesc.billboard.color;
-      } else if (layerDesc.text && layerDesc.text.color !== undefined) {
-        defaultColor = layerDesc.text.color;
-      } else if (layerDesc.polyline && layerDesc.polyline.color !== undefined) {
-        defaultColor = layerDesc.polyline.color;
-      } else if (layerDesc.polygon && layerDesc.polygon.color !== undefined) {
-        defaultColor = layerDesc.polygon.color;
       }
     }
 
@@ -151,7 +132,7 @@ export const addCtrlPanel = (
       layerMap.set(layer.id, layerDef);
     }
 
-    if (layerDef.type !== "tiles") {
+    if (layerDef.type !== "raster") {
       addFeatureUpdateHandler(layerDef, layer);
     }
   });
@@ -269,7 +250,7 @@ export const addCtrlPanel = (
           layerIds[paneParams.layer] = newLayer.id;
           layerDeleted[paneParams.layer] = 0;
 
-          if (layerDef.type !== "tiles") {
+          if (layerDef.type !== "raster") {
             addFeatureUpdateHandler(layerDef, newLayer);
           }
         }
@@ -755,8 +736,8 @@ function createMaterialCtrl(
 
 function getMaterialOptions(layer: MaterialDesc) {
   const materials = [];
-  if ("rasterTile" in layer) {
-    materials.push("rasterTile");
+  if ("raster" in layer) {
+    materials.push("raster");
   }
   if ("point" in layer) {
     materials.push("point");

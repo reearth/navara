@@ -46,12 +46,14 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     visible: true,
   });
 
+  const seamlessphoto = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.gsiSeamlessphoto.url,
+    maxZoom: 23,
+  });
   view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
-    rasterTile: {
-      maxZoom: 23,
-    },
+    type: "raster",
+    source: seamlessphoto,
   });
 
   const pane = new Pane({

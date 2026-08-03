@@ -29,32 +29,45 @@ export const run = async (view: ThreeView<DefaultDescriptions>) => {
     terrain: { castShadow: true, receiveShadow: true },
   });
 
+  const osmSource = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.openstreetmap.url,
+    maxZoom: 23,
+  });
+  const gsiStdSource = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.gsiStd.url,
+    maxZoom: 18,
+  });
+  const gsiSeamlessphotoSource = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.gsiSeamlessphoto.url,
+    maxZoom: 18,
+  });
+
   addCtrlPanel(
     [
       {
-        type: "tiles",
-        data: { url: TILE_DATASETS.openstreetmap.url },
-        rasterTile: {
+        type: "raster",
+        source: osmSource,
+        raster: {
           color: new Color().setStyle("#ffffff"),
-          maxZoom: 23,
           opacity: 1,
         },
       },
       {
-        type: "tiles",
-        data: { url: TILE_DATASETS.gsiStd.url },
-        rasterTile: {
+        type: "raster",
+        source: gsiStdSource,
+        raster: {
           color: new Color().setStyle("#ffffff"),
-          maxZoom: 18,
           opacity: 1,
         },
       },
       {
-        type: "tiles",
-        data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
-        rasterTile: {
+        type: "raster",
+        source: gsiSeamlessphotoSource,
+        raster: {
           color: new Color().setStyle("#ffffff"),
-          maxZoom: 18,
           opacity: 1,
         },
       },

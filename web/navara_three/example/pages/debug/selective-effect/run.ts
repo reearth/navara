@@ -111,9 +111,13 @@ export const run = async (view: ThreeView<DefaultDescriptions>) => {
   });
 
   // 3D Tiles: Chiyoda (outline only)
+  const chiyodaSource = view.addSource({
+    type: "3d-tiles",
+    url: TILES_3D_DATASETS.plateauChiyoda.url,
+  });
   const chiyodaLayer = view.addLayer({
-    type: "cesium3dtiles",
-    data: { url: TILES_3D_DATASETS.plateauChiyoda.url },
+    type: "3d-tiles",
+    source: chiyodaSource,
     model: {
       color: new Color().setHex(0xffffff),
       emissiveColor: new Color().setHex(0xffffff),
@@ -123,40 +127,44 @@ export const run = async (view: ThreeView<DefaultDescriptions>) => {
   });
 
   // 3D Tiles: Chuo (no effects)
+  const chuoSource = view.addSource({
+    type: "3d-tiles",
+    url: TILES_3D_DATASETS.plateauChuo.url,
+  });
   view.addLayer({
-    type: "cesium3dtiles",
-    data: { url: TILES_3D_DATASETS.plateauChuo.url },
+    type: "3d-tiles",
+    source: chuoSource,
     model: {
       color: new Color().setHex(0xffffff),
     },
   });
 
   // Base tiles
+  const osmSource = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.openstreetmap.url,
+    maxZoom: 23,
+  });
   view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.openstreetmap.url },
-    rasterTile: { maxZoom: 23 },
+    type: "raster",
+    source: osmSource,
   });
 
-  view.addLayer({
-    type: "tiles",
-    data: { url: TERRAIN_DATASETS.gsi.url },
-    rasterTile: {
-      maxZoom: 15,
-      minZoom: 5,
-    },
-    hillshade: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
+  const gsiDem = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.gsi.url,
+    maxZoom: 15,
+    minZoom: 5,
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
   });
-
-  // Terrain
+  view.addLayer({
+    type: "raster",
+    source: gsiDem,
+    hillshade: {},
+  });
   view.addLayer({
     type: "terrain",
-    data: { url: TERRAIN_DATASETS.gsi.url },
-    rasterTerrain: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
+    source: gsiDem,
   });
 
   attribution?.add([

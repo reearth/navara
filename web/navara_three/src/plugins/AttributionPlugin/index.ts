@@ -18,7 +18,8 @@
  * await view.init();
  *
  * // A 3D-tiles layer whose tiles embed their own copyright (tracked dynamically).
- * const photoreal = view.addLayer({ type: "cesium3dtiles", data: { url } });
+ * const photorealSource = view.addSource({ type: "3d-tiles", url });
+ * const photoreal = view.addLayer({ type: "3d-tiles", source: photorealSource });
  *
  * // `add` / `remove` manage the set of displayed attributions.
  * view.attribution?.add([

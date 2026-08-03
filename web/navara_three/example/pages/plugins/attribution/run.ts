@@ -69,11 +69,13 @@ export const run = async () => {
     v: ThreeView<CustomDescriptions>,
     attribution: AttributionPlugin | undefined,
   ) => {
+    const googleSource = v.addSource({
+      type: "3d-tiles",
+      url: `${TILES_3D_DATASETS.googlePhotorealTiles.url}?key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}`,
+    });
     const google = v.addLayer({
-      type: "cesium3dtiles",
-      data: {
-        url: `${TILES_3D_DATASETS.googlePhotorealTiles.url}?key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}`,
-      },
+      type: "3d-tiles",
+      source: googleSource,
       model: { maxSse: 60, normals: true },
     });
     attribution?.add([
@@ -92,22 +94,30 @@ export const run = async () => {
     v: ThreeView<CustomDescriptions>,
     attribution: AttributionPlugin | undefined,
   ) => {
-    v.addLayer({
-      type: "terrain",
-      data: { url: TERRAIN_DATASETS.mapterhorn.url },
-      rasterTerrain: {
-        maxZoom: 17,
-        minZoom: 5,
-        elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
-        castShadow: true,
-        receiveShadow: true,
-        tileSize: 512,
-      },
+    const mapterhornDem = v.addSource({
+      type: "raster-dem",
+      url: TERRAIN_DATASETS.mapterhorn.url,
+      elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
+      tileSize: 512,
+      maxZoom: 17,
+      minZoom: 5,
     });
     v.addLayer({
-      type: "tiles",
-      data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
-      rasterTile: { maxZoom: 18 },
+      type: "terrain",
+      source: mapterhornDem,
+      terrain: {
+        castShadow: true,
+        receiveShadow: true,
+      },
+    });
+    const seamlessphoto = v.addSource({
+      type: "raster-tile",
+      url: TILE_DATASETS.gsiSeamlessphoto.url,
+      maxZoom: 18,
+    });
+    v.addLayer({
+      type: "raster",
+      source: seamlessphoto,
     });
     attribution?.add([
       TILE_DATASETS.gsiSeamlessphoto,

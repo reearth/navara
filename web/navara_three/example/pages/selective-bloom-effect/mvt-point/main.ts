@@ -54,9 +54,14 @@ const run = async () => {
   });
 
   // MVT point with bloom (Wakayama facilities)
+  const wakayamaGenSource = view.addSource({
+    type: "vector-tile",
+    url: MVT_DATASETS.plateauWakayamaGen.url,
+    maxZoom: 16,
+  });
   const layer = view.addLayer({
-    type: "mvt",
-    data: { url: MVT_DATASETS.plateauWakayamaGen.url },
+    type: "vector",
+    source: wakayamaGenSource,
     point: {
       size: 500,
       sizeInMeters: true,
@@ -65,9 +70,6 @@ const run = async () => {
       center: { x: 0, y: -0.5 },
       effectIds: [bloomEffect.id],
       emissiveIntensity: 0.5,
-    },
-    vectorTile: {
-      maxZoom: 16,
     },
   });
 
@@ -89,34 +91,36 @@ const run = async () => {
   });
 
   // Base layers
+  const terrainDem = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.gsi.url,
+    maxZoom: 15,
+    minZoom: 5,
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  });
   view.addLayer({
     type: "terrain",
-    data: { url: TERRAIN_DATASETS.gsi.url },
-    rasterTerrain: {
-      maxZoom: 15,
-      minZoom: 5,
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    source: terrainDem,
+    terrain: {
       castShadow: true,
       receiveShadow: true,
     },
   });
 
+  const openstreetmap = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.openstreetmap.url,
+    maxZoom: 23,
+  });
   view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.openstreetmap.url },
-    rasterTile: { maxZoom: 23 },
+    type: "raster",
+    source: openstreetmap,
   });
 
   view.addLayer({
-    type: "tiles",
-    data: { url: TERRAIN_DATASETS.gsi.url },
-    rasterTile: {
-      maxZoom: 15,
-      show: false, // Don't render DEM as color
-    },
-    hillshade: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
+    type: "raster",
+    source: terrainDem,
+    hillshade: {},
   });
 
   attribution?.add([
