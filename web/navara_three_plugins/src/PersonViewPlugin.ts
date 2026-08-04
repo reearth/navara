@@ -122,8 +122,14 @@ export type AnimationConfig = {
   walkClip?: string;
   /** Clip name played while the model is dashing (dash key held). */
   dashClip: string;
-  /** Playback speed multiplier. */
-  speed: number;
+  /** Playback speed for any clip without a per-clip override below. */
+  speed?: number;
+  /** Playback speed for the idle clip (falls back to {@link speed}). */
+  idleSpeed?: number;
+  /** Playback speed for the walk clip (falls back to {@link speed}). */
+  walkSpeed?: number;
+  /** Playback speed for the dash clip (falls back to {@link speed}). */
+  dashSpeed?: number;
   /** Duration in seconds for cross-fade transitions between clips. */
   crossfadeDuration: number;
 };
@@ -163,7 +169,12 @@ export type KeyBindings = {
   toggleView?: string[];
 };
 
-type Action =
+/**
+ * A recognized control input. Delivered to {@link PersonViewPlugin.onAction}
+ * listeners on each keypress — e.g. to dismiss an on-screen controls hint once
+ * the user starts driving the character.
+ */
+export type PersonViewAction =
   | "forward"
   | "backward"
   | "turnLeft"
@@ -173,6 +184,8 @@ type Action =
   | "dash"
   | "orbitCamera"
   | "toggleView";
+
+type Action = PersonViewAction;
 
 export type PersonViewConfig = {
   character?: CharacterConfig;
@@ -188,6 +201,11 @@ export type PersonViewConfig = {
   rotationSpeed?: number;
   /** m/s */
   altSpeed?: number;
+  /**
+   * Factor applied to {@link moveSpeed} while the dash key is held.
+   * @defaultValue `2.5`
+   */
+  dashSpeedMultiplier?: number;
   minAlt?: number;
   maxAlt?: number;
   cameraDistance?: number;
@@ -225,6 +243,7 @@ export type PersonViewConfig = {
 };
 
 type StateListener = (s: PersonViewState) => void;
+type ActionListener = (action: PersonViewAction) => void;
 
 const DEFAULT_ROTATION_OFFSET: ModelRotationOffset = {
   x: 0,
@@ -254,6 +273,7 @@ const DEFAULTS: PersonViewDefaults = {
   moveSpeed: 50,
   rotationSpeed: 3,
   altSpeed: 30,
+  dashSpeedMultiplier: 2.5,
   minAlt: 50,
   maxAlt: 5000,
   cameraDistance: 50,
@@ -317,6 +337,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
 
   private state!: PersonViewState;
   private listeners = new Set<StateListener>();
+  private actionListeners = new Set<ActionListener>();
 
   private heldActions = new Set<Action>();
   private dashMultiplier = 1;
@@ -411,7 +432,8 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
           animationEnabled: true,
           animationAutoPlay: true,
           animationActiveClip: animation.idleClip,
-          animationSpeed: animation.speed,
+          // The initial clip is idle, so start it at the idle clip's speed.
+          animationSpeed: this.clipSpeed(animation.idleClip),
           animationLoop: true,
           animationCrossfadeDuration: animation.crossfadeDuration,
         },
@@ -484,6 +506,17 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
   onStateChange(fn: StateListener): () => void {
     this.listeners.add(fn);
     return () => this.listeners.delete(fn);
+  }
+
+  /**
+   * Subscribe to control-input events. The callback fires once per keypress of
+   * any bound action (movement, dash, view toggle, orbit) — for example, to
+   * hide an on-screen controls hint once the user starts driving the
+   * character. Returns an unsubscribe function.
+   */
+  onAction(fn: ActionListener): () => void {
+    this.actionListeners.add(fn);
+    return () => this.actionListeners.delete(fn);
   }
 
   setViewMode(mode: ViewMode): void {
@@ -615,6 +648,34 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     return this.config.fpvHeightOffset;
   }
 
+  /**
+   * Set the base animation playback speed — the fallback used by any clip
+   * without a per-clip override (`idleSpeed` / `walkSpeed` / `dashSpeed`).
+   * Re-applies to the clip currently playing, so it takes effect immediately.
+   */
+  setAnimationSpeed(speed: number): void {
+    if (this.character) this.character.animation.speed = speed;
+    this.modelRef?.setAnimationSpeed(this.clipSpeed(this.currentAnimState));
+  }
+
+  /** Current base animation playback speed (per-clip overrides aside). */
+  getAnimationSpeed(): number {
+    return this.character?.animation.speed ?? 1;
+  }
+
+  /**
+   * Resolve the effective playback speed for a clip: its per-clip override
+   * (`idleSpeed` / `walkSpeed` / `dashSpeed`) if set, else the base `speed`.
+   */
+  private clipSpeed(clip: string | null): number {
+    const a = this.character?.animation;
+    if (!a) return 1;
+    if (clip === a.dashClip) return a.dashSpeed ?? a.speed ?? 1;
+    if (a.walkClip != null && clip === a.walkClip)
+      return a.walkSpeed ?? a.speed ?? 1;
+    return a.idleSpeed ?? a.speed ?? 1;
+  }
+
   dispose(): void {
     if (this.animId != null) cancelAnimationFrame(this.animId);
     this.animId = null;
@@ -629,6 +690,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     this.modelRef = null;
     this.heldActions.clear();
     this.listeners.clear();
+    this.actionListeners.clear();
     this.orbitKeyHeld = false;
     this.orbitLatched = false;
     this.dashMultiplier = 1;
@@ -812,6 +874,10 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     for (const fn of this.listeners) fn(this.state);
   }
 
+  private emitAction(action: Action): void {
+    for (const fn of this.actionListeners) fn(action);
+  }
+
   private onKeyDown(e: KeyboardEvent): void {
     const t = e.target as HTMLElement;
     if (
@@ -823,6 +889,10 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
 
     const action = this.keyToAction.get(e.code);
     if (action === undefined) return;
+
+    // Notify listeners once per physical press (ignore auto-repeat), before
+    // the action-specific handling below so every control input is reported.
+    if (!e.repeat) this.emitAction(action);
 
     if (action === "toggleView") {
       if (e.repeat) return;
@@ -838,7 +908,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     if (this.movementSuppressed) return;
 
     if (action === "dash") {
-      this.dashMultiplier = 2.5;
+      this.dashMultiplier = this.config.dashSpeedMultiplier;
       return;
     }
     if (this.isMovementAction(action)) {
@@ -1010,6 +1080,8 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
           targetAnim,
           animation.crossfadeDuration,
         );
+        // Apply the incoming clip's own playback speed.
+        this.modelRef.setAnimationSpeed(this.clipSpeed(targetAnim));
         this.currentAnimState = targetAnim;
       }
       nextAnimState = targetAnim;

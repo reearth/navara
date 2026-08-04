@@ -63,15 +63,15 @@ personView.dispose();
 
 ## Keyboard Controls
 
-| Key               | Action                                    |
-| ----------------- | ----------------------------------------- |
-| W / S             | Forward / backward                        |
-| A / D             | Turn left / right                         |
-| Arrow Up / Space  | Ascend                                    |
-| Arrow Down / Ctrl | Descend                                   |
-| Shift             | Dash (2.5x speed; switches to `dashClip`) |
-| Alt (hold)        | Free-orbit camera (TPV) / free-look (FPV) |
-| V                 | Toggle TPV / FPV                          |
+| Key               | Action                                                              |
+| ----------------- | ------------------------------------------------------------------- |
+| W / S             | Forward / backward                                                  |
+| A / D             | Turn left / right                                                   |
+| Arrow Up / Space  | Ascend                                                              |
+| Arrow Down / Ctrl | Descend                                                             |
+| Shift             | Dash (× `dashSpeedMultiplier`, default 2.5; switches to `dashClip`) |
+| Alt (hold)        | Free-orbit camera (TPV) / free-look (FPV)                           |
+| V                 | Toggle TPV / FPV                                                    |
 
 All bindings can be remapped via the `keys` option (see [KeyBindings](#keybindings)).
 
@@ -96,27 +96,28 @@ new PersonViewPlugin(config?: PersonViewConfig)
 
 ### PersonViewConfig
 
-| Property             | Type              | Default         | Description                                                                                                  |
-| -------------------- | ----------------- | --------------- | ------------------------------------------------------------------------------------------------------------ |
-| `character`          | `CharacterConfig` | _(none)_        | Optional character. When omitted, the plugin runs as a pure camera controller.                               |
-| `allowCameraControl` | `boolean`         | `false`         | When `true`, the camera is always free (no Alt-hold required).                                               |
-| `initialView`        | `"tpv" \| "fpv"`  | `"tpv"`         | Initial view mode.                                                                                           |
-| `moveSpeed`          | `number`          | `50`            | Forward/backward speed in m/s.                                                                               |
-| `rotationSpeed`      | `number`          | `3`             | Turning speed in deg/frame.                                                                                  |
-| `altSpeed`           | `number`          | `30`            | Altitude change speed in m/s.                                                                                |
-| `minAlt`             | `number`          | `50`            | Minimum altitude in meters.                                                                                  |
-| `maxAlt`             | `number`          | `5000`          | Maximum altitude in meters.                                                                                  |
-| `cameraDistance`     | `number`          | `50`            | Chase camera distance (TPV) in meters.                                                                       |
-| `cameraPitch`        | `number`          | `0`             | Downward TPV camera pitch in radians (orbits up and over the model).                                         |
-| `cameraLerpSpeed`    | `number`          | `3`             | Camera heading interpolation speed.                                                                          |
-| `fpvForwardOffset`   | `number`          | `0`             | Forward offset (m) applied to the FPV eye position.                                                          |
-| `fpvHeightOffset`    | `number`          | `1`             | Eye-line height offset (m): the FPV eye height, and the shared eye-line height the TPV camera orbits around. |
-| `fpvPitch`           | `number`          | `0`             | Downward FPV camera pitch in radians (tilts the view down in place).                                         |
-| `startLat`           | `number`          | `35.6812`       | Starting latitude in degrees.                                                                                |
-| `startLng`           | `number`          | `139.7671`      | Starting longitude in degrees.                                                                               |
-| `startHeight`        | `number`          | `500`           | Starting altitude in meters.                                                                                 |
-| `startHeading`       | `number`          | `Math.PI * 1.3` | Starting heading in radians (0 = north).                                                                     |
-| `keys`               | `KeyBindings`     | _defaults_      | Keyboard bindings — see [KeyBindings](#keybindings).                                                         |
+| Property              | Type              | Default         | Description                                                                                                  |
+| --------------------- | ----------------- | --------------- | ------------------------------------------------------------------------------------------------------------ |
+| `character`           | `CharacterConfig` | _(none)_        | Optional character. When omitted, the plugin runs as a pure camera controller.                               |
+| `allowCameraControl`  | `boolean`         | `false`         | When `true`, the camera is always free (no Alt-hold required).                                               |
+| `initialView`         | `"tpv" \| "fpv"`  | `"tpv"`         | Initial view mode.                                                                                           |
+| `moveSpeed`           | `number`          | `50`            | Forward/backward speed in m/s.                                                                               |
+| `rotationSpeed`       | `number`          | `3`             | Turning speed in deg/frame.                                                                                  |
+| `altSpeed`            | `number`          | `30`            | Altitude change speed in m/s.                                                                                |
+| `dashSpeedMultiplier` | `number`          | `2.5`           | Factor applied to `moveSpeed` while the dash key is held.                                                    |
+| `minAlt`              | `number`          | `50`            | Minimum altitude in meters.                                                                                  |
+| `maxAlt`              | `number`          | `5000`          | Maximum altitude in meters.                                                                                  |
+| `cameraDistance`      | `number`          | `50`            | Chase camera distance (TPV) in meters.                                                                       |
+| `cameraPitch`         | `number`          | `0`             | Downward TPV camera pitch in radians (orbits up and over the model).                                         |
+| `cameraLerpSpeed`     | `number`          | `3`             | Camera heading interpolation speed.                                                                          |
+| `fpvForwardOffset`    | `number`          | `0`             | Forward offset (m) applied to the FPV eye position.                                                          |
+| `fpvHeightOffset`     | `number`          | `1`             | Eye-line height offset (m): the FPV eye height, and the shared eye-line height the TPV camera orbits around. |
+| `fpvPitch`            | `number`          | `0`             | Downward FPV camera pitch in radians (tilts the view down in place).                                         |
+| `startLat`            | `number`          | `35.6812`       | Starting latitude in degrees.                                                                                |
+| `startLng`            | `number`          | `139.7671`      | Starting longitude in degrees.                                                                               |
+| `startHeight`         | `number`          | `500`           | Starting altitude in meters.                                                                                 |
+| `startHeading`        | `number`          | `Math.PI * 1.3` | Starting heading in radians (0 = north).                                                                     |
+| `keys`                | `KeyBindings`     | _defaults_      | Keyboard bindings — see [KeyBindings](#keybindings).                                                         |
 
 ### CharacterConfig
 
@@ -137,7 +138,10 @@ new PersonViewPlugin(config?: PersonViewConfig)
 | `idleClip`          | `string`  | Clip played while the model is idle (no movement keys held).                                                               |
 | `walkClip`          | `string?` | Clip played while the model is moving without dashing. Omit to keep `idleClip` running — useful for idle+dash-only models. |
 | `dashClip`          | `string`  | Clip played while the model is dashing (dash key held).                                                                    |
-| `speed`             | `number`  | Playback speed multiplier.                                                                                                 |
+| `speed`             | `number`  | Playback speed for any clip without a per-clip override below.                                                             |
+| `idleSpeed`         | `number?` | Playback speed for the idle clip. Falls back to `speed`.                                                                   |
+| `walkSpeed`         | `number?` | Playback speed for the walk clip. Falls back to `speed`.                                                                   |
+| `dashSpeed`         | `number?` | Playback speed for the dash clip. Falls back to `speed`.                                                                   |
 | `crossfadeDuration` | `number`  | Duration in seconds for cross-fade transitions between clips.                                                              |
 
 ### ModelRotationOffset
@@ -223,6 +227,35 @@ getFpvHeightOffset(): number
 
 Set the eye-line height offset in meters, taking effect immediately for the chase / locked camera. It is the FPV eye height and the shared eye-line height the TPV camera orbits around and aims at. `getFpvHeightOffset()` returns the current value.
 
+### setAnimationSpeed(speed) / getAnimationSpeed()
+
+```typescript
+setAnimationSpeed(speed: number): void
+getAnimationSpeed(): number
+```
+
+Set the **base** animation playback speed — the fallback used by any clip without a per-clip override (`idleSpeed` / `walkSpeed` / `dashSpeed` on [`AnimationConfig`](#animationconfig)). It takes effect immediately, re-applying to the clip currently playing. `getAnimationSpeed()` returns the current base speed.
+
+Per-clip speeds let the idle, walk, and dash animations play at independent rates — for example, a calm idle next to a brisk run — while `speed` covers the rest:
+
+```typescript
+const personView = new PersonViewPlugin({
+  character: {
+    modelUrl: "/glTF/Fox/Fox.glb",
+    animation: {
+      idleClip: "Survey",
+      walkClip: "Walk",
+      dashClip: "Run",
+      speed: 1,
+      idleSpeed: 0.6, // slow, relaxed idle
+      dashSpeed: 1.8, // faster run cycle when dashing
+      crossfadeDuration: 0.3,
+    },
+  },
+  // ...
+});
+```
+
 ### setViewMode(mode) / toggleViewMode()
 
 ```typescript
@@ -256,6 +289,16 @@ onStateChange(fn: (state: PersonViewState) => void): () => void
 
 Subscribes to state updates emitted on every animation frame. Returns an unsubscribe function.
 
+### onAction(fn)
+
+```typescript
+onAction(fn: (action: PersonViewAction) => void): () => void
+```
+
+Subscribes to control-input events, firing once per keypress of any bound action. Useful, for example, to dismiss an on-screen controls hint the moment the user starts driving the character. Returns an unsubscribe function.
+
+`PersonViewAction` is one of `"forward" | "backward" | "turnLeft" | "turnRight" | "ascend" | "descend" | "dash" | "orbitCamera" | "toggleView"`.
+
 ### dispose()
 
 ```typescript
@@ -268,15 +311,15 @@ Stops the animation loop, removes keyboard listeners, and deletes the character 
 
 The state object emitted by `onStateChange()`:
 
-| Property         | Type             | Description                                                   |
-| ---------------- | ---------------- | ------------------------------------------------------------- |
-| `lng`            | `number`         | Current longitude in degrees.                                 |
-| `lat`            | `number`         | Current latitude in degrees.                                  |
-| `alt`            | `number`         | Current altitude in meters.                                   |
-| `heading`        | `number`         | Current heading in radians (0 = north, increasing clockwise). |
-| `speed`          | `number`         | Configured movement speed in m/s (`moveSpeed`, multiplied by 2.5 while dashing). |
-| `animationState` | `string \| null` | Name of the currently playing clip; `null` when no character. |
-| `mode`           | `"tpv" \| "fpv"` | Current view mode.                                            |
+| Property         | Type             | Description                                                                                                        |
+| ---------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `lng`            | `number`         | Current longitude in degrees.                                                                                      |
+| `lat`            | `number`         | Current latitude in degrees.                                                                                       |
+| `alt`            | `number`         | Current altitude in meters.                                                                                        |
+| `heading`        | `number`         | Current heading in radians (0 = north, increasing clockwise).                                                      |
+| `speed`          | `number`         | Configured movement speed in m/s (`moveSpeed`, multiplied by `dashSpeedMultiplier` — default 2.5 — while dashing). |
+| `animationState` | `string \| null` | Name of the currently playing clip; `null` when no character.                                                      |
+| `mode`           | `"tpv" \| "fpv"` | Current view mode.                                                                                                 |
 
 ## Related Resources
 

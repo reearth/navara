@@ -8,6 +8,7 @@ export {
   type KeyBindings,
   type ViewMode,
   type TeleportOptions,
+  type PersonViewAction,
 } from "./PersonViewPlugin";
 
 export {
