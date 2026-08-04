@@ -12,6 +12,7 @@ import {
   type Material,
   type OrthographicCamera,
   type PerspectiveCamera,
+  type WebGLRenderer,
 } from "three";
 import invariant from "tiny-invariant";
 
@@ -19,6 +20,10 @@ import { CascadedDirectionalLights } from "./CascadedDirectionalLights";
 import { FrustumCorners } from "./FrustumCorners";
 import { MaterialStates } from "./MaterialStates";
 import { splitFrustum, type FrustumSplitMode } from "./splitFrustum";
+import {
+  composeViewSpaceShadowMatrices,
+  type ShadowMatricesViewUniform,
+} from "./viewSpaceShadowReceive";
 
 const vectorScratch1 = /*#__PURE__*/ new Vector3();
 const vectorScratch2 = /*#__PURE__*/ new Vector3();
@@ -107,10 +112,33 @@ export class CascadedShadowMaps {
   private _fade: boolean;
   private _disableLastCascadeCutoff: boolean;
 
+  private readonly _shadowMatricesView: Matrix4[] = [];
+  private _shadowMatricesViewFrame = -1;
+  private _renderer: WebGLRenderer | null = null;
+
+  /**
+   * Per-cascade `shadow.matrix * mainCamera.matrixWorld`, composed in f64 for
+   * precise shadow receiving (see `viewSpaceShadowReceive.ts`). The value is
+   * refreshed lazily on access: three.js uploads material uniforms during the
+   * main-pass draws, after it has rendered the shadow maps, so reading here
+   * always observes the current frame's `shadow.matrix`. Refreshes are
+   * deduplicated per `renderer.info.render.frame`.
+   */
+  readonly shadowMatricesViewUniform: ShadowMatricesViewUniform;
+
   constructor(
     readonly mainCamera: PerspectiveCamera | OrthographicCamera,
     params?: CascadedShadowMapsOptions,
   ) {
+    const refreshAndGetShadowMatricesView = (): Matrix4[] => {
+      this.refreshShadowMatricesView();
+      return this._shadowMatricesView;
+    };
+    this.shadowMatricesViewUniform = {
+      get value(): Matrix4[] {
+        return refreshAndGetShadowMatricesView();
+      },
+    };
     const {
       cascadeCount,
       mapSize,
@@ -138,6 +166,29 @@ export class CascadedShadowMaps {
 
   setupMaterial<T extends Material>(material: T): T {
     return this.materialStates.setup(material, this);
+  }
+
+  /**
+   * Remember the renderer so lazy refreshes of `shadowMatricesViewUniform`
+   * can be deduplicated per render call. Called from the material hook, which
+   * always runs before the first uniform upload.
+   */
+  captureRenderer(renderer: WebGLRenderer): void {
+    this._renderer ??= renderer;
+  }
+
+  private refreshShadowMatricesView(): void {
+    // Until a renderer is known there is no frame counter to dedupe on;
+    // recompute on every access (only possible before the first compile).
+    const frame = this._renderer?.info.render.frame ?? -1;
+    if (frame !== -1 && frame === this._shadowMatricesViewFrame) return;
+    this._shadowMatricesViewFrame = frame;
+
+    composeViewSpaceShadowMatrices(
+      this.directionalLights.cascadedLights,
+      this.mainCamera.matrixWorld,
+      this._shadowMatricesView,
+    );
   }
 
   rollbackMaterial<T extends Material>(material: T): T {

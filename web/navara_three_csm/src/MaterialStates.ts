@@ -6,6 +6,7 @@ import { type Material, type WebGLProgramParametersWithUniforms } from "three";
 
 import { type CascadedShadowMaps } from "./CascadedShadowMaps";
 import { createFragmentShader } from "./createFragmentShader";
+import { applyViewSpaceShadowReceive } from "./viewSpaceShadowReceive";
 
 type OnBeforeCompile = Material["onBeforeCompile"];
 
@@ -32,8 +33,9 @@ export class MaterialStates {
     const stateRef: MaterialState = {};
     this.map.set(material, stateRef);
 
-    const handleBeforeCompile: OnBeforeCompile = (parameters) => {
+    const handleBeforeCompile: OnBeforeCompile = (parameters, renderer) => {
       stateRef.parameters = parameters;
+      csm.captureRenderer(renderer);
 
       const cascades = csm.cascades;
       const near = csm.mainCamera.near;
@@ -46,6 +48,11 @@ export class MaterialStates {
       parameters.fragmentShader = createFragmentShader(
         parameters.fragmentShader,
       );
+
+      // Precision-safe shadow receiving: sample directional shadow maps from
+      // the view-space position via camera-composed matrices. Skips depth
+      // variants (USE_SHADOWMAP_DEPTH) and shaders without shadowmap chunks.
+      applyViewSpaceShadowReceive(parameters, csm.shadowMatricesViewUniform);
     };
 
     const originalHandler = material.onBeforeCompile.bind(material);
@@ -126,6 +133,7 @@ export class MaterialStates {
       delete parameters.uniforms.csmCascades;
       delete parameters.uniforms.csmNear;
       delete parameters.uniforms.csmFar;
+      delete parameters.uniforms.nvrCsmShadowMatrixView;
     }
     if (originalHandler != null) {
       material.onBeforeCompile = originalHandler;
