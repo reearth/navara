@@ -106,8 +106,10 @@ describe("applyViewSpaceShadowReceive", () => {
     applyViewSpaceShadowReceive(shader, uniform);
 
     expect(shader.uniforms.nvrCsmShadowMatrixView).toBe(uniform);
+    // Sized to the cascade count: additional shadow-casting directional
+    // lights beyond the cascades are not part of the composed array.
     expect(shader.vertexShader).toContain(
-      "uniform mat4 nvrCsmShadowMatrixView[ NUM_DIR_LIGHT_SHADOWS ];",
+      "uniform mat4 nvrCsmShadowMatrixView[ CSM_CASCADE_COUNT ];",
     );
     expect(shader.vertexShader).toContain(
       "vDirectionalShadowCoord[ i ] = nvrCsmShadowMatrixView[ i ] * shadowWorldPosition;",
@@ -115,15 +117,41 @@ describe("applyViewSpaceShadowReceive", () => {
     expect(shader.vertexShader).toContain(
       "shadowWorldPosition = vec4( mvPosition.xyz + ( viewMatrix * vec4( shadowWorldNormal * directionalLightShadows[ i ].shadowNormalBias, 0.0 ) ).xyz, 1.0 );",
     );
-    // The directional loop no longer reads the stock shadow matrix; point
-    // shadows keep the stock path.
-    expect(shader.vertexShader).not.toContain(
-      "directionalShadowMatrix[ i ] * shadowWorldPosition",
-    );
     // Guards against upstream chunk drift: the patched chunk must still be
     // derived from the current three.js source.
     expect(ShaderChunk.shadowmap_vertex).toContain(
       "vDirectionalShadowCoord[ i ] = directionalShadowMatrix[ i ] * shadowWorldPosition;",
+    );
+  });
+
+  it("keeps the stock path for extra directional lights and point shadows", () => {
+    const shader = {
+      vertexShader: litVertexShader,
+      uniforms: {} as Record<string, { value: unknown }>,
+    };
+
+    applyViewSpaceShadowReceive(shader, uniform);
+
+    // Cascade indices branch on the view-space path; any shadow-casting
+    // directional light beyond CSM_CASCADE_COUNT falls back to the stock
+    // matrices managed by three.js (the composed array doesn't cover them).
+    expect(shader.vertexShader).toContain(
+      "#if UNROLLED_LOOP_INDEX < CSM_CASCADE_COUNT",
+    );
+    expect(shader.vertexShader).toContain(
+      "vDirectionalShadowCoord[ i ] = directionalShadowMatrix[ i ] * shadowWorldPosition;",
+    );
+    expect(shader.vertexShader).toContain(
+      "shadowWorldPosition = worldPosition + vec4( shadowWorldNormal * directionalLightShadows[ i ].shadowNormalBias, 0 );",
+    );
+    // Point shadows keep the stock loop untouched.
+    expect(shader.vertexShader).toContain(
+      "vPointShadowCoord[ i ] = pointShadowMatrix[ i ] * shadowWorldPosition;",
+    );
+    // Standalone use (no CSM defines) treats every directional shadow as
+    // camera-composed via the fallback define.
+    expect(shader.vertexShader).toContain(
+      "#define CSM_CASCADE_COUNT NUM_DIR_LIGHT_SHADOWS",
     );
   });
 
@@ -186,9 +214,6 @@ describe("applyViewSpaceShadowReceive", () => {
       applyViewSpaceShadowReceive(shader, uniform);
 
       expect(shader.uniforms.nvrCsmShadowMatrixView).toBe(uniform);
-      expect(shader.vertexShader).not.toContain(
-        "directionalShadowMatrix[ i ] * shadowWorldPosition",
-      );
       const samplingIndex = shader.vertexShader.indexOf(
         "vDirectionalShadowCoord[ i ] = nvrCsmShadowMatrixView[ i ]",
       );

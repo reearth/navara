@@ -173,7 +173,19 @@ export class SunLightDesc extends LightDesc<
 
     // Add appropriate lights to scene
     const sceneLights = this._instance.getSceneLights();
-    this.ctx.scenes.light.add(sceneLights);
+    const lightScene = this.ctx.scenes.light;
+    lightScene.add(sceneLights);
+
+    // Keep the CSM lights FIRST in traversal order. Shadow indices are
+    // assigned in traversal order among shadow-casting lights, and both the
+    // CSM fragment sampling and the view-space shadow matrices assume the
+    // cascades occupy the first CSM_CASCADE_COUNT slots — a shadow-casting
+    // directional light added earlier in the scene would silently shift them.
+    const index = lightScene.children.indexOf(sceneLights);
+    if (index > 0) {
+      lightScene.children.splice(index, 1);
+      lightScene.children.unshift(sceneLights);
+    }
 
     // Add CSM helper if available and enabled
     const helper = this._instance.getSceneHelper();

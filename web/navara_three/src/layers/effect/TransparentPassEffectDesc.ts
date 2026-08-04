@@ -52,11 +52,12 @@ export class TransparentPassEffectDesc extends EffectDesc<
   }
 
   update(_time: number): void {
-    // Sync lights
-    let i = 0;
+    // Sync each clone from its source by id — the children order of
+    // scenes.light is not stable (e.g. the CSM lights are kept first for
+    // shadow-index ordering), so an index-based pairing would copy across
+    // mismatched light types.
     for (const child of this.ctx.scenes.light.children) {
-      this.light.children[i].copy(child, true);
-      i++;
+      this.lightsSyncMap.get(child.id)?.copy(child, true);
     }
   }
 }

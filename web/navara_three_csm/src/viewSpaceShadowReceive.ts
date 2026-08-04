@@ -27,7 +27,16 @@ const SHADOW_MATRIX_VIEW_PARS_VERTEX = /* glsl */ `
 // on the CPU in f64 (shadow.matrix * camera.matrixWorld). Multiplied with the
 // view-space position instead of the absolute world position to avoid f32
 // cancellation at ECEF magnitudes.
-uniform mat4 nvrCsmShadowMatrixView[ NUM_DIR_LIGHT_SHADOWS ];
+//
+// Only the CSM cascade lights (the first CSM_CASCADE_COUNT shadow indices,
+// matching the ordering assumption of the CSM fragment shader) get these
+// matrices; additional shadow-casting directional lights keep the stock
+// directionalShadowMatrix path. Outside a CSM material the define is absent —
+// treat every directional shadow as camera-composed then.
+#ifndef CSM_CASCADE_COUNT
+#define CSM_CASCADE_COUNT NUM_DIR_LIGHT_SHADOWS
+#endif
+uniform mat4 nvrCsmShadowMatrixView[ CSM_CASCADE_COUNT ];
 #endif
 `;
 
@@ -56,7 +65,9 @@ function replaceOrThrow(
  * chunks. The world-space normal bias is rotated into view space with
  * `viewMatrix`, which is exactly equivalent to the stock world-space offset.
  *
- * Point/spot shadows keep the stock absolute-world-position path. Shaders
+ * Point/spot shadows — and shadow-casting directional lights beyond the CSM
+ * cascades (`CSM_CASCADE_COUNT`) — keep the stock absolute-world-position
+ * path, so extra lights coexist with the cascades exactly as before. Shaders
  * without `#include <shadowmap_vertex>` (unlit, depth, or fully custom) are
  * left untouched, as are shaders compiled for the shadow-map depth pass
  * (`USE_SHADOWMAP_DEPTH` — they never sample shadows and would upload the
@@ -76,16 +87,30 @@ export function applyViewSpaceShadowReceive(
   shader.uniforms.nvrCsmShadowMatrixView = uniform;
 
   // Rewrite only the directional-light loop of three's shadowmap_vertex
-  // chunk, preserving the unroll pragmas.
+  // chunk, preserving the unroll pragmas. Each line becomes a per-index
+  // preprocessor branch (the unroller substitutes UNROLLED_LOOP_INDEX with a
+  // literal, the same pattern the CSM fragment shader uses): cascade indices
+  // take the view-space path, any additional shadow-casting directional
+  // lights keep the stock path — their matrices are managed by three, not by
+  // the CSM compose, so routing them through nvrCsmShadowMatrixView would
+  // read past the uploaded array.
   let shadowmapVertexView = replaceOrThrow(
     ShaderChunk.shadowmap_vertex,
     "shadowWorldPosition = worldPosition + vec4( shadowWorldNormal * directionalLightShadows[ i ].shadowNormalBias, 0 );",
-    "shadowWorldPosition = vec4( mvPosition.xyz + ( viewMatrix * vec4( shadowWorldNormal * directionalLightShadows[ i ].shadowNormalBias, 0.0 ) ).xyz, 1.0 );",
+    `#if UNROLLED_LOOP_INDEX < CSM_CASCADE_COUNT
+			shadowWorldPosition = vec4( mvPosition.xyz + ( viewMatrix * vec4( shadowWorldNormal * directionalLightShadows[ i ].shadowNormalBias, 0.0 ) ).xyz, 1.0 );
+			#else
+			shadowWorldPosition = worldPosition + vec4( shadowWorldNormal * directionalLightShadows[ i ].shadowNormalBias, 0 );
+			#endif`,
   );
   shadowmapVertexView = replaceOrThrow(
     shadowmapVertexView,
     "vDirectionalShadowCoord[ i ] = directionalShadowMatrix[ i ] * shadowWorldPosition;",
-    "vDirectionalShadowCoord[ i ] = nvrCsmShadowMatrixView[ i ] * shadowWorldPosition;",
+    `#if UNROLLED_LOOP_INDEX < CSM_CASCADE_COUNT
+			vDirectionalShadowCoord[ i ] = nvrCsmShadowMatrixView[ i ] * shadowWorldPosition;
+			#else
+			vDirectionalShadowCoord[ i ] = directionalShadowMatrix[ i ] * shadowWorldPosition;
+			#endif`,
   );
 
   shader.vertexShader = replaceOrThrow(
