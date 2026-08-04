@@ -91,15 +91,6 @@
     },
     "maplibre-visual": {
       "src": "web/navara_three/example/public/screenshots/plugins-maplibre-style.avif"
-    },
-    "users-1": {
-      "src": "web/navara_three/example/public/screenshots/showcases-photoreal.avif"
-    },
-    "users-2": {
-      "src": "web/navara_three/example/public/screenshots/styling-cesium3dtiles1.1.avif"
-    },
-    "users-3": {
-      "src": "web/navara_three/example/public/screenshots/use-cases-photorealistic.avif"
     }
   }
 }

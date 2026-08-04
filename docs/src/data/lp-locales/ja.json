@@ -80,6 +80,10 @@
     "eyebrow": "ARCHITECTURE",
     "h2": "レンダラーから独立した、ヘッドレスな GIS コア。",
     "sub": "現在は Three.js の上で。将来は、あらゆる環境で。",
+    "sourceTitle": "Rust / WASM",
+    "sourceSub": "データのパース、ジオメトリ生成、その他",
+    "renderTitle": "現在は Three.js、将来は他のエンジンも",
+    "renderSub": "ジオメトリはレンダリングエンジンが描画",
     "diagramAlt": "Rust / WASM がデータのパースとジオメトリ生成を担い、その出力を Three.js（将来は他のエンジンや Native）が描画するアーキテクチャ図。"
   },
   "gallery": {
@@ -105,28 +109,6 @@
     ],
     "roadmap": "Roadmap を見る"
   },
-  "users": {
-    "eyebrow": "WHO'S BUILDING WITH NAVARA",
-    "h2": "実プロダクトの要求を、品質基準に。",
-    "sub": "自社の GIS プロダクトや、研究・自治体のユースケースへの展開を見据えて開発を進めています。",
-    "items": [
-      {
-        "slot": "users-1",
-        "name": "Re:Earth",
-        "desc": "Eukarya が開発するオープンソースの GIS プラットフォーム。その 3D 地図エンジンとして、Navara の統合を予定しています。"
-      },
-      {
-        "slot": "users-2",
-        "name": "PLATEAU",
-        "desc": "国土交通省が主導する 3D 都市モデルのオープンデータプロジェクト。PLATEAU の 3D Tiles を活かした都市スケールの表現を検証していく予定です。"
-      },
-      {
-        "slot": "users-3",
-        "name": "Hiroshima Archive",
-        "desc": "渡邉英徳研究室によるデジタルアーカイブ。Cesium 版を Navara / Three.js で再実装し、より高品質なビジュアル表現を目指す計画です。"
-      }
-    ]
-  },
   "footer": {
     "h2": "Get started",
     "cta": "Getting Started ガイドを読む",
@@ -141,24 +123,21 @@
     "why-tier-2": "プラグイン — 同じシーンにフォトリアルな大気が追加された様子",
     "why-tier-3": "空間演算 — 計測高さでフィーチャー単位に色分けされた建物",
     "why-tier-4": "カスタムシェーダ — 夜に切り替わり街灯の霧で照らされた同じシーン",
-    "tutorial-wide": "Realistic Atmosphere チュートリアル",
-    "tutorial-left": "Arc Line Visualization チュートリアル",
-    "tutorial-right": "Interior Explore チュートリアル",
-    "example-row1-left": "大気散乱 — 夕暮れのニューヨーク",
-    "example-row1-right": "ボリューメトリッククラウド",
+    "tutorial-wide": "Realistic Atmosphere",
+    "tutorial-left": "Arc Line Visualization",
+    "tutorial-right": "Interior Explore",
+    "example-row1-left": "大気",
+    "example-row1-right": "雲",
     "example-row2-left": "glTF アニメーション",
-    "example-row2-center": "雨天の都市",
-    "example-row2-right": "テキストラベル",
-    "example-row3-left": "インスタンスメッシュによる大量描画",
-    "example-row3-right": "太陽位置シミュレーション — 東京の夕景",
-    "example-row4-left": "Gaussian Splatting",
-    "example-row4-center-left": "Polyline — 道路ネットワーク",
-    "example-row4-center-right": "glTF モデル",
+    "example-row2-center": "雨と雪",
+    "example-row2-right": "Text Labels",
+    "example-row3-left": "インスタンス描画",
+    "example-row3-right": "太陽と時刻",
+    "example-row4-left": "ガウシアンスプラット",
+    "example-row4-center-left": "Polyline",
+    "example-row4-center-right": "glTF Model",
     "example-row4-right": "Extruded Polygon",
     "maplibre-logo": "MapLibre ロゴ",
-    "maplibre-visual": "MapLibre スタイルで描いた地図",
-    "users-1": "Re:Earth スクリーンショット",
-    "users-2": "PLATEAU 3D 都市モデルのスクリーンショット",
-    "users-3": "ヒロシマアーカイブ スクリーンショット"
+    "maplibre-visual": "MapLibre スタイルで描いた地図"
   }
 }

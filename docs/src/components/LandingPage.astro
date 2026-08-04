@@ -10,8 +10,11 @@ import { ArrowUpRight, ChevronDown, Globe } from "@lucide/astro";
 import lp from "../data/lp.json";
 import ImageAttribution from "./ImageAttribution.astro";
 import githubIcon from "../assets/lp/github-invertocat.svg?raw";
-import archDiagramPc from "../assets/lp/architecture-pc.avif";
-import archDiagramSp from "../assets/lp/architecture-sp.avif";
+import archGlobe from "../assets/lp/arch-globe.svg?url";
+import archTerrain from "../assets/lp/arch-terrain.svg?url";
+import archBuildings from "../assets/lp/arch-buildings.svg?url";
+import archMarker from "../assets/lp/arch-marker.svg?url";
+import archArrow from "../assets/lp/arch-arrow.svg?url";
 
 interface Props {
   locale: string;
@@ -276,12 +279,62 @@ const rootStyle = `--pri:${colors.primary};--acc:${colors.accent};--sub:${colors
           <p class="lp-eyebrow" data-reveal>{t.arch.eyebrow}</p>
           <h2 class="lp-h2" data-reveal style="--rd:1">{t.arch.h2}</h2>
           <p class="lp-arch-sub" data-reveal style="--rd:2">{t.arch.sub}</p>
-          {/* One <picture>: the horizontal PC layout by default, the vertical
-              SP layout below 640px. Only the matched source is fetched. */}
-          <picture class="lp-arch-diagram" data-reveal style="--rd:3">
-            <source srcset={archDiagramSp.src} media="(max-width: 640px)" />
-            <img src={archDiagramPc.src} alt={t.arch.diagramAlt} decoding="async" loading="lazy" />
-          </picture>
+          {/* The diagram is composed from the arch-* line-art SVGs rather than
+              a baked image: source geometry (terrain / marker / buildings) on
+              the left flows through converging arrows into the globe the
+              renderer draws on the right. Pieces are decorative (alt=""); the
+              node titles/subs carry the meaning. */}
+          {/* Two grid rows: the titles sit in a shared head row and the visual
+              bodies (source pieces / arrows / globe) in a body row of fixed
+              height. Keeping the bodies in one aligned row is what lets the
+              arrows converge on the globe's center regardless of how many lines
+              each title wraps to. DOM order = the mobile (single-column) flow;
+              desktop re-places the cells via grid-template-areas. */}
+          <div
+            class="lp-arch-flow"
+            data-reveal
+            style="--rd:3"
+            role="img"
+            aria-label={t.arch.diagramAlt}
+          >
+            <div class="lp-arch-head is-source">
+              <h3 class="lp-arch-node-title">{t.arch.sourceTitle}</h3>
+              <p class="lp-arch-node-sub">{t.arch.sourceSub}</p>
+            </div>
+
+            {/* Source pieces in equal-height slots so their centers land at
+                1/6, 1/2, 5/6 of the body height — exactly the arrow origins. */}
+            <div class="lp-arch-body is-source lp-arch-stack">
+              <div class="lp-arch-slot">
+                <img class="lp-arch-piece lp-arch-p-terrain" src={archTerrain} alt="" />
+              </div>
+              <div class="lp-arch-slot">
+                <img class="lp-arch-piece lp-arch-p-marker" src={archMarker} alt="" />
+              </div>
+              <div class="lp-arch-slot">
+                <img class="lp-arch-piece lp-arch-p-buildings" src={archBuildings} alt="" />
+              </div>
+            </div>
+
+            {/* Converging arrows (arch-arrow.svg): points right on desktop;
+                the same asset is rotated 90° to point down on mobile. */}
+            <div class="lp-arch-body is-arrows lp-arch-arrows" aria-hidden="true">
+              <img class="lp-arch-arrow-img" src={archArrow} alt="" />
+            </div>
+
+            <div class="lp-arch-head is-render">
+              <h3 class="lp-arch-node-title">{t.arch.renderTitle}</h3>
+              <p class="lp-arch-node-sub">{t.arch.renderSub}</p>
+            </div>
+
+            <div class="lp-arch-body is-render">
+              {/* arch-globe.svg already contains the composited scene (terrain,
+                  buildings, marker inside the globe) — nothing is overlaid. */}
+              <div class="lp-arch-globe">
+                <img class="lp-arch-globe-base" src={archGlobe} alt="" />
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -426,28 +479,6 @@ const rootStyle = `--pri:${colors.primary};--acc:${colors.accent};--sub:${colors
           </div>
           <div class="lp-maplibre-visual" data-reveal data-motion="img">
             {src("maplibre-visual") && <img src={src("maplibre-visual")} alt={alt("maplibre-visual")} />}
-          </div>
-        </div>
-      </section>
-
-      <!-- Who's building with Navara -->
-      <section class="lp-users">
-        <div class="lp-container">
-          <p class="lp-eyebrow" data-reveal>{t.users.eyebrow}</p>
-          <h2 class="lp-h2" data-reveal style="--rd:1">{t.users.h2}</h2>
-          <p class="lp-users-sub" data-reveal style="--rd:2">{t.users.sub}</p>
-          <div class="lp-users-grid" data-reveal-group>
-            {
-              t.users.items.map((item: any) => (
-                <div>
-                  <div class="lp-user-visual">
-                    {src(item.slot) && <img src={src(item.slot)} alt={alt(item.slot)} />}
-                  </div>
-                  <b>{item.name}</b>
-                  <p>{item.desc}</p>
-                </div>
-              ))
-            }
           </div>
         </div>
       </section>
@@ -606,6 +637,19 @@ const rootStyle = `--pri:${colors.primary};--acc:${colors.accent};--sub:${colors
           ?.addEventListener("scroll", requestSideInk, { passive: true });
         requestSideInk();
       }
+
+      // Gallery tiles: open in a new tab, and reveal the example/tutorial name
+      // (reused from the image alt) at the bottom-right on hover.
+      document.querySelectorAll<HTMLAnchorElement>("a.lp-tile").forEach((tile) => {
+        tile.target = "_blank";
+        tile.rel = "noopener noreferrer";
+        const img = tile.querySelector("img");
+        if (!img || !img.alt) return;
+        const label = document.createElement("span");
+        label.className = "lp-tile-title";
+        label.textContent = img.alt;
+        tile.appendChild(label);
+      });
 
       // Resolves once every <img> inside the element is loaded and decoded
       // (errors resolve too, so a broken image can never block an entrance).
@@ -1200,15 +1244,15 @@ const rootStyle = `--pri:${colors.primary};--acc:${colors.accent};--sub:${colors
         z-index: 2;
         top: 0;
         left: 0;
-        max-width: 640px;
+        max-width: 760px;
         padding: clamp(26px, 4vw, 68px) clamp(28px, 5vw, 100px) 0;
       }
       .lp-api-lede-title {
         margin: 0;
         color: #fff;
-        font-size: clamp(24px, 2.7vw, 36px);
-        line-height: 1.24;
-        font-weight: 660;
+        font-size: clamp(30px, 4vw, 52px);
+        line-height: 1.18;
+        font-weight: 680;
         letter-spacing: -0.01em;
         text-wrap: balance;
         text-shadow:
@@ -1433,20 +1477,123 @@ const rootStyle = `--pri:${colors.primary};--acc:${colors.accent};--sub:${colors
         font-size: 15px;
         color: var(--ink-soft);
       }
-      /* PC (horizontal) layout by default; the <source> swaps to the SP
-         (vertical) image below 640px — the aspect-ratio flips with it. */
-      .lp-arch-diagram {
-        display: block;
-        width: min(1000px, 100%);
-        /* The images are tightly cropped, so the breathing room around the
-           diagram comes from this margin rather than baked-in whitespace. */
-        margin: 32px auto 0;
+      /* Diagram composed from the arch-* line-art SVGs. Two grid rows: a shared
+         head row (titles) and a fixed-height body row (source pieces → arrows →
+         globe). Isolating the bodies in one aligned row keeps the arrow
+         convergence, the globe center and the middle source piece on one line,
+         no matter how many lines each title wraps to. The arch-* strokes are
+         near-black, so this reads as clean line art on the white band. */
+      .lp-arch-flow {
+        --arch-body-h: clamp(320px, 36vw, 400px);
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(120px, 0.86fr) minmax(0, 1.3fr);
+        grid-template-rows: auto var(--arch-body-h);
+        grid-template-areas:
+          "shead .      rhead"
+          "sbody arrows rbody";
+        column-gap: clamp(8px, 3vw, 48px);
+        row-gap: clamp(18px, 2.6vw, 34px);
+        width: min(1060px, 100%);
+        margin: clamp(36px, 6vw, 72px) auto 0;
+        color: #1a1a1a;
       }
-      .lp-arch-diagram img {
+      /* Titles sit at the bottom of the head row, just above their body. */
+      .lp-arch-head {
+        align-self: end;
+        text-align: center;
+      }
+      .lp-arch-head.is-source {
+        grid-area: shead;
+      }
+      .lp-arch-head.is-render {
+        grid-area: rhead;
+      }
+      /* Node titles: deliberately larger than the original baked diagram so
+         they carry weight within the LP's type scale. */
+      .lp-arch-node-title {
+        margin: 0;
+        font-size: clamp(22px, 2.6vw, 34px);
+        font-weight: 680;
+        letter-spacing: -0.01em;
+        line-height: 1.2;
+        text-wrap: balance;
+      }
+      .lp-arch-node-sub {
+        margin: 10px 0 0;
+        font-size: clamp(13px, 1.1vw, 15px);
+        line-height: 1.55;
+        color: var(--ink-soft);
+        text-wrap: balance;
+      }
+      .lp-arch-body {
+        min-width: 0;
+      }
+      .lp-arch-body.is-source {
+        grid-area: sbody;
+      }
+      .lp-arch-body.is-arrows {
+        grid-area: arrows;
+      }
+      .lp-arch-body.is-render {
+        grid-area: rbody;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      /* Source pieces in three equal-height slots; each piece is centered in
+         its slot, so their centers fall exactly on the arrow origins. */
+      .lp-arch-stack {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+      .lp-arch-slot {
+        flex: 1 1 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .lp-arch-piece {
+        display: block;
+        height: auto;
+      }
+      .lp-arch-p-terrain {
+        width: clamp(150px, 20vw, 220px);
+      }
+      .lp-arch-p-marker {
+        width: clamp(30px, 3.4vw, 42px);
+      }
+      .lp-arch-p-buildings {
+        width: clamp(120px, 15vw, 168px);
+      }
+      /* Converging arrows (arch-arrow.svg). The asset's three sources sit at
+         the top / middle / bottom edges of its box; sizing it to 2/3 of the
+         body height and centering it maps those onto the source pieces' centers
+         (1/6, 1/2, 5/6) while its arrowhead stays on the row's midline — the
+         globe center. */
+      .lp-arch-arrows {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .lp-arch-arrow-img {
+        display: block;
+        height: 66.666%;
+        width: auto;
+        max-width: 100%;
+      }
+      /* Rendered globe with the same three pieces composited inside it. Square,
+         sized to the body row height (or the cell width when narrower) and
+         centered — so its center stays on the row's vertical midline. */
+      .lp-arch-globe {
+        position: relative;
+        width: min(100%, var(--arch-body-h));
+        aspect-ratio: 1 / 1;
+      }
+      .lp-arch-globe-base {
         display: block;
         width: 100%;
-        height: auto;
-        aspect-ratio: 1588 / 938;
+        height: 100%;
       }
 
       /* Gallery — seamless image strip on black; the section title floats
@@ -1551,11 +1698,66 @@ const rootStyle = `--pri:${colors.primary};--acc:${colors.accent};--sub:${colors
       }
       /* Hover lift on linked tiles (the reveal transition keeps transform,
          so hover only touches filter to stay snappy). */
-      a.lp-tile img {
-        transition: filter 0.35s ease;
+      a.lp-tile {
+        cursor: pointer;
       }
-      a.lp-tile:hover img {
-        filter: brightness(1.08);
+      /* The `.lp` prefix lifts specificity above the reveal system's
+         `.lp [data-motion="img"] img` rule (which otherwise forces its 2.8s
+         entrance-settle transition onto hover too). */
+      .lp a.lp-tile img {
+        transition:
+          filter 0.8s ease,
+          transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
+      }
+      .lp a.lp-tile:hover img,
+      .lp a.lp-tile:focus-visible img {
+        filter: brightness(1.1);
+        transform: scale(1.04);
+      }
+      /* On hover, reveal the example/tutorial name flush in the bottom-right
+         corner — always white text on a black plate that meets the tile edges
+         (no inset), for consistent legibility over any screenshot. */
+      .lp-tile-title {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        z-index: 1;
+        max-width: min(100%, 24em);
+        text-align: right;
+        margin: 0;
+        padding: 7px 12px;
+        font-size: clamp(13px, 1vw, 16px);
+        font-weight: 600;
+        line-height: 1.32;
+        letter-spacing: 0.01em;
+        text-wrap: balance;
+        color: #fff;
+        background: rgba(0, 0, 0, 0.72);
+        opacity: 0;
+        transform: translateY(6px);
+        transition:
+          opacity 0.24s ease,
+          transform 0.24s cubic-bezier(0.2, 0.7, 0.2, 1);
+        pointer-events: none;
+      }
+      a.lp-tile:hover .lp-tile-title,
+      a.lp-tile:focus-visible .lp-tile-title {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .lp a.lp-tile:hover img,
+        .lp a.lp-tile:focus-visible img {
+          transform: none;
+        }
+        .lp-tile-title {
+          transition: opacity 0.24s ease;
+          transform: none;
+        }
+        a.lp-tile:hover .lp-tile-title,
+        a.lp-tile:focus-visible .lp-tile-title {
+          transform: none;
+        }
       }
       .lp-tile-wide {
         grid-column: span 2;
@@ -1665,44 +1867,6 @@ const rootStyle = `--pri:${colors.primary};--acc:${colors.accent};--sub:${colors
         border-radius: 14px;
       }
 
-      /* Who's building with Navara */
-      .lp-users {
-        padding: 120px 48px;
-        background: var(--sub);
-      }
-      .lp-users-sub {
-        margin-bottom: 72px;
-        font-size: 15px;
-        color: var(--ink-soft);
-      }
-      .lp-users-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 64px;
-      }
-      .lp-user-visual {
-        position: relative;
-        aspect-ratio: 16 / 9;
-      }
-      .lp-user-visual img {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      }
-      .lp-users-grid b {
-        display: block;
-        margin-top: 24px;
-        font-size: 18px;
-      }
-      .lp-users-grid > div > p {
-        margin-top: 8px;
-        font-size: 13px;
-        line-height: 1.9;
-        color: var(--ink-soft);
-      }
-
       /* Get started (footer) */
       .lp-footer {
         padding: 120px 48px 64px;
@@ -1803,13 +1967,6 @@ const rootStyle = `--pri:${colors.primary};--acc:${colors.accent};--sub:${colors
           grid-template-columns: 1fr;
           gap: 36px;
         }
-        .lp-users {
-          padding: 88px 32px;
-        }
-        .lp-users-grid {
-          grid-template-columns: 1fr;
-          gap: 36px;
-        }
         .lp-footer {
           padding: 88px 32px 56px;
         }
@@ -1901,7 +2058,7 @@ const rootStyle = `--pri:${colors.primary};--acc:${colors.accent};--sub:${colors
         }
 
         .lp-arch {
-          padding: 72px 20px;
+          padding: 72px 6px;
         }
         .lp-h2 {
           font-size: 30px;
@@ -1909,12 +2066,91 @@ const rootStyle = `--pri:${colors.primary};--acc:${colors.accent};--sub:${colors
         .lp-arch-sub {
           margin-bottom: 32px;
         }
-        .lp-arch-diagram {
-          width: min(420px, 100%);
-          margin-top: 20px;
+        /* Vertical flow on phones, mirroring the original SP diagram: source
+           pieces in a row, converging arrows pointing down, then the globe.
+           Drop the desktop two-row grid so the cells auto-place down a single
+           column in DOM order (head → pieces → arrows → head → globe). */
+        .lp-arch-flow {
+          /* The wider terrain sits on the left, so the pieces group reads as
+             left-leaning even with the marker centred. Nudge the group AND the
+             arrow right by the same amount so they stay mutually aligned while
+             the group looks centred (the globe stays column-centred). */
+          --arch-shift: clamp(0px, 2vw, 15px);
+          grid-template-columns: 1fr;
+          grid-template-rows: none;
+          grid-template-areas: none;
+          row-gap: clamp(20px, 6vw, 36px);
+          width: min(480px, 100%);
+          margin-top: 24px;
         }
-        .lp-arch-diagram img {
-          aspect-ratio: 481 / 870;
+        /* Shift the group right via inside padding (not a transform on the
+           full-width box) so it never bleeds past the viewport. padding-left of
+           2×shift moves the centred marker right by exactly one shift. */
+        .lp-arch-body.is-source {
+          padding-left: calc(2 * var(--arch-shift));
+        }
+        /* Drop the desktop grid-area placement so the cells auto-stack down the
+           single column in DOM order (matching-specificity reset). */
+        .lp-arch-flow .lp-arch-head,
+        .lp-arch-flow .lp-arch-body {
+          grid-area: auto;
+        }
+        .lp-arch-head {
+          align-self: auto;
+        }
+        /* Grid with equal, freely-shrinking side tracks (minmax(0,1fr)) and an
+           auto centre track keeps the middle piece (marker) exactly on the
+           column's centre line — so it aligns with the arrow's centre —
+           regardless of the terrain/buildings widths. */
+        .lp-arch-stack {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+          align-items: end;
+          column-gap: clamp(20px, 6vw, 40px);
+          height: auto;
+        }
+        .lp-arch-slot:nth-child(1) {
+          justify-content: flex-end;
+        }
+        .lp-arch-slot:nth-child(3) {
+          justify-content: flex-start;
+        }
+        /* Terrain / buildings hug the marker and never exceed their track. */
+        .lp-arch-piece {
+          max-width: 100%;
+        }
+        /* Larger source pieces so the group carries similar visual weight to
+           the globe. */
+        .lp-arch-p-terrain {
+          width: clamp(150px, 40vw, 200px);
+        }
+        .lp-arch-p-marker {
+          width: clamp(34px, 9vw, 48px);
+        }
+        .lp-arch-p-buildings {
+          width: clamp(120px, 32vw, 158px);
+        }
+        .lp-arch-body.is-render {
+          justify-content: center;
+        }
+        /* Globe a touch smaller than full width, balanced against the pieces. */
+        .lp-arch-globe {
+          width: min(84%, 350px);
+        }
+        /* Rotate the same arrow asset 90° so it points down. Fixed-height,
+           absolutely-centered cell so the rotated box doesn't distort layout. */
+        .lp-arch-body.is-arrows {
+          position: relative;
+          height: clamp(140px, 38vw, 190px);
+        }
+        .lp-arch-arrow-img {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          height: auto;
+          width: clamp(140px, 38vw, 190px);
+          max-width: none;
+          transform: translate(calc(-50% + var(--arch-shift)), -50%) rotate(90deg);
         }
 
         .lp-gallery-head {
@@ -1964,13 +2200,6 @@ const rootStyle = `--pri:${colors.primary};--acc:${colors.accent};--sub:${colors
         }
         .lp-maplibre-visual {
           min-height: 300px;
-        }
-
-        .lp-users {
-          padding: 72px 20px;
-        }
-        .lp-users-sub {
-          margin-bottom: 28px;
         }
 
         .lp-footer {
