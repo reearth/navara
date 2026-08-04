@@ -256,6 +256,14 @@ const personView = new PersonViewPlugin({
 });
 ```
 
+### model (getter)
+
+```typescript
+get model(): MeshHandle<GLTFModelDesc> | null
+```
+
+The loaded character model's mesh handle, or `null` before [`start()`](#start) has loaded it (or when no character is configured). Its `ref` is the `GLTFModelDesc` — reach the model itself through it, for example `model.ref.raw` for the underlying three.js object, or `model.ref.getWorldPosition()`.
+
 ### setViewMode(mode) / toggleViewMode()
 
 ```typescript

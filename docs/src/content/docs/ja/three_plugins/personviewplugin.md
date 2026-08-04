@@ -256,6 +256,10 @@ const personView = new PersonViewPlugin({
 });
 ```
 
+### model（getter）
+
+ロード済みキャラクターモデルのメッシュハンドルを返します。[`start()`](#start) がモデルをロードするまで（またはキャラクター未設定の場合）は `null` です。ハンドルの `ref` が `GLTFModelDesc` で、これを通じてモデル本体にアクセスします。例えば `model.ref.raw` で内部の three.js オブジェクト、`model.ref.getWorldPosition()` で現在位置を取得できます。
+
 ### setViewMode(mode) / toggleViewMode()
 
 ```typescript

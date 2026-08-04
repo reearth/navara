@@ -340,7 +340,9 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
   private actionListeners = new Set<ActionListener>();
 
   private heldActions = new Set<Action>();
-  private dashMultiplier = 1;
+  /** Whether the dash key is held. Kept separate from the numeric speed factor
+   * so the dash animation still plays when `dashSpeedMultiplier` is 1 (or <1). */
+  private dashHeld = false;
   private orbitKeyHeld = false;
   // Persists the free-camera state after Alt release until the user
   // initiates a new movement action. Lets users dwell at an orbited
@@ -664,6 +666,16 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
   }
 
   /**
+   * The loaded character model's mesh handle, or `null` before {@link start}
+   * has loaded it (or when no character is configured). Its `ref` is the
+   * GLTFModelDesc — reach the model itself through it, e.g. `model.ref.raw`
+   * for the underlying three.js object or `model.ref.getWorldPosition()`.
+   */
+  get model(): MeshHandle<GLTFModelDesc> | null {
+    return this.handle;
+  }
+
+  /**
    * Resolve the effective playback speed for a clip: its per-clip override
    * (`idleSpeed` / `walkSpeed` / `dashSpeed`) if set, else the base `speed`.
    */
@@ -693,7 +705,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     this.actionListeners.clear();
     this.orbitKeyHeld = false;
     this.orbitLatched = false;
-    this.dashMultiplier = 1;
+    this.dashHeld = false;
     this.view = undefined;
   }
   private resolveCharacter(c: CharacterConfig): ResolvedCharacter {
@@ -908,7 +920,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     if (this.movementSuppressed) return;
 
     if (action === "dash") {
-      this.dashMultiplier = this.config.dashSpeedMultiplier;
+      this.dashHeld = true;
       return;
     }
     if (this.isMovementAction(action)) {
@@ -929,7 +941,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
       return;
     }
     if (action === "dash") {
-      this.dashMultiplier = 1;
+      this.dashHeld = false;
       return;
     }
     this.heldActions.delete(action);
@@ -960,6 +972,10 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
       maxAlt,
       cameraLerpSpeed,
     } = this.config;
+
+    // Derive the speed factor from the held state, so animation choice
+    // (dashHeld) stays independent of the numeric multiplier.
+    const dashMultiplier = this.dashHeld ? this.config.dashSpeedMultiplier : 1;
 
     if (dirX !== 0) {
       this.modelHeading += degreeToRadian(rotationSpeed * dirX);
@@ -994,7 +1010,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     if (dirY !== 0) {
       curPos.addScaledVector(
         this._worldForward,
-        moveSpeed * this.dashMultiplier * deltaTime * dirY,
+        moveSpeed * dashMultiplier * deltaTime * dirY,
       );
     }
 
@@ -1060,7 +1076,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     }
 
     const isMoving = dirY !== 0 || dirX !== 0 || dirZ !== 0;
-    const isDashing = isMoving && this.dashMultiplier > 1;
+    const isDashing = isMoving && this.dashHeld;
 
     let nextAnimState = this.currentAnimState;
     if (this.character && this.modelRef) {
@@ -1092,7 +1108,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
       lat: nextLat,
       alt: nextAlt,
       heading: this.modelHeading,
-      speed: moveSpeed * this.dashMultiplier,
+      speed: moveSpeed * dashMultiplier,
       animationState: nextAnimState,
       mode: this.viewMode,
     };
