@@ -138,10 +138,10 @@ new PersonViewPlugin(config?: PersonViewConfig)
 | `idleClip`          | `string`  | 静止時（移動キー未押下）に再生されるクリップ名。                                                                   |
 | `walkClip`          | `string?` | ダッシュなしで移動中に再生されるクリップ名。省略すると移動中も `idleClip` が継続（idle + dash のみのモデル向け）。 |
 | `dashClip`          | `string`  | ダッシュ時（ダッシュキー押下中）に再生されるクリップ名。                                                           |
-| `speed`             | `number`  | 下記のクリップ別上書きが無いクリップに使われる再生速度。                                                           |
-| `idleSpeed`         | `number?` | idle クリップの再生速度。未指定なら `speed`。                                                                      |
-| `walkSpeed`         | `number?` | walk クリップの再生速度。未指定なら `speed`。                                                                      |
-| `dashSpeed`         | `number?` | dash クリップの再生速度。未指定なら `speed`。                                                                      |
+| `speed`     | `number?` | 下記のクリップ別上書きが無いクリップに使われる再生速度。未指定なら `1`。             |
+| `idleSpeed` | `number?` | idle クリップの再生速度。未指定なら `speed`（未指定なら `1`）。                    |
+| `walkSpeed` | `number?` | walk クリップの再生速度。未指定なら `speed`（未指定なら `1`）。                    |
+| `dashSpeed` | `number?` | dash クリップの再生速度。未指定なら `speed`（未指定なら `1`）。                    |
 | `crossfadeDuration` | `number`  | クリップ間のクロスフェード遷移時間（秒）。                                                                         |
 
 ### ModelRotationOffset
