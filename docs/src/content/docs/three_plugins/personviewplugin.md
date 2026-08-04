@@ -138,10 +138,10 @@ new PersonViewPlugin(config?: PersonViewConfig)
 | `idleClip`          | `string`  | Clip played while the model is idle (no movement keys held).                                                               |
 | `walkClip`          | `string?` | Clip played while the model is moving without dashing. Omit to keep `idleClip` running — useful for idle+dash-only models. |
 | `dashClip`          | `string`  | Clip played while the model is dashing (dash key held).                                                                    |
-| `speed`             | `number`  | Playback speed for any clip without a per-clip override below.                                                             |
-| `idleSpeed`         | `number?` | Playback speed for the idle clip. Falls back to `speed`.                                                                   |
-| `walkSpeed`         | `number?` | Playback speed for the walk clip. Falls back to `speed`.                                                                   |
-| `dashSpeed`         | `number?` | Playback speed for the dash clip. Falls back to `speed`.                                                                   |
+| `speed`     | `number?` | Playback speed for any clip without a per-clip override below. Defaults to `1`. |
+| `idleSpeed` | `number?` | Playback speed for the idle clip. Falls back to `speed` (default `1`).         |
+| `walkSpeed` | `number?` | Playback speed for the walk clip. Falls back to `speed` (default `1`).         |
+| `dashSpeed` | `number?` | Playback speed for the dash clip. Falls back to `speed` (default `1`).         |
 | `crossfadeDuration` | `number`  | Duration in seconds for cross-fade transitions between clips.                                                              |
 
 ### ModelRotationOffset
