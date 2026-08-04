@@ -80,6 +80,10 @@
     "eyebrow": "ARCHITECTURE",
     "h2": "A headless GIS core, independent of the renderer.",
     "sub": "On Three.js today. In any environment tomorrow.",
+    "sourceTitle": "Rust / WASM",
+    "sourceSub": "Data parsing, geometry construction, and more",
+    "renderTitle": "Three.js today, other engines tomorrow",
+    "renderSub": "Geometry is drawn by the rendering engine",
     "diagramAlt": "Architecture diagram: Rust / WASM parses data and builds geometry, and its output is drawn by Three.js today, with other engines and Native tomorrow."
   },
   "gallery": {
@@ -105,28 +109,6 @@
     ],
     "roadmap": "See the roadmap"
   },
-  "users": {
-    "eyebrow": "WHO'S BUILDING WITH NAVARA",
-    "h2": "Real products set the quality bar.",
-    "sub": "Developed with real products and public-data use cases on the roadmap.",
-    "items": [
-      {
-        "slot": "users-1",
-        "name": "Re:Earth",
-        "desc": "An open-source GIS platform developed by Eukarya. Navara is planned to be integrated as its 3D map engine."
-      },
-      {
-        "slot": "users-2",
-        "name": "PLATEAU",
-        "desc": "Japan's open 3D city model project led by MLIT. City-scale rendering with PLATEAU's 3D Tiles is on the roadmap."
-      },
-      {
-        "slot": "users-3",
-        "name": "Hiroshima Archive",
-        "desc": "A digital archive by the Hidenori Watanave Laboratory. The plan is to reimplement its Cesium version with Navara / Three.js for higher visual quality."
-      }
-    ]
-  },
   "footer": {
     "h2": "Get started",
     "cta": "Read the Getting Started guide",
@@ -141,24 +123,21 @@
     "why-tier-2": "Plugins — the same scene with the photoreal atmosphere added",
     "why-tier-3": "Spatial operations — buildings colored by their measured height",
     "why-tier-4": "Custom shaders — the same scene at night, lit by fog lights",
-    "tutorial-wide": "Realistic Atmosphere tutorial",
-    "tutorial-left": "Arc Line Visualization tutorial",
-    "tutorial-right": "Interior Explore tutorial",
-    "example-row1-left": "Atmospheric scattering — New York at dusk",
-    "example-row1-right": "Volumetric clouds",
-    "example-row2-left": "glTF animation",
-    "example-row2-center": "A city in the rain",
-    "example-row2-right": "Text labels",
-    "example-row3-left": "Massive rendering with instanced meshes",
-    "example-row3-right": "Sun position simulation — Tokyo at sunset",
-    "example-row4-left": "Gaussian Splatting",
-    "example-row4-center-left": "Polyline — road network",
-    "example-row4-center-right": "glTF model",
-    "example-row4-right": "Extruded polygons",
+    "tutorial-wide": "Realistic Atmosphere",
+    "tutorial-left": "Arc Line Visualization",
+    "tutorial-right": "Interior Explore",
+    "example-row1-left": "Atmosphere",
+    "example-row1-right": "Clouds",
+    "example-row2-left": "glTF Animation",
+    "example-row2-center": "Rain & Snow",
+    "example-row2-right": "Text Labels",
+    "example-row3-left": "Instanced Meshes",
+    "example-row3-right": "Sun & Time of Day",
+    "example-row4-left": "Gaussian Splat",
+    "example-row4-center-left": "Polyline",
+    "example-row4-center-right": "glTF Model",
+    "example-row4-right": "Extruded Polygon",
     "maplibre-logo": "MapLibre logo",
-    "maplibre-visual": "A map rendered with a MapLibre style",
-    "users-1": "Re:Earth screenshot",
-    "users-2": "Screenshot of PLATEAU 3D city models",
-    "users-3": "Hiroshima Archive screenshot"
+    "maplibre-visual": "A map rendered with a MapLibre style"
   }
 }

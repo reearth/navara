@@ -30,7 +30,6 @@ view.setCamera({
   roll: 0,
 });
 
-
 view.addLight({ ambient: { intensity: 1 } });
 view.addLight({ sun: { intensity: 2, applyColor: true } });
 
