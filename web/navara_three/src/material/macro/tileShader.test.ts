@@ -7,7 +7,15 @@ import {
   TILE_EMISSIVE_EFFECT_BUFFER_REPLACEMENT,
   TILE_NORMAL_BUFFER_REPLACEMENT,
   TILE_PICK_FRAGMENT_OVERRIDE,
+  type TileShaderFeatures,
+  WATERMASK_OCEAN_REFLECTIVITY,
 } from "./tileShader";
+
+const FEATURES_OFF: TileShaderFeatures = {
+  hasHillshade: false,
+  hasWater: false,
+  hasWatermask: false,
+};
 
 describe("generateTileCommonInjection", () => {
   it("declares the three atlas samplers", () => {
@@ -26,7 +34,7 @@ describe("generateTileCommonInjection", () => {
 });
 
 describe("generateTileMapFragment", () => {
-  const src = generateTileMapFragment(16);
+  const src = generateTileMapFragment(16, FEATURES_OFF);
 
   it("samples each atlas exactly once", () => {
     const colorMatches = src.match(/texture2D\(uColorAtlas/g) ?? [];
@@ -65,11 +73,34 @@ describe("generateTileMapFragment", () => {
     );
     expect(src).not.toMatch(/mix\(diffuseColor\.rgb,\s*atlasColor\.rgb/);
   });
+
+  it("omits the ocean reflectivity fallback when no watermask is present", () => {
+    expect(src).not.toContain("useWater && !hasSlotWaterParams");
+  });
+
+  it("overrides reflectivity/roughness on watermask water pixels", () => {
+    // Watermask water under a raster winner (or no winner – open ocean) must
+    // clear the SSR mask threshold; a texturized (vector) winner keeps its own
+    // per-slot params.
+    const masked = generateTileMapFragment(16, {
+      ...FEATURES_OFF,
+      hasWatermask: true,
+    });
+    expect(masked).toContain("if (useWater && !hasSlotWaterParams)");
+    expect(masked).toContain(
+      `tileReflectivity = ${WATERMASK_OCEAN_REFLECTIVITY.toFixed(4)};`,
+    );
+    // The override must land AFTER the per-slot reads so it wins.
+    expect(
+      masked.indexOf("if (useWater && !hasSlotWaterParams)"),
+    ).toBeGreaterThan(masked.indexOf("uReflectivities[winIdx]"));
+  });
 });
 
 describe("generateTileNormalFragmentMaps", () => {
   it("omits the hillshade lookup entirely when hasHillshade is off", () => {
     const src = generateTileNormalFragmentMaps({
+      ...FEATURES_OFF,
       hasHillshade: false,
       hasWater: false,
     });
@@ -79,6 +110,7 @@ describe("generateTileNormalFragmentMaps", () => {
 
   it("samples uNormalAtlas exactly once when hasHillshade is on", () => {
     const src = generateTileNormalFragmentMaps({
+      ...FEATURES_OFF,
       hasHillshade: true,
       hasWater: false,
     });
@@ -90,6 +122,7 @@ describe("generateTileNormalFragmentMaps", () => {
 
   it("omits water specular call when hasWater is off", () => {
     const src = generateTileNormalFragmentMaps({
+      ...FEATURES_OFF,
       hasHillshade: false,
       hasWater: false,
     });
@@ -99,6 +132,7 @@ describe("generateTileNormalFragmentMaps", () => {
 
   it("emits computeWaterSpecular when hasWater is on", () => {
     const src = generateTileNormalFragmentMaps({
+      ...FEATURES_OFF,
       hasHillshade: false,
       hasWater: true,
     });

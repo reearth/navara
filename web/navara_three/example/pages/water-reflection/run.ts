@@ -1,8 +1,4 @@
-import ThreeView, {
-  JAPAN_GSI_ELEVATION_DECODER,
-  Color,
-  type LayerDescription,
-} from "@navaramap/three";
+import ThreeView, { Color, type LayerDescription } from "@navaramap/three";
 import { SSREffectDesc } from "@navaramap/three-default-descs";
 import {
   DefaultPlugin,
@@ -45,39 +41,43 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   });
   view.addLayer({ type: "raster", source: baseImagery });
 
-  // GSI DEM shared by the terrain and the hillshade.
-  const dem = view.addSource({
-    type: "raster-dem",
-    url: TERRAIN_DATASETS.gsi.url,
-    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    maxZoom: 15,
-    minZoom: 6,
+  // Quantized-mesh terrain with the watermask: ocean pixels automatically
+  // receive the default reflectivity/roughness, so SSR reflects on the sea
+  // without any water polygon layer.
+  const terrain = view.addSource({
+    type: "quantized-mesh",
+    url: TERRAIN_DATASETS.reearthQuantizedMesh.url,
+    maxZoom: 18,
+    requestVertexNormals: true,
+    requestWaterMask: true,
   });
   view.addLayer({
     type: "terrain",
-    source: dem,
+    source: terrain,
     terrain: { receiveShadow: true, castShadow: true },
   });
-  view.addLayer({ type: "raster", source: dem, hillshade: {} });
 
-  // Add some 3D tiles buildings
-  const buildings = view.addSource({
-    type: "3d-tiles",
-    url: TILES_3D_DATASETS.plateauChiyoda.url,
-  });
-  view.addLayer({
-    type: "3d-tiles",
-    source: buildings,
-    model: {
-      show: true,
-      color: new Color().setStyle("#ffffff"),
-      metalness: 0,
-      roughness: 0.5,
-      height: -50,
-      castShadow: true,
-      receiveShadow: true,
-    },
-  });
+  for (const dataset of [
+    TILES_3D_DATASETS.plateauChiyoda,
+    TILES_3D_DATASETS.plateauChuo,
+  ]) {
+    const buildings = view.addSource({
+      type: "3d-tiles",
+      url: dataset.url,
+    });
+    view.addLayer({
+      type: "3d-tiles",
+      source: buildings,
+      model: {
+        show: true,
+        color: new Color().setStyle("#ffffff"),
+        metalness: 0,
+        roughness: 0.5,
+        castShadow: true,
+        receiveShadow: true,
+      },
+    });
+  }
 
   // Create controls panel
   const pane = new Pane({ title: "SSR Water Reflection Example" });
@@ -106,9 +106,10 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   addWaterControls(view, pane);
 
   attribution?.add([
-    TERRAIN_DATASETS.gsi,
+    TERRAIN_DATASETS.reearthQuantizedMesh,
     TILE_DATASETS.gsiSeamlessphoto,
     TILES_3D_DATASETS.plateauChiyoda,
+    TILES_3D_DATASETS.plateauChuo,
     VECTOR_DATASETS.gsiExperimentalVector,
   ]);
 };
@@ -354,7 +355,7 @@ const addWaterControls = (view: ThreeView<CustomDescriptions>, pane: Pane) => {
     source: waterGeojsonSource.id,
     polygon: {
       color: new Color().setStyle("#001e0f"),
-      height: 55,
+      height: 70,
       extrudedHeight: 1,
       clampToGround: false,
       wireframe: false,
@@ -376,6 +377,7 @@ const addWaterControls = (view: ThreeView<CustomDescriptions>, pane: Pane) => {
 
   const waterParams = {
     dataType: "geojson",
+    show: mvtDesc.polygon?.show ?? true,
     reflectivity: mvtDesc.polygon?.reflectivity ?? 0,
     roughness: mvtDesc.polygon?.roughness ?? 0,
     water: mvtDesc.polygon?.water ?? true,
@@ -412,6 +414,20 @@ const addWaterControls = (view: ThreeView<CustomDescriptions>, pane: Pane) => {
             break;
           }
         }
+      },
+    },
+    {
+      // Hide the water polygon to observe the terrain watermask's ocean
+      // reflection without the polygon covering the bay.
+      name: "show",
+      onChange: (v) => {
+        if (!mvtDesc.polygon || !geoJsonDesc.polygon) return;
+        waterParams.show = v.value;
+        mvtDesc.polygon.show = v.value;
+        geoJsonDesc.polygon.show = v.value;
+        waterLayer.update(
+          waterParams.dataType === "mvt" ? mvtDesc : geoJsonDesc,
+        );
       },
     },
     {

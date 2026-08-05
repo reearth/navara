@@ -20,7 +20,15 @@ export type TileShaderFeatures = {
   hasHillshade: boolean;
   /** Some layer uses Water material → emit the water specular branch. */
   hasWater: boolean;
+  /**
+   * Quantized-mesh watermask is present (source requested `requestWaterMask`).
+   * Emits the ocean reflectivity fallback in the map fragment.
+   */
+  hasWatermask: boolean;
 };
+
+export const WATERMASK_OCEAN_REFLECTIVITY = 0.02;
+export const WATERMASK_OCEAN_ROUGHNESS = 0.2;
 
 /**
  * Goes after `#include <common>` in the fragment shader. Declares the three
@@ -71,7 +79,23 @@ export function generateTileCommonInjection(numTextures: number): string {
  * generateTileEmissiveBuffer below to decide what gets written to the
  * emissive/effect MRT attachments).
  */
-export function generateTileMapFragment(maxTextures: number): string {
+export function generateTileMapFragment(
+  maxTextures: number,
+  features: TileShaderFeatures,
+): string {
+  // Watermask ocean pixels: `useWater` fired from the tile-wide watermask but
+  // the winning slot (raster imagery, or none on open ocean) carries zeroed
+  // reflectivity/roughness – override them with the default ocean appearance
+  // so SSR and envmap reflections apply to the sea automatically. Mirrors the
+  // shininess/specularStrength fallback above. A texturized winner keeps its
+  // own params: a vector layer drawn over water should not turn reflective.
+  const watermaskReflectivityFallback = features.hasWatermask
+    ? `
+  if (useWater && !hasSlotWaterParams) {
+    tileReflectivity = ${WATERMASK_OCEAN_REFLECTIVITY.toFixed(4)};
+    tileRoughness    = ${WATERMASK_OCEAN_ROUGHNESS.toFixed(4)};
+  }`
+    : "";
   return `
   vec4 atlasColor = texture2D(uColorAtlas, vOrigUv);
   vec4 atlasAttr  = texture2D(uAttrAtlas,  vOrigUv);
@@ -135,7 +159,7 @@ export function generateTileMapFragment(maxTextures: number): string {
   // letting the winner's own specular flag gate it — otherwise a draped raster
   // imagery slot (uSpeculars == false) suppresses the watermask water entirely.
   bool  useSpecular           = (!isTexturizedLayer && useWater) || (hasWinner && uSpeculars[winIdx]);
-
+${watermaskReflectivityFallback}
   float tileEmissiveIntensity = (hasWinner && isTexturizedLayer) ? uEmissiveIntensities[winIdx] : 0.0;
   vec3  tileEmissiveColor     = (hasWinner && isTexturizedLayer) ? uEmissiveColors[winIdx]      : vec3(0.0);
   float tileEffectIdsMask     = (hasWinner && isTexturizedLayer) ? uEffectIdsMasks[winIdx]      : 0.0;
