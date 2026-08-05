@@ -4,6 +4,8 @@ export {
   type PersonViewState,
   type CharacterConfig,
   type AnimationConfig,
+  type CollisionConfig,
+  type CollisionMode,
   type ModelRotationOffset,
   type KeyBindings,
   type ViewMode,

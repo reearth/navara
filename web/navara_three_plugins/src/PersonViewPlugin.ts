@@ -62,7 +62,7 @@ import ThreeView, {
 } from "@navaramap/three";
 import type { GLTFModelDesc } from "@navaramap/three-default-descs";
 import type { DefaultDescriptions } from "@navaramap/three-default-plugin";
-import { Vector3, Matrix4 } from "three";
+import { Vector3, Matrix4, MathUtils } from "three";
 
 type View = ThreeView<DefaultDescriptions>;
 
@@ -134,6 +134,57 @@ export type AnimationConfig = {
   crossfadeDuration: number;
 };
 
+/**
+ * How the character's altitude reacts to the terrain surface.
+ *
+ * - `"off"` — altitude is driven purely by the ascend / descend keys.
+ * - `"clamp"` — free flight, but the terrain acts as a floor: the character is
+ *   pushed up whenever it would end up below the surface.
+ * - `"ground"` — the character is glued to the terrain surface, so it walks up
+ *   and down slopes. The ascend / descend keys have no effect in this mode.
+ */
+export type CollisionMode = "off" | "clamp" | "ground";
+
+/** Terrain collision configuration. See {@link CollisionMode}. */
+export type CollisionConfig = {
+  /** @defaultValue `"off"` */
+  mode?: CollisionMode;
+  /**
+   * Height (meters) kept above the sampled terrain surface — the character's
+   * feet in `"ground"` mode, the floor it cannot sink below in `"clamp"`.
+   * @defaultValue `0`
+   */
+  groundOffset?: number;
+  /**
+   * Tilt the character to match the slope it stands on. Costs several extra
+   * terrain lookups per frame, and fades out as it leaves the ground in
+   * `"clamp"` mode.
+   * @defaultValue `true`
+   */
+  alignToSlope?: boolean;
+  /**
+   * Footprint (meters) the slope under the character is averaged over. The
+   * default suits the triangle spacing terrain meshes arrive at; below that
+   * there is nothing left to average and the tilt starts to step.
+   * @defaultValue `4`
+   */
+  slopeSampleDistance?: number;
+  /**
+   * Largest tilt (radians) {@link alignToSlope} may apply, so ground far
+   * steeper than anything walkable does not lay the character flat against it.
+   * @defaultValue `Math.PI / 4` (45°)
+   */
+  maxSlopeTilt?: number;
+  /**
+   * How much of the terrain's slope the camera pitch follows, from `0` (fixed
+   * pitch, so a steep hillside fills the frame) to `1` (the view runs parallel
+   * to the slope, looking up a climb and down a descent). Applies to the TPV
+   * chase camera and the FPV eye line alike.
+   * @defaultValue `1`
+   */
+  cameraSlopeFollow?: number;
+};
+
 export type CharacterConfig = {
   /** URL of the GLTF model to load. */
   modelUrl: string;
@@ -189,6 +240,11 @@ type Action = PersonViewAction;
 
 export type PersonViewConfig = {
   character?: CharacterConfig;
+  /**
+   * Terrain collision. Off by default — the character flies freely and ignores
+   * the terrain surface.
+   */
+  collision?: CollisionConfig;
 
   /** When true, the camera is always free (no Alt-hold required). */
   allowCameraControl?: boolean;
@@ -264,8 +320,72 @@ const DEFAULT_KEYS: Required<KeyBindings> = {
 };
 
 type PersonViewDefaults = Required<
-  Omit<PersonViewConfig, "character" | "keys">
+  Omit<PersonViewConfig, "character" | "keys" | "collision">
 >;
+
+type ResolvedCollision = Required<CollisionConfig>;
+
+/** A geodetic position in radians, as the geodetic helpers return it. */
+type LatLngRadians = { lat: number; lng: number };
+
+// Tuned so that `collision: { mode: "ground" }` alone walks terrain well: the
+// slope footprint is wide enough for the triangle spacing real terrain meshes
+// arrive at.
+const DEFAULT_COLLISION: ResolvedCollision = {
+  mode: "off",
+  groundOffset: 0,
+  alignToSlope: true,
+  slopeSampleDistance: 4,
+  maxSlopeTilt: Math.PI / 4,
+  cameraSlopeFollow: 1,
+};
+
+/**
+ * Terrain tiles keep being replaced by finer ones, which moves the surface and
+ * its gradient under a character that has not gone anywhere — by hundreds of
+ * meters right after load. These bound how fast that is allowed to reach the
+ * character: without them it is thrown up the mountainside and back, and a
+ * single frame swings the slope tilt by 13°.
+ *
+ * The height settles under an acceleration (m/s²) rather than at a fixed speed,
+ * because the two cases need opposite things from it. A second of tile churn
+ * must barely move the character, which a speed low enough to do that then
+ * takes half a minute to walk back a surface that turned out to be 250m out.
+ * Falling covers the first in a few meters and the second in a few seconds.
+ *
+ * They are constants rather than options because there is nothing about an
+ * application that makes another value right: ground the character *walks*
+ * onto is never bounded by them, so they only ever act on data catching up.
+ */
+const GROUND_SETTLE_ACCELERATION = 10;
+const SLOPE_TILT_SMOOTHING = 6;
+
+/**
+ * Largest pitch change {@link CollisionConfig.cameraSlopeFollow} may apply, so
+ * a near-vertical face does not swing the view to straight up or down. Framing
+ * is tuned with `cameraSlopeFollow`; this is only the guard rail behind it.
+ */
+const MAX_CAMERA_SLOPE_PITCH = Math.PI / 4;
+
+/**
+ * Bearings (radians from north) of the probe ring that measures the terrain
+ * gradient for `alignToSlope`. Fitting a ring is steadier than a forward /
+ * sideways pair: a probe crossing a mesh edge steps the slope it reports, and
+ * the ring keeps any single step from tilting the whole character.
+ */
+const SLOPE_PROBE_BEARINGS = [0, 1, 2, 3, 4, 5, 6, 7].map((i) => {
+  const bearing = (i * Math.PI) / 4;
+  return { sin: Math.sin(bearing), cos: Math.cos(bearing) };
+});
+
+/**
+ * Fraction of the remaining distance to cover this frame when easing toward a
+ * target at `rate` (1/s). Exponential, so it is frame-rate independent and
+ * never overshoots. A rate of `0` — or a frame of no length, as when
+ * teleporting — snaps, which is why this is not `MathUtils.damp`.
+ */
+const easeFactor = (rate: number, deltaTime: number): number =>
+  rate > 0 && deltaTime > 0 ? 1 - Math.exp(-rate * deltaTime) : 1;
 
 const DEFAULTS: PersonViewDefaults = {
   allowCameraControl: false,
@@ -326,6 +446,7 @@ type ResolvedCharacter = Required<
 export class PersonViewPlugin extends Plugin<View, ViewContext> {
   private view?: View;
   private config: PersonViewDefaults;
+  private collision: ResolvedCollision;
   private character: ResolvedCharacter | null;
   private keys: Required<KeyBindings>;
   private keyToAction: Map<string, Action>;
@@ -333,6 +454,8 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
   private handle: MeshHandle<GLTFModelDesc> | null = null;
   private modelRef: GLTFModelDesc | null = null;
   private animId: number | null = null;
+  /** Whether the character has been placed, so `start()` resumes from here. */
+  private placed = false;
   private lastTime = 0;
 
   private state!: PersonViewState;
@@ -369,13 +492,38 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
   private _north = new Vector3();
   private _worldForward = new Vector3();
   private _offset = new Vector3();
+  private _probePos = new Vector3();
   private _headingMatrix = new Matrix4();
+  private _tiltMatrix = new Matrix4();
   private _characterFrame = new Matrix4();
+
+  /** Smoothed pitch (radians) the chase camera gives up to follow the slope. */
+  private cameraSlopePitch = 0;
+
+  // Smoothed terrain gradient (meters of rise per meter travelled) under the
+  // character, held in ENU so it does not have to be re-smoothed when the
+  // character turns. Zero unless `alignToSlope` is on.
+  private slopeGradEast = 0;
+  private slopeGradNorth = 0;
+
+  /**
+   * Terrain height (meters) sampled under the character last frame, with the
+   * position it was taken at, so the next frame can re-sample the same spot and
+   * tell a change in the terrain data apart from the character having moved.
+   */
+  private lastGroundSample?: { lat: number; lng: number; height: number };
+  /** Meters of terrain data shift not yet passed on to the character. */
+  private unabsorbedGroundShift = 0;
+  /** Speed (m/s) that shift is being worked off at, positive when rising. */
+  private settleVelocity = 0;
+  /** Surface height (meters) the character stands on, once settling is applied. */
+  private groundSurfaceHeight?: number;
 
   constructor(config: PersonViewConfig = {}) {
     super();
-    const { character, keys, ...rest } = config;
+    const { character, keys, collision, ...rest } = config;
     this.config = { ...DEFAULTS, ...rest };
+    this.collision = { ...DEFAULT_COLLISION, ...collision };
     this.character = character ? this.resolveCharacter(character) : null;
     this.keys = { ...DEFAULT_KEYS, ...keys };
     this.keyToAction = this.buildKeyMap(this.keys);
@@ -403,10 +551,31 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     };
   }
 
+  /**
+   * Take over the camera and start reading the movement keys. Calling it again
+   * after {@link stop} resumes from wherever the character was left, rather
+   * than starting over at the configured position.
+   */
   start(): void {
     if (!this.view) return;
     if (this.animId != null) return;
     this.animId = -1;
+
+    document.addEventListener("keydown", this.boundKeyDown);
+    document.addEventListener("keyup", this.boundKeyUp);
+
+    if (this.placed) {
+      this.resumeLoop();
+      this.placeChaseCamera(
+        this.state.lat,
+        this.state.lng,
+        this.state.alt,
+        this.cameraHeading,
+      );
+      this.applyModelVisibility();
+      return;
+    }
+    this.placed = true;
 
     const { startLat, startLng, startHeight, startHeading } = this.config;
     const startPos = geodeticToVector3({
@@ -450,34 +619,92 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
 
       this.modelRef = this.handle.ref;
       this.modelRef.on("load", () => {
-        if (!this.view) return;
-        this.lastTime = performance.now();
-        this.animId = requestAnimationFrame(this.tick);
+        if (!this.view || this.animId == null) return;
+        this.resumeLoop();
       });
     } else {
-      this.lastTime = performance.now();
-      this.animId = requestAnimationFrame(this.tick);
+      this.resumeLoop();
     }
 
     this.applyInitialCamera();
     this.applyModelVisibility();
+  }
 
-    document.addEventListener("keydown", this.boundKeyDown);
-    document.addEventListener("keyup", this.boundKeyUp);
+  /**
+   * Hand the camera back to the view's own controls and stop reading the
+   * movement keys, leaving the character where it stands. {@link start}
+   * resumes from there — use the two to step out of person view and back
+   * without losing the position.
+   */
+  stop(): void {
+    if (this.animId == null) return;
+    this.releaseControl();
+
+    // Both camera modes are released: whichever was driving, the view's own
+    // controls take over from where it left the camera.
+    this.view?.cameraFollow(false);
+    this.view?.cameraFreeLook(false);
+
+    // Nothing is driving the character any more, so it stands idle.
+    this.playAnimation(this.character?.animation.idleClip);
+    const stopped: PersonViewState = {
+      ...this.state,
+      speed: 0,
+      animationState: this.currentAnimState,
+    };
+    if (this.hasStateChanged(this.state, stopped)) {
+      this.state = stopped;
+      this.notify();
+    }
+  }
+
+  /** Stop the per-frame loop and the key handling, keeping everything else. */
+  private releaseControl(): void {
+    if (this.animId != null && this.animId >= 0)
+      cancelAnimationFrame(this.animId);
+    this.animId = null;
+
+    document.removeEventListener("keydown", this.boundKeyDown);
+    document.removeEventListener("keyup", this.boundKeyUp);
+
+    // Keys held at the moment control is released would otherwise still read as
+    // held when it is taken back.
+    this.heldActions.clear();
+    this.orbitKeyHeld = false;
+    this.orbitLatched = false;
+    this.dashHeld = false;
+  }
+
+  /**
+   * Run the per-frame loop from now. The clock restarts with it, so a pause
+   * between `stop()` and `start()` is not delivered as one enormous frame.
+   */
+  private resumeLoop(): void {
+    this.lastTime = performance.now();
+    this.animId = requestAnimationFrame(this.tick);
   }
 
   /** Instantly move to a new geographic position. */
   teleport(options: TeleportOptions): void {
     if (!this.view) return;
 
-    const { lng, lat, alt } = options;
+    const { lng, lat } = options;
     const headingRad =
       options.heading != null ? options.heading : this.cameraHeading;
+    // A teleport lands on the terrain outright rather than settling onto it.
+    const destination = { lat: degreeToRadian(lat), lng: degreeToRadian(lng) };
+    const alt = this.resolveGroundHeight(
+      destination,
+      destination,
+      options.alt,
+      0,
+    );
+    this.updateSlopeTilt(destination.lat, destination.lng, alt, 0);
 
     if (this.handle && this.character) {
       const pos = geodeticToVector3({
-        lat: degreeToRadian(lat),
-        lng: degreeToRadian(lng),
+        lat: destination.lat,
+        lng: destination.lng,
         height: alt,
       });
       this.handle.update({
@@ -546,6 +773,19 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
 
   setAllowCameraControl(value: boolean): void {
     this.config.allowCameraControl = value;
+  }
+
+  /**
+   * Update the terrain collision settings at runtime. Only the given fields
+   * change; the rest keep their current values.
+   */
+  setCollision(collision: CollisionConfig): void {
+    this.collision = { ...this.collision, ...collision };
+  }
+
+  /** Current terrain collision settings. */
+  getCollision(): Readonly<ResolvedCollision> {
+    return this.collision;
   }
 
   /**
@@ -689,24 +929,31 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
   }
 
   dispose(): void {
-    if (this.animId != null) cancelAnimationFrame(this.animId);
-    this.animId = null;
-
-    document.removeEventListener("keydown", this.boundKeyDown);
-    document.removeEventListener("keyup", this.boundKeyUp);
+    this.releaseControl();
 
     if (this.handle) {
       this.handle.delete();
       this.handle = null;
     }
     this.modelRef = null;
-    this.heldActions.clear();
+    this.placed = false;
     this.listeners.clear();
     this.actionListeners.clear();
-    this.orbitKeyHeld = false;
-    this.orbitLatched = false;
-    this.dashHeld = false;
     this.view = undefined;
+  }
+
+  /** Cross-fade the model onto `clip`, unless it is already the one playing. */
+  private playAnimation(clip: string | undefined): void {
+    if (!clip || !this.character || !this.modelRef) return;
+    if (clip === this.currentAnimState) return;
+    this.modelRef.crossFadeAnimation(
+      this.currentAnimState ?? "",
+      clip,
+      this.character.animation.crossfadeDuration,
+    );
+    // Apply the incoming clip's own playback speed.
+    this.modelRef.setAnimationSpeed(this.clipSpeed(clip));
+    this.currentAnimState = clip;
   }
   private resolveCharacter(c: CharacterConfig): ResolvedCharacter {
     return {
@@ -780,22 +1027,17 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     lng: number,
     alt: number,
     heading: number,
+    deltaTime = 0,
   ): void {
     if (!this.view) return;
 
-    const {
-      cameraDistance,
-      cameraPitch,
-      fpvPitch,
-      fpvHeightOffset,
-      fpvForwardOffset,
-    } = this.config;
+    const { cameraDistance, fpvPitch, fpvForwardOffset } = this.config;
     const isFpv = this.viewMode === "fpv";
-    const eyeHeight = alt + fpvHeightOffset;
+    const eyeHeight = this.eyeHeightAt(alt);
 
     if (isFpv) {
       // FPV: the eye is locked to the person's position at eye height.
-      // `fpvPitch` tilts the view down *in place* by lowering the look-at
+      // The pitch tilts the view down *in place* by lowering the look-at
       // target while a matching upward offset keeps the eye itself at
       // `eyeHeight` — only the look direction changes, not the position.
       //
@@ -803,7 +1045,15 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
       // same distance, so the camera ends up at the eye looking forward.
       const backDistance = FPV_LOOK_AHEAD_DISTANCE;
       const lookAheadDistance = fpvForwardOffset + FPV_LOOK_AHEAD_DISTANCE;
-      const targetDrop = Math.tan(fpvPitch) * backDistance;
+      const pitch = this.followSlopeWithPitch(
+        fpvPitch,
+        lat,
+        lng,
+        alt,
+        heading,
+        deltaTime,
+      );
+      const targetDrop = Math.tan(pitch) * backDistance;
       const target = this.advanceLatLng(lat, lng, heading, lookAheadDistance);
 
       this._offset.set(
@@ -820,14 +1070,22 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
       return;
     }
 
-    // TPV: orbit the camera around the model. The look-at target stays on
-    // the model at eye height, and `cameraPitch` raises the camera while
-    // keeping it aimed at the model, so the model stays centered as you tilt
-    // down. The eye orbits at constant `cameraDistance` from the model:
-    // pulled back by `cos(pitch)` horizontally and up by `sin(pitch)`.
-    const horizontal = cameraDistance * Math.cos(cameraPitch);
-    const vertical = cameraDistance * Math.sin(cameraPitch);
+    // TPV: orbit the camera around the model, staying aimed at it so it keeps
+    // its place in frame. The eye sits at `cameraDistance`, pulled back by
+    // `cos(pitch)` horizontally and up by `sin(pitch)`.
+    const pitch = this.followSlopeWithPitch(
+      this.config.cameraPitch,
+      lat,
+      lng,
+      alt,
+      heading,
+      deltaTime,
+    );
+    const horizontal = cameraDistance * Math.cos(pitch);
+    const vertical = cameraDistance * Math.sin(pitch);
 
+    // The eye rides the character's own height: the terrain settling already
+    // lives in that altitude, so filtering it again would only add lag.
     this._offset.set(
       -Math.sin(heading) * horizontal,
       -Math.cos(heading) * horizontal,
@@ -835,6 +1093,76 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     );
 
     this.view.cameraFollow(true, { lat, lng, height: eyeHeight }, this._offset);
+  }
+
+  /**
+   * Tilt `configured` (radians) with the slope the character is walking along,
+   * eased in over time. Position in degrees, `alt` in meters.
+   *
+   * A fixed pitch hugs a horizontal plane while the ground does not: on a steep
+   * climb the view runs into the hillside and the frame fills with ground. The
+   * slope is taken over the chase distance either side of the character, and
+   * fades out as it rises off the surface so a flying character in `"clamp"`
+   * mode keeps the pitch it was configured with.
+   */
+  private followSlopeWithPitch(
+    configured: number,
+    lat: number,
+    lng: number,
+    alt: number,
+    heading: number,
+    deltaTime: number,
+  ): number {
+    const { cameraDistance, cameraLerpSpeed } = this.config;
+    const { mode, cameraSlopeFollow } = this.collision;
+
+    let target = 0;
+    if (mode !== "off" && cameraSlopeFollow > 0) {
+      const ahead = this.terrainAlong(lat, lng, heading, cameraDistance);
+      const behind = this.terrainAlong(
+        lat,
+        lng,
+        heading + Math.PI,
+        cameraDistance,
+      );
+      if (ahead !== undefined && behind !== undefined) {
+        target = MathUtils.clamp(
+          Math.atan2(ahead - behind, 2 * cameraDistance) *
+            cameraSlopeFollow *
+            this.groundedFactor(alt, cameraDistance),
+          -MAX_CAMERA_SLOPE_PITCH,
+          MAX_CAMERA_SLOPE_PITCH,
+        );
+      }
+    }
+    // Eased: the slope is read a chase distance away, where the ground can
+    // change far faster than it does under the character.
+    this.cameraSlopePitch +=
+      (target - this.cameraSlopePitch) * easeFactor(cameraLerpSpeed, deltaTime);
+    return configured - this.cameraSlopePitch;
+  }
+
+  /**
+   * How much the ground still applies to a character at `alt`: `1` standing on
+   * the surface, fading to `0` once it is `scale` meters above it. Nothing the
+   * terrain does should tilt a character that is flying over it in `"clamp"`
+   * mode — neither the model nor the view follows a slope it has left behind.
+   */
+  private groundedFactor(alt: number, scale: number): number {
+    const surface = this.groundSurfaceHeight;
+    if (surface === undefined) return 0;
+    return MathUtils.clamp(1 - (alt - surface) / scale, 0, 1);
+  }
+
+  /** Terrain height `meters` along `heading` from a position in degrees. */
+  private terrainAlong(
+    lat: number,
+    lng: number,
+    heading: number,
+    meters: number,
+  ): number | undefined {
+    const at = this.advanceLatLng(lat, lng, heading, meters);
+    return this.sampleTerrain(degreeToRadian(at.lat), degreeToRadian(at.lng));
   }
 
   /**
@@ -851,11 +1179,217 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
    * its "facing-north, upright" rest pose. Heading then rotates the
    * already-upright model around world-up, regardless of which axis
    * the GLTF treats as forward.
+   *
+   * After the heading the frame's axes are X = right, Y = forward,
+   * Z = up, so `alignToSlope` tilts around X (nose up when climbing)
+   * then around Y (roll onto the side of the slope).
    */
   private composeCharacterFrame(pos: Vector3, heading: number): Matrix4 {
     const enuFrame = eastNorthUpToFixedFrame(pos);
     this._headingMatrix.makeRotationZ(-heading);
-    return this._characterFrame.multiplyMatrices(enuFrame, this._headingMatrix);
+    this._characterFrame.multiplyMatrices(enuFrame, this._headingMatrix);
+
+    const gradEast = this.slopeGradEast;
+    const gradNorth = this.slopeGradNorth;
+    if (gradEast !== 0 || gradNorth !== 0) {
+      const sin = Math.sin(heading);
+      const cos = Math.cos(heading);
+      const limit = this.collision.maxSlopeTilt;
+      // Rise per meter along the character's own axes: forward is
+      // (sin, cos) in ENU and right is (cos, -sin).
+      const pitch = MathUtils.clamp(
+        Math.atan(gradEast * sin + gradNorth * cos),
+        -limit,
+        limit,
+      );
+      const roll = MathUtils.clamp(
+        -Math.atan(gradEast * cos - gradNorth * sin),
+        -limit,
+        limit,
+      );
+
+      this._tiltMatrix.makeRotationX(pitch);
+      this._characterFrame.multiply(this._tiltMatrix);
+      this._tiltMatrix.makeRotationY(roll);
+      this._characterFrame.multiply(this._tiltMatrix);
+    }
+
+    return this._characterFrame;
+  }
+
+  /** Eye-line height (meters) for a character standing at `alt`. */
+  private eyeHeightAt(alt: number): number {
+    return alt + this.config.fpvHeightOffset;
+  }
+
+  /** Terrain height at a position in radians, or `undefined` if not loaded. */
+  private sampleTerrain(lat: number, lng: number): number | undefined {
+    return this.view?.sampleTerrainHeight({ lat, lng, height: 0 });
+  }
+
+  /**
+   * Apply terrain collision to a candidate altitude (meters). Positions are in
+   * radians. `deltaTime` drives the absorption of terrain data changes — pass
+   * `0` to land on the terrain the sampler reports right now.
+   */
+  private resolveGroundHeight(
+    at: LatLngRadians,
+    from: LatLngRadians,
+    height: number,
+    deltaTime: number,
+  ): number {
+    const { mode, groundOffset } = this.collision;
+    if (mode === "off") {
+      this.forgetGroundSamples();
+      return height;
+    }
+
+    const terrain = this.sampleTerrain(at.lat, at.lng);
+    // Terrain tiles for this spot are not loaded yet. Keep the caller's
+    // altitude — snapping to a fallback would drop the character to sea level.
+    if (terrain === undefined) {
+      this.forgetGroundSamples();
+      return height;
+    }
+    this.groundSurfaceHeight = terrain + groundOffset;
+    const floor =
+      this.groundSurfaceHeight -
+      this.absorbGroundDataShift(at, from, terrain, height, deltaTime);
+    // The floor already tracks the surface exactly as the character walks over
+    // it, so a climb can never bury it and the ground never has to shove it
+    // upward out of turn.
+    return mode === "ground" ? floor : Math.max(height, floor);
+  }
+
+  /**
+   * Absorb terrain that moved because its *data* changed rather than because
+   * the character did, and return how much of that shift is still being held
+   * back (meters, positive when the data rose).
+   *
+   * Only one of the two is real ground: walking onto higher ground has to move
+   * the character at once or a climb buries it, while a tile re-measured at a
+   * finer LOD moving the surface hundreds of meters must not. Re-sampling the
+   * *previous* frame's position separates them — whatever the height there has
+   * changed by is data, and the rest is the character having moved.
+   */
+  private absorbGroundDataShift(
+    at: LatLngRadians,
+    from: LatLngRadians,
+    terrain: number,
+    height: number,
+    deltaTime: number,
+  ): number {
+    const previous = this.lastGroundSample;
+    let shift: number;
+    if (previous === undefined) {
+      // First contact with the terrain, at load or once tiles reach a spot the
+      // character was standing over unloaded ground on: the gap to the surface
+      // is the shift, so it glides down instead of dropping out of the sky.
+      shift =
+        (this.sampleTerrain(from.lat, from.lng) ?? terrain) +
+        this.collision.groundOffset -
+        height;
+    } else {
+      const before = this.sampleTerrain(previous.lat, previous.lng);
+      // The spot just left has gone unloaded: nothing can be attributed.
+      shift = before === undefined ? 0 : before - previous.height;
+    }
+
+    const carried = this.unabsorbedGroundShift + shift;
+    const toward = Math.sign(carried);
+    if (deltaTime > 0) {
+      // Speed builds up while the gap stays on the same side, and starts over
+      // whenever the surface crosses the character — it has landed by then.
+      if (toward !== Math.sign(this.settleVelocity)) this.settleVelocity = 0;
+      this.settleVelocity += toward * GROUND_SETTLE_ACCELERATION * deltaTime;
+    }
+    // A frame of no length is a teleport or a first placement: land outright.
+    const step =
+      deltaTime > 0
+        ? Math.abs(this.settleVelocity) * deltaTime
+        : Math.abs(carried);
+    this.unabsorbedGroundShift = toward * Math.max(0, Math.abs(carried) - step);
+    if (this.unabsorbedGroundShift === 0) this.settleVelocity = 0;
+    this.lastGroundSample = { lat: at.lat, lng: at.lng, height: terrain };
+    return this.unabsorbedGroundShift;
+  }
+
+  /** Drop the terrain history, so the next sample starts a fresh landing. */
+  private forgetGroundSamples(): void {
+    this.lastGroundSample = undefined;
+    this.unabsorbedGroundShift = 0;
+    this.settleVelocity = 0;
+    this.groundSurfaceHeight = undefined;
+  }
+
+  /**
+   * Refresh the terrain gradient the slope tilt is built from, by probing a
+   * ring of points around the character (position in radians, `alt` in meters).
+   * `deltaTime` drives the smoothing — pass `0` to snap.
+   */
+  private updateSlopeTilt(
+    lat: number,
+    lng: number,
+    alt: number,
+    deltaTime: number,
+  ): void {
+    const { mode, alignToSlope, slopeSampleDistance } = this.collision;
+
+    let gradEast = 0;
+    let gradNorth = 0;
+    if (mode !== "off" && alignToSlope) {
+      const gradient = this.measureSlopeGradient(lat, lng);
+      // A missing probe would fake a cliff, so hold the current tilt until the
+      // terrain around the character is fully loaded.
+      if (!gradient) return;
+      // Its own footprint is the scale at which it is still standing on the
+      // ground rather than flying over it.
+      const grounded = this.groundedFactor(alt, slopeSampleDistance);
+      gradEast = gradient.east * grounded;
+      gradNorth = gradient.north * grounded;
+    } else if (this.slopeGradEast === 0 && this.slopeGradNorth === 0) {
+      return;
+    }
+
+    const factor = easeFactor(SLOPE_TILT_SMOOTHING, deltaTime);
+    this.slopeGradEast += (gradEast - this.slopeGradEast) * factor;
+    this.slopeGradNorth += (gradNorth - this.slopeGradNorth) * factor;
+  }
+
+  /**
+   * Terrain gradient (rise per meter, east and north) under a point given in
+   * radians, fitted to a ring of probes, or `undefined` while any of them is
+   * over terrain that has not loaded. The probes sit a few meters apart, so
+   * they share one ENU frame rather than each re-deriving its own.
+   */
+  private measureSlopeGradient(
+    lat: number,
+    lng: number,
+  ): { east: number; north: number } | undefined {
+    const distance = this.collision.slopeSampleDistance;
+    const center = geodeticToVector3({ lat, lng, height: 0 });
+    const enu: Matrix4 = eastNorthUpToFixedFrame(center);
+    this._east.setFromMatrixColumn(enu, 0).normalize();
+    this._north.setFromMatrixColumn(enu, 1).normalize();
+
+    let sumEast = 0;
+    let sumNorth = 0;
+    for (const { sin, cos } of SLOPE_PROBE_BEARINGS) {
+      this._probePos
+        .copy(center)
+        .addScaledVector(this._east, sin * distance)
+        .addScaledVector(this._north, cos * distance);
+      const probe = vector3ToGeodetic(this._probePos);
+      const terrain = this.sampleTerrain(probe.lat, probe.lng);
+      if (terrain === undefined) return undefined;
+      sumEast += terrain * sin;
+      sumNorth += terrain * cos;
+    }
+
+    // Least-squares gradient of the plane through the ring, which for evenly
+    // spaced bearings reduces to this weighted mean.
+    const scale = 2 / (SLOPE_PROBE_BEARINGS.length * distance);
+    return { east: sumEast * scale, north: sumNorth * scale };
   }
 
   /** Advance a (lat,lng) point by `meters` along the given ENU heading. */
@@ -948,7 +1482,9 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
   }
 
   private tick = (currentTime: number): void => {
-    if (!this.view) return;
+    // A frame already scheduled when control was released must not drive the
+    // character, nor schedule another one behind `stop()`.
+    if (!this.view || this.animId == null) return;
     this.animId = requestAnimationFrame(this.tick);
 
     const deltaTime = Math.min((currentTime - this.lastTime) / 1000, 0.1);
@@ -1015,11 +1551,28 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     }
 
     const advancedLLE = vector3ToGeodetic(curPos);
-    const rawHeight = currentLLE.height + dirZ * altSpeed * deltaTime;
-    const height = Math.max(minAlt, Math.min(maxAlt, rawHeight));
+    // Ground mode lets the terrain set the altitude, so the ascend / descend
+    // keys and the limits that bound them play no part. Collision runs last
+    // either way, or `maxAlt` could push the character underground.
+    const flownHeight =
+      this.collision.mode === "ground"
+        ? currentLLE.height
+        : MathUtils.clamp(
+            currentLLE.height + dirZ * altSpeed * deltaTime,
+            minAlt,
+            maxAlt,
+          );
+    const height = this.resolveGroundHeight(
+      advancedLLE,
+      currentLLE,
+      flownHeight,
+      deltaTime,
+    );
     const nextLat = radianToDegree(advancedLLE.lat);
     const nextLng = radianToDegree(advancedLLE.lng);
     const nextAlt = height;
+
+    this.updateSlopeTilt(advancedLLE.lat, advancedLLE.lng, height, deltaTime);
 
     if (this.handle && this.character) {
       const finalPos = geodeticToVector3({
@@ -1037,8 +1590,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     let headingDiff = this.modelHeading - this.cameraHeading;
     headingDiff =
       headingDiff - Math.round(headingDiff / (Math.PI * 2)) * (Math.PI * 2);
-    this.cameraHeading +=
-      headingDiff * Math.min(deltaTime * cameraLerpSpeed, 1);
+    this.cameraHeading += headingDiff * easeFactor(cameraLerpSpeed, deltaTime);
 
     if (this.isFreeCamera()) {
       if (this.viewMode === "fpv") {
@@ -1060,7 +1612,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
         this.view.cameraFreeLook(true, {
           lat: eye.lat,
           lng: eye.lng,
-          height: nextAlt + this.config.fpvHeightOffset,
+          height: this.eyeHeightAt(nextAlt),
         });
       } else {
         // Keep the orbit pivot at the same eye height used everywhere
@@ -1068,39 +1620,32 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
         this.view.cameraFollow(true, {
           lat: nextLat,
           lng: nextLng,
-          height: nextAlt + this.config.fpvHeightOffset,
+          height: this.eyeHeightAt(nextAlt),
         });
       }
     } else {
-      this.placeChaseCamera(nextLat, nextLng, nextAlt, this.cameraHeading);
+      this.placeChaseCamera(
+        nextLat,
+        nextLng,
+        nextAlt,
+        this.cameraHeading,
+        deltaTime,
+      );
     }
 
     const isMoving = dirY !== 0 || dirX !== 0 || dirZ !== 0;
     const isDashing = isMoving && this.dashHeld;
 
     let nextAnimState = this.currentAnimState;
-    if (this.character && this.modelRef) {
+    if (this.character) {
       const { animation } = this.character;
       const walkClip = animation.walkClip ?? animation.idleClip;
-      let targetAnim: string;
-      if (isDashing) {
-        targetAnim = animation.dashClip;
-      } else if (isMoving) {
-        targetAnim = walkClip;
-      } else {
-        targetAnim = animation.idleClip;
-      }
-      if (targetAnim !== this.currentAnimState) {
-        this.modelRef.crossFadeAnimation(
-          this.currentAnimState ?? "",
-          targetAnim,
-          animation.crossfadeDuration,
-        );
-        // Apply the incoming clip's own playback speed.
-        this.modelRef.setAnimationSpeed(this.clipSpeed(targetAnim));
-        this.currentAnimState = targetAnim;
-      }
-      nextAnimState = targetAnim;
+      nextAnimState = isDashing
+        ? animation.dashClip
+        : isMoving
+          ? walkClip
+          : animation.idleClip;
+      this.playAnimation(nextAnimState);
     }
 
     const nextState: PersonViewState = {
