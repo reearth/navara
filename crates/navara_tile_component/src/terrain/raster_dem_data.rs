@@ -2,7 +2,8 @@ use bevy_ecs::entity::Entity;
 use martini::Martini;
 use navara_buffer_store::{BufferStore, Handle};
 use navara_core::{
-    Aabb, Angle, ElevationDecoder, Ellipsoid, Extent, LLE, LngLat, Meters, Radians, TileRegion, XYZ,
+    Aabb, Angle, ElevationDecoder, Ellipsoid, Extent, LLE, LngLat, Meters, Radians, TileRegion,
+    XYZ, lerp,
 };
 use navara_geometry::{
     Geometry, ReturnedConstructedTerrainMesh, UpsamplableTerrainGeometry, UpsampledTerrainGeometry,
@@ -254,13 +255,27 @@ fn compute_terrain_height_from_tile(
     let dist_wlng = (point.lng - west).val();
     let merc_slat = mercator_y(point.lat.val()) - merc_south;
 
-    let x = ((dist_wlng / dist_ew) * (width - 1) as FloatType).round() as usize;
-    let y = ((merc_slat / merc_ns) * (width - 1) as FloatType).round() as usize;
+    let last = (width - 1) as FloatType;
+    let fx = ((dist_wlng / dist_ew) * last).clamp(0., last);
+    let fy = ((merc_slat / merc_ns) * last).clamp(0., last);
 
-    heights
-        .get((x + y * width).min(length - 1))
-        .copied()
-        .map(|v| v as f64)
+    // Bilinear between the four surrounding samples: rounding to the nearest
+    // holds one texel's height across its whole footprint, which stutters for
+    // anything tracking the surface as it moves. This reads the DEM grid, while
+    // the mesh drawn from it is a martini simplification of the same grid, so
+    // the two diverge by the mesh's error budget where samples were dropped.
+    let x0 = fx.floor() as usize;
+    let y0 = fy.floor() as usize;
+    let x1 = (x0 + 1).min(width - 1);
+    let y1 = (y0 + 1).min(width - 1);
+    let tx = fx - x0 as FloatType;
+    let ty = fy - y0 as FloatType;
+
+    // Both axes are clamped to the grid, so every index is in range.
+    let at = |x: usize, y: usize| heights[(x + y * width).min(length - 1)] as FloatType;
+    let bottom = lerp(at(x0, y0), at(x1, y0), tx);
+    let top = lerp(at(x0, y1), at(x1, y1), tx);
+    Some(lerp(bottom, top, ty))
 }
 
 #[cfg(test)]
@@ -290,6 +305,55 @@ mod test {
             },
         );
 
-        assert_eq!(result.unwrap(), 6.);
+        // The point falls between the samples valued 5 and 6, nearer to 6.
+        // The lookup used to round to the nearest sample and return exactly 6;
+        // it now interpolates, so it lands between the two.
+        let height = result.unwrap();
+        assert!(height > 5. && height < 6., "{height}");
+    }
+
+    #[test]
+    fn it_should_interpolate_between_samples() {
+        let tile = TerrainTile::new(TileXYZ { x: 3, y: 1, z: 2 }, 0., 0.);
+        #[rustfmt::skip]
+        let heights = &[
+            0., 1., 2., 3.,
+            4., 5., 6., 7.,
+            8., 9., 10., 11.,
+            12., 13., 14., 15.,
+        ];
+        // Sweep west to east across the tile: the height must rise smoothly
+        // rather than holding one sample's value and stepping to the next.
+        let sample = |lng: f64| {
+            compute_terrain_height_from_tile(
+                &tile.extent,
+                heights,
+                &LngLat {
+                    lng: Angle::new(lng),
+                    lat: Angle::new(0.5),
+                },
+            )
+            .unwrap()
+        };
+
+        let west = tile.extent.west.val();
+        let east = tile.extent.east.val();
+        let mut previous = sample(west);
+        let mut moved = false;
+        for step in 1..=200 {
+            let lng = west + (east - west) * (step as f64 / 200.);
+            let height = sample(lng);
+            // Four samples across the tile, so a full step would be 1.0.
+            assert!(
+                (height - previous).abs() < 0.2,
+                "step of {} at lng {lng}",
+                height - previous
+            );
+            if height != previous {
+                moved = true;
+            }
+            previous = height;
+        }
+        assert!(moved, "the sampled height never changed across the tile");
     }
 }

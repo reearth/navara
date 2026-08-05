@@ -6,6 +6,7 @@ use navara_core::{
 };
 use navara_geometry::{
     Geometry, ReturnedConstructedTerrainMesh, UpsamplableTerrainGeometry, UpsampledTerrainGeometry,
+    sample_mesh_height,
 };
 use navara_math::FloatType;
 use quantized_mesh::{DecodedMesh, WaterMask};
@@ -23,6 +24,12 @@ pub struct QuantizedMeshData {
     pub current_min_height: Option<FloatType>,
     // Cached decoded heights: interleaved (u_norm, v_norm, height) as f32, stride 3
     pub heights_handle: Option<Handle>,
+    // Triangle indices into the cached heights: sampling interpolates across
+    // the triangle containing the point, so it needs the mesh's topology.
+    pub indices_handle: Option<Handle>,
+    // Triangle that answered the previous sample — a moving point almost
+    // always lands in the same one again.
+    pub last_hit_triangle: usize,
     pub tiling_scheme: TilingScheme,
 }
 
@@ -168,9 +175,7 @@ impl TerrainData for QuantizedMeshData {
         terrain_data_requesters: &TileTerrainDataRequesterQuery,
         point: &LngLat<FloatType, Radians>,
     ) -> Option<FloatType> {
-        let interleaved = if let Some(handle) = &self.heights_handle {
-            buf.get_f32(handle)?
-        } else {
+        if self.heights_handle.is_none() {
             let (_, data_requester) = terrain_data_requesters
                 .get(self.data_requester_entity_id()?)
                 .ok()?;
@@ -191,8 +196,10 @@ impl TerrainData for QuantizedMeshData {
                 result.push(h);
             }
             self.heights_handle = Some(buf.new_f32(result));
-            buf.get_f32(&self.heights_handle.unwrap())?
-        };
+            self.indices_handle = Some(buf.new_u32(decoded.indices));
+        }
+        let interleaved = buf.get_f32(self.heights_handle.as_ref()?)?;
+        let indices = buf.get_u32(self.indices_handle.as_ref()?)?;
 
         let east = extent.east;
         let west = extent.west;
@@ -208,24 +215,11 @@ impl TerrainData for QuantizedMeshData {
         let query_u = ((point.lng - west).val() as f32) / dist_ew;
         let query_v = ((point.lat - south).val() as f32) / dist_ns;
 
-        let n = interleaved.len() / 3;
-        let mut best_dist_sq = f32::INFINITY;
-        let mut best_height = 0.0f32;
+        let mut search_hint = self.last_hit_triangle;
+        let height = sample_mesh_height(interleaved, indices, query_u, query_v, &mut search_hint);
+        self.last_hit_triangle = search_hint;
 
-        for i in 0..n {
-            let u = interleaved[i * 3];
-            let v = interleaved[i * 3 + 1];
-            let h = interleaved[i * 3 + 2];
-            let du = u - query_u;
-            let dv = v - query_v;
-            let d2 = du * du + dv * dv;
-            if d2 < best_dist_sq {
-                best_dist_sq = d2;
-                best_height = h;
-            }
-        }
-
-        Some(best_height as FloatType)
+        Some(height as FloatType)
     }
 
     fn current_max_height(&self) -> Option<FloatType> {
@@ -246,6 +240,9 @@ impl TerrainData for QuantizedMeshData {
 
     fn destroy(&mut self, buf: &mut BufferStore) {
         if let Some(handle) = self.heights_handle.take() {
+            buf.remove(&handle);
+        }
+        if let Some(handle) = self.indices_handle.take() {
             buf.remove(&handle);
         }
     }
