@@ -25,7 +25,7 @@ jobs:
           node-version: '24.14.1'
 
       - name: Install dependencies
-        run: pnpm install --filter navara-developer-docs
+        run: pnpm install --filter navara-developer-docs --frozen-lockfile
 
       - name: Build docs
         run: pnpm build:docs

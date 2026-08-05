@@ -90,7 +90,7 @@ jobs:
         run: wasm-opt --version
 
       # Release WASM build (build-std + immediate-abort + wasm-opt -Oz),
-      # then pnpm install with the generated wasm packages in the workspace.
+      # then pnpm install with the generated wasm packages in the workspace. --frozen-lockfile
       - name: Build WASM (release)
         run: cargo make prepare-ci
 
