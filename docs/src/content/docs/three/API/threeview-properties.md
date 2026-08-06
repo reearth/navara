@@ -149,12 +149,15 @@ For a worked deferred lighting effect that consumes the albedo output together w
 
 **Read-only** (getter)
 
-The G-buffer attachments currently allocated, as `{ selectiveEffect, emissive, shadow }` booleans. This is **derived**, not configured: the view allocates the union of the `static requiredBuffers` declared by the active effect Descriptors, and releases a buffer when the last effect needing it is removed.
+The buffers currently allocated, as `{ selectiveEffect, emissive, shadow, globeNormal }` booleans. This is **derived**, not configured: the view allocates the union of the `static requiredBuffers` declared by the active effect Descriptors, and releases a buffer when the last effect needing it is removed.
+
+The first three are G-buffer attachments; `globeNormal` is a separate screen-space copy of the terrain normal, so it takes no attachment slot (see [Custom Descriptor — Buffer / Texture Access](../../../three/core/custom-desc/#buffer--texture-access)).
 
 **Example:**
 
 ```tsx
-console.log(view.buffers); // { selectiveEffect: false, emissive: false, shadow: false }
+console.log(view.buffers);
+// { selectiveEffect: false, emissive: false, shadow: false, globeNormal: false }
 ```
 
 :::tip[Related Documentation]

@@ -464,6 +464,7 @@ export abstract class MeshDesc<
     }
     this.prevPassKey = nextPassKey;
     this.addToScene(nextPassKey);
+    this.ctx.emit("meshPassKeyChanged");
   }
 
   onDestroy(): void {

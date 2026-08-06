@@ -9,9 +9,11 @@ import { describe, expect, it } from "vitest";
 import {
   GBUFFER_ATTACHMENT_NAMES,
   GBUFFER_DEFINE_NAMES,
+  GBUFFER_NORMAL_LOCATION_DEFINE,
+  GBUFFER_NORMAL_WRITE_BASIC,
+  GBUFFER_NORMAL_WRITE_PHYSICAL,
   GBUFFER_EMISSIVE_LOCATION_DEFINE,
   GBUFFER_PARS_FRAGMENT,
-  GBUFFER_TEXTURE_INDEX,
   USE_GBUFFER_EMISSIVE_DEFINE,
   computeGBufferDefines,
   computeGBufferTextureIndex,
@@ -27,37 +29,42 @@ describe("gbufferLayout", () => {
     for (const name of GBUFFER_DEFINE_NAMES) {
       expect(GBUFFER_PARS_FRAGMENT).toContain(name);
     }
-    // Normal is fixed, so its location stays a literal rather than a define.
-    expect(GBUFFER_PARS_FRAGMENT).toContain(
-      `layout(location = ${GBUFFER_TEXTURE_INDEX.normal}) out vec4 normalBuffer;`,
-    );
+    // Every normal write goes through the macro, so the output can be
+    // compiled out wholesale — a direct assignment would not be.
+    expect(GBUFFER_PARS_FRAGMENT).toContain("#define GBUFFER_WRITE_NORMAL(");
+    expect(GBUFFER_NORMAL_WRITE_BASIC).toMatch(/^GBUFFER_WRITE_NORMAL\(/);
+    expect(GBUFFER_NORMAL_WRITE_PHYSICAL).toMatch(/^GBUFFER_WRITE_NORMAL\(/);
   });
 
   it("packs optional attachment indices without gaps", () => {
     expect(
       computeGBufferTextureIndex(
         resolveGBufferOptions({
+          normal: true,
           selectiveEffect: true,
           emissive: true,
           shadow: true,
         }),
       ),
     ).toEqual({ color: 0, normal: 1, effectIds: 2, emissive: 3, shadow: 4 });
-    // A disabled buffer never leaves a hole: later buffers slide down.
+    // A disabled buffer never leaves a hole: later buffers slide down. Normal
+    // is optional too, so shadow lands directly after color without it.
     expect(
       computeGBufferTextureIndex(resolveGBufferOptions({ shadow: true })),
-    ).toEqual({ color: 0, normal: 1, shadow: 2 });
-    // Defaults allocate no optional buffers.
+    ).toEqual({ color: 0, shadow: 1 });
+    // Defaults allocate nothing beyond color.
     expect(computeGBufferTextureIndex(resolveGBufferOptions())).toEqual({
       color: 0,
-      normal: 1,
     });
   });
 
   it("stamps location defines matching the computed indices", () => {
     expect(
-      computeGBufferDefines(resolveGBufferOptions({ emissive: true })),
+      computeGBufferDefines(
+        resolveGBufferOptions({ normal: true, emissive: true }),
+      ),
     ).toEqual({
+      [GBUFFER_NORMAL_LOCATION_DEFINE]: 1,
       [USE_GBUFFER_EMISSIVE_DEFINE]: 1,
       [GBUFFER_EMISSIVE_LOCATION_DEFINE]: 2,
     });
@@ -66,6 +73,7 @@ describe("gbufferLayout", () => {
 
   it("derives the buffer configuration as the union of effect requirements", () => {
     expect(unionGBufferRequirements([])).toEqual({
+      normal: false,
       selectiveEffect: false,
       emissive: false,
       shadow: false,
@@ -78,16 +86,28 @@ describe("gbufferLayout", () => {
         ["shadow"],
       ]),
     ).toEqual({
+      normal: false,
       selectiveEffect: true,
       emissive: true,
       shadow: true,
       globeNormal: false,
+    });
+
+    // The globe normal is a copy of the normal attachment, so requesting it
+    // pulls the attachment in even when nothing asked for it directly.
+    expect(unionGBufferRequirements([["globeNormal"]])).toEqual({
+      normal: true,
+      selectiveEffect: false,
+      emissive: false,
+      shadow: false,
+      globeNormal: true,
     });
   });
 
   it("allocates only enabled attachments, with their texture settings", () => {
     const rt = new WebGLRenderTarget(4, 4);
     const buffers = resolveGBufferOptions({
+      normal: true,
       selectiveEffect: true,
       emissive: true,
       shadow: true,
@@ -109,7 +129,7 @@ describe("gbufferLayout", () => {
     // No placeholder textures for disabled buffers – indices would shift.
     const defaultRt = new WebGLRenderTarget(4, 4);
     createGBufferAttachments(defaultRt, resolveGBufferOptions());
-    expect(defaultRt.textures.length).toBe(2);
+    expect(defaultRt.textures.length).toBe(1);
   });
 });
 
@@ -122,7 +142,9 @@ describe("globeNormal", () => {
   // attachment, so it must not consume a slot, an index, or a location define.
   const buffers = resolveGBufferOptions({ globeNormal: true, shadow: true });
 
-  it("takes no attachment index", () => {
+  it("takes no attachment index of its own", () => {
+    // normal is present because globeNormal implies it, not because
+    // globeNormal took a slot.
     expect(computeGBufferTextureIndex(buffers)).toEqual({
       color: 0,
       normal: 1,
@@ -130,16 +152,17 @@ describe("globeNormal", () => {
     });
   });
 
-  it("allocates no texture", () => {
+  it("allocates no texture of its own", () => {
     const rt = new WebGLRenderTarget(4, 4);
     createGBufferAttachments(rt, buffers);
+    // color + normal (implied) + shadow — globeNormal itself adds nothing.
     expect(rt.textures.length).toBe(3);
   });
 
-  it("stamps no define", () => {
+  it("stamps no define of its own", () => {
     expect(
-      computeGBufferDefines(resolveGBufferOptions({ globeNormal: true })),
-    ).toEqual({});
+      computeGBufferDefines(unionGBufferRequirements([["globeNormal"]])),
+    ).toEqual({ [GBUFFER_NORMAL_LOCATION_DEFINE]: 1 });
   });
 
   it("is excluded from the attachment-backed names", () => {

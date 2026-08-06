@@ -64,11 +64,7 @@ void main() {
     }
 
     #ifndef USE_SHADOWMAP_DEPTH
-        normalBuffer = vec4(
-            packNormalToVec2(vNormal),
-            0.0,
-            1.0
-        );
+        GBUFFER_WRITE_NORMAL(vNormal, 0.0, 1.0)
         #ifdef USE_SELECTIVE_EFFECT
             GBUFFER_WRITE_EFFECT(uEffectIdsMask, (diffuseColor.rgb + uEmissiveColor) * uEmissiveIntensity)
         #else

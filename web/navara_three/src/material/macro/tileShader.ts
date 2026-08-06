@@ -258,7 +258,7 @@ export function generateTileNormalFragmentMaps(
  */
 export const TILE_NORMAL_BUFFER_REPLACEMENT = `
 vec3 finalNormal = mix(origNormal, normalize(origNormal * 0.7 + normal), applyWaterNormals);
-normalBuffer = vec4(packNormalToVec2(finalNormal), tileReflectivity, GBUFFER_NORMAL_ALPHA(tileRoughness));
+GBUFFER_WRITE_NORMAL(finalNormal, tileReflectivity, tileRoughness)
 `;
 
 /**

@@ -153,7 +153,7 @@ function injectGBuffer(
             // blended surface (see NVR_BLENDED_DEFINE).
             float roughnessFactor = 1.0;
           #endif
-          ${GBUFFER_NORMAL_WRITE_BASIC};
+          ${GBUFFER_NORMAL_WRITE_BASIC}
         `;
   shader.fragmentShader = /* glsl */ `
     ${GBUFFER_PARS_FRAGMENT}
@@ -189,7 +189,7 @@ function injectGBuffer(
           /}\s*$/, // Assume the last curly brace is of main()
           /* glsl */ `
           #ifndef USE_SHADOWMAP_DEPTH
-            ${normalBufferWrite};
+            ${normalBufferWrite}
 
             #ifdef USE_SELECTIVE_EFFECT
               ${GBUFFER_EFFECT_WRITE_BUILTIN}
@@ -246,12 +246,8 @@ function injectGBufferToSpriteMaterial(shader: ShaderLibShader) {
             vec3 fdx = dFdx( vViewPosition );
             vec3 fdy = dFdy( vViewPosition );
             vec3 normal = normalize( cross( fdx, fdy ) );
-            normalBuffer = vec4(
-              packNormalToVec2(normal),
-              0.0,
-              // A=1.0 replaces the normal behind under blending.
-              1.0
-            );
+            // A=1.0 replaces the normal behind under blending.
+            GBUFFER_WRITE_NORMAL(normal, 0.0, 1.0)
 
             #ifdef USE_SELECTIVE_EFFECT
               ${GBUFFER_EFFECT_WRITE_ID_ONLY}
@@ -324,11 +320,7 @@ function injectGBufferToShaderMaterial(
   const logdepthParsFrag = "#include <logdepthbuf_pars_fragment>";
   const logdepthFrag = "#include <logdepthbuf_fragment>";
   const normalBufferWrite = /* glsl */ `
-          vec4(
-            packNormalToVec2(${normalVariableName}),
-            0.0,
-            1.0
-          );
+          GBUFFER_WRITE_NORMAL(${normalVariableName}, 0.0, 1.0)
         `;
   shader.fragmentShader = /* glsl */ `
     ${GBUFFER_PARS_FRAGMENT}
@@ -352,7 +344,7 @@ function injectGBufferToShaderMaterial(
           ${shader.fragmentShader.includes(logdepthFrag) ? "" : logdepthFrag}
 
           #ifndef USE_SHADOWMAP_DEPTH
-            normalBuffer = ${normalBufferWrite};
+            ${normalBufferWrite};
 
             #ifdef USE_SELECTIVE_EFFECT
               ${GBUFFER_EFFECT_WRITE_SHADER_MATERIAL}
@@ -430,12 +422,8 @@ function injectGBufferToLineMaterial(lineMaterial: LineMaterial) {
           /}\s*$/, // Assume the last curly brace is of main()
           /* glsl */ `
           #ifndef USE_SHADOWMAP_DEPTH
-            normalBuffer = vec4(
-              packNormalToVec2(normal),
-              0.0,
-              // A=1.0 replaces the normal behind under blending.
-              1.0
-            );
+            // A=1.0 replaces the normal behind under blending.
+            GBUFFER_WRITE_NORMAL(normal, 0.0, 1.0)
 
             #ifdef USE_SELECTIVE_EFFECT
               ${GBUFFER_EFFECT_WRITE_ID_ONLY}

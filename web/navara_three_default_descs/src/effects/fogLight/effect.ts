@@ -4,7 +4,13 @@ import {
   type EffectEvents,
   type EffectOptions,
 } from "@navaramap/three";
-import { Camera, PerspectiveCamera, OrthographicCamera, Vector3 } from "three";
+import {
+  Camera,
+  PerspectiveCamera,
+  OrthographicCamera,
+  Vector3,
+  type Texture,
+} from "three";
 
 import { FogLightDownsampledPass } from "./FogLightDownsampledPass";
 import {
@@ -52,6 +58,12 @@ export class FogLight extends PassWrapper<
       { downsample: ds },
     );
     super(downPass, effect, mergedOptions);
+  }
+
+  setNormalBuffer(texture: Texture | null): void {
+    if (!this.rawEffect) return;
+    const uniform = this.rawEffect.uniforms.get("normalBuffer");
+    if (uniform) uniform.value = texture;
   }
 
   protected onMounted(): void {

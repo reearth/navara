@@ -20,7 +20,6 @@ import { NVR_BLENDED_DEFINE, NVR_UNLIT_SCENE_DEFINE } from "../material";
 import {
   GBUFFER_ATTACHMENT_NAMES,
   GBUFFER_DEFINE_NAMES,
-  GBUFFER_TEXTURE_INDEX,
   appendOptionalGBufferAttachments,
   computeGBufferDefines,
   computeGBufferTextureIndex,
@@ -166,19 +165,27 @@ export class CustomRenderPass extends RenderPass {
     this.allowTransparent = options?.allowTransparent ?? true;
 
     this.globeNormalCopyPass = new NormalCopyPass();
-    this.globeNormalCopyPass.setNormalTexture(
-      this.gbufferRenderTarget.textures[GBUFFER_TEXTURE_INDEX.normal],
-    );
     // The copy target keeps its Texture identity across setSize, so draped
     // materials can bind this ref once.
     this.globeNormalUniform = { value: this.globeNormalCopyPass.texture };
     if (options?.debugNormal) {
       this.debugNormalCopyPass = new NormalCopyPass();
       this.debugNormalCopyPass.unpackNormal = true;
-      this.debugNormalCopyPass.setNormalTexture(
-        this.gbufferRenderTarget.textures[GBUFFER_TEXTURE_INDEX.normal],
-      );
     }
+    this.bindNormalTexture();
+  }
+
+  /**
+   * Re-points the copy passes at the normal attachment. The attachment is
+   * freshly allocated on every {@link setBuffers}, so the reference cannot be
+   * captured once.
+   */
+  private bindNormalTexture(): void {
+    const index = this.textureIndex.normal;
+    if (index === undefined) return;
+    const texture = this.gbufferRenderTarget.textures[index];
+    this.globeNormalCopyPass.setNormalTexture(texture);
+    this.debugNormalCopyPass?.setNormalTexture(texture);
   }
 
   // Render the scene with world scene that includes user setting object like a light.
@@ -213,14 +220,13 @@ export class CustomRenderPass extends RenderPass {
 
     // Must be a fresh target: splicing textures in place leaves the renderer's
     // cached GL state on a stale attachment, so writes land in the framebuffer
-    // while samplers read empty storage. Color/normal/depth keep their Texture
-    // identity because SSR, aerial perspective and fog light capture those
-    // references once at creation.
+    // while samplers read empty storage. Only color and depth keep their
+    // Texture identity; every optional attachment is reallocated, which is why
+    // consumers must re-fetch each frame rather than capture at creation.
     const old = this.gbufferRenderTarget;
     const rt = this.inputBufferTemplate.clone();
     rt.setSize(old.width, old.height);
     rt.texture = old.texture;
-    rt.textures.push(old.textures[GBUFFER_TEXTURE_INDEX.normal]);
     appendOptionalGBufferAttachments(rt, buffers);
     rt.depthTexture = old.depthTexture;
     // three disposes rt.depthTexture with the target; detach the reused one.
@@ -229,6 +235,7 @@ export class CustomRenderPass extends RenderPass {
     old.dispose();
 
     this.copyPass.setRenderTarget(rt);
+    this.bindNormalTexture();
   }
 
   /** Applies a new scene-level `lit` default (`view.lit` changed). */
@@ -393,7 +400,8 @@ export class CustomRenderPass extends RenderPass {
     // Draped meshes read it and draw further down, so the copy still happens
     // before its consumer; effects opt in through `requiredBuffers`.
     const needsGlobeNormal =
-      shouldDrapeByStencilTest || this.buffers.globeNormal;
+      (shouldDrapeByStencilTest || this.buffers.globeNormal) &&
+      this.textureIndex.normal !== undefined;
     this.setGlobeNormalActive(needsGlobeNormal);
     if (needsGlobeNormal) {
       this.globeNormalCopyPass.render(renderer, null, null);

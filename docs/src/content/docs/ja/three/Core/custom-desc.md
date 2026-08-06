@@ -111,14 +111,19 @@ Descriptor の種類に応じて、対応する基底クラスを継承して実
 
 ## G-Buffer（MRT）への出力
 
-Navara は複数のレンダーターゲット（MRT）からなる G-buffer にレンダリングします。色に加えて、すべてのマテリアルはビュー空間の**法線**、**エフェクト ID** ビットマスク、**エミッシブ**バッファも書き込みます。深度・法線を利用するエフェクト（SSAO、SSR、アウトライン、大気透視、雲）や選択的エフェクト（Bloom / Outline）はこれらのアタッチメントを読み取るため、メッシュがそれらのエフェクトに参加できるのは、そのマテリアルが G-buffer に書き込む場合だけです。
+Navara は複数のレンダーターゲット（MRT）からなる G-buffer にレンダリングします。深度・法線を利用するエフェクト（SSAO、SSR、アウトライン、大気透視、雲）や選択的エフェクト（Bloom / Outline）はこれらのアタッチメントを読み取るため、メッシュがそれらのエフェクトに参加できるのは、そのマテリアルが G-buffer に書き込む場合だけです。
 
-| アタッチメント | ロケーション | 内容                                       |
-| -------------- | ------------ | ------------------------------------------ |
-| Color          | 0            | `gl_FragColor`                             |
-| Normal         | 1            | ビュー空間の法線（＋マテリアルプロパティ） |
-| Effect ID      | 2            | 選択的エフェクトのビットマスク             |
-| Emissive       | 3            | 選択的エフェクトの加算エミッシブ           |
+常に存在するのは color と normal だけです。それ以外は必要に応じて確保され、**隙間なく後ろに詰められる**ため、ロケーションは構成によって変わります。シェーダーには各バッファの `layout(location = …)` が define として渡されます。
+
+| アタッチメント | ロケーション | 内容                                                         | 確保される条件            |
+| -------------- | ------------ | ------------------------------------------------------------ | ------------------------- |
+| Color          | 0            | `gl_FragColor`                                                | 常時                      |
+| Normal         | 1            | ビュー空間の法線（＋マテリアルプロパティ）                    | 常時                      |
+| Effect ID      | 可変         | 選択的エフェクトのビットマスク                                | `buffers.selectiveEffect` |
+| Emissive       | 可変         | 選択的エフェクトの加算エミッシブ                              | `buffers.emissive`        |
+| Shadow         | 可変         | R = 影の量（0=非影..1=完全な影）、G = albedo 出力フラグ       | `buffers.shadow`          |
+
+オプションのアタッチメント index はハードコードせず、後述の `ViewContext` のアクセサから取得してください。
 
 ### 組み込みマテリアルは自動対応
 
@@ -155,6 +160,80 @@ setupMaterialForMRT(lineMaterial);
 - 冪等です。同じマテリアルに対して再度呼んでも何も起こりません。
 
 組み込みマテリアルの自動パッチは、import 時に内部の `overrideMaterialsForMRT()` が実行します。アプリケーションコードから呼ぶことはありません。
+
+#### 完全な例
+
+必要なのは 2 つで、**どちらか一方でも欠けると、深度・法線ベースのエフェクトに一切参加しないメッシュが黙って出来上がります**。
+
+1. `setupMaterialForMRT()` — マテリアルがアタッチメントに書き込むようにする
+2. `getPassKey()` が `"mrt"` を返す — メッシュを G-buffer パスで描画する。既定は `"opaque"` で、これは G-buffer のコピー**後**に合成されるため、そこに置かれたメッシュはマテリアルが何をしていても書き込みません
+
+```typescript
+import ThreeView, {
+  MeshDesc,
+  setupMaterialForMRT,
+  type MeshConfig,
+  type MeshUpdate,
+  type PassKey,
+  type ViewContext,
+} from "@navaramap/three";
+import { Mesh, ShaderMaterial, SphereGeometry, Uniform, Vector3 } from "three";
+
+type Description = { glowSphere?: { radius?: number } };
+type GlowSphereConfig = MeshConfig & Description;
+type GlowSphereUpdate = MeshUpdate & Description;
+
+class GlowSphereDesc extends MeshDesc<
+  GlowSphereConfig,
+  GlowSphereUpdate,
+  Mesh<SphereGeometry, ShaderMaterial>
+> {
+  private config: GlowSphereConfig;
+
+  constructor(view: ThreeView, ctx: ViewContext, config: GlowSphereConfig) {
+    super(view, ctx, config);
+    this.config = config;
+  }
+
+  protected override getPassKey(): PassKey {
+    return "mrt";
+  }
+
+  createMesh() {
+    const material = new ShaderMaterial({
+      uniforms: { uColor: new Uniform(new Vector3(0.1, 0.8, 0.5)) },
+      vertexShader: `
+        varying vec3 vNormal;
+        void main() {
+          vNormal = normalize(normalMatrix * normal);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 uColor;
+        varying vec3 vNormal;
+        void main() {
+          gl_FragColor = vec4(uColor, 1.0);
+        }
+      `,
+    });
+
+    setupMaterialForMRT(material, { normal: "vNormal" });
+
+    const radius = this.config.glowSphere?.radius ?? 100;
+    return new Mesh(new SphereGeometry(radius, 32, 32), material);
+  }
+}
+
+const view = new ThreeView();
+view.registerMesh("glowSphere", GlowSphereDesc);
+await view.init();
+
+view.addMesh<GlowSphereDesc>({
+  glowSphere: { radius: 200 },
+  position: { x: 0, y: 0, z: 6_400_000 },
+});
+```
 
 ### G-Buffer の読み取り
 

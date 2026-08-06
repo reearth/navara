@@ -8,7 +8,6 @@ import {
 } from "../../core/EffectDesc";
 import type { ViewContext } from "../../core/ViewContext";
 import type ThreeView from "../../index";
-import { GBUFFER_TEXTURE_INDEX } from "../../material/gbufferLayout";
 import { CustomRenderPass } from "../../passes";
 
 type Description = {
@@ -59,7 +58,11 @@ export class MRTPassEffectDesc extends EffectDesc<
   }
 
   get normalBuffer(): Texture | undefined {
-    return this.raw?.gbufferRenderTarget.textures[GBUFFER_TEXTURE_INDEX.normal];
+    const pass = this.raw;
+    const index = pass?.textureIndex.normal;
+    return index === undefined
+      ? undefined
+      : pass?.gbufferRenderTarget.textures[index];
   }
 
   /**

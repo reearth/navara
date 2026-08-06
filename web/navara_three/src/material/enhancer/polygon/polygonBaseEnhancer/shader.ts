@@ -241,7 +241,7 @@ if (nvr_uPickable > 0.0 && diffuseColor.a > 0.0) {
 ${POLYGON_BASE_SHADER_MARKERS.fragment.FINAL_NORMAL_START}
 vec3 finalNormal = origNormal;
 ${POLYGON_BASE_SHADER_MARKERS.fragment.FINAL_NORMAL_END}
-normalBuffer = vec4(packNormalToVec2(finalNormal), reflectivity, GBUFFER_NORMAL_ALPHA(roughnessFactor))
+GBUFFER_WRITE_NORMAL(finalNormal, reflectivity, roughnessFactor)
 `,
     ).source;
 };

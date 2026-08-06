@@ -225,7 +225,7 @@ class DeferredLightingEffectDesc extends EffectDesc<
 > {
   static key = "deferredLighting";
   static insertAfter = ["mrt"];
-  static requiredBuffers: readonly GBufferName[] = ["shadow"];
+  static requiredBuffers: readonly GBufferName[] = ["normal", "shadow"];
 
   createPass() {
     const camera = this.view.camera.raw;

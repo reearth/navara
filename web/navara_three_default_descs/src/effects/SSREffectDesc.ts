@@ -4,9 +4,8 @@ import {
   type EffectConfig,
   type EffectUpdate,
   type ViewContext,
-  type MRTPassEffectDesc,
+  type GBufferName,
 } from "@navaramap/three";
-import invariant from "tiny-invariant";
 
 import { SSR, type SSROptions } from "./ssr";
 
@@ -20,6 +19,7 @@ export type SSRUpdate = Description & EffectUpdate;
 
 export class SSREffectDesc extends EffectDesc<SSRConfig, SSRUpdate, SSR> {
   static key = "ssr";
+  static requiredBuffers: readonly GBufferName[] = ["normal"];
   static insertAfter = ["toneMapping"];
   static insertBefore = ["final"];
 
@@ -31,16 +31,18 @@ export class SSREffectDesc extends EffectDesc<SSRConfig, SSRUpdate, SSR> {
   }
 
   createPass() {
-    const mrtPass = this.find<MRTPassEffectDesc>("mrt");
-    invariant(mrtPass?.normalBuffer);
-
     const pass = new SSR(this.view.camera.raw, {
       ...this.config.ssr,
-      geometryBuffer: this.config.ssr?.geometryBuffer ?? mrtPass.normalBuffer,
+      geometryBuffer: this.config.ssr?.geometryBuffer ?? null,
       enabled: this.config.visible ?? true,
     });
 
     return pass;
+  }
+
+  update(_time: number): void {
+    if (!this._instance || this.config.ssr?.geometryBuffer) return;
+    this._instance.geometryBuffer = this.ctx.getNormalTexture() ?? null;
   }
 
   onUpdateConfig(updates: SSRUpdate): void {
@@ -56,9 +58,7 @@ export class SSREffectDesc extends EffectDesc<SSRConfig, SSRUpdate, SSR> {
     if (config.geometryBuffer !== undefined) {
       // null resets to the engine's MRT normal buffer
       this._instance.geometryBuffer =
-        config.geometryBuffer ??
-        this.find<MRTPassEffectDesc>("mrt")?.normalBuffer ??
-        null;
+        config.geometryBuffer ?? this.ctx.getNormalTexture() ?? null;
     }
     if (config.resolutionScale !== undefined) {
       this._instance.resolutionScale = config.resolutionScale;

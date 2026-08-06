@@ -12,15 +12,14 @@ import {
  * GLSL mirror is `shaders/glsl/chunks/gbuffer_pars_fragment.glsl`.
  */
 
-/** Optional attachments follow these, gap-free — {@link computeGBufferTextureIndex}. */
+/** The only attachment that always exists. The rest are packed after it. */
 export const GBUFFER_TEXTURE_INDEX = {
   color: 0,
-  normal: 1,
 } as const;
 
 /** Names an effect can declare in `requiredBuffers`. */
 export type GBufferName =
-  "selectiveEffect" | "emissive" | "shadow" | "globeNormal";
+  "normal" | "selectiveEffect" | "emissive" | "shadow" | "globeNormal";
 
 /**
  * The subset backed by an MRT attachment. `globeNormal` is not one of them —
@@ -28,17 +27,26 @@ export type GBufferName =
  * `*_LOCATION` define, or a `MAX_DRAW_BUFFERS` slot.
  */
 export const GBUFFER_ATTACHMENT_NAMES = [
+  "normal",
   "selectiveEffect",
   "emissive",
   "shadow",
 ] as const satisfies readonly GBufferName[];
 
 /**
- * Per-view attachment configuration. Not set by the user — derived as the
- * union of the active effects' `requiredBuffers`. A disabled buffer costs
- * nothing: neither the attachment nor the shader-side writes exist.
+ * Per-view buffer configuration. Not set by the user - derived as the union
+ * of the active effects' `requiredBuffers`. A disabled buffer costs nothing:
+ * neither the storage nor the shader-side writes exist. Only
+ * {@link GBUFFER_ATTACHMENT_NAMES} are MRT attachments.
  */
 export type GBufferOptions = {
+  /**
+   * The view-space normal buffer (RG=octahedral normal, B=metalness or
+   * reflectivity, A=roughness *and* the blend factor). Required by every
+   * normal-reading effect (aerial perspective, SSR, fog light) and, via
+   * {@link globeNormal}, by draped meshes.
+   */
+  normal?: boolean;
   /**
    * The selective-effect id buffer (R=bitmask), required by buffer-based
    * selective effects (`selectiveBloom`, `selectiveOutline`).
@@ -70,11 +78,16 @@ export type ResolvedGBufferOptions = Readonly<Required<GBufferOptions>>;
 export function resolveGBufferOptions(
   options?: GBufferOptions,
 ): ResolvedGBufferOptions {
+  const globeNormal = options?.globeNormal ?? false;
   return {
+    // The globe normal is a copy of the normal attachment, so it cannot be
+    // produced without one. Applied here so every resolved configuration is
+    // self-consistent, whichever path built it.
+    normal: (options?.normal ?? false) || globeNormal,
     selectiveEffect: options?.selectiveEffect ?? false,
     emissive: options?.emissive ?? false,
     shadow: options?.shadow ?? false,
-    globeNormal: options?.globeNormal ?? false,
+    globeNormal,
   };
 }
 
@@ -86,6 +99,7 @@ export function unionGBufferRequirements(
   requirements: Iterable<readonly GBufferName[]>,
 ): ResolvedGBufferOptions {
   const enabled: Record<GBufferName, boolean> = {
+    normal: false,
     selectiveEffect: false,
     emissive: false,
     shadow: false,
@@ -96,7 +110,7 @@ export function unionGBufferRequirements(
       enabled[name] = true;
     }
   }
-  return enabled;
+  return resolveGBufferOptions(enabled);
 }
 
 /**
@@ -105,7 +119,8 @@ export function unionGBufferRequirements(
  */
 export type GBufferTextureIndex = {
   color: typeof GBUFFER_TEXTURE_INDEX.color;
-  normal: typeof GBUFFER_TEXTURE_INDEX.normal;
+  /** Present only when `buffers.normal` is enabled. */
+  normal?: number;
   /** Present only when `buffers.selectiveEffect` is enabled. */
   effectIds?: number;
   /** Present only when `buffers.emissive` is enabled. */
@@ -119,11 +134,12 @@ export function computeGBufferTextureIndex(
   buffers: ResolvedGBufferOptions,
 ): GBufferTextureIndex {
   const index: GBufferTextureIndex = { ...GBUFFER_TEXTURE_INDEX };
-  let next: number = GBUFFER_TEXTURE_INDEX.normal + 1;
+  let next: number = GBUFFER_TEXTURE_INDEX.color + 1;
   // Attachment order of the optional buffers. Extend here (and mirror in
   // appendOptionalGBufferAttachments) when adding a new optional buffer.
   // `globeNormal` is absent on purpose: it is not an attachment.
   for (const [option, key] of [
+    ["normal", "normal"],
     ["selectiveEffect", "effectIds"],
     ["emissive", "emissive"],
     ["shadow", "shadow"],
@@ -141,6 +157,8 @@ export function computeGBufferTextureIndex(
  */
 export const GBUFFER_PARS_FRAGMENT: string = GBufferParsFragmentChunk;
 
+/** Output location of the normal buffer. Mirrored in the GLSL chunk. */
+export const GBUFFER_NORMAL_LOCATION_DEFINE = "GBUFFER_NORMAL_LOCATION";
 /** Enables the effectIds output. Mirrored in the GLSL chunk. */
 export const USE_GBUFFER_SELECTIVE_EFFECT_DEFINE =
   "USE_GBUFFER_SELECTIVE_EFFECT";
@@ -157,6 +175,7 @@ export const GBUFFER_SHADOW_LOCATION_DEFINE = "GBUFFER_SHADOW_LOCATION";
 
 /** Stampers iterate this so defines of disabled buffers are cleared, not left stale. */
 export const GBUFFER_DEFINE_NAMES = [
+  GBUFFER_NORMAL_LOCATION_DEFINE,
   USE_GBUFFER_SELECTIVE_EFFECT_DEFINE,
   GBUFFER_EFFECT_ID_LOCATION_DEFINE,
   USE_GBUFFER_EMISSIVE_DEFINE,
@@ -171,6 +190,9 @@ export function computeGBufferDefines(
 ): Readonly<Record<string, number>> {
   const index = computeGBufferTextureIndex(buffers);
   const defines: Record<string, number> = {};
+  if (index.normal !== undefined) {
+    defines[GBUFFER_NORMAL_LOCATION_DEFINE] = index.normal;
+  }
   if (index.effectIds !== undefined) {
     defines[USE_GBUFFER_SELECTIVE_EFFECT_DEFINE] = 1;
     defines[GBUFFER_EFFECT_ID_LOCATION_DEFINE] = index.effectIds;
@@ -192,19 +214,17 @@ export function computeGBufferDefines(
 
 /**
  * `normalBuffer` write for physically-based materials (standard/physical).
- * No trailing semicolon – injection sites append it, and
- * `modelBaseEnhancer` matches/replaces the bare expression.
+ * `modelBaseEnhancer` matches/replaces this exact string.
  */
 export const GBUFFER_NORMAL_WRITE_PHYSICAL =
-  "normalBuffer = vec4(packNormalToVec2(normal), metalnessFactor, GBUFFER_NORMAL_ALPHA(roughnessFactor))";
+  "GBUFFER_WRITE_NORMAL(normal, metalnessFactor, roughnessFactor)";
 
 /**
  * `normalBuffer` write for non-physical materials (basic/lambert/phong).
- * No trailing semicolon – see {@link GBUFFER_NORMAL_WRITE_PHYSICAL}.
- * `polygonBaseEnhancer` matches/replaces the bare expression.
+ * `polygonBaseEnhancer` matches/replaces this exact string.
  */
 export const GBUFFER_NORMAL_WRITE_BASIC =
-  "normalBuffer = vec4(packNormalToVec2(normal), reflectivity, GBUFFER_NORMAL_ALPHA(roughnessFactor))";
+  "GBUFFER_WRITE_NORMAL(normal, reflectivity, roughnessFactor)";
 
 /**
  * Selective-effect writes for built-in `ShaderLib` materials. The tile mesh
@@ -239,16 +259,18 @@ export function createGBufferAttachments(
   renderTarget: WebGLRenderTarget,
   buffers: ResolvedGBufferOptions,
 ): void {
-  renderTarget.textures.push(renderTarget.texture.clone());
-
   appendOptionalGBufferAttachments(renderTarget, buffers);
 }
 
-/** Split out so `CustomRenderPass` can rebuild a target around reused textures. */
+/** Split out so `CustomRenderPass` can rebuild a target around a reused color. */
 export function appendOptionalGBufferAttachments(
   renderTarget: WebGLRenderTarget,
   buffers: ResolvedGBufferOptions,
 ): void {
+  if (buffers.normal) {
+    renderTarget.textures.push(renderTarget.texture.clone());
+  }
+
   if (buffers.selectiveEffect) {
     // Discrete bitmask data: HalfFloat is exact to 11 bits (0..2047), and
     // interpolating between two masks would invent a third.

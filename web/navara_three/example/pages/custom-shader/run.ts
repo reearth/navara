@@ -3,6 +3,7 @@ import ThreeView, {
   setupMaterialForMRT,
   MeshDesc,
   type MeshConfig,
+  type PassKey,
   type ViewContext,
   degreeToRadian,
   eastNorthUpToFixedFrame,
@@ -65,6 +66,13 @@ export class MarchingCubesLayer extends MeshDesc<
   ) {
     super(view, ctx, config);
     this.config = config;
+  }
+
+  // Without this the mesh lands in the opaque scene, which is composited after
+  // the G-buffer copy — setupMaterialForMRT would then have nothing to write
+  // into, and depth/normal-based effects would shade straight through it.
+  protected override getPassKey(): PassKey {
+    return "mrt";
   }
 
   createMesh(): MarchingCubes {

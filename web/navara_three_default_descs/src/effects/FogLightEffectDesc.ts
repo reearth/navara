@@ -4,9 +4,8 @@ import {
   type EffectConfig,
   type EffectUpdate,
   type ViewContext,
-  type MRTPassEffectDesc,
+  type GBufferName,
 } from "@navaramap/three";
-import invariant from "tiny-invariant";
 
 import { FogLight, type FogLightOptions } from "./fogLight";
 
@@ -24,6 +23,7 @@ export class FogLightEffectDesc extends EffectDesc<
   FogLight
 > {
   static key = "fogLight";
+  static requiredBuffers: readonly GBufferName[] = ["normal"];
   static insertBefore = ["toneMapping", "final"];
   static allowDuplication = true;
 
@@ -35,15 +35,16 @@ export class FogLightEffectDesc extends EffectDesc<
   }
 
   createPass(): FogLight {
-    const mrtPass = this.find<MRTPassEffectDesc>("mrt");
-    invariant(mrtPass?.normalBuffer);
-
     const config = this.config.fogLight ?? {};
     return new FogLight(this.view.camera.raw, {
       ...config,
-      normalBuffer: mrtPass.normalBuffer,
+      normalBuffer: undefined,
       enabled: this.config.visible ?? true,
     });
+  }
+
+  update(_time: number): void {
+    this._instance?.setNormalBuffer(this.ctx.getNormalTexture() ?? null);
   }
 
   onUpdateConfig(updates: FogLightUpdate): void {

@@ -18,7 +18,13 @@
 // (e.g. merging emissive into effectIdBuffer) turns the blend factor into the
 // packed value and silently breaks blended selective meshes.
 #ifndef USE_SHADOWMAP_DEPTH
-layout(location = 1) out vec4 normalBuffer;
+// The chunk is injected into every ShaderLib material, including ones that
+// never render into the G-buffer (the opaque/transparent scenes get only the
+// lighting defines). Keying the declaration on the location define — which
+// CustomRenderPass stamps only on G-buffer materials — is what keeps those
+// compiling.
+#ifdef GBUFFER_NORMAL_LOCATION
+layout(location = GBUFFER_NORMAL_LOCATION) out vec4 normalBuffer;
 
 // The roughness slot doubles as the blend factor, so a blended material has
 // to write 1.0 or it keeps the normal BEHIND the mesh. Its stored roughness
@@ -27,6 +33,14 @@ layout(location = 1) out vec4 normalBuffer;
 #define GBUFFER_NORMAL_ALPHA(roughnessValue) 1.0
 #else
 #define GBUFFER_NORMAL_ALPHA(roughnessValue) (roughnessValue)
+#endif
+
+// Every normal write goes through this, so the output can be compiled out
+// wholesale. `blue` is metalness/reflectivity; unlit writers pass 0.0 and an
+// alpha of 1.0 (they have no roughness to store).
+#define GBUFFER_WRITE_NORMAL(n, blue, roughnessValue) normalBuffer = vec4(packNormalToVec2(n), blue, GBUFFER_NORMAL_ALPHA(roughnessValue));
+#else
+#define GBUFFER_WRITE_NORMAL(n, blue, roughnessValue)
 #endif
 
 #ifdef USE_GBUFFER_SELECTIVE_EFFECT

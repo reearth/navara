@@ -111,14 +111,19 @@ Use these to inherit the scene's existing configuration instead of duplicating i
 
 ## G-Buffer (MRT) Output
 
-Navara renders into a multiple-render-target (MRT) G-buffer. Beyond color, every material also writes a view-space **normal**, an **effect ID** bitmask, and an **emissive** buffer. Depth/normal-based effects (SSAO, SSR, outlines, aerial perspective, clouds) and selective effects (Bloom / Outline) read these attachments, so a mesh participates in those effects only if its material writes the G-buffer.
+Navara renders into a multiple-render-target (MRT) G-buffer. Depth/normal-based effects (SSAO, SSR, outlines, aerial perspective, clouds) and selective effects (Bloom / Outline) read these attachments, so a mesh participates in those effects only if its material writes the G-buffer.
 
-| Attachment | Location | Contents                                     |
-| ---------- | -------- | -------------------------------------------- |
-| Color      | 0        | `gl_FragColor`                               |
-| Normal     | 1        | View-space normal (plus material properties) |
-| Effect ID  | 2        | Selective-effect bitmask                     |
-| Emissive   | 3        | Selective-effect additive emissive           |
+Only color and normal are always present. The rest are allocated on demand and **packed after them with no gaps**, so their locations shift with the configuration — the shader receives each one's `layout(location = …)` as a stamped define.
+
+| Attachment | Location | Contents                                                     | Allocated                |
+| ---------- | -------- | ------------------------------------------------------------ | ------------------------ |
+| Color      | 0        | `gl_FragColor`                                                | always                   |
+| Normal     | 1        | View-space normal (plus material properties)                  | always                   |
+| Effect ID  | packed   | Selective-effect bitmask                                      | `buffers.selectiveEffect` |
+| Emissive   | packed   | Selective-effect additive emissive                            | `buffers.emissive`        |
+| Shadow     | packed   | R = shadow amount (0 = lit .. 1 = shadowed), G = albedo flag  | `buffers.shadow`          |
+
+Never hardcode an optional attachment index — read it from the `ViewContext` accessors below.
 
 ### Built-in Materials Are Automatic
 
@@ -155,6 +160,84 @@ Requirements and behavior:
 - Idempotent — calling it again on the same material is a no-op.
 
 The automatic built-in patching is performed by an internal `overrideMaterialsForMRT()` on import; application code never calls it.
+
+#### Complete Example
+
+Two things are required, and missing either one silently produces a mesh that
+takes part in no depth/normal-based effect:
+
+1. `setupMaterialForMRT()`, so the material writes the attachments.
+2. `getPassKey()` returning `"mrt"`, so the mesh renders in the G-buffer pass.
+   The default is `"opaque"`, which is composited **after** the G-buffer copy —
+   a mesh left there writes nothing, whatever its material does.
+
+```typescript
+import ThreeView, {
+  MeshDesc,
+  setupMaterialForMRT,
+  type MeshConfig,
+  type MeshUpdate,
+  type PassKey,
+  type ViewContext,
+} from "@navaramap/three";
+import { Mesh, ShaderMaterial, SphereGeometry, Uniform, Vector3 } from "three";
+
+type Description = { glowSphere?: { radius?: number } };
+type GlowSphereConfig = MeshConfig & Description;
+type GlowSphereUpdate = MeshUpdate & Description;
+
+class GlowSphereDesc extends MeshDesc<
+  GlowSphereConfig,
+  GlowSphereUpdate,
+  Mesh<SphereGeometry, ShaderMaterial>
+> {
+  private config: GlowSphereConfig;
+
+  constructor(view: ThreeView, ctx: ViewContext, config: GlowSphereConfig) {
+    super(view, ctx, config);
+    this.config = config;
+  }
+
+  protected override getPassKey(): PassKey {
+    return "mrt";
+  }
+
+  createMesh() {
+    const material = new ShaderMaterial({
+      uniforms: { uColor: new Uniform(new Vector3(0.1, 0.8, 0.5)) },
+      vertexShader: `
+        varying vec3 vNormal;
+        void main() {
+          // View space — packNormalToVec2 assumes it.
+          vNormal = normalize(normalMatrix * normal);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 uColor;
+        varying vec3 vNormal;
+        void main() {
+          gl_FragColor = vec4(uColor, 1.0);
+        }
+      `,
+    });
+
+    setupMaterialForMRT(material, { normal: "vNormal" });
+
+    const radius = this.config.glowSphere?.radius ?? 100;
+    return new Mesh(new SphereGeometry(radius, 32, 32), material);
+  }
+}
+
+const view = new ThreeView();
+view.registerMesh("glowSphere", GlowSphereDesc);
+await view.init();
+
+view.addMesh<GlowSphereDesc>({
+  glowSphere: { radius: 200 },
+  position: { x: 0, y: 0, z: 6_400_000 },
+});
+```
 
 ### Reading the G-Buffer
 

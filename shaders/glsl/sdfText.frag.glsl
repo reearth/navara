@@ -155,7 +155,7 @@ void main() {
 
         #ifndef USE_SHADOWMAP_DEPTH
             vec3 normal = screenSpaceNormal();
-            normalBuffer = vec4(packNormalToVec2(normal), 0.0, 1.0);
+            GBUFFER_WRITE_NORMAL(normal, 0.0, 1.0)
             GBUFFER_WRITE_EFFECT_ZERO
             GBUFFER_WRITE_SHADOW_ZERO
         #endif
@@ -295,7 +295,7 @@ void main() {
 
     #ifndef USE_SHADOWMAP_DEPTH
         vec3 normal = screenSpaceNormal();
-        normalBuffer = vec4(packNormalToVec2(normal), 0.0, 1.0);
+        GBUFFER_WRITE_NORMAL(normal, 0.0, 1.0)
         GBUFFER_WRITE_EFFECT_ZERO
         GBUFFER_WRITE_SHADOW_ZERO
     #endif

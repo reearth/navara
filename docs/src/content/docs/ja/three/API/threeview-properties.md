@@ -149,12 +149,15 @@ view.addMesh<SphereMeshDesc>({
 
 **読み取り専用**（getter）
 
-現在確保されている G-buffer のアタッチメントを `{ selectiveEffect, emissive, shadow }` の真偽値として返します。これは設定値ではなく**導出値**です。view はアクティブなエフェクト Descriptor が宣言する `static requiredBuffers` の和集合を確保し、そのバッファを必要とする最後のエフェクトが削除された時点で解放します。
+現在確保されているバッファを `{ selectiveEffect, emissive, shadow, globeNormal }` の真偽値として返します。これは設定値ではなく**導出値**です。view はアクティブなエフェクト Descriptor が宣言する `static requiredBuffers` の和集合を確保し、そのバッファを必要とする最後のエフェクトが削除された時点で解放します。
+
+前 3 つは G-buffer のアタッチメントですが、`globeNormal` だけは地形法線の画面座標コピーであり、アタッチメント枠を消費しません（[カスタム Descriptor — G-Buffer の読み取り](../../../three/core/custom-desc/#g-buffer-の読み取り)を参照）。
 
 **Example:**
 
 ```tsx
-console.log(view.buffers); // { selectiveEffect: false, emissive: false, shadow: false }
+console.log(view.buffers);
+// { selectiveEffect: false, emissive: false, shadow: false, globeNormal: false }
 ```
 
 :::tip[関連ドキュメント]

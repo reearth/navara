@@ -5,6 +5,7 @@ import {
   type EffectUpdate,
   type ViewContext,
   type MRTPassEffectDesc,
+  type GBufferName,
 } from "@navaramap/three";
 import invariant from "tiny-invariant";
 
@@ -27,6 +28,7 @@ export class AerialPerspectiveEffectDesc extends EffectDesc<
   AerialPerspective
 > {
   static key = "aerialPerspective";
+  static requiredBuffers: readonly GBufferName[] = ["normal"];
   static insertAfter = ["mrt"];
 
   private config: AerialPerspectiveConfig;
@@ -42,12 +44,12 @@ export class AerialPerspectiveEffectDesc extends EffectDesc<
 
   createPass() {
     const mrtPass = this.find<MRTPassEffectDesc>("mrt");
-    invariant(mrtPass?.normalBuffer && mrtPass.depthBuffer);
+    invariant(mrtPass?.depthBuffer);
 
     const pass = new AerialPerspective(
       this.view.atmosphere,
       this.view.camera.raw,
-      mrtPass.normalBuffer,
+      null,
       {
         ...this.config.aerialPerspective,
         enabled: this.config.visible ?? true,
@@ -98,6 +100,7 @@ export class AerialPerspectiveEffectDesc extends EffectDesc<
   }
 
   update(_time: number): void {
+    this._instance?.setNormalBuffer(this.ctx.getNormalTexture() ?? null);
     this._instance?._update();
   }
 }

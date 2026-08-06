@@ -49,12 +49,12 @@ export class AerialPerspective extends Pass<
   atmosphere: Atmosphere;
 
   private cloudsShadows = true;
-  private normalBuffer: Texture;
+  private normalBuffer: Texture | null;
 
   constructor(
     atmosphere: Atmosphere,
     camera: PerspectiveCamera,
-    normalBuffer: Texture,
+    normalBuffer: Texture | null,
     _options: AerialPerspectiveOptions = {},
   ) {
     const effect = new AerialPerspectiveEffect(camera, {
@@ -227,6 +227,12 @@ export class AerialPerspective extends Pass<
     this.options.albedoScale = v;
     this.rawEffect.albedoScale = v;
     this.onUpdate();
+  }
+
+  setNormalBuffer(texture: Texture | null): void {
+    this.normalBuffer = texture;
+    if (!this.rawEffect) return;
+    this.rawEffect.normalBuffer = this.useNormalBuffer ? texture : null;
   }
 
   get useNormalBuffer() {

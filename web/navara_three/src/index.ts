@@ -820,8 +820,9 @@ export default class ThreeView<
   }
 
   /**
-   * G-buffer attachments currently allocated. Not configurable – derived as
-   * the union of the active effects' `requiredBuffers`.
+   * Buffers currently allocated. Not configurable — derived as the union of
+   * the active effects' `requiredBuffers`. All but `globeNormal` are G-buffer
+   * attachments.
    */
   get buffers(): ResolvedGBufferOptions {
     return this._buffers;
@@ -1456,6 +1457,7 @@ export default class ThreeView<
       this._meshes,
     );
     this.registries = new Registries(this, this.viewContext);
+    this.viewContext.on("meshPassKeyChanged", this._syncGBuffers);
     this.viewContext._setRegistries(this.registries);
     this.eventContext = new EventContext({
       eventManager: this._eventManager,
@@ -2092,6 +2094,18 @@ export default class ThreeView<
     // Create effect descriptor instance
     const effectDesc = this.registries.effect.create(effectType, config);
 
+    const l = new EffectHandle(effectDesc);
+
+    // Store the effect descriptor
+    this.layersManager.add(l);
+
+    // Allocate before `onCreate()`: `createPass()` reads the buffers this
+    // effect declared, so they have to exist by then. Reallocates attachments
+    // and recompiles shaders when the derived configuration actually changes,
+    // so tune effects via `update()` rather than re-adding them.
+    this._syncGBuffers();
+    l.on("deleted", this._syncGBuffers);
+
     // Initialize the effect
     effectDesc.onCreate();
 
@@ -2102,17 +2116,6 @@ export default class ThreeView<
 
     // Trigger re-render
     effectDesc.on("needsUpdate", this.forceUpdate);
-
-    const l = new EffectHandle(effectDesc);
-
-    // Store the effect descriptor
-    this.layersManager.add(l);
-
-    // Reallocates attachments and recompiles shaders when the derived
-    // configuration actually changes, so tune effects via `update()` rather
-    // than re-adding them.
-    this._syncGBuffers();
-    l.on("deleted", this._syncGBuffers);
 
     // Return handle for imperative access
     return l as EffectHandle<L>;
@@ -2131,6 +2134,11 @@ export default class ThreeView<
       if (EffectClass.requiredBuffers) {
         requirements.push(EffectClass.requiredBuffers);
       }
+    }
+    // Draped meshes are not effects, so they cannot declare this themselves:
+    // they read the terrain normal through the globe-normal copy.
+    if (this._scenes.draped.children.length > 0) {
+      requirements.push(["globeNormal"]);
     }
     this._buffers = unionGBufferRequirements(requirements);
     this.viewContext._setGBufferOptions(this._buffers);

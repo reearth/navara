@@ -157,7 +157,7 @@ if (nvr_uPickable > 0.0 && diffuseColor.a > 0.0) {
 ${MODEL_BASE_SHADER_MARKERS.fragment.FINAL_NORMAL_START}
 vec3 finalNormal = normal;
 ${MODEL_BASE_SHADER_MARKERS.fragment.FINAL_NORMAL_END}
-normalBuffer = vec4(packNormalToVec2(finalNormal), metalnessFactor, GBUFFER_NORMAL_ALPHA(roughnessFactor))
+GBUFFER_WRITE_NORMAL(finalNormal, metalnessFactor, roughnessFactor)
 `,
     ).source;
 };

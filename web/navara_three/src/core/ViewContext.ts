@@ -6,10 +6,7 @@ import type { Material, Object3D, Texture, WebGLRenderer } from "three";
 import invariant from "tiny-invariant";
 
 import type { LayersManager } from "../layersManager";
-import {
-  GBUFFER_TEXTURE_INDEX,
-  type ResolvedGBufferOptions,
-} from "../material/gbufferLayout";
+import { type ResolvedGBufferOptions } from "../material/gbufferLayout";
 import type { PickableMesh } from "../mesh/pickableMesh";
 import type { RenderPassOrchestrator } from "../orchestrators";
 import type { CustomRenderPass } from "../passes";
@@ -45,6 +42,12 @@ type ViewContextEvents = {
    * holding whatever lies behind them.
    */
   gbufferChanged: () => void;
+  /**
+   * Emitted when a mesh moves between render scenes. The view re-derives the
+   * buffer configuration from it: draped meshes need the globe normal but,
+   * not being effects, cannot declare `requiredBuffers` themselves.
+   */
+  meshPassKeyChanged: () => void;
 };
 
 /**
@@ -197,9 +200,10 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
    */
   getNormalTexture() {
     invariant(this._renderPass, "CustomRenderPass isn't initialized yet.");
-    return this._renderPass.gbufferRenderTarget.textures[
-      GBUFFER_TEXTURE_INDEX.normal
-    ];
+    const index = this._renderPass.textureIndex.normal;
+    return index === undefined
+      ? undefined
+      : this._renderPass.gbufferRenderTarget.textures[index];
   }
 
   /**

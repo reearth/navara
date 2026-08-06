@@ -341,11 +341,7 @@ function injectGBufferToSpherePointsMaterial(shader: ShaderMaterial) {
           /}\s*$/, // Assume the last curly brace is of main()
           /* glsl */ `
           #ifndef USE_SHADOWMAP_DEPTH
-            normalBuffer = vec4(
-              packNormalToVec2(normal),
-              0.0,
-              1.0
-            );
+            GBUFFER_WRITE_NORMAL(normal, 0.0, 1.0)
             GBUFFER_WRITE_EFFECT_ZERO
             GBUFFER_WRITE_SHADOW_ZERO
           #endif

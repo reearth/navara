@@ -74,7 +74,7 @@ void main() {
     #ifndef USE_SHADOWMAP_DEPTH
         // Calculate screen-space normal for MRT compatibility
         vec3 normal = screenSpaceNormal();
-        normalBuffer = vec4(packNormalToVec2(normal), 0.0, 1.0);
+        GBUFFER_WRITE_NORMAL(normal, 0.0, 1.0)
 
         #ifdef USE_SELECTIVE_EFFECT
             GBUFFER_WRITE_EFFECT(uEffectIdsMask, (color.rgb + uEmissiveColor) * uEmissiveIntensity)
