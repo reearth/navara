@@ -12,6 +12,7 @@ import SpecularParsFragment from "@shaders/glsl/chunks/spucular_pars_fragment.gl
 import type { WebGLProgramParametersWithUniforms } from "three";
 
 import { createReplacer } from "../../../../utils";
+import { GBUFFER_NORMAL_WRITE_PHYSICAL } from "../../../gbufferLayout";
 
 import { MODEL_BASE_SHADER_MARKERS } from "./markers";
 import type { SupportedMaterial } from "./material";
@@ -151,12 +152,12 @@ if (nvr_uPickable > 0.0 && diffuseColor.a > 0.0) {
 `,
     )
     .replace(
-      "normalBuffer = vec4(packNormalToVec2(normal), metalnessFactor, roughnessFactor)",
+      GBUFFER_NORMAL_WRITE_PHYSICAL,
       `
 ${MODEL_BASE_SHADER_MARKERS.fragment.FINAL_NORMAL_START}
 vec3 finalNormal = normal;
 ${MODEL_BASE_SHADER_MARKERS.fragment.FINAL_NORMAL_END}
-normalBuffer = vec4(packNormalToVec2(finalNormal), metalnessFactor, roughnessFactor)
+normalBuffer = vec4(packNormalToVec2(finalNormal), metalnessFactor, GBUFFER_NORMAL_ALPHA(roughnessFactor))
 `,
     ).source;
 };

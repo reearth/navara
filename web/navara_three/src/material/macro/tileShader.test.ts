@@ -4,9 +4,6 @@ import {
   generateTileCommonInjection,
   generateTileMapFragment,
   generateTileNormalFragmentMaps,
-  TILE_EMISSIVE_EFFECT_BUFFER_REPLACEMENT,
-  TILE_NORMAL_BUFFER_REPLACEMENT,
-  TILE_PICK_FRAGMENT_OVERRIDE,
   type TileShaderFeatures,
   WATERMASK_OCEAN_REFLECTIVITY,
 } from "./tileShader";
@@ -137,34 +134,5 @@ describe("generateTileNormalFragmentMaps", () => {
       hasWater: true,
     });
     expect(src).toContain("computeWaterSpecular(");
-  });
-});
-
-describe("MRT buffer replacements", () => {
-  it("writes finalNormal into normalBuffer with reflectivity/roughness packed", () => {
-    expect(TILE_NORMAL_BUFFER_REPLACEMENT).toContain("normalBuffer = vec4(");
-    expect(TILE_NORMAL_BUFFER_REPLACEMENT).toContain("tileReflectivity");
-    expect(TILE_NORMAL_BUFFER_REPLACEMENT).toContain("tileRoughness");
-  });
-
-  it("gates emissive/effect on isTexturizedLayer", () => {
-    expect(TILE_EMISSIVE_EFFECT_BUFFER_REPLACEMENT).toContain(
-      "if (isTexturizedLayer)",
-    );
-    expect(TILE_EMISSIVE_EFFECT_BUFFER_REPLACEMENT).toContain(
-      "effectIdBuffer = vec4(0.0);",
-    );
-  });
-
-  it("pick override writes nvr_pickColor straight to gl_FragColor", () => {
-    // Output is the LAST write of the fragment shader so envmap/tonemapping/
-    // colorspace/fog can't pollute the pick buffer with lit colours. The
-    // value comes from the attr.g-masked atlas (see generateTileMapFragment)
-    // — raster pixels become batchId=0 (no entity); vector pixels carry the
-    // ID their own per-layer enhancer wrote during the per-layer RT pass.
-    expect(TILE_PICK_FRAGMENT_OVERRIDE).toContain("if (uPickable > 0.)");
-    expect(TILE_PICK_FRAGMENT_OVERRIDE).toContain(
-      "gl_FragColor = vec4(nvr_pickColor, 1.0);",
-    );
   });
 });

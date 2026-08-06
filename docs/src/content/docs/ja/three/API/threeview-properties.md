@@ -105,6 +105,62 @@ view.toneMappingExposure = 1.5;
 view.toneMappingExposure = 0.8;
 ```
 
+### lit
+
+**Type:** `boolean` — **デフォルト:** `true`
+
+マテリアルの `lit` オプションのシーン既定値を取得または設定します。`false` にすると、`lit` を明示していないすべてのマテリアルが**アルベドのみ**を出力します。カラー出力でライティング計算がスキップされるだけで、lit パイプライン自体は動き続けるため、法線とシャドウ G-buffer は書き込まれたままです。この組み合わせが、ディファードライティングパスが必要とする入力になります。
+
+解決は 3 状態で、より具体的な設定が常に優先されます。
+
+| 設定 | 結果 |
+| ---- | ---- |
+| マテリアル / メッシュの `lit: true` | `view.lit` が `false` でも lit |
+| マテリアル / メッシュの `lit: false` | `view.lit` が `true` でもアルベドのみ |
+| `lit` 未設定（`undefined`） | `view.lit` に従う |
+
+このオプションは [`terrain`](../../../three/material/terrain-material/#lit) / [`polygon`](../../../three/material/polygon-material/#lit) / [`polyline`](../../../three/material/polyline-material/#lit) / [`model`](../../../three/material/model-material/#lit) マテリアルと、メッシュ Descriptor の設定のトップレベル（[MeshDesc](../../../three_default_descs/mesh-desc/mesh-desc-base/#lighting-lit) を参照）で使用できます。もともとライティングを行わないマテリアル（`point` / `billboard` / `text`）は影響を受けません。
+
+**Example:**
+
+```tsx
+// シーン既定: すべてアルベドのみを出力
+view.lit = false;
+
+// …ただしこのメッシュはフォワードライティングのまま
+view.addMesh<SphereMeshDesc>({
+  sphere: { radius: 100 },
+  position,
+  lit: true,
+});
+```
+
+:::note
+`lit` の切り替えは、view・マテリアル・メッシュのいずれであっても該当シェーダーを一度再コンパイルします。毎フレーム制御するものではなく、構成の切り替えとして扱ってください。
+:::
+
+:::tip[関連ドキュメント]
+アルベド出力を法線・シャドウ G-buffer と組み合わせて利用するディファードライティングエフェクトの実例は、[カスタム Descriptor — G-Buffer の読み取り](../../../three/core/custom-desc/#g-buffer-の読み取り) を参照してください。
+:::
+
+### buffers
+
+**Type:** `ResolvedGBufferOptions`
+
+**読み取り専用**（getter）
+
+現在確保されている G-buffer のアタッチメントを `{ selectiveEffect, emissive, shadow }` の真偽値として返します。これは設定値ではなく**導出値**です。view はアクティブなエフェクト Descriptor が宣言する `static requiredBuffers` の和集合を確保し、そのバッファを必要とする最後のエフェクトが削除された時点で解放します。
+
+**Example:**
+
+```tsx
+console.log(view.buffers); // { selectiveEffect: false, emissive: false, shadow: false }
+```
+
+:::tip[関連ドキュメント]
+`requiredBuffers` の宣言方法とカスタムエフェクトからの読み取りについては、[カスタム Descriptor — G-Buffer の読み取り](../../../three/core/custom-desc/#g-buffer-の読み取り) を参照してください。
+:::
+
 ### animation
 
 **Type:** `boolean`

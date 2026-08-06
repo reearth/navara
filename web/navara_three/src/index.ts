@@ -108,7 +108,14 @@ import {
 import { FinalCopyEffectDesc } from "./layers/effect/FinalCopyEffectDesc";
 import { LayersManager } from "./layersManager";
 import { disposeTexture } from "./loaders";
-import { overrideMaterialsForMRT } from "./material";
+import {
+  overrideMaterialsForMRT,
+  GBUFFER_ATTACHMENT_NAMES,
+  resolveGBufferOptions,
+  unionGBufferRequirements,
+  type GBufferName,
+  type ResolvedGBufferOptions,
+} from "./material";
 import type { TileMesh } from "./mesh/tile";
 import { RenderPassOrchestrator } from "./orchestrators/RenderPassOrchestrator";
 import { PickHelper } from "./pick/pickHelper";
@@ -244,11 +251,6 @@ export type WorkerMemoryStats = {
   /** Font worker heap/cache breakdown; undefined while no font is in use. */
   fontWorker: FontWorkerMemoryStats | undefined;
 };
-
-// NOTE:
-// This overrides all materials to output a normal buffer, meaning Navara operates using MRT (Multiple Render Targets).
-// Currently, Navara requires two buffers, so your shader must output them.
-overrideMaterialsForMRT();
 
 /**
  * Configuration options for initializing ThreeView.
@@ -792,6 +794,15 @@ export default class ThreeView<
   /** Built-in attribution UI; unset when disabled or in a worker (no DOM). */
   private _attribution?: AttributionPlugin;
 
+  /**
+   * Derived G-buffer attachment configuration — the union of the
+   * `requiredBuffers` declared by the active effects.
+   */
+  private _buffers: ResolvedGBufferOptions;
+
+  /** Scene-level default of the `lit` material option (see {@link lit}). */
+  private _lit = true;
+
   private pixelRatioMatchedMedia?: MediaQueryList;
 
   private fixedGpuBytesReportScheduled = false;
@@ -808,8 +819,41 @@ export default class ThreeView<
     return this._attribution;
   }
 
+  /**
+   * G-buffer attachments currently allocated. Not configurable – derived as
+   * the union of the active effects' `requiredBuffers`.
+   */
+  get buffers(): ResolvedGBufferOptions {
+    return this._buffers;
+  }
+
+  /**
+   * Scene-level default of the `lit` material option. `false` makes every
+   * material without an explicit `lit` output plain albedo, while normals and
+   * the shadow G-buffer keep being written – the input for deferred lighting.
+   * Toggling recompiles the affected shaders once.
+   * @defaultValue true
+   */
+  get lit(): boolean {
+    return this._lit;
+  }
+
+  set lit(value: boolean) {
+    if (this._lit === value) return;
+    this._lit = value;
+    this.viewContext._setLit(value);
+    this.forceUpdate();
+  }
+
   constructor(options: Options = {}) {
     super();
+
+    // Patches the global ShaderLib, but the injected source is
+    // view-independent (defines carry the layout). Here rather than at module
+    // import so importing the library has no side effects.
+    overrideMaterialsForMRT();
+
+    this._buffers = resolveGBufferOptions();
 
     if (!options.canvas) {
       const div = document.createElement("div");
@@ -1412,6 +1456,7 @@ export default class ThreeView<
       this._meshes,
     );
     this.registries = new Registries(this, this.viewContext);
+    this.viewContext._setRegistries(this.registries);
     this.eventContext = new EventContext({
       eventManager: this._eventManager,
       scenes: this._scenes,
@@ -2039,6 +2084,11 @@ export default class ThreeView<
       throw new UnknownTypeError("effect", config);
     }
 
+    // Reject the effect while nothing is created yet if its required
+    // G-buffers would exceed the device's MRT attachment limit
+    // (gl.MAX_DRAW_BUFFERS – spec minimum 4, nearly all devices expose 8).
+    this._assertGBufferCapacity(effectType);
+
     // Create effect descriptor instance
     const effectDesc = this.registries.effect.create(effectType, config);
 
@@ -2058,8 +2108,62 @@ export default class ThreeView<
     // Store the effect descriptor
     this.layersManager.add(l);
 
+    // Reallocates attachments and recompiles shaders when the derived
+    // configuration actually changes, so tune effects via `update()` rather
+    // than re-adding them.
+    this._syncGBuffers();
+    l.on("deleted", this._syncGBuffers);
+
     // Return handle for imperative access
     return l as EffectHandle<L>;
+  }
+
+  /**
+   * Re-derives the G-buffer configuration from the union of the active
+   * effects' `requiredBuffers` and applies it to the MRT pass when changed.
+   */
+  private _syncGBuffers = (): void => {
+    const requirements: (readonly GBufferName[])[] = [];
+    for (const handle of this.layersManager.getEffectDescs()) {
+      const EffectClass = handle.ref.constructor as {
+        requiredBuffers?: readonly GBufferName[];
+      };
+      if (EffectClass.requiredBuffers) {
+        requirements.push(EffectClass.requiredBuffers);
+      }
+    }
+    this._buffers = unionGBufferRequirements(requirements);
+    this.viewContext._setGBufferOptions(this._buffers);
+  };
+
+  /**
+   * Throws when enabling `effectType`'s required G-buffers would push the
+   * attachment count (color + normal + optional buffers) past the device's
+   * `MAX_DRAW_BUFFERS` limit.
+   */
+  private _assertGBufferCapacity(effectType: string): void {
+    const required = this.registries.effect.getRequiredBuffers(effectType);
+    if (required.length === 0) return;
+    const prospective = unionGBufferRequirements([
+      (Object.keys(this._buffers) as GBufferName[]).filter(
+        (name) => this._buffers[name],
+      ),
+      required,
+    ]);
+    const attachmentCount =
+      2 + GBUFFER_ATTACHMENT_NAMES.filter((name) => prospective[name]).length;
+    // Navara requires WebGL2 (MRT), so the context is always WebGL2.
+    const gl = this.viewContext
+      .getRenderer()
+      .getContext() as WebGL2RenderingContext;
+    const maxDrawBuffers = gl.getParameter(gl.MAX_DRAW_BUFFERS) as number;
+    if (attachmentCount > maxDrawBuffers) {
+      throw new Error(
+        `The "${effectType}" effect requires G-buffers [${required.join(", ")}], ` +
+          `but the resulting ${attachmentCount} MRT attachments exceed this ` +
+          `device's MAX_DRAW_BUFFERS (${maxDrawBuffers}).`,
+      );
+    }
   }
 
   /**

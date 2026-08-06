@@ -4,11 +4,9 @@
     uniform sampler2D uTexture;
 #endif
 
-#ifndef USE_SHADOWMAP_DEPTH
-    layout(location = 1) out vec4 normalBuffer;
-    layout(location = 2) out vec4 effectIdBuffer;
-    layout(location = 3) out vec4 emissiveBuffer;
+#include "chunks/gbuffer_pars_fragment.glsl"
 
+#ifndef USE_SHADOWMAP_DEPTH
     #ifdef USE_SELECTIVE_EFFECT
         uniform float uEffectIdsMask;
         uniform vec3 uEmissiveColor;
@@ -76,14 +74,14 @@ void main() {
     #ifndef USE_SHADOWMAP_DEPTH
         // Calculate screen-space normal for MRT compatibility
         vec3 normal = screenSpaceNormal();
-        normalBuffer = vec4(packNormalToVec2(normal), 0.0, 0.0);
+        normalBuffer = vec4(packNormalToVec2(normal), 0.0, 1.0);
 
         #ifdef USE_SELECTIVE_EFFECT
-            effectIdBuffer = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
-            emissiveBuffer = vec4((color.rgb + uEmissiveColor) * uEmissiveIntensity, 1.0);
+            GBUFFER_WRITE_EFFECT(uEffectIdsMask, (color.rgb + uEmissiveColor) * uEmissiveIntensity)
         #else
-            effectIdBuffer = vec4(0.0);
-            emissiveBuffer = vec4(0.0);
+            GBUFFER_WRITE_EFFECT_ZERO
         #endif
+
+        GBUFFER_WRITE_SHADOW_ZERO
     #endif
 }

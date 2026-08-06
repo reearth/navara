@@ -39,6 +39,20 @@ sidebar:
 { terrain: { receiveShadow: true } }
 ```
 
+### lit
+
+**型:** `boolean | undefined` — **デフォルト:** `undefined`（`view.lit` に従う）
+
+**説明:** カラー出力にライティング計算を適用するかどうか。`false` の場合、地形はアルベドのみで描画されます。lit パイプライン自体は動き続けるため、法線とシャドウ G-buffer は書き込まれたままです。未設定の場合はシーン既定値 [`view.lit`](../../../three/api/threeview-properties/#lit) に従い、明示的に指定するとその既定値をどちらの方向にも上書きします。
+
+```typescript
+{ terrain: { lit: false } }
+```
+
+:::note
+地形が lit パスを通るのはタイルに法線がある場合のみです。[`quantized-mesh`](../../../three/source/quantized-mesh-source/) ソースで `requestVertexNormals: true` を指定するか、hillshade レイヤーを併用してください。法線がない場合、タイルはもともとライティングされないため `lit` を変更しても何も変わりません。
+:::
+
 ### showBoundingBox
 
 **型:** `boolean | undefined` — **デフォルト:** `false`

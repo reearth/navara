@@ -1,4 +1,12 @@
-import { EffectDesc, BaseHandle, EffectHandle } from "./core";
+import {
+  EffectDesc,
+  BaseHandle,
+  EffectHandle,
+  LightDesc,
+  LightHandle,
+  MeshDesc,
+  MeshHandle,
+} from "./core";
 import { Layer, type LayerEvent } from "./layer";
 
 export class LayersManager {
@@ -58,6 +66,29 @@ export class LayersManager {
       if (!(desc instanceof EffectDesc)) continue;
 
       yield handle as EffectHandle;
+    }
+  }
+
+  *getLightDescs(): Generator<LightHandle> {
+    for (const handle of this.layers.values()) {
+      if (!(handle instanceof BaseHandle)) continue;
+
+      const desc = handle.ref;
+      if (!(desc instanceof LightDesc)) continue;
+
+      yield handle as LightHandle;
+    }
+  }
+
+  *getMeshDescs(): Generator<MeshHandle> {
+    for (const handle of this.layers.values()) {
+      if (!(handle instanceof BaseHandle)) continue;
+
+      const desc = handle.ref;
+      // Covers instanced meshes too — InstancedMeshDesc extends MeshDesc.
+      if (!(desc instanceof MeshDesc)) continue;
+
+      yield handle as MeshHandle;
     }
   }
 }

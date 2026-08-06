@@ -80,16 +80,27 @@ Descriptor の種類に応じて、対応する基底クラスを継承して実
 | `ctx.getRenderer()`    | WebGLRenderer インスタンスを取得           |
 | `ctx.getInputBuffer()` | エフェクトコンポーザーの入力バッファを取得 |
 
+#### Descriptor の検索
+
+| メソッド                | 説明                                                                    |
+| ----------------------- | ----------------------------------------------------------------------- |
+| `ctx.findEffect(key)`   | `key` で登録されたアクティブなエフェクト Descriptor（例: `"mrt"`）      |
+| `ctx.findLight(key)`    | `key` で登録されたアクティブなライト Descriptor（例: `"sun"`）          |
+| `ctx.findMesh(key)`     | `key` で登録されたアクティブなメッシュ Descriptor（例: `"gltfModel"`）  |
+
+シーンの既存設定を重複して持たずに引き継ぐために使います。たとえばカスタムのライティングエフェクトは、独自オプションを増やす代わりに `ctx.findLight("sun")` から太陽の強度と色を読めます。該当する Descriptor が無ければ `undefined` を返します。
+
 #### バッファ / テクスチャアクセス
 
 | メソッド                      | 説明                                                 |
 | ----------------------------- | ---------------------------------------------------- |
 | `ctx.getRenderTarget()`       | メインレンダーターゲット（G-buffer を含む）を取得    |
 | `ctx.getGlobeDepthTexture()`  | ポストプロセッシング用のグローブ深度テクスチャを取得 |
-| `ctx.getGlobeNormalTexture()` | ポストプロセッシング用のグローブ法線テクスチャを取得 |
+| `ctx.getGlobeNormalTexture()` | 地形のみの法線を画面座標で取得。`requiredBuffers` に `globeNormal` を宣言すること（未宣言だと 1x1 のまま） |
 | `ctx.getNormalTexture()`      | G-buffer からシーン法線テクスチャを取得              |
 | `ctx.getEffectIdsTexture()`   | G-buffer からエフェクト ID テクスチャを取得          |
 | `ctx.getEmissiveTexture()`    | G-buffer からエミッシブテクスチャを取得              |
+| `ctx.getShadowTexture()`      | G-buffer からシャドウテクスチャ（R=影の量、0=非影..1=完全な影）を取得 |
 
 #### シャドウ（実験的）
 
@@ -148,6 +159,16 @@ setupMaterialForMRT(lineMaterial);
 ### G-Buffer の読み取り
 
 これらのバッファをカスタムエフェクトから読み取るには、`ctx` の [バッファ / テクスチャアクセス](#バッファ--テクスチャアクセス) アクセサを使うか、[`find<MRTPassEffectDesc>("mrt")`](#他のエフェクトを参照) で他のエフェクトから MRT パスを参照します。
+
+エフェクト ID・エミッシブ・シャドウ・globeNormal のバッファはオプションです。アクティブなエフェクトが `static requiredBuffers` で宣言している間だけ存在し（例: `["selectiveEffect", "emissive"]` / `["shadow"]` / `["globeNormal"]`）、それ以外ではアクセサは `undefined` を返します。
+
+`globeNormal` だけは性質が異なり、G-buffer のアタッチメントではなく**地形法線の画面座標コピー**です。そのためアタッチメント枠を消費せず、デバイスの `MAX_DRAW_BUFFERS` にも数えられません。未宣言の場合はコピー先が 1x1 のままで、`ctx.getGlobeNormalTexture()` が返すテクスチャは意味のあるサンプリングができません。これらを読み取るカスタムエフェクトは、ビューにバッファを確保させるため `requiredBuffers` を宣言してください。なお、確保されるバッファ構成の変更はアタッチメントの再確保とシェーダーの再コンパイルを伴うため、エフェクトは一度追加したら削除・再追加を繰り返さず、`update()` で調整してください。また構成変更でアタッチメントは再構築されるため、これらのテクスチャはパス生成時にキャッシュせず、毎フレーム（`update()` やパスの `render()` で）取得してください。
+
+サンプリング時に注意すべきエンコーディング:
+
+- 法線バッファの RG チャンネルは**ビュー空間法線の octahedral エンコード**です。`@navaramap/three` がエクスポートする `NORMAL_PACKING_SHADER` GLSL 文字列の `unpackVec2ToNormal()` でデコードしてください（単純な `xy * 2 - 1` の再構成では誤った陰影になります）。
+- シャドウバッファは `R = 影の量`（0=非影..1=完全な影）、`G = albedo 出力フラグ`（[`lit`](../../../three/api/threeview-properties/#lit) オプションで color が素の albedo のとき 1 — deferred lighting パスが「このピクセルを照らす」マスクとして使います）を保持します。
+- 深度テクスチャは Three.js の packing 規約に従います。MRT パスの `depthBufferPacking` / `globeDepthBufferPacking` を確認し、`@navaramap/three` がエクスポートする `DEPTH_PACKING_SHADER` GLSL 文字列（Three.js の `packing` チャンク）のヘルパーでアンパックしてください。
 
 ## カスタムメッシュ
 

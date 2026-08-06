@@ -5,6 +5,7 @@ import {
   encodePositionRTE,
   RTE_ONE_UNIFORM,
 } from "@navaramap/three";
+import GBufferParsFragment from "@shaders/glsl/chunks/gbuffer_pars_fragment.glsl";
 import RteParsVertex from "@shaders/glsl/chunks/rte_pars_vertex.glsl";
 import RteVertex from "@shaders/glsl/chunks/rte_vertex.glsl";
 import { packing } from "@takram/three-geospatial/shaders";
@@ -315,11 +316,7 @@ function injectGBufferToSpherePointsMaterial(shader: ShaderMaterial) {
   const logdepthParsFrag = "#include <logdepthbuf_pars_fragment>";
 
   shader.fragmentShader = /* glsl */ `
-    #ifndef USE_SHADOWMAP_DEPTH
-      layout(location = 1) out vec4 normalBuffer;
-      layout(location = 2) out vec4 effectIdBuffer;
-      layout(location = 3) out vec4 emissiveBuffer;
-    #endif
+    ${GBufferParsFragment}
 
     ${packing}
 
@@ -347,10 +344,10 @@ function injectGBufferToSpherePointsMaterial(shader: ShaderMaterial) {
             normalBuffer = vec4(
               packNormalToVec2(normal),
               0.0,
-              0.0
+              1.0
             );
-            effectIdBuffer = vec4(0.0);
-            emissiveBuffer = vec4(0.0);
+            GBUFFER_WRITE_EFFECT_ZERO
+            GBUFFER_WRITE_SHADOW_ZERO
           #endif
         }
       `,

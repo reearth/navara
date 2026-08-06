@@ -39,6 +39,20 @@ sidebar:
 { terrain: { receiveShadow: true } }
 ```
 
+### lit
+
+**Type:** `boolean | undefined` — **Default:** `undefined` (follows `view.lit`)
+
+**Description:** Applies the lighting equation to the color output. When `false`, the terrain renders as plain albedo — the rest of the lit pipeline still runs, so normals and the shadow G-buffer keep being written. Leaving it unset follows the scene default, [`view.lit`](../../../three/api/threeview-properties/#lit); setting it explicitly overrides that default in either direction.
+
+```typescript
+{ terrain: { lit: false } }
+```
+
+:::note
+The terrain only takes the lit path when the tiles have normals — use a [`quantized-mesh`](../../../three/source/quantized-mesh-source/) source with `requestVertexNormals: true`, or a hillshade layer. Without normals the tiles are unlit already and `lit` changes nothing.
+:::
+
 ### showBoundingBox
 
 **Type:** `boolean | undefined` — **Default:** `false`

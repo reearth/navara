@@ -8,11 +8,9 @@
 // 1.0: enable picking, 0.0: disable picking
 uniform float nvr_uPickable;
 
-#ifndef USE_SHADOWMAP_DEPTH
-    layout(location = 1) out vec4 normalBuffer;
-    layout(location = 2) out vec4 effectIdBuffer;
-    layout(location = 3) out vec4 emissiveBuffer;
+#include "chunks/gbuffer_pars_fragment.glsl"
 
+#ifndef USE_SHADOWMAP_DEPTH
     vec2 packNormalToVec2(vec3 normal) {
         return normal.xy * 0.5 + 0.5;
     }
@@ -157,9 +155,9 @@ void main() {
 
         #ifndef USE_SHADOWMAP_DEPTH
             vec3 normal = screenSpaceNormal();
-            normalBuffer = vec4(packNormalToVec2(normal), 0.0, 0.0);
-            effectIdBuffer = vec4(0.0);
-            emissiveBuffer = vec4(0.0);
+            normalBuffer = vec4(packNormalToVec2(normal), 0.0, 1.0);
+            GBUFFER_WRITE_EFFECT_ZERO
+            GBUFFER_WRITE_SHADOW_ZERO
         #endif
         return;
     }
@@ -297,8 +295,8 @@ void main() {
 
     #ifndef USE_SHADOWMAP_DEPTH
         vec3 normal = screenSpaceNormal();
-        normalBuffer = vec4(packNormalToVec2(normal), 0.0, 0.0);
-        effectIdBuffer = vec4(0.0);
-        emissiveBuffer = vec4(0.0);
+        normalBuffer = vec4(packNormalToVec2(normal), 0.0, 1.0);
+        GBUFFER_WRITE_EFFECT_ZERO
+        GBUFFER_WRITE_SHADOW_ZERO
     #endif
 }

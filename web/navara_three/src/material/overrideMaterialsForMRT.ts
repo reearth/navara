@@ -1,12 +1,61 @@
 // Ref: https://github.com/takram-design-engineering/three-geospatial/blob/main/packages/effects/src/setupMaterialsForGeometryPass.ts
 
 import { packing } from "@takram/three-geospatial/shaders";
-import { ShaderLib, ShaderMaterial, type ShaderLibShader } from "three";
+import {
+  ShaderLib,
+  ShaderMaterial,
+  type Material,
+  type ShaderLibShader,
+} from "three";
 import { LineMaterial } from "three-stdlib";
 
 import { createReplacer } from "../utils";
 
+import {
+  GBUFFER_EFFECT_WRITE_BUILTIN,
+  GBUFFER_EFFECT_WRITE_ID_ONLY,
+  GBUFFER_EFFECT_WRITE_SHADER_MATERIAL,
+  GBUFFER_EFFECT_WRITE_ZERO,
+  GBUFFER_NORMAL_WRITE_BASIC,
+  GBUFFER_NORMAL_WRITE_PHYSICAL,
+  GBUFFER_PARS_FRAGMENT,
+} from "./gbufferLayout";
+
 const SETUP = Symbol("SETUP");
+
+/** `lit: true` – wins over {@link NVR_UNLIT_SCENE_DEFINE}. */
+export const NVR_LIT_DEFINE = "NVR_LIT";
+/** `lit: false` – only the lighting equation is bypassed; the lit pipeline
+ * still runs, so normals and the shadow G-buffer keep being written. */
+export const NVR_UNLIT_DEFINE = "NVR_UNLIT";
+/** Scene-level default, stamped by `CustomRenderPass` from `view.lit`. */
+export const NVR_UNLIT_SCENE_DEFINE = "NVR_UNLIT_SCENE";
+/**
+ * Stamped from `material.transparent`. Under blending, `normalBuffer.a` is
+ * the attachment's blend factor, so a blended material must write 1.0 there
+ * instead of roughness or it keeps the normal of whatever lies behind.
+ */
+export const NVR_BLENDED_DEFINE = "NVR_BLENDED";
+
+/** Applies a material's three-state `lit` option. */
+export function applyLitOption(
+  material: Material,
+  lit: boolean | undefined,
+): void {
+  // `false` is three's "absent" define value, avoiding a delete.
+  const forceLit = lit === true ? 1 : false;
+  const forceUnlit = lit === false ? 1 : false;
+  material.defines ??= {};
+  if (
+    (material.defines[NVR_LIT_DEFINE] ?? false) === forceLit &&
+    (material.defines[NVR_UNLIT_DEFINE] ?? false) === forceUnlit
+  ) {
+    return;
+  }
+  material.defines[NVR_LIT_DEFINE] = forceLit;
+  material.defines[NVR_UNLIT_DEFINE] = forceUnlit;
+  material.needsUpdate = true;
+}
 
 declare module "three" {
   // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
@@ -94,27 +143,20 @@ function injectGBuffer(
   const normalBufferWrite =
     type === "physical"
       ? /* glsl */ `
-          normalBuffer = vec4(packNormalToVec2(normal), metalnessFactor, roughnessFactor)
+          ${GBUFFER_NORMAL_WRITE_PHYSICAL}
         `
       : /* glsl */ `
           #ifdef USE_ROUGHNESS
             float roughnessFactor = roughness;
           #else
-            float roughnessFactor = 0.0;
+            // Not just a default: 0.0 here would leak the normal behind a
+            // blended surface (see NVR_BLENDED_DEFINE).
+            float roughnessFactor = 1.0;
           #endif
-          normalBuffer = vec4(packNormalToVec2(normal), reflectivity, roughnessFactor);
+          ${GBUFFER_NORMAL_WRITE_BASIC};
         `;
   shader.fragmentShader = /* glsl */ `
-    // MRT layout:
-    //   location 0: gl_FragColor (color)
-    //   location 1: normalBuffer (normal + material props)
-    //   location 2: effectIdBuffer (effectIds: R=bitmask)       — SelectiveEffect only
-    //   location 3: emissiveBuffer (emissive: RGB=diffuseColor×intensity+emissive additive, A=unused) — SelectiveEffect only
-    #ifndef USE_SHADOWMAP_DEPTH
-      layout(location = 1) out vec4 normalBuffer;
-      layout(location = 2) out vec4 effectIdBuffer;
-      layout(location = 3) out vec4 emissiveBuffer;
-    #endif
+    ${GBUFFER_PARS_FRAGMENT}
 
     #if !defined(USE_ENVMAP)
       uniform float reflectivity;
@@ -131,23 +173,35 @@ function injectGBuffer(
 
     ${packing}
     ${
-      createReplacer(shader.fragmentShader).replace(
-        /}\s*$/, // Assume the last curly brace is of main()
-        /* glsl */ `
+      createReplacer(shader.fragmentShader)
+        .replace(
+          /* glsl */ `#include <opaque_fragment>`,
+          /* glsl */ `
+            #if !defined(${NVR_LIT_DEFINE}) && (defined(${NVR_UNLIT_DEFINE}) || defined(${NVR_UNLIT_SCENE_DEFINE}))
+              // Overwrite rather than skip the lighting: the G-buffer writes
+              // below still need the lit pipeline to have run.
+              outgoingLight = diffuseColor.rgb;
+            #endif
+            #include <opaque_fragment>
+          `,
+        )
+        .replace(
+          /}\s*$/, // Assume the last curly brace is of main()
+          /* glsl */ `
           #ifndef USE_SHADOWMAP_DEPTH
             ${normalBufferWrite};
 
             #ifdef USE_SELECTIVE_EFFECT
-              effectIdBuffer = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
-              emissiveBuffer = vec4(diffuseColor.rgb * uEmissiveIntensity + emissive, 1.0);
+              ${GBUFFER_EFFECT_WRITE_BUILTIN}
             #else
-              effectIdBuffer = vec4(0.0);
-              emissiveBuffer = vec4(0.0);
+              ${GBUFFER_EFFECT_WRITE_ZERO}
             #endif
+
+            GBUFFER_WRITE_SHADOW
           #endif
         }
       `,
-      ).source
+        ).source
     }
   `;
   shader[SETUP] = true;
@@ -173,9 +227,7 @@ function injectGBufferToSpriteMaterial(shader: ShaderLibShader) {
   `;
 
   shader.fragmentShader = /* glsl */ `
-    layout(location = 1) out vec4 normalBuffer;
-    layout(location = 2) out vec4 effectIdBuffer;
-    layout(location = 3) out vec4 emissiveBuffer;
+    ${GBUFFER_PARS_FRAGMENT}
 
     #ifdef USE_SELECTIVE_EFFECT
       uniform float uEffectIdsMask;
@@ -189,22 +241,25 @@ function injectGBufferToSpriteMaterial(shader: ShaderLibShader) {
       createReplacer(shader.fragmentShader).replace(
         /}\s*$/, // Assume the last curly brace is of main()
         /* glsl */ `
-          // Flat shading
-          vec3 fdx = dFdx( vViewPosition );
-          vec3 fdy = dFdy( vViewPosition );
-          vec3 normal = normalize( cross( fdx, fdy ) );
-          normalBuffer = vec4(
-            packNormalToVec2(normal),
-            0.0,
-            0.0
-          );
+          #ifndef USE_SHADOWMAP_DEPTH
+            // Flat shading
+            vec3 fdx = dFdx( vViewPosition );
+            vec3 fdy = dFdy( vViewPosition );
+            vec3 normal = normalize( cross( fdx, fdy ) );
+            normalBuffer = vec4(
+              packNormalToVec2(normal),
+              0.0,
+              // A=1.0 replaces the normal behind under blending.
+              1.0
+            );
 
-          #ifdef USE_SELECTIVE_EFFECT
-            effectIdBuffer = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
-            emissiveBuffer = vec4(0.0);
-          #else
-            effectIdBuffer = vec4(0.0);
-            emissiveBuffer = vec4(0.0);
+            #ifdef USE_SELECTIVE_EFFECT
+              ${GBUFFER_EFFECT_WRITE_ID_ONLY}
+            #else
+              ${GBUFFER_EFFECT_WRITE_ZERO}
+            #endif
+
+            GBUFFER_WRITE_SHADOW_ZERO
           #endif
         }
       `,
@@ -272,15 +327,13 @@ function injectGBufferToShaderMaterial(
           vec4(
             packNormalToVec2(${normalVariableName}),
             0.0,
-            0.0
+            1.0
           );
         `;
   shader.fragmentShader = /* glsl */ `
-    #ifndef USE_SHADOWMAP_DEPTH
-      layout(location = 1) out vec4 normalBuffer;
-      layout(location = 2) out vec4 effectIdBuffer;
-      layout(location = 3) out vec4 emissiveBuffer;
+    ${GBUFFER_PARS_FRAGMENT}
 
+    #ifndef USE_SHADOWMAP_DEPTH
       #ifdef USE_SELECTIVE_EFFECT
         uniform float uEffectIdsMask;
         uniform vec3 uEmissiveColor;
@@ -302,12 +355,12 @@ function injectGBufferToShaderMaterial(
             normalBuffer = ${normalBufferWrite};
 
             #ifdef USE_SELECTIVE_EFFECT
-              effectIdBuffer = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
-              emissiveBuffer = vec4((gl_FragColor.rgb + uEmissiveColor) * uEmissiveIntensity, 1.0);
+              ${GBUFFER_EFFECT_WRITE_SHADER_MATERIAL}
             #else
-              effectIdBuffer = vec4(0.0);
-              emissiveBuffer = vec4(0.0);
+              ${GBUFFER_EFFECT_WRITE_ZERO}
             #endif
+
+            GBUFFER_WRITE_SHADOW_ZERO
           #endif
         }
       `,
@@ -350,9 +403,7 @@ function injectGBufferToLineMaterial(lineMaterial: LineMaterial) {
   // LineMaterial already has proper vertex shader setup, so we only modify fragment shader
 
   lineMaterial.fragmentShader = /* glsl */ `
-    layout(location = 1) out vec4 normalBuffer;
-    layout(location = 2) out vec4 effectIdBuffer;
-    layout(location = 3) out vec4 emissiveBuffer;
+    ${GBUFFER_PARS_FRAGMENT}
 
     #ifdef USE_SELECTIVE_EFFECT
       uniform float uEffectIdsMask;
@@ -378,18 +429,21 @@ function injectGBufferToLineMaterial(lineMaterial: LineMaterial) {
         .replace(
           /}\s*$/, // Assume the last curly brace is of main()
           /* glsl */ `
-          normalBuffer = vec4(
-            packNormalToVec2(normal),
-            0.0,
-            0.0
-          );
+          #ifndef USE_SHADOWMAP_DEPTH
+            normalBuffer = vec4(
+              packNormalToVec2(normal),
+              0.0,
+              // A=1.0 replaces the normal behind under blending.
+              1.0
+            );
 
-          #ifdef USE_SELECTIVE_EFFECT
-            effectIdBuffer = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
-            emissiveBuffer = vec4(0.0);
-          #else
-            effectIdBuffer = vec4(0.0);
-            emissiveBuffer = vec4(0.0);
+            #ifdef USE_SELECTIVE_EFFECT
+              ${GBUFFER_EFFECT_WRITE_ID_ONLY}
+            #else
+              ${GBUFFER_EFFECT_WRITE_ZERO}
+            #endif
+
+            GBUFFER_WRITE_SHADOW_ZERO
           #endif
         }
       `,

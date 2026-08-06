@@ -1,10 +1,7 @@
 import type { PolygonBaseProps, PolygonBaseState } from "./types";
 
 export const DEFAULT_BASE_PROPS: Required<
-  Omit<
-    PolygonBaseProps,
-    "globeNormalTexture" | "batchDataTexture" | "minMaxHeight"
-  >
+  Omit<PolygonBaseProps, "batchDataTexture" | "minMaxHeight">
 > = {
   color: 0,
   opacity: 1,

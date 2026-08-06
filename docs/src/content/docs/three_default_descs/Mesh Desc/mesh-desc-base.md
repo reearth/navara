@@ -18,6 +18,7 @@ sidebar:
 | `scale`       | `{ x: number, y: number, z: number }`  | -              | Scale, or local offset when `matrix`/`matrixWorld` is set                                      |
 | `matrix`      | `Matrix4`                              | -              | Local transform matrix. When set, `position`/`rotation`/`scale` become offsets within this frame |
 | `matrixWorld` | `Matrix4`                              | -              | World transform matrix. When set, `position`/`rotation`/`scale` become offsets within this frame |
+| `lit`         | `boolean`                              | -              | Lighting override applied to every material of the mesh. Unset follows `view.lit` — see [Lighting](#lighting-lit) |
 | `pickable`    | `boolean`                              | `false`        | Enable GPU-based click picking. Defined per Descriptor by picking-capable mesh Descriptors, not on the base config |
 
 ## Transform Composition
@@ -85,6 +86,42 @@ const box2 = view.addMesh<BoxMeshDesc>({
   position: { x: 0, y: 40, z: 100 },
 });
 ```
+
+## Lighting (`lit`)
+
+`lit` is a three-state lighting override applied to **every** material under the mesh, including the children of a loaded model:
+
+| Value | Result |
+| ----- | ------ |
+| `true` | Lit, even when [`view.lit`](../../../three/api/threeview-properties/#lit) is `false` |
+| `false` | Plain albedo — the lighting equation is skipped on the color output |
+| unset (`undefined`) | Follows `view.lit` (default `true`) |
+
+Setting `lit: false` does not disable the lit pipeline: normals and the shadow G-buffer keep being written, which is what lets a post-processing pass re-light the albedo afterwards.
+
+```typescript
+// Follows view.lit
+const box = view.addMesh<BoxMeshDesc>({ box: { width: 100 }, position });
+
+// Always lit, whatever view.lit says
+const sphere = view.addMesh<SphereMeshDesc>({
+  sphere: { radius: 100 },
+  position,
+  lit: true,
+});
+
+// Change it later
+sphere.update({ lit: false });
+
+// Passing undefined explicitly resets the mesh to following view.lit
+sphere.update({ lit: undefined });
+```
+
+:::note
+Changing `lit` recompiles the mesh's shaders once, so treat it as a configuration switch rather than a per-frame control. Mesh Descriptors that are unlit by nature (points, sprites, text, plain `ShaderMaterial`) are unaffected.
+:::
+
+Descriptors that attach their materials asynchronously (glTF loads, for example) re-apply the override by calling the base class's `applyLit()` once their materials exist.
 
 ## Picking
 

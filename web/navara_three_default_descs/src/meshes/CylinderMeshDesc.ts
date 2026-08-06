@@ -123,13 +123,6 @@ export class CylinderMeshDesc extends MeshDescWithSelectiveEffect<
     cfg: NonNullable<CylinderMeshConfig["cylinder"]>,
   ): CylinderMeshMaterial {
     const colorValue = cfg.color ?? new Color().setStyle("#ffffff");
-    if (cfg.draped) {
-      return new MeshBasicMaterial({
-        color: colorValue.raw,
-        opacity: cfg.opacity ?? 1,
-        transparent: cfg.transparent ?? false,
-      });
-    }
     const emissiveColorValue = cfg.emissiveColor ? cfg.emissiveColor.raw : 0;
     return new MeshLambertMaterial({
       color: colorValue.raw,

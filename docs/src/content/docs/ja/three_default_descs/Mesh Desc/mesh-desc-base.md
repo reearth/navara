@@ -18,6 +18,7 @@ sidebar:
 | `scale`       | `{ x: number, y: number, z: number }` | -          | スケール、`matrix`/`matrixWorld` 設定時はローカルオフセット                                 |
 | `matrix`      | `Matrix4`                             | -          | ローカル変換行列。設定時は `position`/`rotation`/`scale` がこのフレーム内のオフセットになる |
 | `matrixWorld` | `Matrix4`                             | -          | ワールド変換行列。設定時は `position`/`rotation`/`scale` がこのフレーム内のオフセットになる |
+| `lit`         | `boolean`                             | -          | メッシュのすべてのマテリアルに適用するライティングの上書き。未設定なら `view.lit` に従う — [Lighting](#lighting-lit) を参照 |
 | `pickable`    | `boolean`                             | `false`    | GPU ベースのクリックピッキングを有効にする。ピッキング対応のメッシュ Descriptor が Descriptor ごとに定義するもので、基底の設定には存在しない |
 
 ## トランスフォーム合成
@@ -85,6 +86,42 @@ const box2 = view.addMesh<BoxMeshDesc>({
   position: { x: 0, y: 40, z: 100 },
 });
 ```
+
+## Lighting (`lit`)
+
+`lit` はメッシュ配下の**すべて**のマテリアル（読み込んだモデルの子要素を含む）に適用される、3 状態のライティング上書きです。
+
+| 値 | 結果 |
+| -- | ---- |
+| `true` | [`view.lit`](../../../three/api/threeview-properties/#lit) が `false` でも lit |
+| `false` | アルベドのみ — カラー出力でライティング計算がスキップされる |
+| 未設定（`undefined`） | `view.lit` に従う（既定は `true`） |
+
+`lit: false` にしても lit パイプラインが止まるわけではありません。法線とシャドウ G-buffer は書き込まれ続けるため、後段のポストプロセスパスでアルベドを再ライティングできます。
+
+```typescript
+// view.lit に従う
+const box = view.addMesh<BoxMeshDesc>({ box: { width: 100 }, position });
+
+// view.lit の値に関わらず常に lit
+const sphere = view.addMesh<SphereMeshDesc>({
+  sphere: { radius: 100 },
+  position,
+  lit: true,
+});
+
+// 後から変更する
+sphere.update({ lit: false });
+
+// undefined を明示的に渡すと view.lit に従う状態へ戻る
+sphere.update({ lit: undefined });
+```
+
+:::note
+`lit` の変更はメッシュのシェーダーを一度再コンパイルします。毎フレーム制御するものではなく、構成の切り替えとして扱ってください。もともとライティングを行わないメッシュ（ポイント、スプライト、テキスト、素の `ShaderMaterial`）は影響を受けません。
+:::
+
+マテリアルを非同期に組み立てる Descriptor（glTF の読み込みなど）は、マテリアルが揃った時点で基底クラスの `applyLit()` を呼び出して上書きを再適用します。
 
 ## ピッキング
 

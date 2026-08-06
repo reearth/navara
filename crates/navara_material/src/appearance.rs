@@ -310,6 +310,10 @@ pub struct PolylineMaterial {
     pub show: bool,
     pub cast_shadow: bool,
     pub receive_shadow: bool,
+    /// Applies the lighting equation to the color output. When `false` the
+    /// material outputs plain albedo (for deferred lighting) while normals and
+    /// the shadow G-buffer keep being written.
+    pub lit: Option<bool>,
     pub color: u32,
     pub width: f32,
     pub max_width: f32,
@@ -335,6 +339,7 @@ impl Default for PolylineMaterial {
             show: true,
             cast_shadow: false,
             receive_shadow: false,
+            lit: None,
             color: 0xffffff,
             width: 1.,
             max_width: 10000.,
@@ -371,6 +376,10 @@ pub struct PolygonMaterial {
     pub show: bool,
     pub cast_shadow: bool,
     pub receive_shadow: bool,
+    /// Applies the lighting equation to the color output. When `false` the
+    /// material outputs plain albedo (for deferred lighting) while normals and
+    /// the shadow G-buffer keep being written.
+    pub lit: Option<bool>,
     pub color: u32,
     pub clamp_to_ground: bool,
     pub tiled: bool,
@@ -410,6 +419,7 @@ impl Default for PolygonMaterial {
             show: true,
             cast_shadow: false,
             receive_shadow: false,
+            lit: None,
             color: 0xffffff,
             clamp_to_ground: true,
             tiled: false,
@@ -464,6 +474,10 @@ pub struct ModelMaterial {
     pub show: bool,
     pub cast_shadow: bool,
     pub receive_shadow: bool,
+    /// Applies the lighting equation to the color output. When `false` the
+    /// material outputs plain albedo (for deferred lighting) while normals and
+    /// the shadow G-buffer keep being written.
+    pub lit: Option<bool>,
     pub url: String,
     pub size: f32,
     pub height: f32,
@@ -512,6 +526,7 @@ impl Default for ModelMaterial {
             show: true,
             cast_shadow: false,
             receive_shadow: false,
+            lit: None,
             size: 1.,
             height: 1.,
             url: "".to_string(),
@@ -610,6 +625,7 @@ pub struct RasterTileInternalMaterial {
     pub texture_fragments: Option<Vec<Option<Entity>>>,
     pub cast_shadow: Option<bool>,
     pub receive_shadow: Option<bool>,
+    pub lit: Option<bool>,
     pub show_bounding_box: Option<bool>,
 
     // Elevation Heatmap fields
@@ -653,6 +669,10 @@ pub struct TerrainMaterial {
     pub show: bool,
     pub cast_shadow: bool,
     pub receive_shadow: bool,
+    /// Applies the lighting equation to the color output. When `false` the
+    /// material outputs plain albedo (for deferred lighting) while normals and
+    /// the shadow G-buffer keep being written.
+    pub lit: Option<bool>,
     pub show_bounding_box: bool,
     /// Whether to render skirts along tile boundaries to hide gaps.
     pub skirt: bool,
@@ -667,6 +687,7 @@ impl Default for TerrainMaterial {
             show: true,
             cast_shadow: false,
             receive_shadow: false,
+            lit: None,
             show_bounding_box: false,
             skirt: true,
             skirt_exaggeration: 1.0,

@@ -16,9 +16,7 @@ in vec3 vNormal;
 
 #include chunks/show_pars_fragment;
 
-layout(location = 1) out vec4 normalBuffer;
-layout(location = 2) out vec4 effectIdBuffer;
-layout(location = 3) out vec4 emissiveBuffer;
+#include chunks/gbuffer_pars_fragment;
 
 #ifdef USE_SELECTIVE_EFFECT
     uniform float uEffectIdsMask;
@@ -52,6 +50,10 @@ void main() {
 
     vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;
 
+#if !defined(NVR_LIT) && (defined(NVR_UNLIT) || defined(NVR_UNLIT_SCENE))
+    // Albedo-only output (`lit` option / `view.lit` default).
+    outgoingLight = diffuseColor.rgb;
+#endif
     #include <opaque_fragment>
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
@@ -61,16 +63,19 @@ void main() {
         gl_FragColor = vec4(pickColor.xyz, 1.0);
     }
 
-    normalBuffer = vec4(
-        packNormalToVec2(vNormal),
-        0.0,
-        0.0
-    );
-    #ifdef USE_SELECTIVE_EFFECT
-        effectIdBuffer = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
-        emissiveBuffer = vec4((diffuseColor.rgb + uEmissiveColor) * uEmissiveIntensity, 1.0);
-    #else
-        effectIdBuffer = vec4(0.0);
-        emissiveBuffer = vec4(0.0);
+    #ifndef USE_SHADOWMAP_DEPTH
+        normalBuffer = vec4(
+            packNormalToVec2(vNormal),
+            0.0,
+            1.0
+        );
+        #ifdef USE_SELECTIVE_EFFECT
+            GBUFFER_WRITE_EFFECT(uEffectIdsMask, (diffuseColor.rgb + uEmissiveColor) * uEmissiveIntensity)
+        #else
+            GBUFFER_WRITE_EFFECT_ZERO
+        #endif
+
+        // Polyline runs the lit pipeline (CSM accumulates nvr_shadowMask).
+        GBUFFER_WRITE_SHADOW
     #endif
 }

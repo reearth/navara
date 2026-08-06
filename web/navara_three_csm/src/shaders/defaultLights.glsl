@@ -9,17 +9,24 @@ void defaultLights() {
 
     #if defined(USE_SHADOWMAP) && UNROLLED_LOOP_INDEX < NUM_DIR_LIGHT_SHADOWS
     directionalLightShadow = directionalLightShadows[i];
-    directLight.color *=
-      directLight.visible && receiveShadow
-        ? getShadow(
-          directionalShadowMap[i],
-          directionalLightShadow.shadowMapSize,
-          directionalLightShadow.shadowIntensity,
-          directionalLightShadow.shadowBias,
-          directionalLightShadow.shadowRadius,
-          vDirectionalShadowCoord[i]
-        )
-        : 1.0;
+    {
+      float nvrShadowFactor =
+        directLight.visible && receiveShadow
+          ? getShadow(
+            directionalShadowMap[i],
+            directionalLightShadow.shadowMapSize,
+            directionalLightShadow.shadowIntensity,
+            directionalLightShadow.shadowBias,
+            directionalLightShadow.shadowRadius,
+            vDirectionalShadowCoord[i]
+          )
+          : 1.0;
+      directLight.color *= nvrShadowFactor;
+      #if defined(USE_GBUFFER_SHADOW) && !defined(USE_SHADOWMAP_DEPTH)
+      // Feed the G-buffer shadow output (declared by gbuffer_pars_fragment).
+      nvr_shadowMask *= nvrShadowFactor;
+      #endif
+    }
     #endif
 
     RE_Direct(

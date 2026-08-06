@@ -3,7 +3,6 @@ import {
   PolygonMesh as NavaraPolygonMesh,
   PolygonMaterial,
 } from "@navaramap/engine";
-import type { Texture } from "three";
 import {
   BufferAttribute,
   BufferGeometry,
@@ -19,6 +18,7 @@ import {
 
 import { PolygonOutlineMesh } from "..";
 import type { EventContext } from "../event/context";
+import { applyLitOption } from "../material";
 import type { PolygonMaterialProps } from "../material/enhancer/polygon";
 import { createPolygonMaterialEnhancer } from "../material/enhancer/polygon/polygonMaterialEnhancer";
 
@@ -286,6 +286,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
     this.castShadow = !!meshMaterial.castShadow;
     this.receiveShadow = !!meshMaterial.receiveShadow;
+    applyLitOption(this.material, meshMaterial.lit);
 
     // This mesh is texturized if it has a tile handle (terrain attachment).
     // `!= null`, not truthiness: the root vector tile's handle is 0.
@@ -322,7 +323,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
         roughness: meshMaterial.roughness,
         emissiveColor: meshMaterial.emissiveColor,
         emissiveIntensity: meshMaterial.emissiveIntensity,
-        globeNormalTexture: uniforms.tGlobeNormal as { value: Texture | null },
         useRTE,
       },
       water: {
@@ -411,6 +411,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
     }
     this.castShadow = !!material.castShadow;
     this.receiveShadow = !!material.receiveShadow;
+    applyLitOption(this.material, material.lit);
 
     const { base } = enhancer.states();
 

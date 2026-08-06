@@ -5,7 +5,7 @@ sidebar:
   order: 520
 ---
 
-`ModelMaterial`は、3D モデルレンダリング用のマテリアルを表します。
+`ModelMaterial` は [`3d-tiles`](../../../three/layer/3d-tiles-layer/) レイヤーのモデルの描画オプションです。`model` キーで指定します。データセットの URL などの取得設定は、参照先の [`3d-tiles`](../../../three/source/3d-tiles-source/) ソース側にあり、ここには含まれません。
 
 ## Properties
 
@@ -230,6 +230,24 @@ import { Color } from "@navaramap/three";
 {
   model: {
     ior: 1.5 // ガラスの屈折率
+  }
+}
+```
+
+### lit
+
+**Type:** `boolean | undefined`
+
+**Description:** カラー出力にライティング計算を適用するかどうかを指定します。`false` の場合、モデルはアルベドのみで描画されます。lit パイプライン自体は動き続けるため、法線とシャドウ G-buffer は書き込まれたままです。未設定の場合はシーン既定値 [`view.lit`](../../../three/api/threeview-properties/#lit) に従い、明示的に指定するとその既定値をどちらの方向にも上書きします。
+
+**Default:** `undefined`（`view.lit` に従う）
+
+**Example:**
+
+```typescript
+{
+  model: {
+    lit: false // アルベドのみを出力（ディファードライティングパス向けなど）
   }
 }
 ```
@@ -519,24 +537,6 @@ import { Color } from "@navaramap/three";
 {
   model: {
     transparent: true
-  }
-}
-```
-
-### url
-
-**Type:** `string | undefined`
-
-**Description:** データソースの URL を指定します。
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  model: {
-    url: "https://example.com/models/building.glb"
   }
 }
 ```

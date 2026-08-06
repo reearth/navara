@@ -1,4 +1,5 @@
 import type ThreeView from "../index";
+import type { GBufferName } from "../material/gbufferLayout";
 
 import { DescRegistry } from "./DescRegistry";
 import { EffectDesc, type EffectConfig } from "./EffectDesc";
@@ -27,5 +28,18 @@ export class EffectDescRegistry extends DescRegistry<
    */
   findEffectType(config: Record<string, unknown>): string | null {
     return this.findTypeFromConfig(config);
+  }
+
+  /**
+   * Optional G-buffer attachments the effect type declares via the
+   * `requiredBuffers` static (empty when it declares none).
+   */
+  getRequiredBuffers(effectType: string): readonly GBufferName[] {
+    const EffectClass = this.getConstructor(effectType) as
+      | (EffectDescConstructor & {
+          requiredBuffers?: readonly GBufferName[];
+        })
+      | undefined;
+    return EffectClass?.requiredBuffers ?? [];
   }
 }

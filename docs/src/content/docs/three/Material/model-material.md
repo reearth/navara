@@ -5,7 +5,7 @@ sidebar:
   order: 520
 ---
 
-`ModelMaterial` represents a material for 3D model rendering.
+`ModelMaterial` holds the render options for a [`3d-tiles`](../../../three/layer/3d-tiles-layer/) layer's models. It is set via the `model` key. The dataset URL and other fetch config live on the referenced [`3d-tiles`](../../../three/source/3d-tiles-source/) source, not here.
 
 ## Properties
 
@@ -230,6 +230,24 @@ import { Color } from "@navaramap/three";
 {
   model: {
     ior: 1.5 // Index of refraction for glass
+  }
+}
+```
+
+### lit
+
+**Type:** `boolean | undefined`
+
+**Description:** Applies the lighting equation to the color output. When `false`, the model renders as plain albedo — the rest of the lit pipeline still runs, so normals and the shadow G-buffer keep being written. Leaving it unset follows the scene default, [`view.lit`](../../../three/api/threeview-properties/#lit); setting it explicitly overrides that default in either direction.
+
+**Default:** `undefined` (follows `view.lit`)
+
+**Example:**
+
+```typescript
+{
+  model: {
+    lit: false // Plain albedo output, e.g. for a deferred lighting pass
   }
 }
 ```
@@ -519,24 +537,6 @@ import { Color } from "@navaramap/three";
 {
   model: {
     transparent: true
-  }
-}
-```
-
-### url
-
-**Type:** `string | undefined`
-
-**Description:** Specifies the data source URL.
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  model: {
-    url: "https://example.com/models/building.glb"
   }
 }
 ```

@@ -12,6 +12,7 @@ import {
 } from "three";
 
 import type { EventContext } from "../event/context";
+import { applyLitOption } from "../material";
 import { createPolylineMaterialEnhancer } from "../material/enhancer";
 
 import {
@@ -263,6 +264,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
 
     this.castShadow = !!meshMaterial.castShadow;
     this.receiveShadow = !!meshMaterial.receiveShadow;
+    applyLitOption(this.material, meshMaterial.lit);
 
     const isTexturized = mesh.should_be_texturized;
 
@@ -422,6 +424,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
     this.visible = enhancer.states().isTexturized ? shown : shown && active;
     this.castShadow = !!material.castShadow;
     this.receiveShadow = !!material.receiveShadow;
+    applyLitOption(this.material, material.lit);
 
     const base = enhancer.states();
 

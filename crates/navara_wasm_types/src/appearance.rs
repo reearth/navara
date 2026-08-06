@@ -520,6 +520,10 @@ pub struct PolylineMaterial {
     #[wasm_bindgen(js_name = receiveShadow)]
     #[serde(rename = "receiveShadow")]
     pub receive_shadow: Option<bool>,
+    /// Applies the lighting equation to the color output. When `false` the
+    /// material outputs plain albedo (for deferred lighting) while normals and
+    /// the shadow G-buffer keep being written.
+    pub lit: Option<bool>,
     pub color: Option<u32>,
     pub width: Option<f32>,
     /// Maximum line width in pixels, clamping the rendered width regardless of zoom level.
@@ -584,6 +588,7 @@ impl PolylineMaterial {
             show,
             cast_shadow,
             receive_shadow,
+            lit: None,
             color,
             clamp_to_ground,
             tiled,
@@ -610,6 +615,7 @@ impl PolylineMaterial {
             show: self.show.unwrap_or(other.show),
             cast_shadow: self.cast_shadow.unwrap_or(other.cast_shadow),
             receive_shadow: self.receive_shadow.unwrap_or(other.receive_shadow),
+            lit: self.lit.or(other.lit),
             color: self.color.unwrap_or(other.color),
             width: self.width.unwrap_or(other.width),
             max_width: self.max_width.unwrap_or(other.max_width),
@@ -638,6 +644,7 @@ impl From<PolylineMaterial> for navara_material::PolylineMaterial {
             show: val.show.unwrap_or(default.show),
             cast_shadow: val.cast_shadow.unwrap_or(default.cast_shadow),
             receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
+            lit: val.lit.or(default.lit),
             color: val.color.unwrap_or(default.color),
             width: val.width.unwrap_or(default.width),
             max_width: val.max_width.unwrap_or(default.max_width),
@@ -660,6 +667,7 @@ impl<'a> From<&'a navara_material::PolylineMaterial> for PolylineMaterial {
             show: Some(value.show),
             cast_shadow: Some(value.cast_shadow),
             receive_shadow: Some(value.receive_shadow),
+            lit: value.lit,
             color: Some(value.color),
             width: Some(value.width),
             max_width: Some(value.max_width),
@@ -683,6 +691,7 @@ impl From<navara_material::PolylineMaterial> for PolylineMaterial {
             show: Some(value.show),
             cast_shadow: Some(value.cast_shadow),
             receive_shadow: Some(value.receive_shadow),
+            lit: value.lit,
             color: Some(value.color),
             width: Some(value.width),
             max_width: Some(value.max_width),
@@ -741,6 +750,10 @@ pub struct PolygonMaterial {
     #[wasm_bindgen(js_name = receiveShadow)]
     #[serde(rename = "receiveShadow")]
     pub receive_shadow: Option<bool>,
+    /// Applies the lighting equation to the color output. When `false` the
+    /// material outputs plain albedo (for deferred lighting) while normals and
+    /// the shadow G-buffer keep being written.
+    pub lit: Option<bool>,
     pub color: Option<u32>,
     #[wasm_bindgen(js_name = clampToGround)]
     #[serde(rename = "clampToGround")]
@@ -852,6 +865,7 @@ impl PolygonMaterial {
             show,
             cast_shadow,
             receive_shadow,
+            lit: None,
             color,
             clamp_to_ground,
             tiled,
@@ -897,6 +911,7 @@ impl PolygonMaterial {
             show: self.show.unwrap_or(other.show),
             cast_shadow: self.cast_shadow.unwrap_or(other.cast_shadow),
             receive_shadow: self.receive_shadow.unwrap_or(other.receive_shadow),
+            lit: self.lit.or(other.lit),
             color: self.color.unwrap_or(other.color),
             clamp_to_ground: self.clamp_to_ground.unwrap_or(other.clamp_to_ground),
             tiled: self.tiled.unwrap_or(other.tiled),
@@ -944,6 +959,7 @@ impl From<PolygonMaterial> for navara_material::PolygonMaterial {
             show: val.show.unwrap_or(default.show),
             cast_shadow: val.cast_shadow.unwrap_or(default.cast_shadow),
             receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
+            lit: val.lit.or(default.lit),
             color: val.color.unwrap_or(default.color),
             clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
             tiled: val.tiled.unwrap_or(default.tiled),
@@ -987,6 +1003,7 @@ impl<'a> From<&'a navara_material::PolygonMaterial> for PolygonMaterial {
             show: Some(value.show),
             cast_shadow: Some(value.cast_shadow),
             receive_shadow: Some(value.receive_shadow),
+            lit: value.lit,
             color: Some(value.color),
             clamp_to_ground: Some(value.clamp_to_ground),
             tiled: Some(value.tiled),
@@ -1026,6 +1043,7 @@ impl From<navara_material::PolygonMaterial> for PolygonMaterial {
             show: Some(value.show),
             cast_shadow: Some(value.cast_shadow),
             receive_shadow: Some(value.receive_shadow),
+            lit: value.lit,
             color: Some(value.color),
             clamp_to_ground: Some(value.clamp_to_ground),
             tiled: Some(value.tiled),
@@ -1100,6 +1118,10 @@ pub struct ModelMaterial {
     #[wasm_bindgen(js_name = receiveShadow)]
     #[serde(rename = "receiveShadow")]
     pub receive_shadow: Option<bool>,
+    /// Applies the lighting equation to the color output. When `false` the
+    /// material outputs plain albedo (for deferred lighting) while normals and
+    /// the shadow G-buffer keep being written.
+    pub lit: Option<bool>,
     #[wasm_bindgen(getter_with_clone)]
     pub url: Option<String>,
     pub size: Option<f32>,
@@ -1191,6 +1213,7 @@ impl From<ModelMaterial> for navara_material::ModelMaterial {
             show: val.show.unwrap_or(default.show),
             cast_shadow: val.cast_shadow.unwrap_or(default.cast_shadow),
             receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
+            lit: val.lit.or(default.lit),
             url: val.url.unwrap_or(default.url),
             size: val.size.unwrap_or(default.size),
             height: val.height.unwrap_or(default.height),
@@ -1234,6 +1257,7 @@ impl<'a> From<&'a navara_material::ModelMaterial> for ModelMaterial {
             show: Some(value.show),
             cast_shadow: Some(value.cast_shadow),
             receive_shadow: Some(value.receive_shadow),
+            lit: value.lit,
             url: Some(value.url.clone()),
             size: Some(value.size),
             height: Some(value.height),
@@ -1275,6 +1299,7 @@ impl ModelMaterial {
             show: self.show.unwrap_or(other.show),
             cast_shadow: self.cast_shadow.unwrap_or(other.cast_shadow),
             receive_shadow: self.receive_shadow.unwrap_or(other.receive_shadow),
+            lit: self.lit.or(other.lit),
             url: self.url.clone().unwrap_or_else(|| other.url.clone()),
             size: self.size.unwrap_or(other.size),
             height: self.height.unwrap_or(other.height),
@@ -1405,6 +1430,10 @@ pub struct RasterTileInternalMaterial {
     #[wasm_bindgen(js_name = receiveShadow)]
     #[serde(rename = "receiveShadow")]
     pub receive_shadow: Option<bool>,
+    /// Applies the lighting equation to the color output. When `false` the
+    /// material outputs plain albedo (for deferred lighting) while normals and
+    /// the shadow G-buffer keep being written.
+    pub lit: Option<bool>,
     #[wasm_bindgen(js_name = showBoundingBox)]
     #[serde(rename = "showBoundingBox")]
     pub show_bounding_box: Option<bool>,
@@ -1537,6 +1566,7 @@ impl<'a> From<&'a navara_material::RasterTileInternalMaterial> for RasterTileInt
             }),
             cast_shadow: m.cast_shadow,
             receive_shadow: m.receive_shadow,
+            lit: m.lit,
             show_bounding_box: m.show_bounding_box,
 
             // Elevation Heatmap fields
@@ -1679,6 +1709,10 @@ pub struct TerrainMaterial {
     #[wasm_bindgen(js_name = receiveShadow)]
     #[serde(rename = "receiveShadow")]
     pub receive_shadow: Option<bool>,
+    /// Applies the lighting equation to the color output. When `false` the
+    /// material outputs plain albedo (for deferred lighting) while normals and
+    /// the shadow G-buffer keep being written.
+    pub lit: Option<bool>,
     #[wasm_bindgen(js_name = showBoundingBox)]
     #[serde(rename = "showBoundingBox")]
     pub show_bounding_box: Option<bool>,
@@ -1707,6 +1741,7 @@ impl TerrainMaterial {
             show: self.show.unwrap_or(other.show),
             cast_shadow: self.cast_shadow.unwrap_or(other.cast_shadow),
             receive_shadow: self.receive_shadow.unwrap_or(other.receive_shadow),
+            lit: self.lit.or(other.lit),
             show_bounding_box: self.show_bounding_box.unwrap_or(other.show_bounding_box),
             skirt: self.skirt.unwrap_or(other.skirt),
             skirt_exaggeration: self.skirt_exaggeration.unwrap_or(other.skirt_exaggeration),

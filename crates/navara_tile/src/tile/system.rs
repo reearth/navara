@@ -515,12 +515,13 @@ pub fn transfer_mesh(
         }
 
         // Extract shared elevation heatmap configuration (or use defaults)
-        let (cast_shadow, receive_shadow, terrain_show_bounding_box) = terrain_layer
+        let (cast_shadow, receive_shadow, lit, terrain_show_bounding_box) = terrain_layer
             .and_then(|l| l.appearance.as_ref())
-            .map_or((false, false, false), |appearance| {
+            .map_or((false, false, None, false), |appearance| {
                 (
                     appearance.cast_shadow,
                     appearance.receive_shadow,
+                    appearance.lit,
                     appearance.show_bounding_box,
                 )
             });
@@ -540,6 +541,7 @@ pub fn transfer_mesh(
             texture_fragments: merged_texture_fragments,
             cast_shadow: Some(cast_shadow),
             receive_shadow: Some(receive_shadow),
+            lit,
             show_bounding_box: Some(tile_show_bounding_box || terrain_show_bounding_box),
 
             // Elevation Heatmap fields
@@ -1066,14 +1068,17 @@ pub fn update_terrain_layer(
         if matched {
             let cast_shadow = Some(u.material.cast_shadow);
             let receive_shadow = Some(u.material.receive_shadow);
+            let lit = u.material.lit;
             let show_bounding_box = Some(u.material.show_bounding_box);
             for mut material in &mut tile_materials {
                 if material.cast_shadow != cast_shadow
                     || material.receive_shadow != receive_shadow
+                    || material.lit != lit
                     || material.show_bounding_box != show_bounding_box
                 {
                     material.cast_shadow = cast_shadow;
                     material.receive_shadow = receive_shadow;
+                    material.lit = lit;
                     material.show_bounding_box = show_bounding_box;
                 }
             }

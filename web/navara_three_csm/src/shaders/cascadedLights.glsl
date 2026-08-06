@@ -16,7 +16,7 @@ void cascadedLights() {
     cascade = csmCascades[i];
     directionalLightShadow = directionalLightShadows[i];
     if (clipDepth >= cascade.x && clipDepth < cascade.y) {
-      directLight.color *=
+      float nvrShadowFactor =
         directLight.visible && receiveShadow
           ? getShadow(
             directionalShadowMap[i],
@@ -27,6 +27,11 @@ void cascadedLights() {
             vDirectionalShadowCoord[i]
           )
           : 1.0;
+      directLight.color *= nvrShadowFactor;
+      #if defined(USE_GBUFFER_SHADOW) && !defined(USE_SHADOWMAP_DEPTH)
+      // Feed the G-buffer shadow output (declared by gbuffer_pars_fragment).
+      nvr_shadowMask *= nvrShadowFactor;
+      #endif
     }
     #endif // UNROLLED_LOOP_INDEX < CSM_CASCADE_COUNT
     #endif // UNROLLED_LOOP_INDEX < NUM_DIR_LIGHT_SHADOWS
@@ -53,17 +58,23 @@ void cascadedLights() {
     getDirectionalLightInfo(directionalLight, directLight);
 
     directionalLightShadow = directionalLightShadows[i];
-    directLight.color *=
-      directLight.visible && receiveShadow
-        ? getShadow(
-          directionalShadowMap[i],
-          directionalLightShadow.shadowMapSize,
-          directionalLightShadow.shadowIntensity,
-          directionalLightShadow.shadowBias,
-          directionalLightShadow.shadowRadius,
-          vDirectionalShadowCoord[i]
-        )
-        : 1.0;
+    {
+      float nvrShadowFactor =
+        directLight.visible && receiveShadow
+          ? getShadow(
+            directionalShadowMap[i],
+            directionalLightShadow.shadowMapSize,
+            directionalLightShadow.shadowIntensity,
+            directionalLightShadow.shadowBias,
+            directionalLightShadow.shadowRadius,
+            vDirectionalShadowCoord[i]
+          )
+          : 1.0;
+      directLight.color *= nvrShadowFactor;
+      #if defined(USE_GBUFFER_SHADOW) && !defined(USE_SHADOWMAP_DEPTH)
+      nvr_shadowMask *= nvrShadowFactor;
+      #endif
+    }
 
     RE_Direct(
       directLight,

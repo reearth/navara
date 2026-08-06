@@ -42,6 +42,8 @@ import {
 import { setTransform } from "../../event";
 import type { EventContext, TileHandler } from "../../event/context";
 import {
+  GBUFFER_EFFECT_WRITE_BUILTIN,
+  GBUFFER_NORMAL_WRITE_BASIC,
   generateTileCommonInjection,
   generateTileMapFragment,
   generateTileNormalFragmentMaps,
@@ -49,6 +51,7 @@ import {
   TILE_NORMAL_BUFFER_REPLACEMENT,
   TILE_PICK_FRAGMENT_OVERRIDE,
   TILE_VERTEX_INJECTIONS,
+  applyLitOption,
 } from "../../material";
 import { deriveCompositeFeatures } from "../../material/enhancer/tileComposite";
 import type { CustomObject3DEventMap } from "../../object3DEvent";
@@ -564,6 +567,7 @@ export class TileMesh
       this.castShadow = !!mat.castShadow;
       this.receiveShadow = !!mat.receiveShadow;
     }
+    applyLitOption(this.material, mat.lit);
 
     this.visible = false;
     this.renderOrder = mesh.render_order;
@@ -845,13 +849,12 @@ ${generateTileCommonInjection(maxTextures)}
           ${TILE_PICK_FRAGMENT_OVERRIDE}`,
         )
         .replaceWithCondition(
-          "normalBuffer = vec4(packNormalToVec2(normal), reflectivity, roughnessFactor);",
+          GBUFFER_NORMAL_WRITE_BASIC,
           TILE_NORMAL_BUFFER_REPLACEMENT,
           useNormal,
         )
         .replace(
-          `effectIdBuffer = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
-              emissiveBuffer = vec4(diffuseColor.rgb * uEmissiveIntensity + emissive, 1.0);`,
+          GBUFFER_EFFECT_WRITE_BUILTIN,
           TILE_EMISSIVE_EFFECT_BUFFER_REPLACEMENT,
         ).source;
     };
@@ -923,6 +926,7 @@ ${generateTileCommonInjection(maxTextures)}
     if (this.receiveShadow !== changedMaterial.receiveShadow) {
       this.receiveShadow = !!changedMaterial.receiveShadow;
     }
+    applyLitOption(this.material, changedMaterial.lit);
     if (this.material.color.getHex() !== globe.color) {
       this.material.color.setHex(globe.color);
     }

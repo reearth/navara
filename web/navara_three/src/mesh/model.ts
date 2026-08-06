@@ -24,6 +24,7 @@ import {
 import invariant from "tiny-invariant";
 
 import type { EventContext } from "../event/context";
+import { applyLitOption } from "../material";
 import {
   createModelMaterialEnhancer,
   createPntsEnhancer,
@@ -306,6 +307,7 @@ export class ModelMesh
 
     mesh.castShadow = !!meshMaterial.castShadow;
     mesh.receiveShadow = !!meshMaterial.receiveShadow;
+    applyLitOption(mesh.material, meshMaterial.lit);
 
     mesh.material.depthTest = true;
     mesh.material.depthWrite = true;
@@ -369,6 +371,7 @@ export class ModelMesh
       enhancer.update(updateProps);
       mesh.castShadow = !!material.castShadow;
       mesh.receiveShadow = !!material.receiveShadow;
+      applyLitOption(mesh.material, material.lit);
     }
 
     const pntsProps: PntsProps = {

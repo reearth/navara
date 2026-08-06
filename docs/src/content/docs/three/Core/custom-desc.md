@@ -80,16 +80,27 @@ See [ThreeView Properties](../../../three/api/threeview-properties/).
 | `ctx.getRenderer()`    | Get the WebGLRenderer instance                |
 | `ctx.getInputBuffer()` | Get the input buffer from the effect composer |
 
+#### Descriptor Lookup
+
+| Method                  | Description                                                                 |
+| ----------------------- | --------------------------------------------------------------------------- |
+| `ctx.findEffect(key)`   | First active effect Descriptor registered under `key` (e.g. `"mrt"`)         |
+| `ctx.findLight(key)`    | First active light Descriptor registered under `key` (e.g. `"sun"`)          |
+| `ctx.findMesh(key)`     | First active mesh Descriptor registered under `key` (e.g. `"gltfModel"`)     |
+
+Use these to inherit the scene's existing configuration instead of duplicating it — a custom lighting effect can read the sun's intensity and colour from `ctx.findLight("sun")` rather than taking its own options. Each returns `undefined` when no such Descriptor is active.
+
 #### Buffer / Texture Access
 
 | Method                        | Description                                      |
 | ----------------------------- | ------------------------------------------------ |
 | `ctx.getRenderTarget()`       | Get the main render target (includes G-buffer)   |
 | `ctx.getGlobeDepthTexture()`  | Get the globe depth texture for post-processing  |
-| `ctx.getGlobeNormalTexture()` | Get the globe normal texture for post-processing |
+| `ctx.getGlobeNormalTexture()` | Get the terrain-only normal, sampled in screen space. Declare `globeNormal` in `requiredBuffers` — it is kept at 1x1 otherwise |
 | `ctx.getNormalTexture()`      | Get the scene normal texture from the G-buffer   |
 | `ctx.getEffectIdsTexture()`   | Get the effect IDs texture from the G-buffer     |
 | `ctx.getEmissiveTexture()`    | Get the emissive texture from the G-buffer       |
+| `ctx.getShadowTexture()`      | Get the shadow texture (R=shadow amount, 0=lit..1=fully shadowed) from the G-buffer |
 
 #### Shadow (Experimental)
 
@@ -148,6 +159,16 @@ The automatic built-in patching is performed by an internal `overrideMaterialsFo
 ### Reading the G-Buffer
 
 To read these buffers from a custom effect, use the [Buffer / Texture Access](#buffer--texture-access) accessors on `ctx`, or reference the MRT pass from another effect via [`find<MRTPassEffectDesc>("mrt")`](#referencing-other-effect-descs).
+
+The effectIds, emissive, shadow and globeNormal buffers are optional: they exist only while an active effect declares them in its `static requiredBuffers` (e.g. `["selectiveEffect", "emissive"]`, `["shadow"]` or `["globeNormal"]`), and the accessors return `undefined` otherwise.
+
+`globeNormal` is the odd one out: it is a separate screen-space copy of the terrain normal rather than a G-buffer attachment, so it takes no attachment slot and does not count against the device's `MAX_DRAW_BUFFERS`. Undeclared, its target stays 1x1 and `ctx.getGlobeNormalTexture()` returns a texture you cannot sample meaningfully. A custom effect that reads them must declare `requiredBuffers` so the view allocates them. Note that changing the set of allocated buffers reallocates attachments and recompiles shaders, so effects should be added once and tuned via `update()` rather than added and removed repeatedly. Because a configuration change rebuilds the attachments, fetch these textures each frame (in `update()` or the pass's `render()`) instead of caching them at pass creation.
+
+Buffer encodings to be aware of when sampling:
+
+- The normal buffer's RG channels hold the **view-space normal in octahedral encoding** — decode with `unpackVec2ToNormal()` from the `NORMAL_PACKING_SHADER` GLSL string exported by `@navaramap/three` (a plain `xy * 2 - 1` reconstruction produces wrong shading).
+- The shadow buffer holds `R = shadow amount` (0 = lit .. 1 = fully shadowed) and `G = albedo-output flag` (1 when the fragment's color is plain albedo via the [`lit`](../../../three/api/threeview-properties/#lit) option — a deferred lighting pass uses it as its "shade this pixel" mask).
+- Depth textures follow Three.js packing conventions — check `depthBufferPacking` / `globeDepthBufferPacking` on the MRT pass and unpack with the helpers in the `DEPTH_PACKING_SHADER` GLSL string exported by `@navaramap/three` (Three.js's `packing` chunk).
 
 ## Custom Mesh Desc
 

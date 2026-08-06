@@ -39,6 +39,10 @@ export abstract class MeshDescWithSelectiveEffect<
     this.onPassKeyChange();
   };
 
+  private _onGBufferChanged = () => {
+    this.onPassKeyChange();
+  };
+
   constructor(view: ThreeView, ctx: ViewContext, config?: Config) {
     const resolvedConfig = config ?? ({} as Config);
     super(view, ctx, resolvedConfig);
@@ -51,11 +55,16 @@ export abstract class MeshDescWithSelectiveEffect<
     // ordering between SE participants stays consistent — an empty
     // effectIds list still has to coexist with non-empty siblings, and is
     // expressed by effectIdsMask=0 rather than by falling back to opaque.
-    // When no effect is registered, MRT participation is pure overhead, so
-    // defer to the parent's default (opaque) pass.
     if (this.ctx.selectiveEffectRegistry.slotCount > 0) {
       return "mrt";
     }
+    // Likewise while any optional G-buffer is allocated: outside the MRT pass
+    // the mesh leaves the G-buffer holding what lies behind it, and effects
+    // reading those buffers shade "through" it.
+    if (Object.values(this.view.buffers).some(Boolean)) {
+      return "mrt";
+    }
+    // Otherwise MRT participation is pure overhead.
     return super.getPassKey();
   }
 
@@ -67,6 +76,8 @@ export abstract class MeshDescWithSelectiveEffect<
 
     // Recompute mask when slot assignments change (effect added/removed)
     this.ctx.on("effectSlotsChanged", this._onSlotsChanged);
+    // G-buffer allocation changes also flip getPassKey() (mrt <-> opaque).
+    this.ctx.on("gbufferChanged", this._onGBufferChanged);
   }
 
   override onUpdateConfig(updates: UpdateConfig): void {
@@ -122,6 +133,7 @@ export abstract class MeshDescWithSelectiveEffect<
 
     // Unsubscribe from slot changes
     this.ctx.off("effectSlotsChanged", this._onSlotsChanged);
+    this.ctx.off("gbufferChanged", this._onGBufferChanged);
 
     super.onDestroy();
   }

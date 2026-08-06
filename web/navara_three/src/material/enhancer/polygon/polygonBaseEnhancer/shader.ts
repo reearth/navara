@@ -21,6 +21,7 @@ import { ShaderChunk } from "three";
 import type { WebGLProgramParametersWithUniforms } from "three";
 
 import { createReplacer } from "../../../../utils";
+import { GBUFFER_NORMAL_WRITE_BASIC } from "../../../gbufferLayout";
 
 import { POLYGON_BASE_SHADER_MARKERS } from "./markers";
 import type { SupportedMaterial } from "./material";
@@ -156,7 +157,6 @@ vPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;
 ${POLYGON_BASE_SHADER_MARKERS.fragment.UNIFORM_START}
 uniform vec3 diffuse;
 uniform bool uClampToGround;
-uniform sampler2D uGlobeNormal;
 uniform float nvr_uPickable;
 // uEffectIdsMask is declared by overrideMaterialsForMRT (#ifdef USE_SELECTIVE_EFFECT block)
 uniform bool uIsTexturized;
@@ -205,13 +205,7 @@ ${POLYGON_BASE_SHADER_MARKERS.fragment.NORMAL_START}
 vec3 origNormal = vec3(normal);
 vec3 specular;
 
-if(uClampToGround) {
-  vec2 uv = gl_FragCoord.xy / vec2(textureSize(uGlobeNormal, 0));
-  vec3 mapN = unpackVec2ToNormal(texture2D( uGlobeNormal, uv ).xy);
-  normal = normalize( mapN );
-} else {
- #include <normal_fragment_maps>
-}
+#include <normal_fragment_maps>
 
 ${POLYGON_BASE_SHADER_MARKERS.fragment.NORMAL_END}
 `,
@@ -242,12 +236,12 @@ if (nvr_uPickable > 0.0 && diffuseColor.a > 0.0) {
 `,
     )
     .replace(
-      "normalBuffer = vec4(packNormalToVec2(normal), reflectivity, roughnessFactor);",
+      GBUFFER_NORMAL_WRITE_BASIC,
       `
 ${POLYGON_BASE_SHADER_MARKERS.fragment.FINAL_NORMAL_START}
 vec3 finalNormal = origNormal;
 ${POLYGON_BASE_SHADER_MARKERS.fragment.FINAL_NORMAL_END}
-normalBuffer = vec4(packNormalToVec2(finalNormal), reflectivity, roughnessFactor);
+normalBuffer = vec4(packNormalToVec2(finalNormal), reflectivity, GBUFFER_NORMAL_ALPHA(roughnessFactor))
 `,
     ).source;
 };

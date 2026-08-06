@@ -80,9 +80,10 @@ export abstract class DescRegistry<
   }
 
   /**
-   * Get constructor by name (protected method for subclasses)
+   * Get constructor by name. Public so `ViewContext.findLight`/`findMesh`
+   * can resolve a registered key to its descriptor class.
    */
-  protected getConstructor(name: string): TConstructor | undefined {
+  getConstructor(name: string): TConstructor | undefined {
     return this.registry.get(name);
   }
 }

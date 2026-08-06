@@ -193,6 +193,24 @@ import { Color } from "@navaramap/three";
 }
 ```
 
+### lit
+
+**Type:** `boolean | undefined`
+
+**Description:** カラー出力にライティング計算を適用するかどうかを指定します。`false` の場合、ポリゴンはアルベドのみで描画されます。lit パイプライン自体は動き続けるため、法線とシャドウ G-buffer は書き込まれたままです。未設定の場合はシーン既定値 [`view.lit`](../../../three/api/threeview-properties/#lit) に従い、明示的に指定するとその既定値をどちらの方向にも上書きします。
+
+**Default:** `undefined`（`view.lit` に従う）
+
+**Example:**
+
+```typescript
+{
+  polygon: {
+    lit: false // アルベドのみを出力（ディファードライティングパス向けなど）
+  }
+}
+```
+
 ### opacity
 
 **Type:** `number | undefined`

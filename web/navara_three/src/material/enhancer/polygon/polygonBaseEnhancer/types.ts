@@ -42,9 +42,6 @@ export type PolygonBaseProps = {
   emissiveColor?: number;
   emissiveIntensity?: number;
 
-  // External uniforms (passed from CommonUniforms)
-  globeNormalTexture?: UniformValue<Texture | null>;
-
   // Batch texture
   batchDataTexture?: UniformValue<Texture | null>;
 
@@ -102,7 +99,6 @@ export type PolygonBaseRefs = {
 
   // Optional uniforms
   batchDataTexture?: UniformValue<Texture | null>;
-  uGlobeNormal?: UniformValue<Texture | null>;
 
   // RTE uniforms (only present if useRTE is true)
   modelViewMatrixRTE?: UniformValue<Matrix4>;
@@ -143,10 +139,5 @@ export type PolygonBaseMutates = Mutates<
      * This is needed because batchDataTexture is an external ref passed via props.
      */
     setBatchDataTexture: (texture: UniformValue<Texture | null>) => void;
-    /**
-     * Set the globe normal texture ref.
-     * This is needed because globeNormalTexture is an external ref passed via props.
-     */
-    setGlobeNormalTexture: (texture: UniformValue<Texture | null>) => void;
   }
 >;

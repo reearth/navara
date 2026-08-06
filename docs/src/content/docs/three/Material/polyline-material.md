@@ -157,6 +157,24 @@ import { Color } from "@navaramap/three";
 }
 ```
 
+### lit
+
+**Type:** `boolean | undefined`
+
+**Description:** Applies the lighting equation to the color output. When `false`, the polyline renders as plain albedo — the rest of the lit pipeline still runs, so normals and the shadow G-buffer keep being written. Leaving it unset follows the scene default, [`view.lit`](../../../three/api/threeview-properties/#lit); setting it explicitly overrides that default in either direction.
+
+**Default:** `undefined` (follows `view.lit`)
+
+**Example:**
+
+```typescript
+{
+  polyline: {
+    lit: false // Plain albedo output, e.g. for a deferred lighting pass
+  }
+}
+```
+
 ### maxWidth
 
 **Type:** `number | undefined`

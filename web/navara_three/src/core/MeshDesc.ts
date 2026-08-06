@@ -1,8 +1,9 @@
 import type { BaseEventMap, XYZ } from "@navaramap/core";
-import { Euler, Matrix4, Object3D, Vector3 } from "three";
+import { Euler, Matrix4, Object3D, Vector3, type Mesh } from "three";
 import invariant from "tiny-invariant";
 
 import type ThreeView from "../index";
+import { applyLitOption } from "../material";
 import type { Scenes } from "../scene";
 
 import {
@@ -44,11 +45,18 @@ export type MeshConfig = {
    * Disables Three.js's auto matrix-world update.
    */
   matrixWorld?: Matrix4;
+  /**
+   * Lighting override for every material of the mesh. `false` outputs albedo
+   * only, while normals and the shadow G-buffer keep being written.
+   * `undefined` follows `view.lit` — passing it to `update()` resets a mesh
+   * to inheriting again.
+   */
+  lit?: boolean;
 } & BaseDescConfig;
 
 export type MeshUpdate = Pick<
   MeshConfig,
-  "position" | "scale" | "rotation" | "matrix" | "matrixWorld"
+  "position" | "scale" | "rotation" | "matrix" | "matrixWorld" | "lit"
 > &
   BaseDescConfigUpdate;
 
@@ -214,6 +222,8 @@ export abstract class MeshDesc<
   public rotation?: XYZ;
   public matrix?: Matrix4;
   public matrixWorld?: Matrix4;
+  /** Three-state `lit` override (see {@link MeshConfig.lit}). */
+  public lit?: boolean;
   private prevPassKey?: PassKey;
 
   constructor(view: ThreeView, ctx: ViewContext, config?: Config) {
@@ -224,6 +234,25 @@ export abstract class MeshDesc<
     this.rotation = resolvedConfig.rotation;
     this.matrix = resolvedConfig.matrix;
     this.matrixWorld = resolvedConfig.matrixWorld;
+    this.lit = resolvedConfig.lit;
+  }
+
+  /**
+   * Applies {@link lit} to every material under the mesh. Subclasses that
+   * attach materials asynchronously (glTF) call it again once they exist.
+   */
+  protected applyLit(): void {
+    const root = this.raw;
+    if (!root) return;
+    root.traverse((object) => {
+      const material = (object as Partial<Mesh>).material;
+      if (!material) return;
+      if (Array.isArray(material)) {
+        for (const m of material) applyLitOption(m, this.lit);
+      } else {
+        applyLitOption(material, this.lit);
+      }
+    });
   }
 
   /**
@@ -272,6 +301,7 @@ export abstract class MeshDesc<
     invariant(this.raw);
 
     this.applyTransform();
+    this.applyLit();
 
     this._instance.visible = this.visible;
 
@@ -390,6 +420,12 @@ export abstract class MeshDesc<
     if (updates.position !== undefined) this.position = updates.position;
     if (updates.scale !== undefined) this.scale = updates.scale;
     if (updates.rotation !== undefined) this.rotation = updates.rotation;
+
+    // Key presence, not value: `!== undefined` could not express a reset.
+    if ("lit" in updates) {
+      this.lit = updates.lit;
+      this.applyLit();
+    }
 
     if (spatialChanged) {
       // With a frame present, the effective transform depends on the

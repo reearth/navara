@@ -7,6 +7,7 @@ import {
 } from "../../core/EffectDesc";
 import type { ViewContext } from "../../core/ViewContext";
 import type ThreeView from "../../index";
+import type { GBufferName } from "../../material/gbufferLayout";
 
 import type { MRTPassEffectDesc } from "./MRTPassEffectDesc";
 
@@ -42,6 +43,13 @@ export abstract class SelectiveEffectDesc<
   Config extends SelectiveEffectConfig = SelectiveEffectConfig,
   UpdateConfig extends SelectiveEffectUpdate = SelectiveEffectUpdate,
 > extends EffectDesc<Config, UpdateConfig> {
+  /**
+   * Buffer-based selective effects read the effectIds bitmask buffer.
+   * Subclasses that also read the emissive buffer (e.g. bloom) override this
+   * with `["selectiveEffect", "emissive"]`.
+   */
+  static requiredBuffers: readonly GBufferName[] = ["selectiveEffect"];
+
   protected config: Config;
 
   constructor(view: ThreeView, ctx: ViewContext, config: Config) {
@@ -94,13 +102,13 @@ export abstract class SelectiveEffectDesc<
   // Buffer accessors — used by subclass passes to read MRT data
   // ---------------------------------------------------------------------------
 
-  /** Emissive RGB buffer (MRT attachment[3]). */
+  /** Emissive RGB buffer. */
   public getEmissiveBuffer(): Texture | null {
     const mrtDesc = this.find<MRTPassEffectDesc>("mrt");
     return mrtDesc?.emissiveBuffer ?? null;
   }
 
-  /** EffectIds bitmask buffer (MRT attachment[2]). NearestFilter, discrete data. */
+  /** EffectIds bitmask buffer (R=bitmask). NearestFilter, discrete data. */
   public getEffectIdsBuffer(): Texture | null {
     const mrtDesc = this.find<MRTPassEffectDesc>("mrt");
     return mrtDesc?.effectIdsBuffer ?? null;

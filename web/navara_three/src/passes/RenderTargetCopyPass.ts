@@ -77,6 +77,12 @@ export class RenderTargetCopyPass extends Pass {
     this._material.uniforms.color.value = texture;
   }
 
+  /** Points the pass at a rebuilt render target (same-purpose replacement). */
+  setRenderTarget(renderTarget: WebGLRenderTarget): void {
+    this._renderTarget = renderTarget;
+    this.setTexture(renderTarget.texture);
+  }
+
   /**
    * When a depth texture is set, the pass copies its depth into the target's
    * depth buffer via gl_FragDepth. Depth test must be enabled (with AlwaysDepth)

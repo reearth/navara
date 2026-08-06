@@ -258,21 +258,20 @@ export function generateTileNormalFragmentMaps(
  */
 export const TILE_NORMAL_BUFFER_REPLACEMENT = `
 vec3 finalNormal = mix(origNormal, normalize(origNormal * 0.7 + normal), applyWaterNormals);
-normalBuffer = vec4(packNormalToVec2(finalNormal), tileReflectivity, tileRoughness);
+normalBuffer = vec4(packNormalToVec2(finalNormal), tileReflectivity, GBUFFER_NORMAL_ALPHA(tileRoughness));
 `;
 
 /**
- * `effectIdBuffer = …; emissiveBuffer = …;` replacement. Only the
- * texturized-layer pixels write effect/emissive; raster pixels stay 0 so they
- * don't perturb downstream effect-mask passes.
+ * Effect/emissive write replacement, via the `GBUFFER_WRITE_EFFECT*` macros
+ * from the pars chunk (each buffer's write is compiled out when the view
+ * disables it). Only the texturized-layer pixels write effect/emissive;
+ * raster pixels stay 0 so they don't perturb downstream effect-mask passes.
  */
 export const TILE_EMISSIVE_EFFECT_BUFFER_REPLACEMENT = `
 if (isTexturizedLayer) {
-  effectIdBuffer = vec4(tileEffectIdsMask, 0.0, 0.0, 1.0);
-  emissiveBuffer = vec4(diffuseColor.rgb * tileEmissiveIntensity + tileEmissiveColor, 1.0);
+  GBUFFER_WRITE_EFFECT(tileEffectIdsMask, diffuseColor.rgb * tileEmissiveIntensity + tileEmissiveColor)
 } else {
-  effectIdBuffer = vec4(0.0);
-  emissiveBuffer = vec4(0.0);
+  GBUFFER_WRITE_EFFECT_ZERO
 }
 `;
 

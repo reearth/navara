@@ -59,6 +59,8 @@ export class SelectiveBloomEffectDesc extends SelectiveEffectDesc<
   static key = "selectiveBloom";
   static insertAfter = ["mrt"];
   static insertBefore = ["transparent"];
+  /** Bloom extraction reads the emissive buffer on top of the id mask. */
+  static requiredBuffers = ["selectiveEffect", "emissive"] as const;
 
   private bloomPass?: SelectiveBloomPass;
 

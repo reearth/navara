@@ -123,13 +123,6 @@ export class BoxMeshDesc extends MeshDescWithSelectiveEffect<
     cfg: NonNullable<BoxMeshConfig["box"]>,
   ): BoxMeshMaterial {
     const colorValue = cfg.color ?? new Color().setStyle("#ffffff");
-    if (cfg.draped) {
-      return new MeshBasicMaterial({
-        color: colorValue.raw,
-        opacity: cfg.opacity ?? 1,
-        transparent: cfg.transparent ?? false,
-      });
-    }
     return new MeshLambertMaterial({
       color: colorValue.raw,
       opacity: cfg.opacity ?? 1,

@@ -105,6 +105,62 @@ view.toneMappingExposure = 1.5;
 view.toneMappingExposure = 0.8;
 ```
 
+### lit
+
+**Type:** `boolean` — **Default:** `true`
+
+Gets or sets the scene-level default of the `lit` material option. When `false`, every material that does not set `lit` explicitly outputs **plain albedo**: the lighting equation is skipped on the color output, while the rest of the lit pipeline keeps running — normals and the shadow G-buffer are still written. That combination is the input a deferred lighting pass needs.
+
+Resolution is three-state, and the more specific setting always wins:
+
+| Setting | Result |
+| ------- | ------ |
+| `lit: true` on a material or mesh | Lit, even when `view.lit` is `false` |
+| `lit: false` on a material or mesh | Plain albedo, even when `view.lit` is `true` |
+| `lit` unset (`undefined`) | Follows `view.lit` |
+
+The option is available on the [`terrain`](../../../three/material/terrain-material/#lit), [`polygon`](../../../three/material/polygon-material/#lit), [`polyline`](../../../three/material/polyline-material/#lit) and [`model`](../../../three/material/model-material/#lit) materials, and top-level on any mesh Descriptor config (see [MeshDesc](../../../three_default_descs/mesh-desc/mesh-desc-base/#lighting-lit)). Materials that are unlit by nature (`point`, `billboard`, `text`) are unaffected.
+
+**Example:**
+
+```tsx
+// Scene default: everything outputs plain albedo
+view.lit = false;
+
+// …except this mesh, which stays forward-lit
+view.addMesh<SphereMeshDesc>({
+  sphere: { radius: 100 },
+  position,
+  lit: true,
+});
+```
+
+:::note
+Toggling `lit` — on the view, a material, or a mesh — recompiles the affected shaders once. It is a configuration switch, not a per-frame control.
+:::
+
+:::tip[Related Documentation]
+For a worked deferred lighting effect that consumes the albedo output together with the normal and shadow G-buffers, see [Custom Descriptor — Buffer / Texture Access](../../../three/core/custom-desc/#buffer--texture-access).
+:::
+
+### buffers
+
+**Type:** `ResolvedGBufferOptions`
+
+**Read-only** (getter)
+
+The G-buffer attachments currently allocated, as `{ selectiveEffect, emissive, shadow }` booleans. This is **derived**, not configured: the view allocates the union of the `static requiredBuffers` declared by the active effect Descriptors, and releases a buffer when the last effect needing it is removed.
+
+**Example:**
+
+```tsx
+console.log(view.buffers); // { selectiveEffect: false, emissive: false, shadow: false }
+```
+
+:::tip[Related Documentation]
+For declaring `requiredBuffers` and reading the buffers from a custom effect, see [Custom Descriptor — Buffer / Texture Access](../../../three/core/custom-desc/#buffer--texture-access).
+:::
+
 ### animation
 
 **Type:** `boolean`

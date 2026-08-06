@@ -71,9 +71,6 @@ export function createPolygonBaseEnhancer(
       if (props.batchDataTexture) {
         mutates.setBatchDataTexture(props.batchDataTexture);
       }
-      if (props.globeNormalTexture) {
-        mutates.setGlobeNormalTexture(props.globeNormalTexture);
-      }
       updateMaterialProps(material, mergedProps);
     },
 
@@ -84,9 +81,6 @@ export function createPolygonBaseEnhancer(
       // Handle external refs that are passed through props
       if (props.batchDataTexture) {
         mutates.setBatchDataTexture(props.batchDataTexture);
-      }
-      if (props.globeNormalTexture) {
-        mutates.setGlobeNormalTexture(props.globeNormalTexture);
       }
       updateMaterialProps(material, props);
     },

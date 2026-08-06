@@ -60,9 +60,6 @@ export const createBaseMutates = (useRTE: boolean): PolygonBaseMutates => {
     },
     updateUniforms: (uniforms, state) => {
       // Assign core uniform refs to shader.uniforms
-      if (refs.uGlobeNormal) {
-        uniforms.uGlobeNormal = refs.uGlobeNormal;
-      }
       uniforms.nvr_uPickable = refs.nvr_uPickable;
       uniforms.uEffectIdsMask = refs.uEffectIdsMask;
       uniforms.uEmissiveIntensity = refs.uEmissiveIntensity;
@@ -99,9 +96,6 @@ export const createBaseMutates = (useRTE: boolean): PolygonBaseMutates => {
     },
     setBatchDataTexture: (texture: UniformValue<Texture | null>): void => {
       refs.batchDataTexture = texture;
-    },
-    setGlobeNormalTexture: (texture: UniformValue<Texture | null>): void => {
-      refs.uGlobeNormal = texture;
     },
     updateRteUniforms: (
       modelViewMatrixRTE: Matrix4,

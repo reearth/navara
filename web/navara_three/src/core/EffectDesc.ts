@@ -6,6 +6,7 @@ import invariant from "tiny-invariant";
 
 import { Pass } from "../effects";
 import type ThreeView from "../index";
+import type { GBufferName } from "../material/gbufferLayout";
 
 import {
   BaseDesc,
@@ -194,6 +195,15 @@ export abstract class EffectDesc<
   static insertBefore?: string[];
   /** Set to `true` to allow multiple instances of this effect in the pipeline. */
   static allowDuplication?: boolean;
+  /**
+   * Optional G-buffer attachments this effect reads. The view derives its
+   * G-buffer configuration as the union of these across active effects:
+   * adding an effect allocates what it needs, removing the last effect that
+   * needs a buffer releases it. Changing the configuration reallocates
+   * attachments and recompiles shaders, so add effects once and tune them
+   * via `update()` instead of re-adding.
+   */
+  static requiredBuffers?: readonly GBufferName[];
 
   private instanceId: string;
 

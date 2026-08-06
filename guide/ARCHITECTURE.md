@@ -105,6 +105,8 @@ GIS Processing Modules
 
 This architecture ensures clear separation of concerns: the GIS engine handles all geospatial computations and data processing, while the rendering engine focuses purely on visual representation and GPU optimization.
 
+For the rendering engine's internals — the pass pipeline, the MRT G-buffer (layout, encodings, blending invariants), scene/pass routing, and the `lit` system — see [RENDERING_PIPELINE.md](RENDERING_PIPELINE.md).
+
 ## Source and Layer Model
 
 Navara separates **what data to fetch** from **how to render it**:

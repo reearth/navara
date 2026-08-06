@@ -8,6 +8,7 @@ import {
 } from "../../core/EffectDesc";
 import type { ViewContext } from "../../core/ViewContext";
 import type ThreeView from "../../index";
+import { GBUFFER_TEXTURE_INDEX } from "../../material/gbufferLayout";
 import { CustomRenderPass } from "../../passes";
 
 type Description = {
@@ -49,6 +50,8 @@ export class MRTPassEffectDesc extends EffectDesc<
       this.view.globe,
       {
         debugNormal: !!this.config.mrt?.debugNormal,
+        buffers: this.view.buffers,
+        lit: this.view.lit,
       },
     );
 
@@ -56,15 +59,40 @@ export class MRTPassEffectDesc extends EffectDesc<
   }
 
   get normalBuffer(): Texture | undefined {
-    return this.raw?.gbufferRenderTarget.textures[1];
+    return this.raw?.gbufferRenderTarget.textures[GBUFFER_TEXTURE_INDEX.normal];
   }
 
+  /**
+   * Selective-effect bitmask buffer (R=bitmask).
+   * `undefined` when the view disabled `buffers.selectiveEffect`.
+   */
   get effectIdsBuffer(): Texture | undefined {
-    return this.raw?.gbufferRenderTarget.textures[2];
+    const index = this.raw?.textureIndex.effectIds;
+    return index === undefined
+      ? undefined
+      : this.raw?.gbufferRenderTarget.textures[index];
   }
 
+  /**
+   * Emissive RGB buffer (HDR).
+   * `undefined` when the view disabled `buffers.emissive`.
+   */
   get emissiveBuffer(): Texture | undefined {
-    return this.raw?.gbufferRenderTarget.textures[3];
+    const index = this.raw?.textureIndex.emissive;
+    return index === undefined
+      ? undefined
+      : this.raw?.gbufferRenderTarget.textures[index];
+  }
+
+  /**
+   * Shadow buffer (R=shadow amount, 0=lit..1=fully shadowed).
+   * `undefined` unless an active effect requires the `shadow` buffer.
+   */
+  get shadowBuffer(): Texture | undefined {
+    const index = this.raw?.textureIndex.shadow;
+    return index === undefined
+      ? undefined
+      : this.raw?.gbufferRenderTarget.textures[index];
   }
 
   get depthBuffer(): Texture | undefined {
