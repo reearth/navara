@@ -44,7 +44,7 @@ export type CustomRenderPassOptions = {
   debugNormal?: boolean;
   disableShadow?: boolean;
   allowTransparent?: boolean;
-  /** G-buffer attachment configuration. Defaults to all buffers enabled. */
+  /** G-buffer attachment configuration. Defaults to all optional buffers disabled. */
   buffers?: ResolvedGBufferOptions;
   /**
    * Scene-level default of the `lit` material option (`view.lit`). When
