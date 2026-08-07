@@ -198,7 +198,7 @@ view.addEffect({
 
 **Type:** `number | undefined`
 
-**Description:** Maximum distance from the camera at which fog lights are considered. Lights that is farther than this value are culled on the CPU.
+**Description:** Maximum distance from the camera at which fog lights are considered. Lights that are farther than this value are culled on the CPU.
 
 **Default:** the camera's `far` value at effect creation
 
