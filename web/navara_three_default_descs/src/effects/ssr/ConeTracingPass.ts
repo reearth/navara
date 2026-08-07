@@ -1,5 +1,6 @@
-import { ShaderPass, CopyPass, GaussianBlurPass } from "postprocessing";
+import { ShaderPass, CopyPass } from "postprocessing";
 import {
+  LinearMipmapLinearFilter,
   Texture,
   WebGLRenderTarget,
   type WebGLRenderer,
@@ -14,9 +15,6 @@ import {
 } from "./ConeTracingMaterial";
 
 export type ConeTracingPassOptions = {
-  width?: number;
-  height?: number;
-  kernelSize?: number;
   coneTracingFadeStart?: number;
   coneTracingFadeEnd?: number;
   coneTracingMaxDistance?: number;
@@ -32,6 +30,7 @@ export const coneTracingPassOptionsDefaults = {
   coneTracingMaxDistance: coneTracingMaterialParametersDefaults.maxDistance,
   coneTracingIteration: coneTracingMaterialParametersDefaults.iteration,
   coneTracingIor: coneTracingMaterialParametersDefaults.ior,
+  resolveKernelSize: coneTracingMaterialParametersDefaults.resolveKernelSize,
   rayTracingBuffer: null,
   normalBuffer: null,
 } satisfies ConeTracingPassOptions;
@@ -39,20 +38,11 @@ export const coneTracingPassOptionsDefaults = {
 export class ConeTracingPass extends ShaderPass {
   readonly coneTracingMaterial: ConeTracingMaterial;
 
-  readonly blurPass: GaussianBlurPass;
   readonly copyPass: CopyPass;
   readonly mippedRenderTarget: WebGLRenderTarget;
-  readonly blurredRenderTarget: WebGLRenderTarget;
 
   constructor(options?: ConeTracingPassOptions) {
-    const {
-      width,
-      height,
-      kernelSize = 7,
-      rayTracingBuffer,
-      normalBuffer,
-      ...others
-    } = {
+    const { rayTracingBuffer, normalBuffer, ...others } = {
       ...coneTracingMaterialParametersDefaults,
       ...coneTracingPassOptionsDefaults,
       ...options,
@@ -69,20 +59,16 @@ export class ConeTracingPass extends ShaderPass {
 
     this.coneTracingMaterial = material;
 
+    // A mipmap min filter is required for the shader's textureLod() to reach
+    // the pre-convolved levels: with LinearFilter (the default) GL only ever
+    // samples mip 0, so the roughness-driven blur silently does nothing and
+    // the raw per-ray noise passes straight through.
     this.mippedRenderTarget = new WebGLRenderTarget(1, 1, {
       generateMipmaps: true,
+      minFilter: LinearMipmapLinearFilter,
     });
-    this.copyPass = new CopyPass(this.mippedRenderTarget);
-
     material.colorBuffer = this.mippedRenderTarget.texture;
-
-    this.blurredRenderTarget = new WebGLRenderTarget(1, 1);
-    this.blurPass = new GaussianBlurPass({
-      resolutionScale: 1,
-      resolutionX: width,
-      resolutionY: height,
-      kernelSize: kernelSize,
-    });
+    this.copyPass = new CopyPass(this.mippedRenderTarget, false);
   }
 
   update(
@@ -90,10 +76,7 @@ export class ConeTracingPass extends ShaderPass {
     inputBuffer: WebGLRenderTarget,
     _deltaTime?: number,
   ) {
-    // Blur the cone tracing result
-    this.blurPass.render(renderer, inputBuffer, this.blurredRenderTarget);
-
-    this.copyPass.render(renderer, this.blurredRenderTarget, null);
+    this.copyPass.render(renderer, inputBuffer, null);
   }
 
   override initialize(
@@ -102,34 +85,30 @@ export class ConeTracingPass extends ShaderPass {
     frameBufferType: TextureDataType,
   ): void {
     super.initialize(renderer, alpha, frameBufferType);
-    this.blurPass.initialize(renderer, alpha, frameBufferType);
     this.copyPass.initialize(renderer, alpha, frameBufferType);
   }
 
   setDepthTexture(
     depthTexture: Texture,
-    depthPacking?: DepthPackingStrategies,
+    _depthPacking?: DepthPackingStrategies,
   ): void {
     this.coneTracingMaterial.depthBuffer = depthTexture;
-    this.blurPass.setDepthTexture(depthTexture, depthPacking);
-    this.copyPass.setDepthTexture(depthTexture, depthPacking);
   }
 
+  /**
+   * Sizes the *colour* buffer the cone samples and the mip chain built over
+   * it. Both the mip count and the mip-level maths that indexes it are
+   * expressed in these pixels, so passing the resolve's own resolution keeps
+   * the physical blur radius identical while quartering the per-frame copy and
+   * mipmap work. The resolve's output resolution never comes through here; it
+   * is set by whichever render target the pass is asked to render into.
+   */
   override setSize(width: number, height: number): void {
     this.coneTracingMaterial.setSize(width, height);
-
-    this.blurredRenderTarget.setSize(width, height);
-    this.blurPass.setSize(width, height);
-
     this.mippedRenderTarget.setSize(width, height);
-    this.copyPass.setSize(width, height);
 
     // Calculate number of mip levels
     const numMips = Math.floor(Math.log2(Math.max(width, height))) + 1;
     this.coneTracingMaterial.uniforms.uNumMips.value = numMips;
-  }
-
-  override dispose(): void {
-    super.dispose();
   }
 }

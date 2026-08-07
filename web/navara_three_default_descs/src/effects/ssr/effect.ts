@@ -44,12 +44,16 @@ export type SSROptions = {
   eyeFadeStart?: number;
   /** End angle (radians) for fading reflections based on viewing angle */
   eyeFadeEnd?: number;
-  /** Amount of random jitter to reduce artifact */
+  /**
+   * Offsets each ray's start along its own stride, trading the banding of a
+   * coarse `pixelStride` for noise that the resolve then averages away. Only
+   * meaningful with cone tracing enabled, which is where the resolve lives -
+   * with `useConeTracing: false` nothing averages the rays and any non-zero
+   * value dithers reflection silhouettes into visible speckle.
+   */
   jitter?: number;
   /** Blend function for compositing reflections with the scene */
   blendMode?: BlendMode;
-  /** Gaussian blur kernel size. Should be an odd number in the range [3, 1020]. */
-  kernelSize?: number;
   /** Enable cone tracing that improves visual quality, but it might take a cost. */
   useConeTracing?: boolean;
   /** A ratio thats starts fading reflections */
@@ -61,6 +65,15 @@ export type SSROptions = {
   /** The number of iteration to accumulate the cone tracing */
   coneTracingIteration?: number;
   coneTracingIor?: number;
+  /**
+   * Width, in ray-buffer texels, of the neighbourhood the resolve gathers when
+   * cone tracing is enabled. One ray per pixel makes reflecting a binary
+   * decision; averaging the neighbours turns it into a continuous coverage, so
+   * reflection silhouettes get antialiased and jittered rays become extra
+   * samples of the same lobe instead of noise. Larger is smoother and softer.
+   * Odd numbers only.
+   */
+  resolveKernelSize?: number;
 } & EffectOptions;
 
 export const DEFAULT_SSR_OPTIONS: Required<SSROptions> = {
@@ -78,13 +91,13 @@ export const DEFAULT_SSR_OPTIONS: Required<SSROptions> = {
   eyeFadeEnd: 1,
   jitter: 1,
   blendMode: "normal",
-  kernelSize: 5,
   useConeTracing: true,
   coneTracingFadeStart: ssrEffectOptionsDefaults.coneTracingFadeStart,
   coneTracingFadeEnd: ssrEffectOptionsDefaults.coneTracingFadeEnd,
   coneTracingMaxDistance: ssrEffectOptionsDefaults.coneTracingMaxDistance,
   coneTracingIteration: ssrEffectOptionsDefaults.coneTracingIteration,
   coneTracingIor: ssrEffectOptionsDefaults.coneTracingIor,
+  resolveKernelSize: ssrEffectOptionsDefaults.resolveKernelSize,
 };
 
 export class SSR extends Effect<SSREffectImpl, SSROptions> {
@@ -104,13 +117,13 @@ export class SSR extends Effect<SSREffectImpl, SSROptions> {
       eyeFadeEnd: options.eyeFadeEnd,
       jitter: options.jitter,
       blendMode: options.blendMode,
-      kernelSize: options.kernelSize,
       useConeTracing: options.useConeTracing,
       coneTracingFadeStart: options.coneTracingFadeStart,
       coneTracingFadeEnd: options.coneTracingFadeEnd,
       coneTracingMaxDistance: options.coneTracingMaxDistance,
       coneTracingIteration: options.coneTracingIteration,
       coneTracingIor: options.coneTracingIor,
+      resolveKernelSize: options.resolveKernelSize,
     });
 
     super(camera, effect, options);
@@ -369,6 +382,18 @@ export class SSR extends Effect<SSREffectImpl, SSROptions> {
     if (!this.rawEffect) return;
     this.options.coneTracingIor = v;
     this.rawEffect.coneTracingIor = v;
+    this.emit("needsUpdate");
+  }
+
+  get resolveKernelSize(): number {
+    return (
+      this.options.resolveKernelSize ?? DEFAULT_SSR_OPTIONS.resolveKernelSize
+    );
+  }
+  set resolveKernelSize(v: number) {
+    if (!this.rawEffect) return;
+    this.options.resolveKernelSize = v;
+    this.rawEffect.resolveKernelSize = v;
     this.emit("needsUpdate");
   }
 }

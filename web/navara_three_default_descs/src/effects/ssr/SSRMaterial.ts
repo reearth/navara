@@ -4,7 +4,12 @@ import { assertType } from "@navaramap/core";
 import fragmentShader from "@shaders/glsl/ssr.frag.glsl?raw";
 import vertexShader from "@shaders/glsl/ssr.vert.glsl?raw";
 import { resolveIncludes } from "@takram/three-geospatial";
-import { depth, packing, transform } from "@takram/three-geospatial/shaders";
+import {
+  depth,
+  interleavedGradientNoise,
+  packing,
+  transform,
+} from "@takram/three-geospatial/shaders";
 import {
   Matrix4,
   NoBlending,
@@ -86,6 +91,7 @@ export class SSRMaterial extends ShaderMaterial {
       fragmentShader: resolveIncludes(fragmentShader, {
         core: {
           depth,
+          interleavedGradientNoise,
           packing,
           transform,
         },

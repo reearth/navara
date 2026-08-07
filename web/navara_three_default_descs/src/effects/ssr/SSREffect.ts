@@ -9,6 +9,9 @@ import {
   ShaderPass,
 } from "postprocessing";
 import {
+  FloatType,
+  LinearFilter,
+  NearestFilter,
   Uniform,
   WebGLRenderTarget,
   type Camera,
@@ -35,14 +38,13 @@ export type SSREffectOptions = {
   height?: number;
   resolutionX?: number;
   resolutionY?: number;
-  kernelSize?: number;
-  blur?: boolean;
   useConeTracing?: boolean;
   coneTracingFadeStart?: number;
   coneTracingFadeEnd?: number;
   coneTracingMaxDistance?: number;
   coneTracingIteration?: number;
   coneTracingIor?: number;
+  resolveKernelSize?: number;
 } & Omit<SSRMaterialParameters, "inputBuffer" | "depthBuffer">;
 
 export const ssrEffectOptionsDefaults = {
@@ -71,12 +73,12 @@ export class SSREffect extends Effect {
       height,
       resolutionX = width,
       resolutionY = height,
-      kernelSize = 7,
       coneTracingFadeStart,
       coneTracingFadeEnd,
       coneTracingMaxDistance,
       coneTracingIteration,
       coneTracingIor,
+      resolveKernelSize,
       useConeTracing,
       ...others
     } = {
@@ -90,9 +92,14 @@ export class SSREffect extends Effect {
       uniforms: new Map<string, Uniform>([["ssrBuffer", new Uniform(null)]]),
     });
 
+    // With cone tracing this target holds hit UVs and hit depth rather than
+    // color. The default 8-bit unorm format quantizes a UV to 1/255 of the
+    // screen, which snaps reflections onto a coarse grid, and it destroys the
+    // logarithmic depth entirely, so full float precision is required.
     this.renderTarget = new WebGLRenderTarget(1, 1, {
       depthBuffer: false,
       stencilBuffer: false,
+      type: FloatType,
     });
     this.renderTarget.texture.name = "SSR.Reflection";
 
@@ -109,21 +116,20 @@ export class SSREffect extends Effect {
     });
     this.coneRenderTarget.texture.name = "ConeSSR.Reflection";
     this.coneTracingPass = new ConeTracingPass({
-      width,
-      height,
       fadeStart: coneTracingFadeStart,
       fadeEnd: coneTracingFadeEnd,
       maxDistance: coneTracingMaxDistance,
-      kernelSize: kernelSize,
       rayTracingBuffer: this.renderTarget.texture,
       normalBuffer: geometryBuffer,
       specularBuffer: null,
       indirectSpecularBuffer: null,
       iteration: coneTracingIteration,
       ior: coneTracingIor,
+      resolveKernelSize,
     });
 
     this._useConeTracing = !!useConeTracing;
+    this.updateRayTracingBufferFilter();
 
     const ssrBuffer = this.uniforms.get("ssrBuffer");
     if (ssrBuffer) {
@@ -149,6 +155,22 @@ export class SSREffect extends Effect {
     this.setSize(this.resolution.baseWidth, this.resolution.baseHeight);
   };
 
+  /**
+   * The ray tracing target is rendered at `resolutionScale` and read back at
+   * full resolution. Hit UVs must not be interpolated across hit/miss
+   * boundaries — the blend would produce coordinates pointing at unrelated
+   * parts of the screen — whereas plain reflection color upsamples fine.
+   */
+  private updateRayTracingBufferFilter(): void {
+    const filter = this._useConeTracing ? NearestFilter : LinearFilter;
+    const texture = this.renderTarget.texture;
+    if (texture.minFilter !== filter) {
+      texture.minFilter = filter;
+      texture.magFilter = filter;
+      texture.needsUpdate = true;
+    }
+  }
+
   get mainCamera(): Camera {
     return this.camera;
   }
@@ -166,6 +188,11 @@ export class SSREffect extends Effect {
   ): void {
     this.ssrPass.initialize(renderer, alpha, frameBufferType);
     this.coneTracingPass.initialize(renderer, alpha, frameBufferType);
+    // The resolve output holds premultiplied colour, so 8-bit would crush the
+    // low end of a reflection as its coverage falls off.
+    if (frameBufferType !== undefined) {
+      this.coneRenderTarget.texture.type = frameBufferType;
+    }
   }
 
   override update(
@@ -190,9 +217,12 @@ export class SSREffect extends Effect {
     this.renderTarget.setSize(resolution.width, resolution.height);
     this.ssrMaterial.setSize(resolution.width, resolution.height);
     this.ssrMaterial.copyCameraSettings(this.camera);
-
-    this.coneRenderTarget.setSize(width, height);
-    this.coneTracingPass.setSize(width, height);
+    this.coneRenderTarget.setSize(resolution.width, resolution.height);
+    this.coneTracingPass.setSize(resolution.width, resolution.height);
+    this.coneTracingPass.coneTracingMaterial.setRayBufferSize(
+      resolution.width,
+      resolution.height,
+    );
     this.coneTracingPass.coneTracingMaterial.copyCameraSettings(this.camera);
   }
 
@@ -307,6 +337,7 @@ export class SSREffect extends Effect {
   }
   set useConeTracing(v: boolean) {
     this._useConeTracing = v;
+    this.updateRayTracingBufferFilter();
     const ssrBuffer = this.uniforms.get("ssrBuffer");
     this.ssrMaterial.generateRayTracingBuffer = v;
     this.ssrMaterial.needsUpdate = true;
@@ -350,5 +381,12 @@ export class SSREffect extends Effect {
   }
   set coneTracingIor(value: number) {
     this.coneTracingPass.coneTracingMaterial.ior = value;
+  }
+
+  get resolveKernelSize(): number {
+    return this.coneTracingPass.coneTracingMaterial.resolveKernelSize;
+  }
+  set resolveKernelSize(value: number) {
+    this.coneTracingPass.coneTracingMaterial.resolveKernelSize = value;
   }
 }

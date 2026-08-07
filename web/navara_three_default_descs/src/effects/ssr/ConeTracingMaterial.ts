@@ -30,6 +30,7 @@ export type ConeTracingMaterialParameters = {
   maxDistance?: number;
   iteration?: number;
   ior?: number;
+  resolveKernelSize?: number;
 } & ShaderMaterialParameters;
 
 export const coneTracingMaterialParametersDefaults = {
@@ -39,6 +40,7 @@ export const coneTracingMaterialParametersDefaults = {
   maxDistance: 500.0,
   iteration: 14,
   ior: 0xeeeeee,
+  resolveKernelSize: 6,
 } satisfies ConeTracingMaterialParameters;
 
 export class ConeTracingMaterial extends ShaderMaterial {
@@ -55,6 +57,7 @@ export class ConeTracingMaterial extends ShaderMaterial {
       maxDistance,
       iteration,
       ior,
+      resolveKernelSize,
     } = {
       ...coneTracingMaterialParametersDefaults,
       ...params,
@@ -79,6 +82,7 @@ export class ConeTracingMaterial extends ShaderMaterial {
         uSpecularBuffer: new Uniform(specularBuffer),
         uIndirectSpecularBuffer: new Uniform(indirectSpecularBuffer),
         uBufferSize: new Uniform(new Vector2()),
+        uRayTexelSize: new Uniform(new Vector2()),
         uNumMips: new Uniform(numMips),
         uFadeStart: new Uniform(fadeStart),
         uFadeEnd: new Uniform(fadeEnd),
@@ -92,6 +96,7 @@ export class ConeTracingMaterial extends ShaderMaterial {
       defines: {
         DEPTH_PACKING: "0",
         ITERATION: iteration,
+        RESOLVE_KERNEL: resolveKernelSize,
       },
       blending: NoBlending,
       toneMapped: false,
@@ -100,8 +105,19 @@ export class ConeTracingMaterial extends ShaderMaterial {
     });
   }
 
+  /**
+   * `width`/`height` describe the *colour* buffer the cone samples, which is
+   * what the mip-level maths is expressed in. The resolve output may well be
+   * smaller; that resolution only reaches the shader through
+   * {@link setRayBufferSize}.
+   */
   setSize(width: number, height: number): void {
     this.uniforms.uBufferSize.value.set(width, height);
+  }
+
+  /** Size of the ray-tracing buffer, whose texels the resolve gathers over. */
+  setRayBufferSize(width: number, height: number): void {
+    this.uniforms.uRayTexelSize.value.set(1 / width, 1 / height);
   }
 
   copyCameraSettings(camera?: Camera | null): void {
@@ -212,6 +228,17 @@ export class ConeTracingMaterial extends ShaderMaterial {
   set iteration(value: number) {
     this.defines.ITERATION = value;
     this.needsUpdate = true;
+  }
+
+  get resolveKernelSize(): number {
+    return +(this.defines.RESOLVE_KERNEL as string);
+  }
+
+  set resolveKernelSize(value: number) {
+    if (value !== this.resolveKernelSize) {
+      this.defines.RESOLVE_KERNEL = value;
+      this.needsUpdate = true;
+    }
   }
 
   get ior(): number {

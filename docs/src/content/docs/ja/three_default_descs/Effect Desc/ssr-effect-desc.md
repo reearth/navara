@@ -242,9 +242,11 @@ const sceneNormals = mrtPass?.normalBuffer; // Texture | undefined
 
 **Type:** `number | undefined`
 
-**Description:** アーティファクトを減らすためのランダムジッター量を指定します。
+**Description:** 各レイの開始位置をそのストライド分だけずらし、粗い `pixelStride` によるバンディングをノイズと引き換えに軽減します。そのノイズは resolve が平均化して均します。
 
 **Default:** `1`
+
+意味を持つのは cone tracing 有効時のみです（resolve は cone tracing パスの中にあります）。`useConeTracing: false` ではレイを平均化する処理が無いため、0 以外にすると反射のシルエットが粒状にディザリングされます。その場合は `0` にしてください。
 
 **Example:**
 
@@ -276,28 +278,6 @@ const sceneNormals = mrtPass?.normalBuffer; // Texture | undefined
 {
   ssr: {
     blendMode: "add",
-  }
-}
-```
-
-### kernelSize
-
-**Type:** `number | undefined`
-
-**Description:** コーントレーシングのガウシアンブラーのカーネルサイズを指定します。
-
-**Default:** `5`
-
-:::note[初期化時のみ設定可能]
-このプロパティはDescriptor作成時にのみ設定できます。`update()`メソッドでは変更できません。
-:::
-
-**Example:**
-
-```typescript
-{
-  ssr: {
-    kernelSize: 9,
   }
 }
 ```
@@ -406,6 +386,28 @@ const sceneNormals = mrtPass?.normalBuffer; // Texture | undefined
 {
   ssr: {
     coneTracingIor: 1.5,
+  }
+}
+```
+
+### resolveKernelSize
+
+**Type:** `number | undefined`
+
+**Description:** resolve が集める近傍の幅を、レイバッファのテクセル単位で指定します。奇数のみです。
+
+**Default:** `3`
+
+SSR は 1 ピクセルにつき 1 本のレイを飛ばすため、「反射するかどうか」がピクセル単位の二値判定になります。その結果、反射のシルエットは硬いエッジになり、レイをジッタさせるとブロック状にディザリングされます。resolve は近傍を平均して連続的なカバレッジに変換するので、シルエットがアンチエイリアスされ、ジッタで散ったレイが周囲のピクセルにとって同一ローブの追加サンプルとして働きます。近傍はサーフェス深度の一致度で重み付けされるため、シルエットをまたいで反射が滲むことはありません。
+
+値を大きくすると滑らかになりますが甘くなり、テクセルあたりのテクスチャタップが各方向に 1 つずつ増えます。`useConeTracing` 有効時のみ適用されます。
+
+**Example:**
+
+```typescript
+{
+  ssr: {
+    resolveKernelSize: 5,
   }
 }
 ```
@@ -521,7 +523,6 @@ const ssrDesc = view.addEffect<SSREffectDesc>({
     binarySearchIterations: 6,
     useConeTracing: true,
     coneTracingIteration: 8,
-    jitter: 1,
   },
 });
 ```

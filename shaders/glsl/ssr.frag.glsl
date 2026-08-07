@@ -30,6 +30,7 @@
 #include <packing>
 
 #include "core/depth"
+#include "core/interleavedGradientNoise"
 #include "core/packing"
 #include "core/transform"
 
@@ -57,18 +58,23 @@ uniform float jitter;
 
 in vec2 vUv;
 
+// What a pixel writes when it produces no reflection. With cone tracing the
+// buffer carries hit coordinates rather than colour, and .w carries a signed
+// rdotv fade that legitimately goes negative at near-normal incidence — so a
+// miss cannot be encoded there. A negative .z can never be a real depth, which
+// leaves the resolve pass able to tell "no hit" from "hit that faces the eye".
+#ifdef GENERATE_RAY_TRACING_BUFFER
+#define SSR_NO_HIT vec4(0.0, 0.0, -1.0, 0.0)
+#else
+#define SSR_NO_HIT vec4(0.0)
+#endif
+
 float readDepth(const vec2 uv) {
   #if DEPTH_PACKING == 3201
   return unpackRGBAToDepth(texture2D(depthBuffer, uv));
   #else
   return texture2D(depthBuffer, uv).r;
   #endif // DEPTH_PACKING == 3201
-}
-
-float getLinearDepth(vec2 screenPosition) {
-  float fragCoordZ = texture2D(depthBuffer, screenPosition).x;
-  float nz = cameraNear * fragCoordZ;
-  return -nz / (cameraFar * (fragCoordZ - 1.0) - nz);
 }
 
 float getViewZ(const float depth) {
@@ -319,13 +325,19 @@ vec3 sampleGGX(const vec3 n, const vec2 u, float roughness) {
 void main() {
   vec4 geometry = texture2D(geometryBuffer, vUv);
   float metalness = geometry.z;
-  float roughness = geometry.z;
+  float roughness = geometry.w;
+  // Every early-out below must still write gl_FragColor. The output target is
+  // never cleared (postprocessing's ShaderPass doesn't clear and the composer
+  // disables autoClear), so a bare return leaves the fragment undefined, which
+  // surfaces as tile-shaped garbage on tiled GPUs.
   if (metalness < 0.01) {
+    gl_FragColor = SSR_NO_HIT;
     return;
   }
 
   float depth = readDepth(vUv);
   if (depth > 0.9999) {
+    gl_FragColor = SSR_NO_HIT;
     return;
   }
   depth = reverseLogDepth(depth, cameraNear, cameraFar);
@@ -344,7 +356,9 @@ void main() {
   vec3 rayDirection = reflect(normalize(rayOrigin), viewNormal);
 
   #ifndef GENERATE_RAY_TRACING_BUFFER
-    float scaledRoughness = geometry.w * roughness;
+    // Scale the GGX lobe by the reflectivity mask so barely-reflective
+    // surfaces don't scatter their rays.
+    float scaledRoughness = metalness * roughness;
     if (scaledRoughness > 0.0001) {
       rayDirection = sampleGGX(
         rayDirection,
@@ -354,9 +368,11 @@ void main() {
     }
   #endif
 
-  vec2 uv2 = vUv * resolution;
-  float c = (uv2.x + uv2.y) * 0.25;
-  float jitter = mod(c, 1.0) * jitter;
+  // Interleaved gradient noise rather than a fixed 4-pixel diagonal ramp: the
+  // resolve pass averages each pixel's neighbours, so their offsets have to be
+  // decorrelated to act as extra samples of the same lobe instead of replaying
+  // the same handful of phases over and over.
+  float jitter = interleavedGradientNoise(vUv * resolution) * jitter;
 
   vec2 hitPixel;
   vec3 hitPoint;
@@ -371,6 +387,13 @@ void main() {
     iterationCount
   );
 
+  // Bail before the fades rather than after: they end up multiplied by zero
+  // for a ray that hit nothing, and a miss is the common case.
+  if (!intersect) {
+    gl_FragColor = SSR_NO_HIT;
+    return;
+  }
+
   float alpha = calculateAlphaForIntersection(
     intersect,
     iterationCount,
@@ -383,26 +406,23 @@ void main() {
 
   // Ref: https://willpgfx.com/2015/07/screen-space-glossy-reflections/
   #ifdef GENERATE_RAY_TRACING_BUFFER
-    if(!intersect) {
-      gl_FragColor = vec4(0.0);
-      return;
-    }
 
-    // Calculate rdotv (reflection dot view) for validity check
+    // How much the reflected ray turns back towards the eye. Rays that do are
+    // unreliable in screen space, so the resolve fades them out; it goes
+    // negative at near-normal incidence, which is why validity lives in .z.
     float rdotv = dot(rayDirection, normalize(rayOrigin));
 
     // Store ray tracing results in a format compatible with cone tracing
     // x,y = hit UV coordinates
-    // z = hit depth at the hit point
-    // w = rdotv * alpha (combined validity indicator)
+    // z = hit depth at the hit point (negative marks a miss)
+    // w = rdotv * alpha (fade only)
     float hitDepth = readDepth(hitPixel);
     gl_FragColor = vec4(hitPixel.x, hitPixel.y, hitDepth, rdotv * alpha);
   #else
-    if (!intersect) {
-      return;
-    }
+    // Premultiplied, matching the cone tracing path so that either buffer can
+    // be composited with the same blend and filtered without haloing.
     vec3 color = texture2D(inputBuffer, hitPixel).rgb;
-    gl_FragColor = vec4(color, alpha);
+    gl_FragColor = vec4(color * alpha, alpha);
   #endif
   
 }

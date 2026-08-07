@@ -242,9 +242,11 @@ A full working example that draws animated puddles into a custom geometry buffer
 
 **Type:** `number | undefined`
 
-**Description:** Specifies the amount of random jitter to reduce artifacts.
+**Description:** Offsets each ray's start along its own stride, trading the banding of a coarse `pixelStride` for noise that the resolve then averages away.
 
 **Default:** `1`
+
+Only meaningful with cone tracing enabled, which is where the resolve lives. With `useConeTracing: false` nothing averages the rays, and any non-zero value dithers reflection silhouettes into visible speckle — set it to `0` there.
 
 **Example:**
 
@@ -276,28 +278,6 @@ This property can only be set when creating the Descriptor. It cannot be changed
 {
   ssr: {
     blendMode: "add",
-  }
-}
-```
-
-### kernelSize
-
-**Type:** `number | undefined`
-
-**Description:** Specifies the kernel size for the Gaussian blur used in cone tracing.
-
-**Default:** `5`
-
-:::note[Can only be set at initialization]
-This property can only be set when creating the Descriptor. It cannot be changed via the `update()` method.
-:::
-
-**Example:**
-
-```typescript
-{
-  ssr: {
-    kernelSize: 9,
   }
 }
 ```
@@ -406,6 +386,28 @@ This property can only be set when creating the Descriptor. It cannot be changed
 {
   ssr: {
     coneTracingIor: 1.5,
+  }
+}
+```
+
+### resolveKernelSize
+
+**Type:** `number | undefined`
+
+**Description:** Specifies the width, in ray-buffer texels, of the neighbourhood the resolve gathers. Odd numbers only.
+
+**Default:** `3`
+
+SSR traces one ray per pixel, which makes reflecting a binary, per-pixel decision — reflection silhouettes come out hard-edged, and once the rays are jittered, dithered into blocks. The resolve averages each pixel's neighbourhood into a continuous coverage instead, which antialiases those silhouettes and turns every jittered ray into an extra sample of the same lobe for the pixels around it. Neighbours are weighted by how closely their surface depth matches, so reflections do not bleed across silhouettes.
+
+Larger values are smoother but softer, and cost one more texture tap per texel in each direction. Only applies with `useConeTracing` enabled.
+
+**Example:**
+
+```typescript
+{
+  ssr: {
+    resolveKernelSize: 5,
   }
 }
 ```
@@ -521,7 +523,6 @@ const ssrDesc = view.addEffect<SSREffectDesc>({
     binarySearchIterations: 6,
     useConeTracing: true,
     coneTracingIteration: 8,
-    jitter: 1,
   },
 });
 ```
