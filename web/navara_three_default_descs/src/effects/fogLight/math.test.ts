@@ -7,13 +7,31 @@ import {
   tileContributionEstimate,
 } from "./math";
 
-// Deterministic pseudo-random sequence (tests must not depend on run order)
-function lcg(seed: number): () => number {
-  let s = seed >>> 0;
-  return () => {
-    s = (s * 1664525 + 1013904223) >>> 0;
-    return s / 0xffffffff;
-  };
+/**
+ * Exact projected extent of a sphere along one screen axis. The NDC
+ * coordinate p * x / z over the sphere (x-cx)^2 + (y-cy)^2 + (z-cz)^2 = r^2
+ * does not involve y, so its extremes lie on the circle of radius r around
+ * (cx, cz) in the x-z plane; a dense sweep of that circle converges to the
+ * true bounds (error O(step^2), far below the assertion tolerance).
+ */
+function sweepExtent(
+  c: number,
+  cz: number,
+  r: number,
+  p: number,
+): [number, number] {
+  const STEPS = 20000;
+  let min = Infinity;
+  let max = -Infinity;
+  for (let k = 0; k < STEPS; k++) {
+    const a = (k / STEPS) * Math.PI * 2;
+    const x = c + r * Math.cos(a);
+    const z = cz + r * Math.sin(a);
+    const ndc = (p * x) / z;
+    if (ndc < min) min = ndc;
+    if (ndc > max) max = ndc;
+  }
+  return [min, max];
 }
 
 describe("effectiveRange", () => {
@@ -44,40 +62,45 @@ describe("effectiveRange", () => {
 });
 
 describe("projectSphereBoundsNdc", () => {
-  it("bounds every projected point of the sphere surface", () => {
-    const rand = lcg(1234);
-    const p00 = 1.5;
-    const p11 = 2.0;
-    const out = new Float32Array(4);
-    for (let iter = 0; iter < 200; iter++) {
-      const cz = 50 + rand() * 2000;
-      const r = rand() * cz * 0.8; // fully in front of the near plane
-      const cx = (rand() - 0.5) * cz;
-      const cy = (rand() - 0.5) * cz;
-      expect(projectSphereBoundsNdc(cx, cy, cz, r, p00, p11, out)).toBe(true);
+  const p00 = 1.5;
+  const p11 = 2.0;
 
-      let touchedMinX = false;
-      let touchedMaxX = false;
-      for (let s = 0; s < 500; s++) {
-        // Uniform-ish direction on the sphere
-        const u = rand() * 2 - 1;
-        const phi = rand() * Math.PI * 2;
-        const q = Math.sqrt(1 - u * u);
-        const px = cx + r * q * Math.cos(phi);
-        const py = cy + r * q * Math.sin(phi);
-        const pz = cz + r * u;
-        const ndcX = (p00 * px) / pz;
-        const ndcY = (p11 * py) / pz;
-        expect(ndcX).toBeGreaterThanOrEqual(out[0] - 1e-4);
-        expect(ndcX).toBeLessThanOrEqual(out[1] + 1e-4);
-        expect(ndcY).toBeGreaterThanOrEqual(out[2] - 1e-4);
-        expect(ndcY).toBeLessThanOrEqual(out[3] + 1e-4);
-        if (ndcX < out[0] + (out[1] - out[0]) * 0.02) touchedMinX = true;
-        if (ndcX > out[1] - (out[1] - out[0]) * 0.02) touchedMaxX = true;
+  it("matches the exact projected extent of the sphere", () => {
+    const out = new Float32Array(4);
+    // Deterministic grid over depth, radius, and off-axis offsets, including
+    // the near-limit r = 0.79 * cz the tile culling guarantees to stay under
+    for (const cz of [50, 200, 1000]) {
+      for (const rf of [0.1, 0.5, 0.79]) {
+        for (const ox of [-0.6, 0, 0.6]) {
+          for (const oy of [-0.6, 0.6]) {
+            const r = rf * cz;
+            const cx = ox * cz;
+            const cy = oy * cz;
+            expect(projectSphereBoundsNdc(cx, cy, cz, r, p00, p11, out)).toBe(
+              true,
+            );
+
+            const [minX, maxX] = sweepExtent(cx, cz, r, p00);
+            const [minY, maxY] = sweepExtent(cy, cz, r, p11);
+            // Relative tolerance: `out` is Float32 and the sweep is a dense
+            // approximation, so allow a small scale-aware epsilon
+            const tolX = 1e-3 * (1 + Math.max(Math.abs(minX), Math.abs(maxX)));
+            const tolY = 1e-3 * (1 + Math.max(Math.abs(minY), Math.abs(maxY)));
+
+            // Coverage AND tightness: the bounds equal the true extent
+            expect(Math.abs(out[0] - minX)).toBeLessThanOrEqual(tolX);
+            expect(Math.abs(out[1] - maxX)).toBeLessThanOrEqual(tolX);
+            expect(Math.abs(out[2] - minY)).toBeLessThanOrEqual(tolY);
+            expect(Math.abs(out[3] - maxY)).toBeLessThanOrEqual(tolY);
+          }
+        }
       }
-      // Tightness: surface samples come close to both x bounds
-      expect(touchedMinX || touchedMaxX).toBe(true);
     }
+  });
+
+  it("reports degenerate projections (sphere reaching the camera plane)", () => {
+    const out = new Float32Array(4);
+    expect(projectSphereBoundsNdc(0, 0, 100, 100, p00, p11, out)).toBe(false);
   });
 });
 

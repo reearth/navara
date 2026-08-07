@@ -331,11 +331,11 @@ export class FogLightTileGrid {
     for (let i = 0; i < lightCount; i++) {
       const base = i * 4;
       const intensity = buf0[base + 3];
-      const reff = effectiveRange(
-        intensity,
-        fogDensity,
-        userRadii[i],
-        haloFalloff,
+      // fround so the change check compares like with like — buf1 is a
+      // Float32Array and a double would never equal its stored value,
+      // flagging a texture re-upload on every rebuild
+      const reff = Math.fround(
+        effectiveRange(intensity, fogDensity, userRadii[i], haloFalloff),
       );
       reffArr[i] = reff;
       // Bake the effective range into the position texture's w channel so

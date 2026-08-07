@@ -200,7 +200,7 @@ view.addEffect({
 
 **Description:** フォグライトを考慮するカメラからの最大距離です。この距離より遠いライトはCPU側でカリングされます。
 
-**Default:** `1e6`
+**Default:** エフェクト作成時のカメラの `far` 値
 
 **Example:**
 

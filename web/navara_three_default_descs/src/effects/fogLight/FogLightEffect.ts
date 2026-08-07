@@ -75,7 +75,7 @@ export type FogLightEffectOptions = {
   /**
    * Maximum distance from the camera at which fog lights are considered.
    * Lights whose entire influence sphere is farther than this value are
-   * culled on CPU (default: 1e6).
+   * culled on CPU. Defaults to the camera's `far` value at effect creation.
    */
   maxFar?: number;
 };
@@ -90,7 +90,6 @@ export const DEFAULT_FOG_LIGHT_EFFECT_OPTIONS: FogLightEffectOptions = {
   extentScale: 1.0,
   haloFalloff: 0.1,
   debugShowGrid: false,
-  maxFar: 1e6,
 };
 
 export class FogLightEffect extends PostProcessingEffect {
