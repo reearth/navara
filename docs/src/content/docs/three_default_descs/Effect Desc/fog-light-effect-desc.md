@@ -21,32 +21,40 @@ The `FogLightEffectDesc` class is a Descriptor that generates volumetric lightin
 
 **Type:** `FogLightDefinition[] | undefined`
 
-**Description:** Specifies an array of fog lights. Each light has a position, color, intensity, and influence radius.
+**Description:** Specifies an array of fog lights. Each light has a position, color, intensity, and an optional influence radius (`radius`, default `500`). Positions are world (ECEF) coordinates — build them with `geodeticToVector3()`. `color` accepts either a numeric hex value or a `Color`.
 
 **Default:** `[]`
 
 **Example:**
 
 ```typescript
-{
+import { degreeToRadian, geodeticToVector3 } from "@navaramap/three";
+
+const position = geodeticToVector3({
+  lat: degreeToRadian(35.68),
+  lng: degreeToRadian(139.76),
+  height: 60,
+});
+
+view.addEffect({
   fogLight: {
     lights: [
       {
-        position: { x: 0, y: 100, z: 0 },
-        color: new Color().setHex(0xffffff),
-        intensity: 10,
-        radius: 500
-      }
+        position: { x: position.x, y: position.y, z: position.z },
+        color: 0xffb45c,
+        intensity: 1,
+        radius: 500,
+      },
     ],
-  }
-}
+  },
+});
 ```
 
 ### maxLights
 
 **Type:** `number | undefined`
 
-**Description:** Specifies the maximum number of lights. Lights exceeding this value are ignored.
+**Description:** Initial light capacity hint. The internal light textures grow automatically when more lights are set, so this only pre-sizes them - passing the expected light count avoids a reallocation later.
 
 **Default:** `100`
 
@@ -64,7 +72,7 @@ The `FogLightEffectDesc` class is a Descriptor that generates volumetric lightin
 
 **Type:** `number | undefined`
 
-**Description:** Specifies the density of the volumetric fog.
+**Description:** Specifies the density of the volumetric fog. Higher values brighten the scattering and also extend each light's automatically derived reach.
 
 **Default:** `5`
 
@@ -82,7 +90,7 @@ The `FogLightEffectDesc` class is a Descriptor that generates volumetric lightin
 
 **Type:** `boolean | undefined`
 
-**Description:** Specifies whether to apply the surface lighting effect.
+**Description:** Specifies whether lights also illuminate surfaces, in addition to the fog itself.
 
 **Default:** `true`
 
@@ -100,9 +108,9 @@ The `FogLightEffectDesc` class is a Descriptor that generates volumetric lightin
 
 **Type:** `number | undefined`
 
-**Description:** Specifies the downsample factor. 1 = full resolution, 2 = half, 4 = quarter.
+**Description:** Fog render scale divisor: 1 = full resolution, 2 = half, 4 = quarter. The low-resolution fog is composited back with depth-aware upsampling, so higher divisors stay clean along silhouettes while cutting the GPU cost by the divisor squared.
 
-**Default:** `2`
+**Default:** `4`
 
 **Example:**
 
@@ -118,7 +126,7 @@ The `FogLightEffectDesc` class is a Descriptor that generates volumetric lightin
 
 **Type:** `number | undefined`
 
-**Description:** Specifies the maximum number of lights iterated per tile on the GPU.
+**Description:** Maximum number of lights evaluated per screen tile on the GPU. This is the main quality/cost dial: shader cost scales roughly linearly with it, and lights beyond the cap are folded into a smooth residual haze rather than dropped, so lowering it dims the weakest halos instead of producing seams.
 
 **Default:** `64`
 
@@ -132,13 +140,31 @@ The `FogLightEffectDesc` class is a Descriptor that generates volumetric lightin
 }
 ```
 
+### haloFalloff
+
+**Type:** `number | undefined`
+
+**Description:** Falloff coefficient of the halo attenuation `1 / (1 + haloFalloff * h)`, where `h` is the ray's closest distance to the light in meters. Higher values tighten halos around their lights. Useful to suppress ghost-like glow from lights hidden behind terrain, which the fog model cannot shadow.
+
+**Default:** `0.1`
+
+**Example:**
+
+```typescript
+{
+  fogLight: {
+    haloFalloff: 0.3,
+  }
+}
+```
+
 ### extentScale
 
 **Type:** `number | undefined`
 
-**Description:** Specifies a safety scale applied to the analytical closest distance.
+**Description:** Safety scale applied to each light's effective range when registering it on screen tiles. Values below `1.0` risk cutting fog at tile borders.
 
-**Default:** `0.8`
+**Default:** `1.0`
 
 **Example:**
 
@@ -150,11 +176,29 @@ The `FogLightEffectDesc` class is a Descriptor that generates volumetric lightin
 }
 ```
 
+### tileSize
+
+**Type:** `number | undefined`
+
+**Description:** Screen tile size in pixels (at the fog render resolution) used for the tiled light culling.
+
+**Default:** `32`
+
+**Example:**
+
+```typescript
+{
+  fogLight: {
+    tileSize: 32,
+  }
+}
+```
+
 ### maxFar
 
 **Type:** `number | undefined`
 
-**Description:** Specifies the maximum distance at which fog lights are considered.
+**Description:** Maximum distance from the camera at which fog lights are considered. Lights that is farther than this value are culled on the CPU.
 
 **Default:** `1e6`
 
@@ -172,7 +216,7 @@ The `FogLightEffectDesc` class is a Descriptor that generates volumetric lightin
 
 **Type:** `boolean | undefined`
 
-**Description:** Specifies whether to display a debug grid extent overlay.
+**Description:** Specifies whether to display the tile grid and its per-tile light occupancy as a debug overlay.
 
 **Default:** `false`
 
@@ -186,24 +230,38 @@ The `FogLightEffectDesc` class is a Descriptor that generates volumetric lightin
 }
 ```
 
+## Performance
+
+- **`downsample` is the biggest lever.** The default `4` renders the fog at quarter resolution; the depth-aware upsampling keeps silhouettes clean. Use `2` (or `1`) only when the fog needs to stay crisp on close inspection.
+- **`maxLightsPerTile` trades halo completeness for shader cost** almost linearly. With many broad-radius lights, lowering it to `32` roughly halves the fog pass; the weakest halos blend into the residual haze.
+- **`radius` caps each light's reach.** The effective reach is derived automatically from `intensity`, `fogDensity`, and `haloFalloff`, then clamped by `radius` — so tightening `radius` (or raising `haloFalloff`) directly shrinks how many tiles each light touches.
+- **Pass the expected light count as `maxLights`** to avoid a texture reallocation when lights are added later.
+- The tile grid only rebuilds when the camera, lights, or fog parameters change; a static view costs no CPU time.
+
 ## Usage Examples
 
 ### Adding a basic fog light effect
 
 ```typescript
-import ThreeView, { Color } from "@navaramap/three";
+import ThreeView, { degreeToRadian, geodeticToVector3 } from "@navaramap/three";
 import { FogLightEffectDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();
+
+const position = geodeticToVector3({
+  lat: degreeToRadian(35.68),
+  lng: degreeToRadian(139.76),
+  height: 60,
+});
 
 // Add fog light effect descriptor
 view.addEffect<FogLightEffectDesc>({
   fogLight: {
     lights: [
       {
-        position: { x: 0, y: 100, z: 0 },
-        color: new Color().setHex(0xffffff),
+        position: { x: position.x, y: position.y, z: position.z },
+        color: 0xffffff,
         intensity: 10,
         radius: 500,
       },
@@ -217,38 +275,60 @@ view.addEffect<FogLightEffectDesc>({
 ### Street light effect in a night scene
 
 ```typescript
-import ThreeView, { Color, type LayerDescription } from "@navaramap/three";
-import { FogLightEffectDesc } from "@navaramap/three-default-descs";
+import ThreeView, {
+  degreeToRadian,
+  geodeticToVector3,
+} from "@navaramap/three";
+import {
+  FogLightEffectDesc,
+  type FogLightDefinition,
+} from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();
 
-// Define multiple street lights
-const streetLights = [
-  { position: { x: 100, y: 50, z: 0 }, color: new Color().setHex(0xffaa00), intensity: 8, radius: 200 },
-  { position: { x: -100, y: 50, z: 0 }, color: new Color().setHex(0xffaa00), intensity: 8, radius: 200 },
-  { position: { x: 0, y: 50, z: 100 }, color: new Color().setHex(0xffaa00), intensity: 8, radius: 200 },
+// One warm lamp per road point ([lng, lat, ground elevation in meters]);
+// lift each above the pavement so it reads as a glowing orb
+const roadPoints: [number, number, number][] = [
+  [139.7601, 35.6805, 30],
+  [139.7612, 35.6811, 31],
+  [139.7623, 35.6816, 33],
 ];
+const streetLights: FogLightDefinition[] = roadPoints.map(
+  ([lng, lat, elevation]) => {
+    const position = geodeticToVector3({
+      lat: degreeToRadian(lat),
+      lng: degreeToRadian(lng),
+      height: elevation + 14,
+    });
+    return {
+      position: { x: position.x, y: position.y, z: position.z },
+      color: 0xffaa00,
+      intensity: 1,
+      radius: 200,
+    };
+  },
+);
 
-const fogEffectDesc = {
+view.addEffect<FogLightEffectDesc>({
   fogLight: {
     lights: streetLights,
-    fogDensity: 0.7,
+    fogDensity: 2,
     useSurfaceLighting: true,
-    downsample: 2,
-    maxLightsPerTile: 128,
+    maxFar: view.camera.raw.far,
   },
   visible: true,
-};
-
-view.addEffect<FogLightEffectDesc>(fogEffectDesc);
+});
 ```
 
 ### Dynamically adding lights to a scene
 
 ```typescript
-import ThreeView, { Color } from "@navaramap/three";
-import { FogLightEffectDesc, type FogLightDefinition } from "@navaramap/three-default-descs";
+import ThreeView, { degreeToRadian, geodeticToVector3 } from "@navaramap/three";
+import {
+  FogLightEffectDesc,
+  type FogLightDefinition,
+} from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();
@@ -256,23 +336,25 @@ await view.init();
 // Initial light array
 const fogLights: FogLightDefinition[] = [];
 
-// Add fog light descriptor
+// Add fog light descriptor; pre-size the capacity for the lights added later
 const fogDesc = view.addEffect<FogLightEffectDesc>({
   fogLight: {
     lights: fogLights,
-    fogDensity: 0.7,
-    useSurfaceLighting: true,
-    downsample: 2,
-    maxLightsPerTile: 128,
+    fogDensity: 2,
     maxLights: 400,
   },
 });
 
 // Add lights later
-function addLight(x: number, y: number, z: number) {
+function addLight(lng: number, lat: number, height: number) {
+  const position = geodeticToVector3({
+    lat: degreeToRadian(lat),
+    lng: degreeToRadian(lng),
+    height,
+  });
   fogLights.push({
-    position: { x, y, z },
-    color: new Color().setHex(0xffffff),
+    position: { x: position.x, y: position.y, z: position.z },
+    color: 0xffffff,
     intensity: 10,
     radius: 300,
   });
@@ -288,20 +370,31 @@ function addLight(x: number, y: number, z: number) {
 ### Fog lights visible only at night
 
 ```typescript
-import ThreeView, { Color } from "@navaramap/three";
+import ThreeView, { degreeToRadian, geodeticToVector3 } from "@navaramap/three";
 import { FogLightEffectDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();
+
+const position = geodeticToVector3({
+  lat: degreeToRadian(35.68),
+  lng: degreeToRadian(139.76),
+  height: 60,
+});
 
 const isNight = view.atmosphere.isAtNight(view.camera.positionECEF); // Determined based on time
 
 const fogDesc = view.addEffect<FogLightEffectDesc>({
   fogLight: {
     lights: [
-      { position: { x: 0, y: 100, z: 0 }, color: new Color().setHex(0xffffff), intensity: 10, radius: 500 },
+      {
+        position: { x: position.x, y: position.y, z: position.z },
+        color: 0xffffff,
+        intensity: 10,
+        radius: 500,
+      },
     ],
-    fogDensity: 0.7,
+    fogDensity: 2,
   },
   visible: isNight,
 });
@@ -316,4 +409,6 @@ function updateVisibility(nightMode: boolean) {
 
 ## Notes
 
-This effect supports multiple lights, and since `allowDuplication` is set to `true`, multiple FogLightEffectDesc instances can be created.
+- This effect supports multiple lights, and since `allowDuplication` is set to `true`, multiple FogLightEffectDesc instances can be created.
+- The fog is not shadowed by geometry: a light hidden behind terrain still brightens the fog around it, which can read as a faint glow above a ridge. Raise [`haloFalloff`](#halofalloff) to suppress it.
+- The camera can enter the fog: scattering stays continuous when lights move beside or behind the viewer.

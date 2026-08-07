@@ -24,14 +24,18 @@ export type FogLightEvents = EffectEvents;
 
 export type FogLightOptions = FogLightEffectOptions &
   EffectOptions & {
-    // Downsample factor: 1 = full-res, 2 = half, 4 = quarter. Default 1.
+    /**
+     * Fog render scale divisor: 1 = full-res, 2 = half, 4 = quarter
+     * (default: 4). The low-res fog is composited back with depth-aware
+     * upsampling, so higher divisors stay clean along silhouettes.
+     */
     downsample?: number;
   };
 
 export const DEFAULT_FOG_LIGHT_OPTIONS: FogLightOptions = {
   ...DEFAULT_FOG_LIGHT_EFFECT_OPTIONS,
   enabled: true,
-  downsample: 2,
+  downsample: 4,
 };
 
 export class FogLight extends PassWrapper<
@@ -76,30 +80,19 @@ export class FogLight extends PassWrapper<
     if (!this.rawEffect) return;
 
     const lights = this.options.lights ?? [];
-    const maxLights =
-      this.options.maxLights ?? DEFAULT_FOG_LIGHT_OPTIONS.maxLights ?? 0;
-    const numLights = Math.min(lights.length, maxLights);
-
-    // Warn if there are more lights than maxLights
-    if (lights.length > maxLights) {
-      console.warn(
-        `FogLight: ${lights.length} lights specified, but only ${maxLights} will be rendered. ` +
-          `Consider increasing the 'maxLights' option if you need more lights.`,
-      );
-    }
+    const numLights = lights.length;
+    this.rawEffect.ensureLightCapacity(numLights);
 
     // Write light data to buffers
+    const position = new Vector3();
+    const scratchColor = new Color();
     for (let i = 0; i < numLights; i++) {
       const light = lights[i];
-      const position = new Vector3(
-        light.position.x,
-        light.position.y,
-        light.position.z,
-      );
+      position.set(light.position.x, light.position.y, light.position.z);
       const color =
         light.color instanceof Color
           ? light.color
-          : new Color().setHex(light.color);
+          : scratchColor.setHex(light.color);
 
       this.rawEffect.writeLight(
         i,
@@ -111,13 +104,10 @@ export class FogLight extends PassWrapper<
     }
 
     // Clear remaining slots
-    for (let i = numLights; i < maxLights; i++) {
-      this.rawEffect.writeLight(
-        i,
-        new Color().setRGB(0, 0, 0),
-        0,
-        new Vector3(0, 0, 0),
-      );
+    position.set(0, 0, 0);
+    scratchColor.setRGB(0, 0, 0);
+    for (let i = numLights; i < this.rawEffect.lightCapacity; i++) {
+      this.rawEffect.writeLight(i, scratchColor, 0, position);
     }
 
     // Update textures
@@ -214,6 +204,15 @@ export class FogLight extends PassWrapper<
 
   set maxFar(value: number) {
     this.rawEffect.maxFar = value;
+    this.emit("needsUpdate");
+  }
+
+  get haloFalloff(): number {
+    return this.rawEffect.haloFalloff;
+  }
+
+  set haloFalloff(value: number) {
+    this.rawEffect.haloFalloff = value;
     this.emit("needsUpdate");
   }
 

@@ -19,17 +19,17 @@ import {
   DataTexture,
   FloatType,
   RGBAFormat,
-  RGFormat,
   NearestFilter,
   ClampToEdgeWrapping,
   Texture,
   RGBADepthPacking,
   type DepthPackingStrategies,
-  Frustum,
-  Sphere,
 } from "three";
 
+import { FogLightTileGrid } from "./tileGrid";
+
 export type FogLightDefinition = {
+  /** Light position in world (ECEF) coordinates */
   position: { x: number; y: number; z: number };
   color: number | Color;
   intensity: number;
@@ -42,7 +42,10 @@ export type FogLightEffectOptions = {
   lights?: FogLightDefinition[];
   /** Density of the volumetric fog (default: 5) */
   fogDensity?: number;
-  /** Maximum number of lights supported (default: 100) */
+  /**
+   * Initial light capacity hint (default: 100). The light textures grow
+   * automatically when more lights are set, so this only pre-sizes them.
+   */
   maxLights?: number;
   /** Optional normal buffer texture for surface lighting calculations */
   normalBuffer?: Texture;
@@ -50,16 +53,29 @@ export type FogLightEffectOptions = {
   useSurfaceLighting?: boolean;
   /** Tile size in pixels for tiled/clustered culling */
   tileSize?: number;
-  /** Maximum lights iterated per tile on GPU (shader safety) */
+  /**
+   * Maximum lights evaluated per tile on GPU (default: 64). Acts as a
+   * quality/cost dial: shader cost scales roughly linearly with it, and
+   * lights beyond the cap degrade into the smooth residual haze instead of
+   * disappearing.
+   */
   maxLightsPerTile?: number;
-  /** Safety scale applied to analytic closest-approach distance h to get world radius */
+  /** Safety scale applied to the effective range for tile registration */
   extentScale?: number;
+  /**
+   * Falloff coefficient of the halo attenuation 1/(1 + haloFalloff * h),
+   * where h is the ray's closest distance to the light in meters
+   * (default: 0.1). Higher values tighten halos around their lights —
+   * useful to suppress ghost-like glow from lights hidden behind terrain,
+   * which the fog model cannot shadow.
+   */
+  haloFalloff?: number;
   /** Debug: show grid extent overlay in the shader */
   debugShowGrid?: boolean;
   /**
    * Maximum distance from the camera at which fog lights are considered.
-   * Lights whose entire influence sphere is farther than this value are culled on CPU.
-   * Defaults to the camera's current `far` value.
+   * Lights whose entire influence sphere is farther than this value are
+   * culled on CPU (default: 1e6).
    */
   maxFar?: number;
 };
@@ -71,7 +87,8 @@ export const DEFAULT_FOG_LIGHT_EFFECT_OPTIONS: FogLightEffectOptions = {
   useSurfaceLighting: true,
   tileSize: 32,
   maxLightsPerTile: 64,
-  extentScale: 0.8,
+  extentScale: 1.0,
+  haloFalloff: 0.1,
   debugShowGrid: false,
   maxFar: 1e6,
 };
@@ -81,33 +98,29 @@ export class FogLightEffect extends PostProcessingEffect {
   private invProjectionMatrix: Matrix4;
   private invViewMatrix: Matrix4;
   private viewMatrix: Matrix4;
-  // Scratch and culling instances reused per frame
   private _vpM: Matrix4;
-  private _frustum: Frustum;
-  private _viewScratch: Vector3;
-  private _ndcScratch: Vector3;
-  private _sphereScratch: Sphere;
+
+  // Per-light data textures: buf0 = color+intensity, buf1 = position +
+  // baked effective range. userRadii keeps the user-specified radii CPU-side
+  // (buf1's w channel is overwritten with the derived range each rebuild).
   private lightTex0: DataTexture;
   private lightTex1: DataTexture;
   private buf0: Float32Array;
   private buf1: Float32Array;
+  private userRadii: Float32Array;
+
   private depthCopyPass: DepthCopyPass;
-  // Tiled culling buffers
-  private lightGridTex?: DataTexture;
-  private lightIndexTex?: DataTexture;
-  private gridBuf?: Float32Array;
-  private indexBuf?: Float32Array;
-  private tileCounts?: Uint16Array;
-  private gridW = 0;
-  private gridH = 0;
-  private indexTexW = 0;
-  private indexTexH = 1;
-  private tileSizePx: number;
-  private _maxLightsPerTile: number;
-  // Extent tuning
+
+  // CPU tiled culling (uLightGrid / uLightIndex / uResidual)
+  private tileGrid: FogLightTileGrid;
+
   private _extentScale: number;
-  // Culling distance (defaults to camera.far)
   private _maxFar: number;
+
+  // Grid rebuild is skipped while the camera, lights, and fog stay unchanged
+  private _gridDirty = true;
+  private _prevVpM = new Matrix4();
+  private _prevFogDensity = Number.NaN;
 
   constructor(
     camera: PerspectiveCamera | OrthographicCamera,
@@ -123,7 +136,7 @@ export class FogLightEffect extends PostProcessingEffect {
 
     // Create buffers for DataTextures
     const buf0 = new Float32Array(W * H * 4); // color,intensity
-    const buf1 = new Float32Array(W * H * 4); // position(xyz), radius(w)
+    const buf1 = new Float32Array(W * H * 4); // position(xyz), range(w)
 
     // Create DataTextures
     const lightTex0 = new DataTexture(buf0, W, H, RGBAFormat, FloatType);
@@ -147,6 +160,12 @@ export class FogLightEffect extends PostProcessingEffect {
           options.fogDensity ?? DEFAULT_FOG_LIGHT_EFFECT_OPTIONS.fogDensity,
         ),
       ],
+      [
+        "haloFalloff",
+        new Uniform(
+          options.haloFalloff ?? DEFAULT_FOG_LIGHT_EFFECT_OPTIONS.haloFalloff,
+        ),
+      ],
       ["normalBuffer", new Uniform(options.normalBuffer ?? null)],
       ["copiedDepthBuffer", new Uniform(null)],
       [
@@ -164,6 +183,7 @@ export class FogLightEffect extends PostProcessingEffect {
       ["invViewMatrix", new Uniform(new Matrix4())],
       ["viewMatrix", new Uniform(new Matrix4())],
       // Tiled culling uniforms
+      ["uResidual", new Uniform(null)],
       ["uLightGrid", new Uniform(null)],
       ["uLightGridSize", new Uniform(new Vector2(0, 0))],
       ["uLightIndex", new Uniform(null)],
@@ -196,35 +216,32 @@ export class FogLightEffect extends PostProcessingEffect {
     this.invViewMatrix = new Matrix4();
     this.viewMatrix = new Matrix4();
     this._vpM = new Matrix4();
-    this._frustum = new Frustum();
-    this._viewScratch = new Vector3();
-    this._ndcScratch = new Vector3();
-    this._sphereScratch = new Sphere();
     this.lightTex0 = lightTex0;
     this.lightTex1 = lightTex1;
     this.buf0 = buf0;
     this.buf1 = buf1;
-    this.tileSizePx =
-      options.tileSize ?? DEFAULT_FOG_LIGHT_EFFECT_OPTIONS.tileSize ?? 16;
-    this._maxLightsPerTile =
+    this.userRadii = new Float32Array(W * H);
+
+    this.tileGrid = new FogLightTileGrid(
+      options.tileSize ?? DEFAULT_FOG_LIGHT_EFFECT_OPTIONS.tileSize ?? 16,
       options.maxLightsPerTile ??
-      DEFAULT_FOG_LIGHT_EFFECT_OPTIONS.maxLightsPerTile ??
-      64;
+        DEFAULT_FOG_LIGHT_EFFECT_OPTIONS.maxLightsPerTile ??
+        64,
+    );
+
     this._extentScale =
       options.extentScale ??
       DEFAULT_FOG_LIGHT_EFFECT_OPTIONS.extentScale ??
-      3.0;
-
-    // Far-distance culling threshold
+      1.0;
     this._maxFar = options.maxFar ?? camera.far;
 
     if (options.debugShowGrid) {
       this.defines.set("DEBUG_SHOW_GRID", "1");
     }
 
-    // This is necessary to avoid
+    // The composer's depth buffer cannot be sampled while it is bound, so a
+    // copy is rendered each frame and read through copiedDepthBuffer.
     this.depthCopyPass = new DepthCopyPass();
-    // Assign the copied depth texture to the uniform
     const depthBufferUniform = this.uniforms.get("copiedDepthBuffer");
     if (depthBufferUniform) {
       depthBufferUniform.value = this.depthCopyPass.texture;
@@ -282,10 +299,33 @@ export class FogLightEffect extends PostProcessingEffect {
       }
     }
 
-    // Update light count uniform from define (set by layer) if present
-    const lightCount = this.lightCount;
-
-    this.populateLightGrid(lightCount);
+    // Rebuild the tile grid only when the camera, lights, or fog changed.
+    const fogDensity =
+      (this.uniforms.get("fogDensity")?.value as number | undefined) ?? 1;
+    this._vpM.multiplyMatrices(this.camera.projectionMatrix, this.viewMatrix);
+    if (
+      this._gridDirty ||
+      fogDensity !== this._prevFogDensity ||
+      !this._vpM.equals(this._prevVpM)
+    ) {
+      const bakedRangeChanged = this.tileGrid.populate({
+        camera: this.camera,
+        vpM: this._vpM,
+        viewM: this.viewMatrix,
+        buf0: this.buf0,
+        buf1: this.buf1,
+        userRadii: this.userRadii,
+        lightCount: this.lightCount,
+        fogDensity,
+        haloFalloff: this.haloFalloff,
+        extentScale: this._extentScale,
+        maxFar: this._maxFar,
+      });
+      if (bakedRangeChanged) this.lightTex1.needsUpdate = true;
+      this._prevVpM.copy(this._vpM);
+      this._prevFogDensity = fogDensity;
+      this._gridDirty = false;
+    }
 
     super.update(renderer, inputBuffer, deltaTime);
   }
@@ -306,12 +346,55 @@ export class FogLightEffect extends PostProcessingEffect {
     this.buf1[k + 0] = position.x;
     this.buf1[k + 1] = position.y;
     this.buf1[k + 2] = position.z;
+    // Placeholder until the tile grid bakes the effective range into w
     this.buf1[k + 3] = radius;
+    this.userRadii[i] = radius;
   }
 
   updateLightTextures(): void {
     this.lightTex0.needsUpdate = true;
     this.lightTex1.needsUpdate = true;
+    this._gridDirty = true;
+  }
+
+  /** Number of light slots the data textures currently hold. */
+  get lightCapacity(): number {
+    return this.buf0.length / 4;
+  }
+
+  /** Grow the light data textures so at least `count` lights fit. */
+  ensureLightCapacity(count: number): void {
+    if (count <= this.lightCapacity) return;
+    const W = Math.ceil(Math.sqrt(count));
+    const H = Math.ceil(count / W);
+
+    const buf0 = new Float32Array(W * H * 4);
+    const buf1 = new Float32Array(W * H * 4);
+    buf0.set(this.buf0);
+    buf1.set(this.buf1);
+    this.buf0 = buf0;
+    this.buf1 = buf1;
+    const userRadii = new Float32Array(W * H);
+    userRadii.set(this.userRadii);
+    this.userRadii = userRadii;
+
+    // Resizing a DataTexture requires releasing the GL texture: three
+    // allocates immutable storage on first upload, so an in-place
+    // image swap would texSubImage past the old dimensions (GL_INVALID_VALUE)
+    this.lightTex0.image.data = buf0;
+    this.lightTex0.image.width = W;
+    this.lightTex0.image.height = H;
+    this.lightTex0.dispose();
+    this.lightTex0.needsUpdate = true;
+    this.lightTex1.image.data = buf1;
+    this.lightTex1.image.width = W;
+    this.lightTex1.image.height = H;
+    this.lightTex1.dispose();
+    this.lightTex1.needsUpdate = true;
+
+    const sizeUni = this.uniforms.get("uLightTexSize");
+    if (sizeUni) (sizeUni.value as Vector2).set(W, H);
+    this._gridDirty = true;
   }
 
   updateDepthBuffer(depthBuffer: Texture | null): void {
@@ -325,13 +408,26 @@ export class FogLightEffect extends PostProcessingEffect {
     this.depthCopyPass.setSize(width, height);
     const res = this.uniforms.get("resolution");
     if (res) (res.value as Vector2).set(width, height);
-    // Recreate grid textures on size change
-    this.gridW = Math.max(1, Math.ceil(width / this.tileSizePx));
-    this.gridH = Math.max(1, Math.ceil(height / this.tileSizePx));
-    const gridSizeUniform = this.uniforms.get("uLightGridSize");
-    if (gridSizeUniform)
-      (gridSizeUniform.value as Vector2).set(this.gridW, this.gridH);
-    this.allocateGridTextures();
+    this.tileGrid.setSize(width, height);
+    this.syncTileGridUniforms();
+    this._gridDirty = true;
+  }
+
+  /** Low-resolution copy of the scene depth, for depth-aware upsampling. */
+  get copiedDepthTexture(): Texture {
+    return this.depthCopyPass.texture;
+  }
+
+  /** Toggle fog-only output (used by the downsampled composite path). */
+  setFogOnlyOutput(enabled: boolean): void {
+    const current = this.defines.get("FOG_ONLY_OUTPUT") === "1";
+    if (enabled === current) return;
+    if (enabled) {
+      this.defines.set("FOG_ONLY_OUTPUT", "1");
+    } else {
+      this.defines.delete("FOG_ONLY_OUTPUT");
+    }
+    this.setChanged();
   }
 
   get lightCount() {
@@ -341,18 +437,19 @@ export class FogLightEffect extends PostProcessingEffect {
 
   set maxLightsPerTile(v: number) {
     const value = Math.max(1, Math.floor(v));
-    this._maxLightsPerTile = value;
+    this.tileGrid.maxLightsPerTile = value;
     this.defines.set("MAX_LIGHTS_PER_TILE", String(value));
-    // Reallocate index texture with new stride
-    this.allocateGridTextures();
+    this.syncTileGridUniforms();
+    this._gridDirty = true;
     this.setChanged();
   }
   get maxLightsPerTile(): number {
-    return this._maxLightsPerTile;
+    return this.tileGrid.maxLightsPerTile;
   }
 
   set extentScale(v: number) {
     this._extentScale = Math.max(0, v);
+    this._gridDirty = true;
   }
   get extentScale(): number {
     return this._extentScale;
@@ -360,276 +457,26 @@ export class FogLightEffect extends PostProcessingEffect {
 
   set maxFar(v: number) {
     this._maxFar = Math.max(0, v);
+    this._gridDirty = true;
   }
   get maxFar(): number {
     return this._maxFar;
   }
 
-  private allocateGridTextures(): void {
-    // Allocate or resize uLightGrid (gridW x gridH, RG32F: offset, count)
-    const gridTexelCount = this.gridW * this.gridH;
-    if (!this.gridBuf || this.gridBuf.length !== gridTexelCount * 2) {
-      this.gridBuf = new Float32Array(gridTexelCount * 2);
-      if (!this.lightGridTex) {
-        this.lightGridTex = new DataTexture(
-          this.gridBuf,
-          this.gridW,
-          this.gridH,
-          RGFormat,
-          FloatType,
-        );
-        this.lightGridTex.needsUpdate = true;
-        this.lightGridTex.magFilter = this.lightGridTex.minFilter =
-          NearestFilter;
-        this.lightGridTex.wrapS = this.lightGridTex.wrapT = ClampToEdgeWrapping;
-        const uni = this.uniforms.get("uLightGrid");
-        if (uni) uni.value = this.lightGridTex;
-      } else {
-        // Rebind existing DataTexture with new buffer and size
-        this.lightGridTex.image.data = this.gridBuf;
-        this.lightGridTex.image.width = this.gridW;
-        this.lightGridTex.image.height = this.gridH;
-        this.lightGridTex.needsUpdate = true;
-      }
-    }
-    // per-tile light counts buffer (CPU only)
-    if (!this.tileCounts || this.tileCounts.length !== gridTexelCount) {
-      this.tileCounts = new Uint16Array(gridTexelCount);
-    }
-
-    // Use fixed-stride packing: each tile reserves strideTexels = ceil(maxLightsPerTile/4) RGBA texels
-    const strideTexels = Math.max(1, Math.ceil(this.maxLightsPerTile / 4));
-    const indexTexelCapacity = Math.max(
-      1,
-      this.gridW * this.gridH * strideTexels,
+  set haloFalloff(v: number) {
+    const value = Math.max(0, v);
+    const uni = this.uniforms.get("haloFalloff");
+    if (uni) uni.value = value;
+    // The effective range derives from the falloff, so the grid must rebuild
+    this._gridDirty = true;
+  }
+  get haloFalloff(): number {
+    return (
+      (this.uniforms.get("haloFalloff")?.value as number | undefined) ??
+      DEFAULT_FOG_LIGHT_EFFECT_OPTIONS.haloFalloff ??
+      0.1
     );
-    if (!this.indexBuf || this.indexBuf.length !== indexTexelCapacity * 4) {
-      // Use near-square 2D texture to avoid exceeding max texture size
-      this.indexTexW = Math.ceil(Math.sqrt(indexTexelCapacity));
-      this.indexTexH = Math.ceil(indexTexelCapacity / this.indexTexW);
-      const roundedCapacity = this.indexTexW * this.indexTexH;
-      this.indexBuf = new Float32Array(roundedCapacity * 4);
-      if (!this.lightIndexTex) {
-        this.lightIndexTex = new DataTexture(
-          this.indexBuf,
-          this.indexTexW,
-          this.indexTexH,
-          RGBAFormat,
-          FloatType,
-        );
-        this.lightIndexTex.needsUpdate = true;
-        this.lightIndexTex.magFilter = this.lightIndexTex.minFilter =
-          NearestFilter;
-        this.lightIndexTex.wrapS = this.lightIndexTex.wrapT =
-          ClampToEdgeWrapping;
-        const uni = this.uniforms.get("uLightIndex");
-        if (uni) uni.value = this.lightIndexTex;
-      } else {
-        this.lightIndexTex.image.data = this.indexBuf;
-        this.lightIndexTex.image.width = this.indexTexW;
-        this.lightIndexTex.image.height = this.indexTexH;
-        this.lightIndexTex.needsUpdate = true;
-      }
-      const sizeUni = this.uniforms.get("uLightIndexTexSize");
-      if (sizeUni)
-        (sizeUni.value as Vector2).set(this.indexTexW, this.indexTexH);
-    }
   }
-
-  // The idea is based on: https://www.aortiz.me/2018/12/21/CG.html
-  private populateLightGrid(lightCount: number): void {
-    if (
-      !this.gridBuf ||
-      !this.indexBuf ||
-      !this.lightGridTex ||
-      !this.lightIndexTex ||
-      !this.tileCounts
-    )
-      return;
-
-    // Reset per-tile counts; grid metadata is fully overwritten below
-    this.tileCounts.fill(0);
-
-    const resUniform = this.uniforms.get("resolution");
-    if (!resUniform) return;
-    const res = resUniform.value as Vector2;
-    const width = res.x;
-    const height = res.y;
-    if (width <= 0 || height <= 0) return;
-
-    const halfW = 0.5 * width;
-    const halfH = 0.5 * height;
-
-    // Precompute matrices
-    const viewM = this.viewMatrix; // world -> view
-    const projM = this.camera.projectionMatrix; // view -> clip
-    const vpM = this._vpM.multiplyMatrices(projM, viewM); // world -> clip
-    const frustum = this._frustum.setFromProjectionMatrix(vpM);
-
-    // Scratch vectors to avoid allocations
-    const view = this._viewScratch;
-    const ndc = this._ndcScratch;
-    const sphere = this._sphereScratch;
-
-    // Helper: project world to pixel coordinates
-    const projectToPixel = (
-      wx: number,
-      wy: number,
-      wz: number,
-    ): [number, number] => {
-      ndc.set(wx, wy, wz).applyMatrix4(vpM); // becomes NDC via perspective divide
-      const px = (ndc.x * 0.5 + 0.5) * width;
-      const py = (ndc.y * 0.5 + 0.5) * height;
-      return [px, py];
-    };
-
-    // Approximate screen-space radius (pixels) from world radius
-    const fx = Math.abs(projM.elements[0]);
-    const fy = Math.abs(projM.elements[5]);
-    const computeScreenRadiusPx = (rWorld: number, viewZ: number): number => {
-      if (this.camera instanceof PerspectiveCamera) {
-        // Use a conservative depth when projecting the sphere: closest point of the sphere to the camera.
-        // This inflates the screen radius and avoids missing tiles where the ray intersects the sphere near its front cap.
-        const absViewZCenter = Math.abs(viewZ);
-        const absViewZMin = Math.max(
-          1e-3,
-          Math.min(
-            Math.max(this.camera.near * 0.5, 1e-3),
-            absViewZCenter - rWorld,
-          ),
-        );
-        const absViewZ = absViewZMin;
-        const ndcRadiusX = (rWorld * fx) / absViewZ;
-        const ndcRadiusY = (rWorld * fy) / absViewZ;
-        return Math.max(
-          Math.abs(ndcRadiusX) * halfW,
-          Math.abs(ndcRadiusY) * halfH,
-        );
-      } else {
-        const ndcRadiusX = rWorld * fx;
-        const ndcRadiusY = rWorld * fy;
-        return Math.max(
-          Math.abs(ndcRadiusX) * halfW,
-          Math.abs(ndcRadiusY) * halfH,
-        );
-      }
-    };
-
-    // Fixed-stride packing parameters
-    const strideTexels = Math.max(1, Math.ceil(this.maxLightsPerTile / 4));
-    const strideScalars = strideTexels * 4; // components per tile
-
-    for (let i = 0; i < lightCount; i++) {
-      const base = i * 4;
-      const intensity = this.buf0[base + 3];
-      if (intensity <= 0) continue;
-
-      const wx = this.buf1[base + 0];
-      const wy = this.buf1[base + 1];
-      const wz = this.buf1[base + 2];
-
-      // Compute camera-to-light distance using scratch vector to satisfy TS types
-      view.set(wx, wy, wz);
-      const distance = this.camera.position.distanceTo(view);
-
-      // World-space influence radius: read from buffer (w component)
-      const radius = this.buf1[base + 3] || 0;
-      const ratio = (radius * 4) / distance;
-
-      // const rWorld = Math.max(0, radius * this.extentScale);
-      const rWorld =
-        this.estimatePointLightRange(
-          intensity,
-          this.uniforms.get("fogDensity")?.value ?? 1,
-        ) * ratio;
-
-      // Additional far-distance culling: if the nearest point of the light's
-      // influence sphere is beyond maxFar from the camera, skip it.
-      if (distance - rWorld > this._maxFar) continue;
-
-      // Camera-space position (also used later for screen-radius)
-      view.set(wx, wy, wz).applyMatrix4(viewM);
-
-      // Frustum culling in world space using a bounding sphere
-      sphere.center.set(wx, wy, wz);
-      sphere.radius = rWorld;
-      if (!frustum.intersectsSphere(sphere)) continue;
-
-      // Project to screen pixels (after passing frustum test)
-      const [px, py] = projectToPixel(wx, wy, wz);
-      if (!isFinite(px) || !isFinite(py)) continue;
-
-      // View-space Z for perspective scaling of pixel radius
-      const rPx = computeScreenRadiusPx(rWorld, view.z);
-      if (!isFinite(rPx) || rPx <= 0) continue;
-
-      // Tile range overlapped by this light's screen-space AABB
-      // Use a small pixel padding to avoid rounding/off-by-one gaps on edges.
-      // Also compute the max side with ceil(...)-1 to ensure inclusive coverage
-      // of tiles when the light's AABB touches a tile boundary.
-      // Compute the overlapped tile range in tile coordinates BEFORE clamping
-      const minTx = Math.floor((px - rPx) / this.tileSizePx);
-      const maxTx = Math.ceil((px + rPx) / this.tileSizePx) - 1;
-      const minTy = Math.floor((py - rPx) / this.tileSizePx);
-      const maxTy = Math.ceil((py + rPx) / this.tileSizePx) - 1;
-
-      // If the AABB is completely outside the grid, skip early
-      if (maxTx < 0 || minTx >= this.gridW || maxTy < 0 || minTy >= this.gridH)
-        continue;
-
-      // Now clamp to the valid tile range
-      const x0 = Math.max(0, Math.min(this.gridW - 1, minTx));
-      const x1 = Math.max(0, Math.min(this.gridW - 1, maxTx));
-      const y0 = Math.max(0, Math.min(this.gridH - 1, minTy));
-      const y1 = Math.max(0, Math.min(this.gridH - 1, maxTy));
-
-      for (let ty = y0; ty <= y1; ty++) {
-        const baseTile = ty * this.gridW;
-        for (let tx = x0; tx <= x1; tx++) {
-          const tileIdx = baseTile + tx;
-          const cnt = this.tileCounts[tileIdx];
-          if (cnt < this.maxLightsPerTile) {
-            const startScalar = tileIdx * strideScalars; // component 0 start for this tile
-            this.indexBuf[startScalar + cnt] = i;
-            this.tileCounts[tileIdx] = cnt + 1;
-          }
-        }
-      }
-    }
-
-    // Write per-tile metadata using fixed stride (aligned texel offset)
-    for (let t = 0; t < this.gridW * this.gridH; t++) {
-      const k = t * 2;
-      const offsetTexel = t * strideTexels;
-      this.gridBuf[k + 0] = offsetTexel;
-      this.gridBuf[k + 1] = this.tileCounts[t];
-    }
-
-    // Upload
-    this.lightGridTex.needsUpdate = true;
-    this.lightIndexTex.needsUpdate = true;
-  }
-
-  // Estimate a point light's effective world-space range for culling
-  // Follow calculateFogScattering: use the analytic upper bound of the
-  // integral with attenuation 1/(1+0.1*h).
-  private estimatePointLightRange(
-    intensity: number,
-    fogDensity: number,
-  ): number {
-    const I = Math.max(intensity, 0);
-    if (I <= 0) return 0;
-    const D = fogDensity;
-
-    const minIntegral = 0.001; // perceptual threshold
-    const c = I * D;
-    const sqrtDisc = Math.sqrt(c / minIntegral);
-    const r = Math.max(1, sqrtDisc);
-
-    return r * this.extentScale;
-  }
-
-  // range estimation removed; radius is provided per light
 
   set debugShowGrid(v: boolean) {
     if (v) this.defines.set("DEBUG_SHOW_GRID", "1");
@@ -639,5 +486,28 @@ export class FogLightEffect extends PostProcessingEffect {
 
   get debugShowGrid(): boolean {
     return this.defines.get("DEBUG_SHOW_GRID") === "1";
+  }
+
+  // Point the tiled-culling uniforms at the grid's (possibly reallocated)
+  // textures and sizes.
+  private syncTileGridUniforms(): void {
+    const gridUni = this.uniforms.get("uLightGrid");
+    if (gridUni) gridUni.value = this.tileGrid.gridTexture ?? null;
+    const indexUni = this.uniforms.get("uLightIndex");
+    if (indexUni) indexUni.value = this.tileGrid.indexTexture ?? null;
+    const residualUni = this.uniforms.get("uResidual");
+    if (residualUni) residualUni.value = this.tileGrid.residualTexture ?? null;
+    const gridSizeUni = this.uniforms.get("uLightGridSize");
+    if (gridSizeUni)
+      (gridSizeUni.value as Vector2).set(
+        this.tileGrid.gridW,
+        this.tileGrid.gridH,
+      );
+    const indexSizeUni = this.uniforms.get("uLightIndexTexSize");
+    if (indexSizeUni)
+      (indexSizeUni.value as Vector2).set(
+        this.tileGrid.indexTexW,
+        this.tileGrid.indexTexH,
+      );
   }
 }

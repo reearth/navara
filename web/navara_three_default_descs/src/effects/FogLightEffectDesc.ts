@@ -78,6 +78,9 @@ export class FogLightEffectDesc extends EffectDesc<
       if (cfg.maxFar !== undefined) {
         this._instance.maxFar = cfg.maxFar;
       }
+      if (cfg.haloFalloff !== undefined) {
+        this._instance.haloFalloff = cfg.haloFalloff;
+      }
       if (cfg.debugShowGrid !== undefined) {
         this._instance.debugShowGrid = cfg.debugShowGrid;
       }
