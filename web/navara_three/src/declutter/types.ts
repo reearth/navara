@@ -1,3 +1,5 @@
+import type { PerspectiveCamera } from "three";
+
 /**
  * One label/sprite competing for screen space in a declutter pass.
  *
@@ -58,4 +60,12 @@ export type DeclutterParticipant = {
    * anything is fading; returns true while any label is still mid-fade.
    */
   stepDeclutterFade: (deltaMs: number) => boolean;
+  /**
+   * Optional: start preparation (font loading, shaping) for labels that
+   * parked it while their anchor was out of view. Called at the start of
+   * every placement pass with the camera the pass will use — the cadence at
+   * which visibility can actually change. Preparation is asynchronous, so
+   * promoted labels join a *later* pass once their text is applied.
+   */
+  prepareDeferredLabels?: (camera: PerspectiveCamera) => void;
 };

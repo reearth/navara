@@ -632,6 +632,69 @@ describe("FontManager", () => {
       expect(loadedFaces.has("https://fonts.test/cjk.ttf")).toBe(true);
     });
 
+    it("should not let non-printing characters drive face loading", async () => {
+      // Google-style boilerplate: a face other than the one the surrounding
+      // text uses *declares* the C0 control range. A `\n` inside a Latin run
+      // must stick to the Latin face instead of pulling that file.
+      manager.registerFontFamily({
+        family: "CtrlFamily",
+        faces: [
+          {
+            url: "https://fonts.test/latin.ttf",
+            unicodeRanges: [{ from: 0x0020, to: 0x00ff }],
+          },
+          {
+            url: "https://fonts.test/ctrl-claimer.ttf",
+            unicodeRanges: [
+              { from: 0x0000, to: 0x001f },
+              { from: 0x4e00, to: 0x9fff },
+            ],
+          },
+        ],
+      });
+      setupBatchMock("CtrlFamily");
+
+      const loadedFaces = new Set<string>();
+      await manager.prepareText("CtrlFamily", "Hi\nYou", false, loadedFaces);
+
+      expect(loadedFaces.has("https://fonts.test/latin.ttf")).toBe(true);
+      expect(loadedFaces.has("https://fonts.test/ctrl-claimer.ttf")).toBe(
+        false,
+      );
+    });
+
+    it("should route leading non-printing characters to the fallback face", async () => {
+      // Controls are declared only by the second face; a text *opening* with
+      // one must fall back to face 0, matching `_findFaceForCodepoint`.
+      manager.registerFontFamily({
+        family: "LeadingCtrlFamily",
+        faces: [
+          {
+            url: "https://fonts.test/latin.ttf",
+            unicodeRanges: [{ from: 0x0041, to: 0x005a }],
+          },
+          {
+            url: "https://fonts.test/ctrl-claimer.ttf",
+            unicodeRanges: [{ from: 0x0000, to: 0x001f }],
+          },
+        ],
+      });
+      setupBatchMock("LeadingCtrlFamily");
+
+      const loadedFaces = new Set<string>();
+      await manager.prepareText(
+        "LeadingCtrlFamily",
+        "\nAB",
+        false,
+        loadedFaces,
+      );
+
+      expect(loadedFaces.has("https://fonts.test/latin.ttf")).toBe(true);
+      expect(loadedFaces.has("https://fonts.test/ctrl-claimer.ttf")).toBe(
+        false,
+      );
+    });
+
     it("should not reload a face that is already tracked in loadedFaces", async () => {
       const loadedFaces = new Set<string>();
       await manager.prepareText("TestFamily", "Hello", false, loadedFaces);

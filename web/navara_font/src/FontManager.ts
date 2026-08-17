@@ -205,8 +205,9 @@ export class FontManager {
   /**
    * Split `text` into runs of consecutive characters that map to the same face.
    * Each character picks the first face whose unicode ranges contain it,
-   * falling back to face 0. Spaces stick to the current run to avoid breaking
-   * up whitespace.
+   * falling back to face 0. Non-printing characters (spaces and C0/C1
+   * controls) stick to the current run instead of picking a face — see the
+   * loop body for why that is load-bearing.
    */
   private _segmentTextByFace(
     faces: FontFace[],
@@ -222,10 +223,25 @@ export class FontManager {
     let currentText = "";
 
     for (const ch of text) {
-      const url =
-        ch === " " && currentUrl
-          ? currentUrl
-          : this._findFaceForCodepoint(faces, ch.codePointAt(0) ?? 0);
+      const codepoint = ch.codePointAt(0) ?? 0;
+      // Characters that never carry a glyph must not drive face selection.
+      // A space sticking to its run is cosmetic, but for `\n` and the other
+      // C0/C1 controls it is load-bearing: Google Fonts' per-subset
+      // `unicode-range` boilerplate makes dozens of faces *declare*
+      // U+0000-00FF, while no font's cmap actually contains a newline. Letting
+      // one pick a face means the cmap-refinement loop in `prepareText` finds
+      // the codepoint uncovered after every load and re-routes it to the next
+      // declaring face — walking the entire family, one face download per
+      // pass. (Measured: a lone "\n" pulled 39 files across 17 Noto families.)
+      // The shaper treats `\n` as a zero-advance hard break with no atlas
+      // entry, so which face nominally owns it changes nothing downstream.
+      const isNonPrinting =
+        codepoint <= 0x20 || (codepoint >= 0x7f && codepoint <= 0x9f);
+      const url = isNonPrinting
+        ? // Attach to the current run, or to the fallback face when the text
+          // opens with one — matching `_findFaceForCodepoint`'s own fallback.
+          currentUrl || faces[0].url
+        : this._findFaceForCodepoint(faces, codepoint);
 
       if (url === currentUrl) {
         currentText += ch;

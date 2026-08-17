@@ -153,6 +153,16 @@ export class DeclutterManager {
     widthPx: number,
     heightPx: number,
   ): void {
+    // Let participants start font/shape preparation for labels whose anchors
+    // became potentially visible (text batches park preparation while an
+    // anchor is out of view, so world-spanning low-zoom tiles don't fetch
+    // fonts for labels the camera can't see). Results land asynchronously and
+    // mark the pass dirty again, so this pass places only already-shaped
+    // labels.
+    for (const p of this._participants) {
+      p.prepareDeferredLabels?.(camera);
+    }
+
     const candidates = this._candidates;
     candidates.length = 0;
     for (const p of this._participants) {

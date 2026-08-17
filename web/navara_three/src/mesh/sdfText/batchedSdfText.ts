@@ -34,11 +34,17 @@ import type { PickableMesh } from "../pickableMesh";
 import { GlyphBuffers } from "./glyphBuffers";
 import { GlyphSlotAllocator, type GlyphRun } from "./glyphSlots";
 import { LabelDataTexture, LabelRow } from "./labelData";
+import {
+  createAnchorVisibilityState,
+  isAnchorPotentiallyVisible,
+  syncAnchorVisibilityState,
+} from "./labelVisibility";
 import { ALIGN_FACTORS, buildLabelLayout, type LayoutOptions } from "./layout";
 
 /** Reusable scratch to avoid per-frame / per-write allocations. */
 const _tmpSize = new Vector2();
 const _tmpColor = new Color();
+const _visibility = createAnchorVisibilityState();
 
 type PositionsInfoBase = {
   batchIDs: Float32Array<ArrayBufferLike> | null;
@@ -80,10 +86,19 @@ type LabelRecord = {
   text: string;
   /**
    * The most recent text asked for. Differs from {@link text} only while an
-   * async font preparation is in flight; the callback compares against it so a
+   * async font preparation is in flight or parked (see
+   * {@link prepareDeferred}); the prepare callback compares against it so a
    * slow prepare can't clobber a newer text that landed meanwhile.
    */
   requestedText: string;
+  /**
+   * True while {@link requestedText} awaits font preparation parked on anchor
+   * visibility: unprepared text is not shaped — and its font faces not
+   * fetched — until a placement pass finds the anchor potentially visible
+   * (inside the frustum and not behind the globe's horizon). See
+   * `prepareDeferredLabels`.
+   */
+  prepareDeferred: boolean;
   /** Glyph-instance slots this label owns, or null when it has no text. */
   run: GlyphRun | null;
   /** Unique atlas glyphs the current text renders. */
@@ -174,6 +189,10 @@ export class BatchedSdfTextMesh
   private _maxWidth: number;
   private _lineHeight: number;
   private _textAlign: number;
+
+  /** Labels currently parked in `prepareDeferred`, so the per-pass promotion
+   *  scan can bail without touching `_labels` when nothing is parked. */
+  private _deferredCount = 0;
 
   /** Layer-level declutter settings, mirrored from the material. */
   private _declutter: boolean;
@@ -357,6 +376,7 @@ export class BatchedSdfTextMesh
       batchId: info.batchIDs ? info.batchIDs[batchIndex * info.batchIDSize] : 0,
       text: "",
       requestedText: "",
+      prepareDeferred: false,
       run: null,
       glyphKeys: [],
       retainedKeys: null,
@@ -539,8 +559,11 @@ export class BatchedSdfTextMesh
    * text is already prepared in the font worker.
    */
   private _applyText(record: LabelRecord, text: string): void {
+    // `requestedText` is deliberately not touched here: it belongs to the
+    // intent-setting paths (`setTextByBatchIndex`, the material-text update).
+    // A re-layout of the *current* text (font/layout change) must not clobber
+    // a newer intent that is still in flight or parked on visibility.
     record.text = text;
-    record.requestedText = text;
 
     if (!text) {
       this._releaseRun(record);
@@ -1050,6 +1073,10 @@ export class BatchedSdfTextMesh
 
       record.requestedShow = materialShow;
       if (materialText !== undefined && materialText !== "") {
+        // The material text overrides whatever the evaluator asked for —
+        // including a prepare that is in flight or parked on visibility.
+        record.requestedText = materialText;
+        this._clearDeferred(record);
         this._applyText(record, materialText);
       } else if (forceUpdate || layoutChanged) {
         // Font or layout changed — re-lay-out existing text.
@@ -1085,31 +1112,98 @@ export class BatchedSdfTextMesh
         this._highQuality,
       )
     ) {
-      this._fontManager
-        .prepareText(
-          this._fontIdentifier,
-          text,
-          this._highQuality,
-          this._loadedFaceUrls,
-        )
-        .then(() => {
-          // A newer text may have landed while the font loaded.
-          if (record.requestedText !== text) return;
-          this._refreshAtlasTextures();
-          this._applyText(record, text);
-          this._markDeclutterDirty();
-          this._needRender?.();
-        })
-        .catch((err: unknown) => {
-          console.error("Failed to prepare text:", err);
-          this._needRender?.();
-        });
+      // Unprepared text costs a worker round-trip and possibly font-face
+      // fetches, and low-zoom tiles span far more world than the screen shows
+      // (a z0 tile carries every country's name). Park preparation until a
+      // placement pass confirms the anchor can actually appear on screen
+      // (`prepareDeferredLabels`). Deciding here instead would race camera
+      // initialization: early tiles evaluate before the first render commits
+      // the camera pose to `matrixWorld`, wrongly passing far-side labels.
+      // The pass runs with the render camera on the next frame, so visible
+      // labels start preparing at most one throttle window later.
+      if (this.ctx.declutter) {
+        if (!record.prepareDeferred) {
+          record.prepareDeferred = true;
+          this._deferredCount++;
+        }
+        this._markDeclutterDirty();
+        this._needRender?.();
+        return;
+      }
+      this._prepareAndApply(record, text);
       return;
     }
 
+    this._clearDeferred(record);
     this._applyText(record, text);
     this._markDeclutterDirty();
     this._needRender?.();
+  }
+
+  /** Kick off async font preparation for `text`, then lay it out — unless a
+   *  newer text supersedes it while the fonts load. */
+  private _prepareAndApply(record: LabelRecord, text: string): void {
+    this._fontManager
+      .prepareText(
+        this._fontIdentifier,
+        text,
+        this._highQuality,
+        this._loadedFaceUrls,
+      )
+      .then(() => {
+        // A newer text may have landed while the font loaded.
+        if (record.requestedText !== text) return;
+        this._refreshAtlasTextures();
+        this._applyText(record, text);
+        this._markDeclutterDirty();
+        this._needRender?.();
+      })
+      .catch((err: unknown) => {
+        console.error("Failed to prepare text:", err);
+        this._needRender?.();
+      });
+  }
+
+  private _clearDeferred(record: LabelRecord): void {
+    if (record.prepareDeferred) {
+      record.prepareDeferred = false;
+      this._deferredCount--;
+    }
+  }
+
+  /**
+   * Promote parked labels whose anchor became potentially visible: start
+   * their font preparation and apply the text when it lands. Runs at the
+   * start of every placement pass (see {@link DeclutterParticipant}) — the
+   * cadence at which visibility can actually change.
+   */
+  prepareDeferredLabels(camera: PerspectiveCamera): void {
+    if (this._deferredCount === 0 || !this.visible) return;
+    const state = syncAnchorVisibilityState(camera, _visibility);
+    for (const record of this._labels) {
+      if (!record.prepareDeferred) continue;
+      const a = record.anchor;
+      if (!isAnchorPotentiallyVisible(state, a[0], a[1], a[2])) continue;
+      this._clearDeferred(record);
+
+      const text = record.requestedText;
+      // Parked intent may have gone stale: cleared, or applied via another
+      // path (e.g. a material-level text update).
+      if (!text || text === record.text) continue;
+      if (
+        this._fontManager.isTextPrepared(
+          this._fontIdentifier,
+          text,
+          this._highQuality,
+        )
+      ) {
+        this._applyText(record, text);
+        this._markDeclutterDirty();
+        this._needRender?.();
+        continue;
+      }
+      this._prepareAndApply(record, text);
+    }
   }
 
   override setFeatureColorByBatchIndex(batchIndex: number, color: Color) {
