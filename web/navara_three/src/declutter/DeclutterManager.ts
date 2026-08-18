@@ -49,6 +49,11 @@ export class DeclutterManager {
    *  drift toggles frame to frame instead of flickering. Its full box is
    *  still claimed against competitors. */
   static readonly HYSTERESIS_PX = 6;
+  /** Anchor distance (m) within which two same-content candidates count as
+   *  the same label for the tile-swap handoff. Covers the anchor drift a
+   *  zoom level's tile-grid quantization (and per-tile terrain heights)
+   *  introduces, while staying far below distinct same-name places. */
+  static readonly HANDOFF_TOLERANCE_M = 2000;
 
   private _participants = new Set<DeclutterParticipant>();
   /** Set when the label set changed (register/update/text change) so the next
@@ -59,6 +64,11 @@ export class DeclutterManager {
   private _prevCamera = new Float64Array(34).fill(Number.NaN);
   private _lastRunAt = Number.NEGATIVE_INFINITY;
   private _lastStepAt = Number.NaN;
+
+  /** Shown candidates of the most recent pass, keyed by content, as flat xyz
+   *  anchor triplets. Read by {@link wasRecentlyShown} when a tile swap
+   *  activates a replacement batch. */
+  private _shownByContent = new Map<string, number[]>();
 
   // Reused per-pass scratch to keep steady-state allocations low.
   private _candidates: DeclutterCandidate[] = [];
@@ -98,6 +108,33 @@ export class DeclutterManager {
    *  the next update re-runs placement even if the camera is still. */
   markDirty(): void {
     this._dirty = true;
+  }
+
+  /**
+   * Whether the most recent pass showed `contentKey` anchored within
+   * {@link DeclutterManager.HANDOFF_TOLERANCE_M} of (x, y, z) — i.e. an
+   * equivalent label (typically the swapped-out tile's copy) already holds
+   * this screen space. A batch activating in a tile swap uses this to seed
+   * such labels as granted instead of fading them in from hidden, which
+   * would blink the whole tile's labels out for a pass-plus-fade.
+   */
+  wasRecentlyShown(
+    contentKey: string,
+    x: number,
+    y: number,
+    z: number,
+  ): boolean {
+    const anchors = this._shownByContent.get(contentKey);
+    if (!anchors) return false;
+    const tol = DeclutterManager.HANDOFF_TOLERANCE_M;
+    const tolSq = tol * tol;
+    for (let i = 0; i < anchors.length; i += 3) {
+      const dx = anchors[i] - x;
+      const dy = anchors[i + 1] - y;
+      const dz = anchors[i + 2] - z;
+      if (dx * dx + dy * dy + dz * dz <= tolSq) return true;
+    }
+    return false;
   }
 
   /**
@@ -222,9 +259,20 @@ export class DeclutterManager {
 
     // Apply results as fade targets. Order is irrelevant — applyDeclutter is
     // idempotent per handle — so iterate in candidate order, not sorted order.
+    // Rebuild the shown-content registry from the same results.
+    this._shownByContent.clear();
     for (let i = 0; i < n; i++) {
       const c = candidates[i];
-      c.owner.applyDeclutter(c.handle, hidden[i] !== 0);
+      const isHidden = hidden[i] !== 0;
+      c.owner.applyDeclutter(c.handle, isHidden);
+      if (!isHidden && c.contentKey) {
+        let anchors = this._shownByContent.get(c.contentKey);
+        if (!anchors) {
+          anchors = [];
+          this._shownByContent.set(c.contentKey, anchors);
+        }
+        anchors.push(c.anchorX, c.anchorY, c.anchorZ);
+      }
     }
 
     candidates.length = 0;
@@ -236,6 +284,7 @@ export class DeclutterManager {
   dispose(): void {
     this._participants.clear();
     this._candidates.length = 0;
+    this._shownByContent.clear();
   }
 
   private _snapshotChanged(

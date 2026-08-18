@@ -232,4 +232,69 @@ describe("DeclutterManager", () => {
     manager.dispose();
     expect(manager.update(camera, 800, 600, 1000)).toBe("idle");
   });
+
+  // Tile swaps replace a batch wholesale; the new batch's labels start hidden
+  // and would re-earn placement from scratch (throttled pass + fade-in) while
+  // the old batch vanished instantly — a tile-shaped blink. The registry lets
+  // the new batch seed a label as already-granted when the previous pass
+  // showed the same content at (nearly) the same anchor.
+  describe("shown-content registry (tile-swap handoff)", () => {
+    it("answers lookups for content shown by the last pass, within tolerance", () => {
+      const manager = new DeclutterManager(new StubKernel());
+      const p = new FakeParticipant([label({ handle: 0, contentKey: "東京" })]);
+      manager.register(p);
+
+      // Nothing recorded before any pass ran.
+      expect(manager.wasRecentlyShown("東京", R, 0, 0)).toBe(false);
+
+      manager.update(makeCamera(), 800, 600, 0);
+
+      expect(manager.wasRecentlyShown("東京", R, 0, 0)).toBe(true);
+      // Same content, slightly offset anchor (a coarser tile's quantization).
+      expect(manager.wasRecentlyShown("東京", R + 500, 200, -300)).toBe(true);
+      // Same content but far away (an unrelated same-name label).
+      expect(manager.wasRecentlyShown("東京", R + 50_000, 0, 0)).toBe(false);
+      // Different content at the same anchor.
+      expect(manager.wasRecentlyShown("大阪", R, 0, 0)).toBe(false);
+    });
+
+    it("does not record candidates the pass hid", () => {
+      const kernel = new StubKernel();
+      kernel.hiddenFor = (n) => new Uint8Array(n).fill(1);
+      const manager = new DeclutterManager(kernel);
+      const p = new FakeParticipant([label({ handle: 0, contentKey: "東京" })]);
+      manager.register(p);
+
+      manager.update(makeCamera(), 800, 600, 0);
+
+      expect(manager.wasRecentlyShown("東京", R, 0, 0)).toBe(false);
+    });
+
+    it("reflects the latest pass only", () => {
+      const kernel = new StubKernel();
+      const manager = new DeclutterManager(kernel);
+      const p = new FakeParticipant([label({ handle: 0, contentKey: "東京" })]);
+      manager.register(p);
+      const camera = makeCamera();
+
+      manager.update(camera, 800, 600, 0);
+      expect(manager.wasRecentlyShown("東京", R, 0, 0)).toBe(true);
+
+      // The next pass hides it; the registry must forget it.
+      kernel.hiddenFor = (n) => new Uint8Array(n).fill(1);
+      manager.markDirty();
+      manager.update(camera, 800, 600, DeclutterManager.MIN_INTERVAL_MS);
+      expect(manager.wasRecentlyShown("東京", R, 0, 0)).toBe(false);
+    });
+
+    it("ignores candidates without a contentKey", () => {
+      const manager = new DeclutterManager(new StubKernel());
+      const p = new FakeParticipant([label({ handle: 0 })]);
+      manager.register(p);
+
+      manager.update(makeCamera(), 800, 600, 0);
+
+      expect(manager.wasRecentlyShown("", R, 0, 0)).toBe(false);
+    });
+  });
 });

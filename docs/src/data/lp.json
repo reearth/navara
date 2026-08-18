@@ -5,6 +5,15 @@
     "sub": "#F4F3EF",
     "maplibre": "#285DAA"
   },
+  "themeVariants": {
+    "current": { "primary": "#10141B", "sub": "#F4F3EF", "accent": "#4FB3C6" },
+    "reco-1": { "primary": "#d7b400", "sub": "#fafafa", "accent": "#3c64d2" },
+    "reco-2": { "primary": "#c8ebfa", "sub": "#faf0c8", "accent": "#143c6e" },
+    "ml-blue": { "primary": "#9baff5", "sub": "#e6f0fa", "accent": "#325abe" },
+    "ml-purple": { "primary": "#b4aaf0", "sub": "#e6e6ff", "accent": "#786ed7" },
+    "earth": { "primary": "#aad7f2", "sub": "#e6f0f0", "accent": "#288241" },
+    "sunset": { "primary": "#ffaa8c", "sub": "#f0d7b4", "accent": "#b44632" }
+  },
   "links": {
     "docs": "/",
     "gettingStarted": "/guides/introduction/getting-started/",

@@ -40,6 +40,7 @@ import {
   syncAnchorVisibilityState,
 } from "./labelVisibility";
 import { ALIGN_FACTORS, buildLabelLayout, type LayoutOptions } from "./layout";
+import { PendingSettlement } from "./pendingSettlement";
 
 /** Reusable scratch to avoid per-frame / per-write allocations. */
 const _tmpSize = new Vector2();
@@ -180,6 +181,9 @@ export class BatchedSdfTextMesh
   private _labels: LabelRecord[] = [];
   /** Sparse batchIndex → label; labels are created on first per-feature touch. */
   private _labelByIndex: (LabelRecord | undefined)[] = [];
+
+  /** In-flight per-feature text preparations; see {@link whenLabelsSettled}. */
+  private _pendingTextPrepares = new PendingSettlement();
 
   private _glyphs: GlyphBuffers;
   private _slots = new GlyphSlotAllocator();
@@ -804,6 +808,7 @@ export class BatchedSdfTextMesh
         isShown: record.declutterTarget === 0,
         owner: this,
         handle: record.slot,
+        contentKey: record.text,
       });
     }
   }
@@ -845,8 +850,50 @@ export class BatchedSdfTextMesh
   }
 
   override setActive(active: boolean) {
+    const activating = active && !this.active;
     super.setActive(active);
+    // Tile-swap handoff: this batch replaces another (its parent tile is
+    // hidden in the same swap), so any label whose content the previous
+    // declutter pass already showed nearby starts granted instead of fading
+    // in from hidden — otherwise every swap blinks the whole tile's labels
+    // out for a throttled pass plus a fade-in. Genuinely new labels keep the
+    // fade; the next pass re-places everything and corrects any misseed.
+    if (activating && this._declutter) {
+      const declutter = this.ctx.declutter;
+      if (declutter) {
+        for (const record of this._labels) {
+          if (!record.show || record.declutterHide === 0) continue;
+          const a = record.anchor;
+          if (declutter.wasRecentlyShown(record.text, a[0], a[1], a[2])) {
+            record.declutterHide = 0;
+            record.declutterTarget = 0;
+            this._writeDeclutterHide(record);
+          }
+        }
+      }
+    }
     this._markDeclutterDirty();
+  }
+
+  /**
+   * Resolves once every per-feature text preparation currently in flight has
+   * landed (glyph runs written), bounded by `timeoutMs`.
+   *
+   * The tile-LOD swap on the Rust side hides a parent tile the moment its
+   * children report rendered, so the caller must not report this batch
+   * rendered while labels are still shaping — the swap would show a batch
+   * that draws nothing (a tile-shaped blank).
+   *
+   * Only preparations already started are awaited. With declutter enabled,
+   * `setTextByBatchIndex` parks unprepared text until a placement pass
+   * confirms the anchor is on screen, so those labels are not yet in flight
+   * and this resolves immediately — cached text (the common case for a child
+   * tile repeating its parent's strings) applies synchronously and needs no
+   * wait either. The gate therefore only bites on the non-decluttered path;
+   * decluttered swaps rely on the placement handoff in {@link setActive}.
+   */
+  whenLabelsSettled(timeoutMs: number): Promise<void> {
+    return this._pendingTextPrepares.whenSettled(timeoutMs);
   }
 
   // --- Picking ---
@@ -929,6 +976,11 @@ export class BatchedSdfTextMesh
 
     const material = m.material;
     const text = material.text ?? "";
+    // Kept so _applyUpdate can tell which material fields actually changed:
+    // engine change events re-send the full material even when only geometry
+    // or activation moved, and only genuine changes may overwrite per-feature
+    // (evaluator-set) values.
+    const prevMaterial = this._material;
     this._material = material;
     this._transform = m.transform;
 
@@ -987,7 +1039,7 @@ export class BatchedSdfTextMesh
       this._fontManager
         .prepareText(this._fontIdentifier, text, q, this._loadedFaceUrls)
         .then(() => {
-          this._applyUpdate(material, needRender, needFontUpdate);
+          this._applyUpdate(material, prevMaterial, needRender, needFontUpdate);
         })
         .catch((err: unknown) => {
           console.error("Failed to prepare text:", err);
@@ -996,11 +1048,12 @@ export class BatchedSdfTextMesh
       return;
     }
 
-    this._applyUpdate(material, needRender, needFontUpdate);
+    this._applyUpdate(material, prevMaterial, needRender, needFontUpdate);
   }
 
   private _applyUpdate(
     material: NavaraTextMaterial,
+    prevMaterial: NavaraTextMaterial,
     needRender?: () => void,
     forceUpdate = false,
   ) {
@@ -1052,26 +1105,43 @@ export class BatchedSdfTextMesh
       },
     });
 
-    // Per-label values the material supplies defaults for. This mirrors the
-    // pre-batching behaviour where a material update overwrote whatever the
-    // evaluator had set per feature.
+    // Per-label values the material supplies defaults for. A *changed*
+    // material value overwrites whatever the evaluator had set per feature
+    // (mirroring the pre-batching behaviour for real `layer.update` calls) —
+    // but engine change events re-send the whole material for geometry or
+    // activation updates too, and stomping evaluator values with an unchanged
+    // material made labels visibly pulse: every terrain-height event reset
+    // per-feature sizes to the default for a few frames until the app's
+    // evaluator ran again.
     const materialText = material.text;
     const materialShow = material.show ?? true;
     const colorHex = material.color ?? 0xffffff;
     const opacity = clamp01(material.opacity ?? 1.0);
     const fontSize = material.size ?? 16.0;
     const addHeight = material.height ?? 0;
+    const showChanged = materialShow !== (prevMaterial.show ?? true);
+    const styleChanged =
+      colorHex !== (prevMaterial.color ?? 0xffffff) ||
+      opacity !== clamp01(prevMaterial.opacity ?? 1.0);
+    const fontSizeChanged = fontSize !== (prevMaterial.size ?? 16.0);
+    const addHeightChanged = addHeight !== (prevMaterial.height ?? 0);
 
     for (const record of this._labels) {
-      record.colorHex = colorHex;
-      record.opacity = opacity;
-      record.fontSize = fontSize;
-      record.addHeight = addHeight;
-      this._writeStyle(record);
-      this._writeFontSize(record);
-      this._writeAddHeight(record);
+      if (styleChanged) {
+        record.colorHex = colorHex;
+        record.opacity = opacity;
+        this._writeStyle(record);
+      }
+      if (fontSizeChanged) {
+        record.fontSize = fontSize;
+        this._writeFontSize(record);
+      }
+      if (addHeightChanged) {
+        record.addHeight = addHeight;
+        this._writeAddHeight(record);
+      }
 
-      record.requestedShow = materialShow;
+      if (showChanged) record.requestedShow = materialShow;
       if (materialText !== undefined && materialText !== "") {
         // The material text overrides whatever the evaluator asked for —
         // including a prepare that is in flight or parked on visibility.
@@ -1143,25 +1213,32 @@ export class BatchedSdfTextMesh
   /** Kick off async font preparation for `text`, then lay it out — unless a
    *  newer text supersedes it while the fonts load. */
   private _prepareAndApply(record: LabelRecord, text: string): void {
-    this._fontManager
-      .prepareText(
-        this._fontIdentifier,
-        text,
-        this._highQuality,
-        this._loadedFaceUrls,
-      )
-      .then(() => {
-        // A newer text may have landed while the font loaded.
-        if (record.requestedText !== text) return;
-        this._refreshAtlasTextures();
-        this._applyText(record, text);
-        this._markDeclutterDirty();
-        this._needRender?.();
-      })
-      .catch((err: unknown) => {
-        console.error("Failed to prepare text:", err);
-        this._needRender?.();
-      });
+    // Tracked so `whenLabelsSettled` can gate the tile's render-completion
+    // report on the glyphs actually being written (this chain ends after
+    // `_applyText`), not merely on the font round-trip finishing. This is the
+    // single point where preparation starts — both the inline path above and
+    // the promotion of a parked label in `prepareDeferredLabels` route here.
+    this._pendingTextPrepares.track(
+      this._fontManager
+        .prepareText(
+          this._fontIdentifier,
+          text,
+          this._highQuality,
+          this._loadedFaceUrls,
+        )
+        .then(() => {
+          // A newer text may have landed while the font loaded.
+          if (record.requestedText !== text) return;
+          this._refreshAtlasTextures();
+          this._applyText(record, text);
+          this._markDeclutterDirty();
+          this._needRender?.();
+        })
+        .catch((err: unknown) => {
+          console.error("Failed to prepare text:", err);
+          this._needRender?.();
+        }),
+    );
   }
 
   private _clearDeferred(record: LabelRecord): void {

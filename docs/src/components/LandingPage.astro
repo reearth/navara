@@ -13,11 +13,18 @@ import ImageAttribution from "./ImageAttribution.astro";
 import GalleryTile from "./GalleryTile.astro";
 import googleMapsLogo from "../assets/lp/google-maps-logo.png";
 import githubIcon from "../assets/lp/github-invertocat.svg?raw";
-import archGlobe from "../assets/lp/arch-globe.svg?url";
-import archTerrain from "../assets/lp/arch-terrain.svg?url";
-import archBuildings from "../assets/lp/arch-buildings.svg?url";
-import archMarker from "../assets/lp/arch-marker.svg?url";
-import archArrow from "../assets/lp/arch-arrow.svg?url";
+import archGlobe from "../assets/lp/arch-globe.svg?raw";
+import archTerrain from "../assets/lp/arch-terrain.svg?raw";
+import archBuildings from "../assets/lp/arch-buildings.svg?raw";
+import archMarker from "../assets/lp/arch-marker.svg?raw";
+import archArrow from "../assets/lp/arch-arrow.svg?raw";
+
+// Inline an arch SVG so the page CSS can re-theme its baked fills/strokes
+// (an <img> would seal them off). The classes land on the <svg> itself, so
+// the existing sizing rules keep applying to the same element they did as
+// an <img>; the pieces are decorative, hence aria-hidden.
+const archSvg = (raw: string, className: string): string =>
+  raw.replace("<svg ", `<svg class="${className}" aria-hidden="true" `);
 
 interface Props {
   locale: string;
@@ -87,7 +94,25 @@ const alt = (id: string): string => {
 };
 
 const { colors, links } = lp;
-const rootStyle = `--pri:${colors.primary};--acc:${colors.accent};--sub:${colors.sub};--ml:${colors.maplibre}`;
+const rootStyle = `--pri:${colors.primary};--pri-ink:${colors.primary};--acc:${colors.accent};--sub:${colors.sub};--ml:${colors.maplibre}`;
+
+// Theme candidates (primary/sub/accent sets) for the header preview switcher —
+// only revealed when the URL carries `?color` (`?color=<name>` preselects one).
+// Values live in lp.json (themeVariants) like the rest of the theme. Each
+// candidate is also offered with primary/sub exchanged ("<name>-swap") to
+// preview the other color carrying the bands — except "current", whose
+// near-black primary as a page background has no readable counterpart.
+type ThemeVariant = { primary: string; sub: string; accent: string };
+const themeVariants: [string, ThemeVariant][] = Object.entries(
+  lp.themeVariants ?? {},
+).flatMap(([name, v]: [string, ThemeVariant]): [string, ThemeVariant][] =>
+  name === "current"
+    ? [[name, v]]
+    : [
+        [name, v],
+        [`${name}-swap`, { primary: v.sub, sub: v.primary, accent: v.accent }],
+      ],
+);
 
 // Attribution credits (text + link to each source's terms). The strings are
 // language-agnostic, so they live here rather than duplicated per locale; only
@@ -274,6 +299,29 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
                 Object.entries(locales).map(([code, strings]: [string, any]) => (
                   <option value={lpPathOf(code)} selected={code === locale} lang={strings.htmlLang}>
                     {strings.short}
+                  </option>
+                ))
+              }
+            </select>
+          </label>
+          <!-- Theme preview switcher: hidden unless the URL carries `?color`
+               (see the script below). Each option carries its full
+               primary/sub/accent set; the striped dot paints the live vars, so
+               it doubles as the "current theme" indicator. -->
+          <label class="lp-lang lp-color" data-lp-color hidden>
+            <span class="lp-color-dot" aria-hidden="true"></span>
+            <ChevronDown class="lp-lang-chevron" size={14} stroke-width={2} aria-hidden="true" />
+            <select aria-label="Theme colors">
+              {
+                themeVariants.map(([name, v]) => (
+                  <option
+                    value={name}
+                    data-pri={v.primary}
+                    data-sub={v.sub}
+                    data-acc={v.accent}
+                    selected={v.accent === colors.accent && v.primary === colors.primary}
+                  >
+                    {name}
                   </option>
                 ))
               }
@@ -524,20 +572,20 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
                 1/6, 1/2, 5/6 of the body height — exactly the arrow origins. */}
             <div class="lp-arch-body is-source lp-arch-stack">
               <div class="lp-arch-slot">
-                <img class="lp-arch-piece lp-arch-p-terrain" src={archTerrain} alt="" />
+                <Fragment set:html={archSvg(archTerrain, "lp-arch-piece lp-arch-p-terrain")} />
               </div>
               <div class="lp-arch-slot">
-                <img class="lp-arch-piece lp-arch-p-marker" src={archMarker} alt="" />
+                <Fragment set:html={archSvg(archMarker, "lp-arch-piece lp-arch-p-marker")} />
               </div>
               <div class="lp-arch-slot">
-                <img class="lp-arch-piece lp-arch-p-buildings" src={archBuildings} alt="" />
+                <Fragment set:html={archSvg(archBuildings, "lp-arch-piece lp-arch-p-buildings")} />
               </div>
             </div>
 
             {/* Converging arrows (arch-arrow.svg): points right on desktop;
                 the same asset is rotated 90° to point down on mobile. */}
             <div class="lp-arch-body is-arrows lp-arch-arrows" aria-hidden="true">
-              <img class="lp-arch-arrow-img" src={archArrow} alt="" />
+              <Fragment set:html={archSvg(archArrow, "lp-arch-arrow-img")} />
             </div>
 
             <div class="lp-arch-head is-render">
@@ -549,7 +597,7 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
               {/* arch-globe.svg already contains the composited scene (terrain,
                   buildings, marker inside the globe) — nothing is overlaid. */}
               <div class="lp-arch-globe">
-                <img class="lp-arch-globe-base" src={archGlobe} alt="" />
+                <Fragment set:html={archSvg(archGlobe, "lp-arch-globe-base")} />
               </div>
             </div>
           </div>
@@ -819,22 +867,91 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
     </div>
 
     <script>
+      // A native select drops its list on mousedown; suppress that and open
+      // on the completed click instead (where showPicker is available —
+      // otherwise the native behavior stays).
+      const openPickerOnClick = (el: HTMLSelectElement) => {
+        if (typeof el.showPicker !== "function") return;
+        el.addEventListener("mousedown", (e) => {
+          e.preventDefault();
+          el.focus();
+        });
+        el.addEventListener("click", () => el.showPicker());
+      };
+
       // Navigate to the selected locale's landing page.
       document.querySelectorAll<HTMLSelectElement>("select[data-lp-lang]").forEach((el) => {
         el.addEventListener("change", () => {
           location.href = el.value;
         });
-        // A native select drops its list on mousedown; suppress that and open
-        // on the completed click instead (where showPicker is available —
-        // otherwise the native behavior stays).
-        if (typeof el.showPicker === "function") {
-          el.addEventListener("mousedown", (e) => {
-            e.preventDefault();
-            el.focus();
-          });
-          el.addEventListener("click", () => el.showPicker());
-        }
+        openPickerOnClick(el);
       });
+
+      // Theme preview: `?color` in the URL reveals the header switcher;
+      // picking a candidate rewrites the full --pri/--sub/--acc set on <html>
+      // with the palette sheet's colors verbatim. Roles a candidate color
+      // cannot fill without losing contrast fall back to the sheet's plain
+      // black/white (its logo colors) instead of bending the palette:
+      // a light primary keeps the bands but hands ink/scrims (--pri-ink) to
+      // black and flips the band text (--on-band); a dark accent gets white
+      // text (--on-acc). `?color=<variant name>` preselects that candidate.
+      const colorSwitch = document.querySelector<HTMLElement>("[data-lp-color]");
+      const colorSelect = colorSwitch?.querySelector<HTMLSelectElement>("select");
+      const colorParam = new URLSearchParams(location.search).get("color");
+      if (colorSwitch && colorSelect && colorParam !== null) {
+        colorSwitch.hidden = false;
+        // No showPicker() wiring here (unlike the language select): stacked
+        // open-on-click handling can leave the dropdown eating the selection
+        // until blur. The native mousedown behavior reacts immediately.
+        if ([...colorSelect.options].some((o) => o.value === colorParam)) {
+          colorSelect.value = colorParam;
+        }
+        // Relative luminance of a #rrggbb color.
+        const lumOf = (hex: string): number => {
+          const lin = (c: number) => {
+            const s = c / 255;
+            return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+          };
+          return (
+            0.2126 * lin(parseInt(hex.slice(1, 3), 16)) +
+            0.7152 * lin(parseInt(hex.slice(3, 5), 16)) +
+            0.0722 * lin(parseInt(hex.slice(5, 7), 16))
+          );
+        };
+        const applyTheme = () => {
+          const opt = colorSelect.selectedOptions[0];
+          if (!opt) return;
+          const pri = opt.dataset.pri ?? "";
+          const acc = opt.dataset.acc ?? "";
+          const root = document.documentElement.style;
+          root.setProperty("--pri", pri);
+          root.setProperty("--sub", opt.dataset.sub ?? "");
+          root.setProperty("--acc", acc);
+          const priDark = lumOf(pri) < 0.25;
+          root.setProperty("--pri-ink", priDark ? pri : "#000000");
+          if (priDark) {
+            // Dark primary drives everything, like the shipped theme.
+            root.removeProperty("--on-band");
+            root.removeProperty("--on-band-soft");
+          } else {
+            root.setProperty("--on-band", "#000000");
+            root.setProperty("--on-band-soft", "color-mix(in srgb, #000000 62%, transparent)");
+          }
+          if (lumOf(acc) < 0.3) {
+            root.setProperty("--on-acc", "#ffffff");
+          } else {
+            root.removeProperty("--on-acc");
+          }
+          // The adaptive gallery inks compare against the (now changed) theme
+          // ink; the resize path re-samples both the per-tile and side labels.
+          window.dispatchEvent(new Event("resize"));
+        };
+        applyTheme();
+        // `input` fires on selection itself; `change` covers browsers that
+        // only commit on close/blur.
+        colorSelect.addEventListener("input", applyTheme);
+        colorSelect.addEventListener("change", applyTheme);
+      }
 
       // Measure the catch-copy height so its sticky pin line sits exactly at
       // "fully revealed" (see .lp-intro's top calc).
@@ -918,14 +1035,28 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
         new ResizeObserver(setHeaderHeight).observe(headerEl);
       }
 
-      // Give the fixed header a dark backdrop once the hero has scrolled away.
+      // Give the fixed header its light frosted backdrop (and ink chrome) as
+      // soon as the intro panel scrolls up to meet it — from that line on the
+      // header sits over light surfaces, never bare video. An observer on the
+      // hero would flip too late: the intro's light glass slides under the
+      // still-transparent header while the hero is partially on screen.
       const header = document.querySelector(".lp-header");
-      const hero = document.querySelector(".lp-hero");
-      if (header && hero) {
-        const headerObserver = new IntersectionObserver(([entry]) => {
-          header.classList.toggle("lp-header-solid", !entry.isIntersecting);
-        });
-        headerObserver.observe(hero);
+      if (header && intro) {
+        let headerTicking = false;
+        const updateHeaderSolid = () => {
+          headerTicking = false;
+          const h = header.getBoundingClientRect().height;
+          header.classList.toggle("lp-header-solid", intro.getBoundingClientRect().top <= h);
+        };
+        const requestHeaderSolid = () => {
+          if (!headerTicking) {
+            headerTicking = true;
+            requestAnimationFrame(updateHeaderSolid);
+          }
+        };
+        window.addEventListener("scroll", requestHeaderSolid, { passive: true });
+        window.addEventListener("resize", requestHeaderSolid);
+        updateHeaderSolid();
       }
 
       // Crossfade the gallery overlay label when it crosses into the example
@@ -962,14 +1093,19 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
         };
         const contrast = (a: number, b: number): number =>
           (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
-        // Luminance of the theme ink (--pri, always #rrggbb from lp.json).
-        const priHex = getComputedStyle(document.documentElement)
-          .getPropertyValue("--pri")
-          .trim();
-        const priLum =
-          0.2126 * linear(parseInt(priHex.slice(1, 3), 16)) +
-          0.7152 * linear(parseInt(priHex.slice(3, 5), 16)) +
-          0.0722 * linear(parseInt(priHex.slice(5, 7), 16));
+        // Luminance of the theme ink (--pri-ink, always #rrggbb — set inline
+        // from lp.json, or rewritten at runtime by the `?color` theme preview,
+        // so it is read per sample rather than cached at load).
+        const priLum = (): number => {
+          const priHex = getComputedStyle(document.documentElement)
+            .getPropertyValue("--pri-ink")
+            .trim();
+          return (
+            0.2126 * linear(parseInt(priHex.slice(1, 3), 16)) +
+            0.7152 * linear(parseInt(priHex.slice(3, 5), 16)) +
+            0.0722 * linear(parseInt(priHex.slice(5, 7), 16))
+          );
+        };
 
         // Average luminance of the left quarter of the image's VISIBLE crop —
         // tiles render with object-fit: cover, so the displayed region must be
@@ -1066,7 +1202,7 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
           if (lum === null) return;
           attr.classList.toggle(
             "nv-attrib-ink-dark",
-            contrast(priLum, lum) > contrast(1, lum),
+            contrast(priLum(), lum) > contrast(1, lum),
           );
         };
         // Sample when a tile is (near) on screen: by then its layout — and thus
@@ -1115,7 +1251,7 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
           if (!img) return;
           const bg = luminanceOf(img);
           if (bg === null) return;
-          gallerySide.classList.toggle("lp-side-dark", contrast(priLum, bg) > contrast(1, bg));
+          gallerySide.classList.toggle("lp-side-dark", contrast(priLum(), bg) > contrast(1, bg));
         };
         const requestSideInk = () => {
           if (!sideTicking) {
@@ -1418,12 +1554,22 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
         --lp-safe-l: env(safe-area-inset-left, 0px);
         --lp-safe-r: env(safe-area-inset-right, 0px);
         --lp-safe-b: env(safe-area-inset-bottom, 0px);
-        --ink: color-mix(in oklab, var(--pri), black 20%);
-        --ink-soft: color-mix(in oklab, var(--pri), white 35%);
-        --on-dark: color-mix(in oklab, var(--pri), white 88%);
-        --on-dark-soft: color-mix(in oklab, var(--pri), white 60%);
-        --line: color-mix(in oklab, var(--pri), white 85%);
-        --line-dark: color-mix(in oklab, var(--pri), white 14%);
+        /* --pri-ink is the always-dark side of the theme: normally --pri
+           itself (set inline with it), but the `?color` preview swaps it to
+           plain black when a candidate palette's primary is light, so ink,
+           hairlines and media scrims never go light. Bands keep --pri. */
+        --ink: color-mix(in oklab, var(--pri-ink), black 20%);
+        --ink-soft: color-mix(in oklab, var(--pri-ink), white 35%);
+        --on-dark: color-mix(in oklab, var(--pri-ink), white 88%);
+        --on-dark-soft: color-mix(in oklab, var(--pri-ink), white 60%);
+        --line: color-mix(in oklab, var(--pri-ink), white 85%);
+        --line-dark: color-mix(in oklab, var(--pri-ink), white 14%);
+        /* Text on --pri-painted bands / on --acc surfaces. The preview flips
+           these to the palette sheet's plain black or white when the band or
+           accent color needs it; defaults reproduce the shipped theme. */
+        --on-band: var(--on-dark);
+        --on-band-soft: var(--on-dark-soft);
+        --on-acc: var(--pri-ink);
       }
       html {
         scroll-behavior: smooth;
@@ -1592,10 +1738,22 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
         padding: 20px max(48px, var(--lp-safe-r)) 20px max(48px, var(--lp-safe-l));
         transition: background 0.3s ease;
       }
+      /* Scrolled past the hero, the header frosts with the same primary
+         glass as the intro panel, so both read as one surface; the chrome
+         uses the matching on-band ink. */
       .lp-header.lp-header-solid {
-        background: color-mix(in srgb, var(--pri) 88%, transparent);
+        background: color-mix(in srgb, var(--pri) 60%, transparent);
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
+      }
+      .lp-header-solid .lp-wordmark,
+      .lp .lp-header-solid .lp-nav a,
+      .lp-header-solid .lp-lang {
+        color: var(--on-band);
+      }
+      .lp .lp-header-solid .lp-nav a:hover,
+      .lp-header-solid .lp-lang:hover {
+        color: var(--acc);
       }
       .lp-wordmark {
         font: 700 22px "Arsenal", "Zen Kaku Gothic New", sans-serif;
@@ -1666,7 +1824,7 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
       }
       /* Native dropdown list opens on a light background. */
       .lp-lang select option {
-        color: var(--pri);
+        color: var(--pri-ink);
       }
       .lp-lang .lp-lang-chevron {
         position: absolute;
@@ -1674,6 +1832,27 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
         top: 50%;
         transform: translateY(-50%);
         pointer-events: none;
+      }
+      /* Theme preview switcher (`?color`): a swatch dot instead of a label,
+         striped with the live primary/sub/accent set. .lp-lang's
+         display: flex would defeat [hidden], so restate it. */
+      .lp-color {
+        padding-right: 16px;
+      }
+      .lp-color[hidden] {
+        display: none;
+      }
+      .lp-color-dot {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: linear-gradient(
+          135deg,
+          var(--pri) 33.3%,
+          var(--sub) 33.3% 66.6%,
+          var(--acc) 66.6%
+        );
+        box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.35);
       }
       /* Inline arrow icons sit on the text baseline row of their link. */
       .lp .lp-getting-started a,
@@ -1718,6 +1897,9 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
         height: 100vh;
         height: 100lvh;
         min-height: 480px;
+        /* The section band is the theme primary (the alternating rhythm is
+           PRI / SUB / PRI / SUB down the page); the promo video covers it,
+           so it only peeks while the poster is still decoding. */
         background: var(--pri);
       }
       .lp-hero img,
@@ -1753,7 +1935,7 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
         justify-content: center;
         border: 1px solid color-mix(in srgb, #fff 35%, transparent);
         border-radius: 50%;
-        background: color-mix(in srgb, var(--pri) 45%, transparent);
+        background: color-mix(in srgb, var(--pri-ink) 45%, transparent);
         backdrop-filter: blur(8px);
         -webkit-backdrop-filter: blur(8px);
         color: var(--on-dark);
@@ -1779,7 +1961,7 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
         justify-content: center;
         border: 1px solid color-mix(in srgb, #fff 35%, transparent);
         border-radius: 50%;
-        background: color-mix(in srgb, var(--pri) 45%, transparent);
+        background: color-mix(in srgb, var(--pri-ink) 45%, transparent);
         backdrop-filter: blur(8px);
         -webkit-backdrop-filter: blur(8px);
         color: var(--on-dark);
@@ -1848,8 +2030,11 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
         /* Pinned flush with the bottom of the viewport, so the bottom padding
            also has to clear the home indicator. */
         padding: 80px 48px calc(72px + var(--lp-safe-b));
-        /* Frosted-glass panel over the hero image. */
-        background: color-mix(in srgb, var(--pri) 40%, transparent);
+        /* Frosted-glass panel over the hero image, in the theme primary: the
+           page alternates PRI / SUB / PRI / SUB bands, and this glass is what
+           the hero section reads as. Copy uses the on-band inks, which follow
+           whether the primary is dark or light. */
+        background: color-mix(in srgb, var(--pri) 60%, transparent);
         backdrop-filter: blur(14px);
         -webkit-backdrop-filter: blur(14px);
       }
@@ -1862,7 +2047,7 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
       .lp-h1 {
         font: 700 68px/1.12 "Arsenal", "Zen Kaku Gothic New", sans-serif;
         letter-spacing: -0.01em;
-        color: var(--on-dark);
+        color: var(--on-band);
       }
       .lp-h1 span {
         color: var(--acc);
@@ -1870,7 +2055,7 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
       .lp-h1-sub {
         margin-top: 26px;
         font-size: 15px;
-        color: var(--on-dark-soft);
+        color: var(--on-band-soft);
       }
       .lp-intro-right {
         padding-top: 8px;
@@ -1879,7 +2064,7 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
         font-size: 14.5px;
         line-height: 2;
         text-wrap: pretty;
-        color: var(--on-dark);
+        color: var(--on-band);
       }
       .lp-cta-row {
         display: flex;
@@ -1888,8 +2073,11 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
         margin-top: 34px;
         flex-wrap: wrap;
       }
+      /* CTAs sit on the primary glass: the filled button inverts the band
+         (on-band surface, primary text) and the outline draws in on-band, so
+         both follow a dark or light primary. */
       .lp a.lp-btn-primary {
-        background: var(--on-dark);
+        background: var(--on-band);
         color: var(--pri);
         padding: 12px 24px;
         border-radius: 8px;
@@ -1898,11 +2086,11 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
       }
       .lp a.lp-btn-primary:hover {
         background: var(--acc);
-        color: var(--pri);
+        color: var(--on-acc);
       }
       .lp a.lp-btn-outline {
-        border: 1.5px solid color-mix(in oklab, var(--pri), white 45%);
-        color: var(--on-dark);
+        border: 1.5px solid color-mix(in srgb, var(--on-band) 45%, transparent);
+        color: var(--on-band);
         padding: 12px 24px;
         border-radius: 8px;
         font-weight: 700;
@@ -1921,7 +2109,7 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
         color: var(--acc);
       }
       .lp .lp-getting-started a:hover {
-        color: var(--on-dark);
+        color: var(--on-band);
       }
 
       /* Eyebrow labels */
@@ -2032,19 +2220,17 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
       .lp-api-media img.lp-tier-visible {
         opacity: 1;
       }
-      /* keep the still readable under the thin white ring + captions */
+      /* keep the still readable under the captions (bottom fade only — the
+         ring itself sits on the plain still, no halo) */
       .lp-api-scrim {
         position: absolute;
         inset: 0;
         z-index: 1;
-        background:
-          radial-gradient(
-            circle at 88% 84%,
-            color-mix(in srgb, var(--pri) 60%, transparent),
-            color-mix(in srgb, var(--pri) 30%, transparent) 40%,
-            color-mix(in srgb, var(--pri) 10%, transparent) 70%
-          ),
-          linear-gradient(to top, color-mix(in srgb, var(--pri) 62%, transparent), transparent 34%);
+        background: linear-gradient(
+          to top,
+          color-mix(in srgb, var(--pri-ink) 62%, transparent),
+          transparent 34%
+        );
       }
       /* attribution: no background, white icon with a shadow, tucked into
          the top-right corner */
@@ -2214,7 +2400,7 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
         min-height: calc(100svh - var(--lp-header-h, 68px));
         padding: 96px 48px;
         background: var(--pri);
-        color: var(--on-dark);
+        color: var(--on-band);
       }
       .lp-hello .lp-eyebrow {
         color: var(--acc);
@@ -2239,15 +2425,15 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
          palette so a theme change in lp.json restyles the code too. */
       .lp-hello-code {
         border-radius: 14px;
-        /* A step lighter than the section band, with a hairline, so the card
-           still reads as a panel on the same-ink background. */
-        background: color-mix(in oklab, var(--pri), white 4%);
+        /* Always a dark editor panel (--pri-ink stays dark whatever the band
+           color), a step lighter than pure ink with a hairline. */
+        background: color-mix(in oklab, var(--pri-ink), white 4%);
         border: 1px solid color-mix(in srgb, #fff 10%, transparent);
         --astro-code-background: transparent;
         --astro-code-foreground: var(--on-dark);
         --astro-code-color-background: transparent;
         --astro-code-color-text: var(--on-dark);
-        --astro-code-token-keyword: var(--acc);
+        --astro-code-token-keyword: color-mix(in oklab, var(--acc), white 20%);
         --astro-code-token-function: color-mix(in oklab, var(--acc), white 40%);
         --astro-code-token-string: color-mix(in oklab, var(--acc), white 60%);
         --astro-code-token-string-expression: color-mix(in oklab, var(--acc), white 60%);
@@ -2255,7 +2441,7 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
         --astro-code-token-parameter: var(--on-dark-soft);
         --astro-code-token-punctuation: var(--on-dark-soft);
         --astro-code-token-comment: color-mix(in srgb, var(--on-dark) 45%, transparent);
-        --astro-code-token-link: var(--acc);
+        --astro-code-token-link: color-mix(in oklab, var(--acc), white 20%);
       }
       .lp-hello-code pre {
         margin: 0;
@@ -2273,7 +2459,7 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
         flex: 1;
         min-height: 0;
         border-radius: 14px;
-        border: 1px solid color-mix(in srgb, #fff 10%, transparent);
+        border: 1px solid color-mix(in srgb, var(--on-band) 10%, transparent);
         overflow: hidden;
       }
       .lp-hello-visual img {
@@ -2424,6 +2610,21 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
         width: 100%;
         height: 100%;
       }
+      /* Re-theme the inlined arch line-art: CSS outranks the SVGs' baked
+         presentation attributes, so their fixed palette (sub-colored fills,
+         ink strokes, gray graticule) maps onto the live theme vars. */
+      .lp-arch-flow svg [fill="#F4F3EF"] {
+        fill: var(--sub);
+      }
+      .lp-arch-flow svg [stroke="#090C11"] {
+        stroke: var(--pri-ink);
+      }
+      .lp-arch-flow svg [fill="#090C11"] {
+        fill: var(--pri-ink);
+      }
+      .lp-arch-flow svg [stroke="#C9C9C9"] {
+        stroke: color-mix(in oklab, var(--pri-ink), white 75%);
+      }
 
       /* Gallery — seamless image strip on black; the section title floats
          over the first tile. */
@@ -2496,7 +2697,7 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
         transition: color 0.4s ease;
       }
       .lp-gallery-side.lp-side-dark .lp-gallery-label {
-        color: var(--pri);
+        color: var(--pri-ink);
       }
       .lp-gallery-link {
         margin-top: 26px;
@@ -2508,7 +2709,7 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
         transition: color 0.4s ease;
       }
       .lp .lp-gallery-side.lp-side-dark .lp-gallery-link a {
-        color: var(--pri);
+        color: var(--pri-ink);
       }
       .lp .lp-gallery-link a:hover {
         text-decoration: underline;
@@ -2571,7 +2772,7 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
          tile by the top-right luminance sampler). */
       .lp-tile-attrib.nv-attrib-ink-dark .nv-attrib-btn,
       .lp-tile-attrib.nv-attrib-ink-dark .nv-attrib-btn:hover {
-        color: var(--pri);
+        color: var(--pri-ink);
       }
       /* Hover lift on linked tiles (the reveal transition keeps transform,
          so hover only touches filter to stay snappy). */
@@ -2752,7 +2953,7 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
         background: none;
         box-shadow: none;
         backdrop-filter: none;
-        color: var(--pri);
+        color: var(--pri-ink);
       }
 
       /* Get started (footer) */
@@ -2813,6 +3014,24 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
       .lp-outro-ctas {
         justify-content: center;
         margin-top: 40px;
+      }
+      /* The shared CTA classes are styled for the light intro glass; on the
+         dark closing band they invert back to light-on-dark. */
+      .lp .lp-outro-ctas a.lp-btn-primary {
+        background: var(--on-dark);
+        color: var(--pri-ink);
+      }
+      .lp .lp-outro-ctas a.lp-btn-primary:hover {
+        background: var(--acc);
+        color: var(--on-acc);
+      }
+      .lp .lp-outro-ctas a.lp-btn-outline {
+        border-color: color-mix(in srgb, #fff 45%, transparent);
+        color: var(--on-dark);
+      }
+      .lp .lp-outro-ctas a.lp-btn-outline:hover {
+        border-color: var(--acc);
+        color: var(--acc);
       }
 
       .lp-footer {
