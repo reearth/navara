@@ -188,27 +188,31 @@ export const PMTILES_DATASETS = {
   // latency than hitting the us-west-2 origin directly).
   //
   // NOTE: releases have a 60-day retention window, so a dated path 404s ~2
-  // months after its release date (e.g. `2026-06-17.0` expires 2026-08-17).
+  // months after its release date (`2026-07-22.0` expires ~2026-09-20).
+  // Expiry is per-object, not per-release: when `2026-06-17.0` lapsed,
+  // `divisions`/`transportation` 404'd while `base`/`buildings`/`places` were
+  // still served — which looks like a broken layer (labels vanish, basemap
+  // draws) rather than a dead source. Check the specific file, not the prefix.
   // When the fetches start failing, bump the date below to a live release —
   // list them at:
   //   https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/?list-type=2&prefix=tiles/&delimiter=/
   overtureBase: {
-    url: "https://tiles.overturemaps.org/2026-06-17.0/base.pmtiles",
+    url: "https://tiles.overturemaps.org/2026-07-22.0/base.pmtiles",
     attribution: "© OpenStreetMap contributors, © Overture Maps Foundation",
     attributionUrl: "https://overturemaps.org",
   },
   overtureDivisions: {
-    url: "https://tiles.overturemaps.org/2026-06-17.0/divisions.pmtiles",
+    url: "https://tiles.overturemaps.org/2026-07-22.0/divisions.pmtiles",
     attribution: "© OpenStreetMap contributors, © Overture Maps Foundation",
     attributionUrl: "https://overturemaps.org",
   },
   overtureBuildings: {
-    url: "https://tiles.overturemaps.org/2026-06-17.0/buildings.pmtiles",
+    url: "https://tiles.overturemaps.org/2026-07-22.0/buildings.pmtiles",
     attribution: "© OpenStreetMap contributors, © Overture Maps Foundation",
     attributionUrl: "https://overturemaps.org",
   },
   overturePlaces: {
-    url: "https://tiles.overturemaps.org/2026-06-17.0/places.pmtiles",
+    url: "https://tiles.overturemaps.org/2026-07-22.0/places.pmtiles",
     attribution: "© Overture Maps Foundation",
     attributionUrl: "https://overturemaps.org",
   },
