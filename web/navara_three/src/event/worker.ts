@@ -598,6 +598,12 @@ async function processConstructPolygonBatchedFeature(
       let outlineGeometry: TransferablePolygonOutlineGeometry | undefined;
       if (result.outline_position) {
         const outlinePosition = bufHandler.adoptF32(result.outline_position);
+        const outlinePosition3dHigh = result.outline_position_3d_high
+          ? bufHandler.adoptF32(result.outline_position_3d_high)
+          : undefined;
+        const outlinePosition3dLow = result.outline_position_3d_low
+          ? bufHandler.adoptF32(result.outline_position_3d_low)
+          : undefined;
         const outlineScaleNormalAndCap = result.outline_scale_normal_and_cap
           ? bufHandler.adoptF32(result.outline_scale_normal_and_cap)
           : undefined;
@@ -614,6 +620,18 @@ async function processConstructPolygonBatchedFeature(
             ? new TransferableFloatAttribute(
                 outlinePosition,
                 result.outline_position_size ?? 3,
+              )
+            : undefined,
+          outlinePosition3dHigh
+            ? new TransferableFloatAttribute(
+                outlinePosition3dHigh,
+                result.outline_position_3d_high_size ?? 3,
+              )
+            : undefined,
+          outlinePosition3dLow
+            ? new TransferableFloatAttribute(
+                outlinePosition3dLow,
+                result.outline_position_3d_low_size ?? 3,
               )
             : undefined,
           outlineScaleNormalAndCap

@@ -286,6 +286,10 @@ pub struct TransferablePolygonOutlineGeometry {
     #[wasm_bindgen(getter_with_clone)]
     pub position: Option<TransferableFloatAttribute>,
     #[wasm_bindgen(getter_with_clone)]
+    pub position_3d_high: Option<TransferableFloatAttribute>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub position_3d_low: Option<TransferableFloatAttribute>,
+    #[wasm_bindgen(getter_with_clone)]
     pub scale_normal_and_cap: Option<TransferableFloatAttribute>,
     #[wasm_bindgen(getter_with_clone)]
     pub skip_indices: Option<Handle>,
@@ -298,12 +302,16 @@ impl TransferablePolygonOutlineGeometry {
     #[wasm_bindgen(constructor)]
     pub fn new(
         position: Option<TransferableFloatAttribute>,
+        position_3d_high: Option<TransferableFloatAttribute>,
+        position_3d_low: Option<TransferableFloatAttribute>,
         scale_normal_and_cap: Option<TransferableFloatAttribute>,
         skip_indices: Option<Handle>,
         batch_index: Option<TransferableFloatAttribute>,
     ) -> Self {
         Self {
             position,
+            position_3d_high,
+            position_3d_low,
             scale_normal_and_cap,
             skip_indices,
             batch_index,
@@ -317,6 +325,8 @@ impl From<TransferablePolygonOutlineGeometry>
     fn from(val: TransferablePolygonOutlineGeometry) -> Self {
         navara_feature_component::render::TransferablePolygonOutlineGeometry {
             position: val.position.map(|p| p.into()),
+            position_3d_high: val.position_3d_high.map(|p| p.into()),
+            position_3d_low: val.position_3d_low.map(|p| p.into()),
             scale_normal_and_cap: val.scale_normal_and_cap.map(|p| p.into()),
             skip_indices: val.skip_indices,
             batch_index: val.batch_index.map(|b| b.into()),
@@ -331,6 +341,8 @@ impl<'a> From<&'a navara_feature_component::render::TransferablePolygonOutlineGe
     ) -> TransferablePolygonOutlineGeometry {
         TransferablePolygonOutlineGeometry {
             position: val.position.as_ref().map(|p| p.into()),
+            position_3d_high: val.position_3d_high.as_ref().map(|p| p.into()),
+            position_3d_low: val.position_3d_low.as_ref().map(|p| p.into()),
             scale_normal_and_cap: val.scale_normal_and_cap.as_ref().map(|p| p.into()),
             skip_indices: val.skip_indices,
             batch_index: val.batch_index.as_ref().map(|b| b.into()),

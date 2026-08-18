@@ -541,6 +541,8 @@ impl TransferablePolygonGeometry {
 #[derive(Component, Clone, Debug, Default, PartialEq)]
 pub struct TransferablePolygonOutlineGeometry {
     pub position: Option<TransferableFloatAttribute>,
+    pub position_3d_high: Option<TransferableFloatAttribute>,
+    pub position_3d_low: Option<TransferableFloatAttribute>,
     pub scale_normal_and_cap: Option<TransferableFloatAttribute>,
     pub skip_indices: Option<Handle>,
     pub batch_index: Option<TransferableFloatAttribute>,
@@ -560,6 +562,16 @@ impl TransferablePolygonOutlineGeometry {
             size: geo.position.size,
         };
 
+        let position_3d_high = geo.position_3d_high.map(|p| TransferableFloatAttribute {
+            data: buf.new_f32(p.data),
+            size: p.size,
+        });
+
+        let position_3d_low = geo.position_3d_low.map(|p| TransferableFloatAttribute {
+            data: buf.new_f32(p.data),
+            size: p.size,
+        });
+
         let scale_normal_and_cap = TransferableFloatAttribute {
             data: buf.new_f32(geo.scale_normal_and_cap.data),
             size: geo.scale_normal_and_cap.size,
@@ -569,6 +581,8 @@ impl TransferablePolygonOutlineGeometry {
 
         TransferablePolygonOutlineGeometry {
             position: Some(position),
+            position_3d_high,
+            position_3d_low,
             scale_normal_and_cap: Some(scale_normal_and_cap),
             skip_indices: Some(skip_indices),
             batch_index: None,
@@ -580,6 +594,14 @@ impl TransferablePolygonOutlineGeometry {
     pub fn remove_from_buf(&mut self, buf: &mut BufferStore) {
         if let Some(position) = &self.position {
             buf.remove(&position.data);
+        }
+
+        if let Some(position_3d_high) = &self.position_3d_high {
+            buf.remove(&position_3d_high.data);
+        }
+
+        if let Some(position_3d_low) = &self.position_3d_low {
+            buf.remove(&position_3d_low.data);
         }
 
         if let Some(scale_normal_and_cap) = &self.scale_normal_and_cap {

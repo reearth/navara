@@ -60,6 +60,8 @@ pub fn construct_polygon(
 
     // Outline accumulators
     let mut outline_positions: Vec<f32> = Vec::new();
+    let mut outline_position_high: Vec<f32> = Vec::new();
+    let mut outline_position_low: Vec<f32> = Vec::new();
     let mut outline_scale_normal_and_cap: Vec<f32> = Vec::new();
     let mut outline_skip_indices: Vec<u32> = Vec::new();
     let mut outline_batch_index: Vec<f32> = Vec::new();
@@ -216,6 +218,12 @@ pub fn construct_polygon(
                 outline_batch_index.push(batch_idx.0 as f32);
             }
             outline_positions.extend_from_slice(&outline.position.data);
+            if let Some(high) = &outline.position_3d_high {
+                outline_position_high.extend_from_slice(&high.data);
+            }
+            if let Some(low) = &outline.position_3d_low {
+                outline_position_low.extend_from_slice(&low.data);
+            }
             outline_scale_normal_and_cap.extend_from_slice(&outline.scale_normal_and_cap.data);
         }
     }
@@ -242,8 +250,22 @@ pub fn construct_polygon(
     let outline = if outline_positions.is_empty() {
         None
     } else {
+        // RTE mode fills high/low; RTC mode leaves them empty (positions are
+        // tile-center relative instead).
+        let outline_high_low = (use_rte && !outline_position_high.is_empty()).then(|| {
+            (
+                navara_wasm_types::FloatAttribute::new(outline_position_high, 3),
+                navara_wasm_types::FloatAttribute::new(outline_position_low, 3),
+            )
+        });
+        let (outline_high, outline_low) = match outline_high_low {
+            Some((high, low)) => (Some(high), Some(low)),
+            None => (None, None),
+        };
         Some(ConstructedPolygonOutlineGeometry::new(
             navara_wasm_types::FloatAttribute::new(outline_positions, 3),
+            outline_high,
+            outline_low,
             navara_wasm_types::FloatAttribute::new(outline_scale_normal_and_cap, 4),
             outline_skip_indices,
             Some(navara_wasm_types::FloatAttribute::new(

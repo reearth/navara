@@ -6,6 +6,8 @@ use crate::{ExtentRadianF32, FloatAttribute, UintAttribute, Vec3, copy_f32_array
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct ConstructedPolygonOutlineGeometry {
     position: FloatAttribute,
+    position_3d_high: Option<FloatAttribute>,
+    position_3d_low: Option<FloatAttribute>,
     scale_normal_and_cap: FloatAttribute,
     skip_indices: Vec<u32>,
     batch_index: Option<FloatAttribute>,
@@ -14,12 +16,16 @@ pub struct ConstructedPolygonOutlineGeometry {
 impl ConstructedPolygonOutlineGeometry {
     pub fn new(
         position: FloatAttribute,
+        position_3d_high: Option<FloatAttribute>,
+        position_3d_low: Option<FloatAttribute>,
         scale_normal_and_cap: FloatAttribute,
         skip_indices: Vec<u32>,
         batch_index: Option<FloatAttribute>,
     ) -> Self {
         Self {
             position,
+            position_3d_high,
+            position_3d_low,
             scale_normal_and_cap,
             skip_indices,
             batch_index,
@@ -34,6 +40,22 @@ impl ConstructedPolygonOutlineGeometry {
     }
     pub fn position_size(&self) -> u8 {
         self.position.size
+    }
+    pub fn position_3d_high(&mut self) -> Option<js_sys::Float32Array> {
+        self.position_3d_high
+            .as_ref()
+            .map(|p| copy_f32_array(&p.data))
+    }
+    pub fn position_3d_high_size(&self) -> Option<u8> {
+        self.position_3d_high.as_ref().map(|p| p.size)
+    }
+    pub fn position_3d_low(&mut self) -> Option<js_sys::Float32Array> {
+        self.position_3d_low
+            .as_ref()
+            .map(|p| copy_f32_array(&p.data))
+    }
+    pub fn position_3d_low_size(&self) -> Option<u8> {
+        self.position_3d_low.as_ref().map(|p| p.size)
     }
     pub fn scale_normal_and_cap(&mut self) -> js_sys::Float32Array {
         copy_f32_array(&self.scale_normal_and_cap.data)

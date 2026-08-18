@@ -58,6 +58,10 @@ pub struct PolygonGeometryResult {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct PolygonOutlineGeometry {
     pub position: FloatAttribute,
+    /// RTE-encoded positions (present when use_rte). `position` is still
+    /// emitted alongside for bounding volumes and non-RTE fallbacks.
+    pub position_3d_high: Option<FloatAttribute>,
+    pub position_3d_low: Option<FloatAttribute>,
     pub scale_normal_and_cap: FloatAttribute,
     pub skip_indices: Vec<u32>, // [a,b ..] segments (a, a+1), (b, b+1) will be skipped
 }
@@ -190,6 +194,7 @@ fn outlines_from_hierarchy(
     hierarchies: &[HierarchyDVec3],
     granularity: f64,
     per_position_height: bool,
+    use_rte: bool,
 ) -> PolygonOutlineGeometry {
     let mut positions = vec![];
     let mut skip_indices = vec![];
@@ -240,11 +245,24 @@ fn outlines_from_hierarchy(
         }
     }
 
-    // TODO: Support RTE
-    let (positions, _, _) = encode_positions_conditionally(positions, false);
+    // Always emit f32 positions (bounding volumes / raycast / non-RTE
+    // fallback); additionally emit RTE high/low pairs when requested so the
+    // shader can render jitter-free at globe scale.
+    let f32_positions: Vec<f32> = positions.iter().map(|&p| p as f32).collect();
+    let (position_3d_high, position_3d_low) = if use_rte {
+        let (_, high, low) = encode_positions_conditionally(positions, true);
+        (
+            high.map(|h| FloatAttribute::new(h, 3)),
+            low.map(|l| FloatAttribute::new(l, 3)),
+        )
+    } else {
+        (None, None)
+    };
 
     PolygonOutlineGeometry {
-        position: FloatAttribute::new(positions.unwrap(), 3),
+        position: FloatAttribute::new(f32_positions, 3),
+        position_3d_high,
+        position_3d_low,
         scale_normal_and_cap: FloatAttribute::new(scale_normal_cap, 4),
         skip_indices,
     }
@@ -277,6 +295,7 @@ pub fn create_polygon_geometry(
             &hierarchies,
             granularity as f64,
             per_position_height,
+            options.use_rte,
         ))
     } else {
         None
@@ -657,4 +676,88 @@ fn compute_extruded_normals(
     }
 
     normals
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn ecef(lng: f64, lat: f64) -> Vec3 {
+        CRS::Geographic.to_vec3(WGS84_64, Vec3::new(lng, lat, 0.0), 0.0)
+    }
+
+    fn square_hierarchy() -> HierarchyDVec3 {
+        let mut hierarchy = HierarchyDVec3 {
+            outer_ring: vec![
+                ecef(0.00, 0.00),
+                ecef(0.01, 0.00),
+                ecef(0.01, 0.01),
+                ecef(0.00, 0.01),
+            ],
+            holes: None,
+            expected_winding_order: WindingOrder::Unknown,
+        };
+        hierarchy.align_winding_order();
+        hierarchy
+    }
+
+    fn build_outline(use_rte: bool) -> PolygonOutlineGeometry {
+        let mut polygon_resource = PolygonResource::new();
+        create_polygon_geometry(
+            PolygonGeometryOptions {
+                hierarchy: square_hierarchy(),
+                outline: true,
+                use_rte,
+                ..Default::default()
+            },
+            &mut polygon_resource,
+        )
+        .expect("polygon geometry")
+        .outline
+        .expect("outline geometry")
+    }
+
+    #[test]
+    fn outline_rte_high_low_reconstructs_f32_positions() {
+        // With use_rte=true the outline must carry high/low pairs encoding the
+        // same f64 coordinates as the (truncated) f32 position attribute.
+        let outline = build_outline(true);
+
+        let high = outline
+            .position_3d_high
+            .as_ref()
+            .expect("position_3d_high should be present when use_rte=true");
+        let low = outline
+            .position_3d_low
+            .as_ref()
+            .expect("position_3d_low should be present when use_rte=true");
+
+        let positions = &outline.position.data;
+        assert!(!positions.is_empty());
+        assert_eq!(high.data.len(), positions.len());
+        assert_eq!(low.data.len(), positions.len());
+        assert_eq!(high.size, 3);
+        assert_eq!(low.size, 3);
+
+        for (i, _) in positions.iter().enumerate() {
+            let reconstructed = high.data[i] + low.data[i];
+            let diff = (reconstructed - positions[i]).abs();
+            // f32 truncation of the absolute ECEF coordinate loses up to ~0.5m
+            // at earth radius; high+low retains more precision, so compare with
+            // that tolerance.
+            assert!(
+                diff <= 1.0,
+                "high+low should reconstruct position at index {i}: {reconstructed} vs {}",
+                positions[i]
+            );
+        }
+    }
+
+    #[test]
+    fn outline_without_rte_has_no_high_low() {
+        let outline = build_outline(false);
+        assert!(outline.position_3d_high.is_none());
+        assert!(outline.position_3d_low.is_none());
+        assert!(!outline.position.data.is_empty());
+    }
 }

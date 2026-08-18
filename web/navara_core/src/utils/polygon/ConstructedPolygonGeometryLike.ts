@@ -24,6 +24,10 @@ export class ConstructedPolygonGeometryLike {
   rtc_translation: Vec3Like | undefined;
   outline_position: Float32Array | undefined;
   outline_position_size: number | undefined;
+  outline_position_3d_high: Float32Array | undefined;
+  outline_position_3d_high_size: number | undefined;
+  outline_position_3d_low: Float32Array | undefined;
+  outline_position_3d_low_size: number | undefined;
   outline_scale_normal_and_cap: Float32Array | undefined;
   outline_scale_normal_and_cap_size: number | undefined;
   outline_skip_indices: Uint32Array | undefined;
@@ -56,6 +60,10 @@ export class ConstructedPolygonGeometryLike {
     if (outline) {
       this.outline_position = outline.position()?.slice();
       this.outline_position_size = outline.position_size();
+      this.outline_position_3d_high = outline.position_3d_high()?.slice();
+      this.outline_position_3d_high_size = outline.position_3d_high_size();
+      this.outline_position_3d_low = outline.position_3d_low()?.slice();
+      this.outline_position_3d_low_size = outline.position_3d_low_size();
       this.outline_scale_normal_and_cap = outline
         .scale_normal_and_cap()
         ?.slice();
