@@ -86,6 +86,46 @@ describe("PendingSettlement", () => {
     expect(settled).toBe(true);
   });
 
+  // A timed-out waiter used to stay queued forever when its operation never
+  // settled, so repeated calls grew the queue without bound and a late settle
+  // still invoked every one of them.
+  it("drops timed-out waiters instead of queueing them forever", async () => {
+    const s = new PendingSettlement();
+    s.track(new Promise<void>(() => {}));
+
+    for (let i = 0; i < 5; i++) {
+      void s.whenSettled(1000);
+      await vi.advanceTimersByTimeAsync(1000);
+    }
+
+    // Private, but the leak is only observable here — the queue is the bug.
+    const waiters = (s as unknown as { _waiters: unknown[] })._waiters;
+    expect(waiters.length).toBe(0);
+  });
+
+  it("completes once when a settle races the timeout", async () => {
+    const s = new PendingSettlement();
+    let resolveOp!: () => void;
+    s.track(new Promise<void>((r) => (resolveOp = r)));
+
+    let count = 0;
+    void s.whenSettled(1000).then(() => count++);
+
+    // Time out first, then let the operation settle afterwards.
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(count).toBe(1);
+
+    resolveOp();
+    await flushMicrotasks();
+    expect(count).toBe(1);
+
+    // The settle still drained the queue, so a fresh call resolves at once.
+    let after = false;
+    void s.whenSettled(1000).then(() => (after = true));
+    await flushMicrotasks();
+    expect(after).toBe(true);
+  });
+
   it("supports waiters registered across separate settle cycles", async () => {
     const s = new PendingSettlement();
 

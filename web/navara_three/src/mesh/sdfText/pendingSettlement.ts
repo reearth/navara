@@ -35,15 +35,34 @@ export class PendingSettlement {
    * whichever comes first. Only operations already tracked when this is
    * called are waited on (plus any tracked before the count next reaches
    * zero); resolves immediately when already settled.
+   *
+   * Settle and timeout are mutually exclusive completion paths, and the
+   * timeout drops its own waiter: an operation that never settles would
+   * otherwise leave every timed-out waiter queued forever, so repeated calls
+   * would grow `_waiters` without bound.
    */
   whenSettled(timeoutMs: number): Promise<void> {
     if (this._pending === 0) return Promise.resolve();
     return new Promise((resolve) => {
-      const timer = setTimeout(resolve, timeoutMs);
-      this._waiters.push(() => {
+      let finished = false;
+      const finish = () => {
+        if (finished) return;
+        finished = true;
         clearTimeout(timer);
         resolve();
-      });
+      };
+      // Declared after `finish` so it can be `const`; `finish` only reads it
+      // when invoked, which is always after this assignment.
+      const timer = setTimeout(() => {
+        this._removeWaiter(finish);
+        finish();
+      }, timeoutMs);
+      this._waiters.push(finish);
     });
+  }
+
+  private _removeWaiter(waiter: () => void): void {
+    const i = this._waiters.indexOf(waiter);
+    if (i !== -1) this._waiters.splice(i, 1);
   }
 }
