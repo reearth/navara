@@ -22,7 +22,7 @@ export class TransparentPassEffectDesc extends EffectDesc<
   RenderPass
 > {
   static key = "transparent";
-  static insertAfter = ["ssao", "clouds", "atmosphere", "mrt"];
+  static insertBefore = ["final"];
 
   light = new Group();
   lightsSyncMap = new Map();

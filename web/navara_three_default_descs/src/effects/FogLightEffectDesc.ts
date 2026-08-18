@@ -24,7 +24,7 @@ export class FogLightEffectDesc extends EffectDesc<
 > {
   static key = "fogLight";
   static requiredBuffers: readonly GBufferName[] = ["normal"];
-  static insertBefore = ["toneMapping", "final"];
+  static insertBefore = ["transparent"];
   static allowDuplication = true;
 
   private config: FogLightConfig;

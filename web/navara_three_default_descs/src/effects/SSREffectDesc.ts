@@ -20,8 +20,7 @@ export type SSRUpdate = Description & EffectUpdate;
 export class SSREffectDesc extends EffectDesc<SSRConfig, SSRUpdate, SSR> {
   static key = "ssr";
   static requiredBuffers: readonly GBufferName[] = ["normal"];
-  static insertAfter = ["toneMapping"];
-  static insertBefore = ["final"];
+  static insertBefore = ["transparent"];
 
   private config: SSRConfig;
 
