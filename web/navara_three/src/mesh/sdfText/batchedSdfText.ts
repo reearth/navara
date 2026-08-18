@@ -35,6 +35,7 @@ import { GlyphBuffers } from "./glyphBuffers";
 import { GlyphSlotAllocator, type GlyphRun } from "./glyphSlots";
 import { LabelDataTexture, LabelRow } from "./labelData";
 import { ALIGN_FACTORS, buildLabelLayout, type LayoutOptions } from "./layout";
+import { PendingSettlement } from "./pendingSettlement";
 
 /** Reusable scratch to avoid per-frame / per-write allocations. */
 const _tmpSize = new Vector2();
@@ -165,6 +166,9 @@ export class BatchedSdfTextMesh
   private _labels: LabelRecord[] = [];
   /** Sparse batchIndex → label; labels are created on first per-feature touch. */
   private _labelByIndex: (LabelRecord | undefined)[] = [];
+
+  /** In-flight per-feature text preparations; see {@link whenLabelsSettled}. */
+  private _pendingTextPrepares = new PendingSettlement();
 
   private _glyphs: GlyphBuffers;
   private _slots = new GlyphSlotAllocator();
@@ -781,6 +785,7 @@ export class BatchedSdfTextMesh
         isShown: record.declutterTarget === 0,
         owner: this,
         handle: record.slot,
+        contentKey: record.text,
       });
     }
   }
@@ -822,8 +827,43 @@ export class BatchedSdfTextMesh
   }
 
   override setActive(active: boolean) {
+    const activating = active && !this.active;
     super.setActive(active);
+    // Tile-swap handoff: this batch replaces another (its parent tile is
+    // hidden in the same swap), so any label whose content the previous
+    // declutter pass already showed nearby starts granted instead of fading
+    // in from hidden — otherwise every swap blinks the whole tile's labels
+    // out for a throttled pass plus a fade-in. Genuinely new labels keep the
+    // fade; the next pass re-places everything and corrects any misseed.
+    if (activating && this._declutter) {
+      const declutter = this.ctx.declutter;
+      if (declutter) {
+        for (const record of this._labels) {
+          if (!record.show || record.declutterHide === 0) continue;
+          const a = record.anchor;
+          if (declutter.wasRecentlyShown(record.text, a[0], a[1], a[2])) {
+            record.declutterHide = 0;
+            record.declutterTarget = 0;
+            this._writeDeclutterHide(record);
+          }
+        }
+      }
+    }
     this._markDeclutterDirty();
+  }
+
+  /**
+   * Resolves once every per-feature text preparation currently in flight has
+   * landed (glyph runs written), bounded by `timeoutMs`.
+   *
+   * The tile-LOD swap on the Rust side hides a parent tile the moment its
+   * children report rendered, so the caller must not report this batch
+   * rendered while labels are still shaping — the swap would show a batch
+   * that draws nothing (a tile-shaped blank). Call after the evaluator has
+   * run (its setters fire synchronously, so their prepares are counted).
+   */
+  whenLabelsSettled(timeoutMs: number): Promise<void> {
+    return this._pendingTextPrepares.whenSettled(timeoutMs);
   }
 
   // --- Picking ---
@@ -1085,25 +1125,30 @@ export class BatchedSdfTextMesh
         this._highQuality,
       )
     ) {
-      this._fontManager
-        .prepareText(
-          this._fontIdentifier,
-          text,
-          this._highQuality,
-          this._loadedFaceUrls,
-        )
-        .then(() => {
-          // A newer text may have landed while the font loaded.
-          if (record.requestedText !== text) return;
-          this._refreshAtlasTextures();
-          this._applyText(record, text);
-          this._markDeclutterDirty();
-          this._needRender?.();
-        })
-        .catch((err: unknown) => {
-          console.error("Failed to prepare text:", err);
-          this._needRender?.();
-        });
+      // Tracked so whenLabelsSettled can gate the tile's render-completion
+      // report on the glyphs actually being written (the chain ends after
+      // `_applyText`), not merely on the font round-trip finishing.
+      this._pendingTextPrepares.track(
+        this._fontManager
+          .prepareText(
+            this._fontIdentifier,
+            text,
+            this._highQuality,
+            this._loadedFaceUrls,
+          )
+          .then(() => {
+            // A newer text may have landed while the font loaded.
+            if (record.requestedText !== text) return;
+            this._refreshAtlasTextures();
+            this._applyText(record, text);
+            this._markDeclutterDirty();
+            this._needRender?.();
+          })
+          .catch((err: unknown) => {
+            console.error("Failed to prepare text:", err);
+            this._needRender?.();
+          }),
+      );
       return;
     }
 
