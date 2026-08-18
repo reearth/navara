@@ -26,7 +26,7 @@ built-ins registered by `ThreeView` are:
 |---|---|---|
 | `skyEnvMap` | `SkyEnvMapPass` | renders the sky to a cube map for reflections (before `mrt`) |
 | `mrt` | `CustomRenderPass` | the G-buffer pass — everything in section 2 |
-| `transparent` | transparent-scene pass | renders the `transparent` scene after atmosphere-type effects |
+| `transparent` | transparent-scene pass | renders the `transparent` scene after every depth-based screen-space effect, before tone mapping |
 | `final` | `FinalCopyEffectDesc` | copies the result out |
 
 `DefaultPlugin` inserts its effects (aerial perspective, clouds, SSAO, SSR,
@@ -34,13 +34,19 @@ selective bloom/outline, tone mapping, SMAA/FXAA, …) into the same ordering
 graph. A typical resolved order:
 
 ```
-SkyEnvMapPass → CustomRenderPass(mrt) → selective effects → transparent
-→ aerial perspective / lens flare … → tone mapping → SMAA/FXAA → copy
+SkyEnvMapPass → CustomRenderPass(mrt) → selective effects
+→ aerial perspective / clouds / SSAO / SSR / lens flare … → transparent
+→ tone mapping → SMAA/FXAA → copy
 ```
 
-Custom effects that read G-buffer textures should insert **late**
-(`insertBefore: ["toneMapping", "smaa", "fxaa", "final"]`) so every earlier
-pass has already composited into the input buffer they read.
+The `transparent` pass is the boundary that matters when placing an effect:
+its scene writes no depth and no G-buffer data, so any effect that samples
+those buffers and runs after it will composite over that content as if it
+weren't there. Custom effects that read G-buffer or depth textures should
+therefore use `insertBefore: ["transparent"]` — the pass is a built-in, so the
+anchor always resolves. Purely screen-space effects that should cover the
+whole frame (vignette, color grading, AA) insert after it instead
+(`insertBefore: ["smaa", "fxaa", "final"]`).
 
 ## 2. Scenes and pass routing
 
@@ -52,7 +58,7 @@ pass has already composited into the input buffer they read.
 | `mrt` | `CustomRenderPass` | **yes** — meshes participating in the G-buffer |
 | `draped` | `CustomRenderPass` (stencil draping) | **yes** |
 | `opaque` | `CustomRenderPass`, but *after* the G-buffer copy | no — composer input only |
-| `transparent` | the `transparent` pass, after atmosphere effects | no |
+| `transparent` | the `transparent` pass, after depth-based effects | no |
 | `light` | added temporarily to whichever scene is being lit-rendered | — |
 | `skyEnvMap` | `SkyEnvMapPass` | no |
 
@@ -315,7 +321,7 @@ read per frame:
 
 ```ts
 class MyEffectDesc extends EffectDesc<...> {
-  static insertBefore = ["toneMapping", "smaa", "fxaa", "final"];
+  static insertBefore = ["transparent"];
   static requiredBuffers: readonly GBufferName[] = ["shadow"];
 
   update = () => {
