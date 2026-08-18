@@ -906,6 +906,11 @@ export class BatchedSdfTextMesh
 
     const material = m.material;
     const text = material.text ?? "";
+    // Kept so _applyUpdate can tell which material fields actually changed:
+    // engine change events re-send the full material even when only geometry
+    // or activation moved, and only genuine changes may overwrite per-feature
+    // (evaluator-set) values.
+    const prevMaterial = this._material;
     this._material = material;
     this._transform = m.transform;
 
@@ -964,7 +969,7 @@ export class BatchedSdfTextMesh
       this._fontManager
         .prepareText(this._fontIdentifier, text, q, this._loadedFaceUrls)
         .then(() => {
-          this._applyUpdate(material, needRender, needFontUpdate);
+          this._applyUpdate(material, prevMaterial, needRender, needFontUpdate);
         })
         .catch((err: unknown) => {
           console.error("Failed to prepare text:", err);
@@ -973,11 +978,12 @@ export class BatchedSdfTextMesh
       return;
     }
 
-    this._applyUpdate(material, needRender, needFontUpdate);
+    this._applyUpdate(material, prevMaterial, needRender, needFontUpdate);
   }
 
   private _applyUpdate(
     material: NavaraTextMaterial,
+    prevMaterial: NavaraTextMaterial,
     needRender?: () => void,
     forceUpdate = false,
   ) {
@@ -1029,26 +1035,43 @@ export class BatchedSdfTextMesh
       },
     });
 
-    // Per-label values the material supplies defaults for. This mirrors the
-    // pre-batching behaviour where a material update overwrote whatever the
-    // evaluator had set per feature.
+    // Per-label values the material supplies defaults for. A *changed*
+    // material value overwrites whatever the evaluator had set per feature
+    // (mirroring the pre-batching behaviour for real `layer.update` calls) —
+    // but engine change events re-send the whole material for geometry or
+    // activation updates too, and stomping evaluator values with an unchanged
+    // material made labels visibly pulse: every terrain-height event reset
+    // per-feature sizes to the default for a few frames until the app's
+    // evaluator ran again.
     const materialText = material.text;
     const materialShow = material.show ?? true;
     const colorHex = material.color ?? 0xffffff;
     const opacity = clamp01(material.opacity ?? 1.0);
     const fontSize = material.size ?? 16.0;
     const addHeight = material.height ?? 0;
+    const showChanged = materialShow !== (prevMaterial.show ?? true);
+    const styleChanged =
+      colorHex !== (prevMaterial.color ?? 0xffffff) ||
+      opacity !== clamp01(prevMaterial.opacity ?? 1.0);
+    const fontSizeChanged = fontSize !== (prevMaterial.size ?? 16.0);
+    const addHeightChanged = addHeight !== (prevMaterial.height ?? 0);
 
     for (const record of this._labels) {
-      record.colorHex = colorHex;
-      record.opacity = opacity;
-      record.fontSize = fontSize;
-      record.addHeight = addHeight;
-      this._writeStyle(record);
-      this._writeFontSize(record);
-      this._writeAddHeight(record);
+      if (styleChanged) {
+        record.colorHex = colorHex;
+        record.opacity = opacity;
+        this._writeStyle(record);
+      }
+      if (fontSizeChanged) {
+        record.fontSize = fontSize;
+        this._writeFontSize(record);
+      }
+      if (addHeightChanged) {
+        record.addHeight = addHeight;
+        this._writeAddHeight(record);
+      }
 
-      record.requestedShow = materialShow;
+      if (showChanged) record.requestedShow = materialShow;
       if (materialText !== undefined && materialText !== "") {
         this._applyText(record, materialText);
       } else if (forceUpdate || layoutChanged) {
