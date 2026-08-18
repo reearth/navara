@@ -34,6 +34,13 @@ export type DeclutterCandidate = {
   /** Participant-defined id (label slot for text batches, instance index for
    *  sprites) passed back to `applyDeclutter`. */
   handle: number;
+  /**
+   * Stable identity of what the candidate displays (label text for text
+   * batches). Feeds the manager's shown-content registry so a tile swap can
+   * hand placement over to the replacing batch's identical label without a
+   * hide/fade-in blink. Omit for candidates that don't participate.
+   */
+  contentKey?: string;
 };
 
 /** Duration of the show/hide fade applied to placement results (ms). */

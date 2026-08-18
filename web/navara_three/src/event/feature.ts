@@ -38,6 +38,14 @@ import { renderText, processTextChanged } from "./features/text";
 import { setTransform } from ".";
 
 /**
+ * Upper bound on how long a text batch's render-completion report waits for
+ * label shaping (see processRenderableFeatureAdded). Settling normally takes
+ * tens of milliseconds; the cap exists so a hung font fetch cannot stall the
+ * tile LOD indefinitely.
+ */
+const TEXT_LABELS_SETTLE_TIMEOUT_MS = 2000;
+
+/**
  * Choose the render scene for a non-draped feature based on its material.
  *
  * Sprites (billboards/points) and SDF text configured with `depthTest: false`
@@ -232,7 +240,16 @@ export async function processRenderableFeatureAdded(
   // terrain tile's vector source to this tile once its features report rendered,
   // so reporting before the offscreen scene existed left the terrain tile's
   // vector drape blank until a camera-move re-traverse.
-  if (renderedType) featureHandler.markFeatureIsRendered(renderedType, bits);
+  //
+  // Text batches are the exception: the report drives the Rust tile-LOD swap,
+  // and a text batch draws nothing until its labels finish async font shaping,
+  // which the evaluator only kicks off further down. Reporting here swapped
+  // the parent tile out for a child that couldn't draw yet — a tile-shaped
+  // blank on every LOD refinement. Their report is deferred below.
+  const isTextBatch = obj instanceof BatchedSdfTextMesh;
+  if (renderedType && !isTextBatch) {
+    featureHandler.markFeatureIsRendered(renderedType, bits);
+  }
 
   if (obj instanceof PolygonMesh && polygon && polygon.outline_geometry) {
     const outline = await renderPolygonOutline(ctx, polygon);
@@ -255,7 +272,13 @@ export async function processRenderableFeatureAdded(
     featureLayerId,
     ev.bits,
   );
-  if (obj.visible) {
+  // Text batches also get their initial `featureUpdated` while still
+  // invisible: tiles spawn inactive, and apps that style text through
+  // `featureUpdated` must be able to populate label texts *before* the
+  // tile-LOD swap flips this batch visible (per-label writes persist in the
+  // label data texture, so styling hidden batches is safe). Otherwise labels
+  // could not exist until after the swap, guaranteeing a blank activation.
+  if (obj.visible || isTextBatch) {
     handleFeatureUpdatedEventByLayerId(
       viewEvents,
       layersManager,
@@ -263,6 +286,18 @@ export async function processRenderableFeatureAdded(
       ev.bits,
       updatedAt,
     );
+  }
+
+  // The evaluator runs synchronously inside the emits above, so every async
+  // font preparation it kicked off is in flight now. Report the text batch
+  // rendered only once those land, so the Rust swap waits until this batch
+  // can actually draw. The timeout only bounds a hung font fetch — a late or
+  // post-removal report is a safe no-op on the Rust side.
+  if (renderedType && obj instanceof BatchedSdfTextMesh) {
+    void obj.whenLabelsSettled(TEXT_LABELS_SETTLE_TIMEOUT_MS).then(() => {
+      featureHandler.markFeatureIsRendered(renderedType, bits);
+      ctx.renderFlag.forceUpdate = true;
+    });
   }
 }
 
