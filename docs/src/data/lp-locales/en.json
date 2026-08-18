@@ -9,8 +9,7 @@
   "nav": {
     "docs": "Docs",
     "examples": "Examples",
-    "github": "GitHub",
-    "getStarted": "Get started"
+    "github": "GitHub"
   },
   "hero": {
     "posterAlt": "Navara promotion video — a dive from orbit onto a 3D globe",
@@ -30,15 +29,15 @@
     "h2Html": "Complexity, made simple –<br />and <mark>beautiful</mark>.",
     "values": [
       {
-        "title": "Beautiful, instantly",
+        "title": "High quality, instantly",
         "desc": "Create beautiful scenes with just a few lines of code."
       },
       {
         "title": "Yours to control",
-        "desc": "Fine-tune a wide range of effects down to the smallest detail, and extend them whenever you need to."
+        "desc": "Fine-tune a wide range of effects down to the smallest detail."
       },
       {
-        "title": "Expressive, yet simple",
+        "title": "Extending is just the start",
         "desc": "A flexible foundation for building, extending, and reusing your own visualizations."
       },
       {
@@ -74,6 +73,12 @@
     ],
     "mediaAttributionLabel": "Data attribution"
   },
+  "hello": {
+    "eyebrow": "HELLO WORLD",
+    "h2": "A globe in a few lines of code.",
+    "cta": "Follow the Getting Started guide",
+    "mediaAttributionLabel": "Data attribution"
+  },
   "arch": {
     "eyebrow": "ARCHITECTURE",
     "h2Html": "A headless GIS core,<br />independent of the rendering engine.",
@@ -107,6 +112,12 @@
     "roadmap": "See the roadmap",
     "mediaAttributionLabel": "Data attribution"
   },
+  "outro": {
+    "h2": "Start building with Navara.",
+    "ctaPrimary": "Get started",
+    "ctaSecondary": "Try examples",
+    "mediaAttributionLabel": "Data attribution"
+  },
   "footer": {
     "docs": "Docs",
     "github": "GitHub",
@@ -119,6 +130,8 @@
     "why-tier-2": "Plugins – the same scene with the photoreal atmosphere added",
     "why-tier-3": "Spatial operations – buildings colored by their measured height",
     "why-tier-4": "Custom shaders – the same scene at night, lit by fog lights",
+    "hello-result": "The rendered result: the globe with a photorealistic atmosphere over NASA Blue Marble imagery",
+    "outro-bg": "The glow-globe example: the night globe lit by city lights",
     "tutorial-wide": "Realistic Atmosphere",
     "tutorial-left": "Arc Line Visualization",
     "tutorial-right": "Interior Explore",

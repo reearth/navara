@@ -30,6 +30,12 @@
     "why-tier-4": {
       "src": "docs/src/assets/lp/why-tier-4.avif"
     },
+    "hello-result": {
+      "src": "docs/src/assets/hero.png"
+    },
+    "outro-bg": {
+      "src": "docs/src/assets/lp/outro-globe.avif"
+    },
     "tutorial-wide": {
       "src": "docs/src/assets/tutorial/realistic-atmosphere-result.png",
       "href": "/three/tutorial/realistic-atmosphere/"
@@ -51,8 +57,8 @@
       "href": "https://navara-preview.reearth.workers.dev/weather/clouds"
     },
     "example-row2-left": {
-      "src": "web/navara_three/example/public/screenshots/mesh/gltf-animation.avif",
-      "href": "https://navara-preview.reearth.workers.dev/mesh/gltf-animation"
+      "src": "web/navara_three/example/public/screenshots/evaluator/color.avif",
+      "href": "https://navara-preview.reearth.workers.dev/evaluator/color"
     },
     "example-row2-center": {
       "src": "web/navara_three/example/public/screenshots/weather/precipitation.avif",
@@ -71,20 +77,20 @@
       "href": "https://navara-preview.reearth.workers.dev/sky/sun-time"
     },
     "example-row4-left": {
-      "src": "web/navara_three/example/public/screenshots/mesh/splat.avif",
-      "href": "https://navara-preview.reearth.workers.dev/mesh/splat"
-    },
-    "example-row4-center-left": {
       "src": "web/navara_three/example/public/screenshots/gis/polyline.avif",
       "href": "https://navara-preview.reearth.workers.dev/gis/polyline"
     },
+    "example-row4-center-left": {
+      "src": "web/navara_three/example/public/screenshots/effect/fog-light.avif",
+      "href": "https://navara-preview.reearth.workers.dev/effect/fog-light"
+    },
     "example-row4-center-right": {
-      "src": "web/navara_three/example/public/screenshots/mesh/gltf-model.avif",
-      "href": "https://navara-preview.reearth.workers.dev/mesh/gltf-model"
+      "src": "web/navara_three/example/public/screenshots/mesh/splat.avif",
+      "href": "https://navara-preview.reearth.workers.dev/mesh/splat"
     },
     "example-row4-right": {
-      "src": "web/navara_three/example/public/screenshots/gis/extruded-polygon.avif",
-      "href": "https://navara-preview.reearth.workers.dev/gis/extruded-polygon"
+      "src": "web/navara_three/example/public/screenshots/effect/selective-bloom.avif",
+      "href": "https://navara-preview.reearth.workers.dev/effect/selective-bloom"
     },
     "maplibre-logo": {
       "src": "docs/src/assets/lp/maplibre-logo.svg"

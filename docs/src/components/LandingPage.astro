@@ -6,6 +6,7 @@
 // Image `src` values are repo-root-relative paths pointing into docs/src/assets
 // or web/navara_three/example/public/screenshots.
 import type { ImageMetadata } from "astro";
+import { Code } from "astro:components";
 import { ArrowUpRight, Check, ChevronDown, Globe, Maximize2, Play } from "@lucide/astro";
 import lp from "../data/lp.json";
 import ImageAttribution from "./ImageAttribution.astro";
@@ -120,6 +121,14 @@ const SRC = {
     text: "NASA Earth at Night imagery - NASA Earth Observatory",
     href: "https://earthobservatory.nasa.gov/features/NightLights",
   },
+  nasaBlackMarble: {
+    text: "NASA Earth Observatory - Suomi NPP VIIRS - Black Marble 2016",
+    href: "https://science.nasa.gov/earth/earth-observatory/earth-at-night/maps",
+  },
+  nasaGibs: {
+    text: "Imagery courtesy of NASA EOSDIS GIBS - Blue Marble: Next Generation (public domain)",
+    href: "https://earthdata.nasa.gov/gibs",
+  },
   google: {
     text: "Google Maps Photorealistic 3D Tiles",
     href: "https://www.google.com/permissions/geoguidelines/",
@@ -182,6 +191,39 @@ const whyAttrib = [
   SRC.osm,
 ];
 const maplibreAttrib = [SRC.osm, SRC.protomaps];
+
+// The MapLibre-family section is parked until its story (style plugin / MLT)
+// is further along; flip to true to bring it back.
+const SHOW_MAPLIBRE = false;
+
+// Hello world: the entire first program, shown whole in the HELLO WORLD
+// section. A TileJSON-based take on the docs' Getting Started example
+// (guides/Introduction/getting-started.mdx) — the TileJSON document supplies
+// the tile URL, zoom range, and data attribution, which keeps the program
+// short without dropping the credits. Every API call is real; verify against
+// the docs before editing.
+const helloCode = `// Initialization
+const view = new ThreeView({ useNormal: true });
+const defaultPlugin = new DefaultPlugin();
+const tilejson = new TileJsonPlugin();
+view.addPlugin(defaultPlugin);
+view.addPlugin(tilejson);
+await view.init();
+
+// Setting up default atmosphere
+defaultPlugin.addDefaultPhotorealScene();
+view.atmosphere.date = new Date("2026-07-16T01:00:00Z");
+view.toneMappingExposure = 10;
+
+// Raster tile
+const source = await tilejson.addSource({
+  type: "raster-tile",
+  url: "https://papers.reearth.land/bluemarble/tilejson.json",
+});
+view.addLayer({ type: "raster", source });`;
+
+const helloAttrib = [SRC.nasaGibs, SRC.reearthPapers];
+const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
 ---
 
 <html lang={t.htmlLang} style={rootStyle}>
@@ -216,6 +258,10 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
           />
           <label class="lp-lang">
             <Globe size={16} stroke-width={1.8} aria-hidden="true" />
+            <span class="lp-lang-label" aria-hidden="true">{t.short}</span>
+            <ChevronDown class="lp-lang-chevron" size={14} stroke-width={2} aria-hidden="true" />
+            <!-- Invisible select stretched over the whole switcher, so a
+                 click anywhere on it opens the native dropdown. -->
             <select aria-label="Language" data-lp-lang>
               {
                 Object.entries(locales).map(([code, strings]: [string, any]) => (
@@ -225,9 +271,7 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
                 ))
               }
             </select>
-            <ChevronDown class="lp-lang-chevron" size={14} stroke-width={2} aria-hidden="true" />
           </label>
-          <a class="lp-nav-cta" href={localizeHref(links.gettingStarted)}>{t.nav.getStarted}</a>
         </nav>
       </header>
 
@@ -266,6 +310,12 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
           <button class="lp-hero-play" type="button" aria-label={t.hero.play}>
             <Play size={22} stroke-width={2} aria-hidden="true" />
           </button>
+          <!-- Phone-only scroll cue: the full-viewport video gives no hint
+               that the page continues; a pulsing chevron at the bottom center
+               does, and fades out for good once scrolling starts. -->
+          <div class="lp-hero-scroll-cue" aria-hidden="true">
+            <ChevronDown size={22} stroke-width={2} />
+          </div>
         </div>
         <!-- Catch copy + intro -->
         <section class="lp-intro">
@@ -393,6 +443,42 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
                     <span>{t.why.apiSegments[3].label}</span>
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Hello world: the whole first program beside its rendered result —
+           the proof of the "a few lines" claim. Copy lives in the locale
+           JSONs (t.hello); the snippet itself is language-agnostic and lives
+           in the frontmatter (helloCode). -->
+      <section class="lp-hello">
+        <div class="lp-container">
+          <p class="lp-eyebrow" data-reveal>{t.hello.eyebrow}</p>
+          <h2 class="lp-h2" data-reveal style="--rd:1">{t.hello.h2}</h2>
+          <div class="lp-hello-grid">
+            <div class="lp-hello-code" data-reveal>
+              <Code code={helloCode} lang="ts" theme="css-variables" />
+            </div>
+            <div class="lp-hello-side" data-reveal-group style="--rd-base:1">
+              <div class="lp-hello-visual" data-motion="img">
+                <img
+                  src={src("hello-result")}
+                  alt={alt("hello-result")}
+                  loading="lazy"
+                  decoding="async"
+                />
+                <ImageAttribution
+                  items={helloAttrib}
+                  label={t.hello.mediaAttributionLabel}
+                  corner="br"
+                />
+                <p class="lp-hello-cta">
+                  <a href={localizeHref(links.gettingStarted)}
+                    >{t.hello.cta}<ArrowUpRight class="lp-link-icon" size={15} /></a
+                  >
+                </p>
               </div>
             </div>
           </div>
@@ -634,7 +720,8 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
         </div>
       </section>
 
-      <!-- MapLibre family -->
+      <!-- MapLibre family (parked behind SHOW_MAPLIBRE for now) -->
+      {SHOW_MAPLIBRE && (
       <section class="lp-maplibre">
         <div class="lp-container lp-maplibre-grid">
           <div data-reveal-group>
@@ -680,16 +767,47 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
           </div>
         </div>
       </section>
+      )}
 
-      <!-- Get started (footer) -->
-      <footer class="lp-footer" data-reveal-group>
-        <div class="lp-footer-links">
-          <a href={localizeHref(links.docs)}>{t.footer.docs}</a>
-          <a href={links.github}>{t.footer.github}</a>
-          <a href={links.discord}>{t.footer.discord}</a>
-        </div>
-        <p class="lp-footer-credit">{t.footer.credit}</p>
-      </footer>
+      <!-- Closing call to action: the page opens dark and closes dark,
+           flowing straight into the footer's matching band. -->
+      <!-- The closing band: outro CTA and footer share one black canvas with
+           the glow-globe still spanning both. -->
+      <div class="lp-close">
+        <img
+          class="lp-outro-bg"
+          src={src("outro-bg")}
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          decoding="async"
+        />
+        <div class="lp-outro-scrim" aria-hidden="true" />
+        <section class="lp-outro">
+          <div class="lp-container lp-outro-content" data-reveal-group>
+            <h2 class="lp-outro-h2">{t.outro.h2}</h2>
+            <div class="lp-cta-row lp-outro-ctas">
+              <a class="lp-btn-primary" href={localizeHref(links.gettingStarted)}>{t.outro.ctaPrimary}</a>
+              <a class="lp-btn-outline" href={links.examples}>{t.outro.ctaSecondary}</a>
+            </div>
+          </div>
+        </section>
+
+        <!-- Get started (footer) -->
+        <footer class="lp-footer" data-reveal-group>
+          <div class="lp-footer-links">
+            <a href={localizeHref(links.docs)}>{t.footer.docs}</a>
+            <a href={links.github}>{t.footer.github}</a>
+            <a href={links.discord}>{t.footer.discord}</a>
+          </div>
+          <p class="lp-footer-credit">{t.footer.credit}</p>
+        </footer>
+        <ImageAttribution
+          items={outroAttrib}
+          label={t.outro.mediaAttributionLabel}
+          corner="tr"
+        />
+      </div>
       </div>
     </div>
 
@@ -699,6 +817,16 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
         el.addEventListener("change", () => {
           location.href = el.value;
         });
+        // A native select drops its list on mousedown; suppress that and open
+        // on the completed click instead (where showPicker is available —
+        // otherwise the native behavior stays).
+        if (typeof el.showPicker === "function") {
+          el.addEventListener("mousedown", (e) => {
+            e.preventDefault();
+            el.focus();
+          });
+          el.addEventListener("click", () => el.showPicker());
+        }
       });
 
       // Measure the catch-copy height so its sticky pin line sits exactly at
@@ -706,10 +834,81 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
       const stage = document.querySelector<HTMLElement>(".lp-hero-stage");
       const intro = document.querySelector<HTMLElement>(".lp-intro");
       if (stage && intro) {
+        // Fractional height (not offsetHeight): a rounded value leaves a
+        // sub-pixel hairline of hero video under the pinned panel.
         const setIntroHeight = () =>
-          stage.style.setProperty("--lp-intro-h", `${intro.offsetHeight}px`);
+          stage.style.setProperty("--lp-intro-h", `${intro.getBoundingClientRect().height}px`);
         setIntroHeight();
         window.addEventListener("resize", setIntroHeight);
+        // Web fonts land after first paint and change the measured height,
+        // which would leave a gap under the pinned panel — re-measure on any
+        // reflow of the panel itself.
+        new ResizeObserver(setIntroHeight).observe(intro);
+      }
+
+      // Scroll-linked fade for the catch-copy panel: it breathes in while it
+      // rises over the hero, and once fully revealed it stays opaque — the
+      // eased opacity rides the same scroll the slide does, so the two always
+      // agree, and scrolling back up replays the fade in reverse.
+      const heroPanel = document.querySelector<HTMLElement>(".lp-hero");
+      if (
+        stage &&
+        intro &&
+        heroPanel &&
+        !matchMedia("(prefers-reduced-motion: reduce)").matches
+      ) {
+        // Cubic ease-in: stays faint for most of the travel, then surges to
+        // full opacity near the end.
+        const easeIn = (t: number) => t * t * t;
+        let fadeQueued = false;
+        const applyIntroFade = () => {
+          fadeQueued = false;
+          const vh = window.innerHeight;
+          const y = window.scrollY;
+          // Reveal: the panel's top travels from the viewport bottom up to
+          // its pin line — one panel-height of scroll. Past that it holds at
+          // full opacity for the rest of the page.
+          const revealStart = heroPanel.offsetHeight - vh;
+          const revealSpan = intro.offsetHeight;
+          const t = (y - revealStart) / revealSpan;
+          intro.style.opacity = String(easeIn(Math.min(1, Math.max(0, t))));
+        };
+        const queueIntroFade = () => {
+          if (!fadeQueued) {
+            fadeQueued = true;
+            requestAnimationFrame(applyIntroFade);
+          }
+        };
+        applyIntroFade();
+        window.addEventListener("scroll", queueIntroFade, { passive: true });
+        window.addEventListener("resize", queueIntroFade);
+      }
+
+      // The scroll cue has served its purpose once scrolling starts — fade it
+      // out for good.
+      const scrollCue = document.querySelector<HTMLElement>(".lp-hero-scroll-cue");
+      if (scrollCue) {
+        const dismissCue = () => {
+          if (window.scrollY > 24) {
+            scrollCue.classList.add("lp-cue-done");
+            window.removeEventListener("scroll", dismissCue);
+          }
+        };
+        window.addEventListener("scroll", dismissCue, { passive: true });
+      }
+
+      // The full-screen bands subtract the fixed header's height; publish the
+      // real height (it varies with the breakpoint) so the last band ends
+      // flush with the header when scrolled to the bottom.
+      const headerEl = document.querySelector<HTMLElement>(".lp-header");
+      if (headerEl) {
+        const setHeaderHeight = () =>
+          document.documentElement.style.setProperty(
+            "--lp-header-h",
+            `${headerEl.getBoundingClientRect().height}px`,
+          );
+        setHeaderHeight();
+        new ResizeObserver(setHeaderHeight).observe(headerEl);
       }
 
       // Give the fixed header a dark backdrop once the hero has scrolled away.
@@ -1053,15 +1252,16 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
         );
       }
 
-      // Hero video: pick the phone or desktop encode, start the infinite
-      // loop, and fade it in over the poster still once frames are actually
-      // rendering. Reduced motion keeps the still.
+      // Hero video: pick the phone or desktop encode, fade the (identical)
+      // first frame in over the poster still, and only start the infinite
+      // loop once that fade has finished — motion never happens on a
+      // semi-transparent video ghosting against the static poster. Reduced
+      // motion keeps the still.
       const heroEl = document.querySelector<HTMLElement>(".lp-hero");
       const heroVideo = document.querySelector<HTMLVideoElement>(".lp-hero-video");
       if (heroEl && heroVideo) {
         if (window.matchMedia("(prefers-reduced-motion: no-preference)").matches) {
           const sp = window.matchMedia("(max-width: 640px)").matches;
-          heroVideo.src = (sp ? heroVideo.dataset.srcSp : heroVideo.dataset.src) ?? "";
           // Not `once`: the blocked state can come back (e.g. the resume
           // after fullscreen is refused in Low Power Mode), so every
           // successful (re)start must clear it again.
@@ -1069,10 +1269,29 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
             heroEl.classList.add("lp-video-live");
             heroEl.classList.remove("lp-video-blocked");
           });
-          // Autoplay can be refused (iOS Low Power Mode, browser policies);
-          // that cannot be overridden, but a play() from a tap is still
-          // allowed, so surface a play button as the fallback.
-          heroVideo.play().catch(() => heroEl.classList.add("lp-video-blocked"));
+          heroVideo.addEventListener(
+            "loadeddata",
+            () => {
+              // First frame is decodable: fade it in (still paused), then
+              // start playback when the opacity transition ends. Autoplay can
+              // be refused (iOS Low Power Mode, browser policies); that
+              // cannot be overridden, but a play() from a tap is still
+              // allowed, so surface a play button as the fallback.
+              heroEl.classList.add("lp-video-live");
+              let started = false;
+              const start = () => {
+                if (started) return;
+                started = true;
+                heroVideo.play().catch(() => heroEl.classList.add("lp-video-blocked"));
+              };
+              heroVideo.addEventListener("transitionend", start, { once: true });
+              // Fallback in case transitionend never fires (display: none
+              // ancestors, interrupted transitions).
+              window.setTimeout(start, 1200);
+            },
+            { once: true },
+          );
+          heroVideo.src = (sp ? heroVideo.dataset.srcSp : heroVideo.dataset.src) ?? "";
           const playButton = document.querySelector<HTMLButtonElement>(".lp-hero-play");
           playButton?.addEventListener("click", () => heroVideo.play().catch(() => {}));
         }
@@ -1175,7 +1394,7 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
       }
       body {
         margin: 0;
-        background: #fff;
+        background: var(--sub);
         color: var(--ink);
         font-family: "Arsenal", "Zen Kaku Gothic New", sans-serif;
         -webkit-font-smoothing: antialiased;
@@ -1187,13 +1406,18 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
       .lp a:hover {
         color: var(--acc);
       }
-      /* Attribution credit links stay white with an underline — override the
+      /* Attribution credit links keep an underline — override the
          accent-coloured, underline-less default LP link style above. */
       .lp .nv-attrib-list a,
       .lp .nv-attrib-list a:hover {
-        color: #fff;
+        color: var(--on-dark);
         text-decoration: underline;
         text-underline-offset: 2px;
+      }
+      /* Attribution icons follow the LP's on-dark ink (the per-tile
+         luminance flip to theme ink stays, its selector is more specific). */
+      .lp .nv-attrib-btn {
+        color: var(--on-dark);
       }
       /* Zero-specificity reset so per-section margin rules always win. */
       :where(.lp h1, .lp h2, .lp h3, .lp p) {
@@ -1366,15 +1590,21 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
         display: block;
         flex: none;
       }
-      .lp-lang select {
-        appearance: none;
-        background: transparent;
-        border: none;
-        color: inherit;
-        /* Tall enough that Latin descenders are not clipped by the select box. */
+      .lp-lang-label {
+        /* Tall enough that Latin descenders are not clipped. */
         font: 500 13px/18px "Arsenal", "Zen Kaku Gothic New", sans-serif;
-        height: 18px;
-        padding: 0 16px 0 0;
+        padding-right: 16px;
+      }
+      /* The select is an invisible hit area over the whole switcher — the
+         visible text is the span; only the native dropdown list shows. */
+      .lp-lang select {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        appearance: none;
+        border: none;
+        opacity: 0;
         cursor: pointer;
       }
       /* Draw the focus ring around the whole switcher (icon + label + arrow). */
@@ -1411,18 +1641,6 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
            its optical center. */
         transform: translateY(1.5px);
       }
-      .lp .lp-nav a.lp-nav-cta {
-        color: var(--pri);
-        background: var(--on-dark);
-        padding: 8px 18px;
-        border-radius: 6px;
-        font-weight: 700;
-      }
-      .lp .lp-nav a.lp-nav-cta:hover {
-        background: var(--acc);
-        color: var(--pri);
-      }
-
       /* Hero */
       .lp-hero-stage {
         position: relative;
@@ -1515,10 +1733,48 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
       .lp-hero.lp-video-blocked .lp-hero-play {
         display: flex;
       }
+      /* Phone-only scroll cue at the bottom center of the hero video. */
+      .lp-hero-scroll-cue {
+        display: none;
+        position: absolute;
+        left: 50%;
+        bottom: 22px;
+        transform: translateX(-50%);
+        z-index: 2;
+        color: var(--on-dark);
+        opacity: 0.85;
+        transition: opacity 0.5s ease;
+        pointer-events: none;
+      }
+      @media (max-width: 640px) {
+        .lp-hero-scroll-cue {
+          display: block;
+        }
+      }
+      .lp-hero-scroll-cue.lp-cue-done {
+        opacity: 0;
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .lp-hero-scroll-cue svg {
+          animation: lp-scroll-cue 2.2s ease-in-out infinite;
+        }
+      }
+      @keyframes lp-scroll-cue {
+        0%,
+        55%,
+        100% {
+          transform: translateY(0);
+          opacity: 1;
+        }
+        25% {
+          transform: translateY(7px);
+          opacity: 0.35;
+        }
+      }
       .lp-main {
         position: relative;
         z-index: 1;
-        background: #fff;
+        background: var(--sub);
       }
 
       /* Catch copy + intro: transparent, overlaid on the hero image. Pins
@@ -1676,24 +1932,18 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
       }
       .lp-api-lede-title {
         margin: 0;
-        color: #fff;
+        color: var(--on-dark);
         font-size: clamp(30px, 4vw, 52px);
         line-height: 1.18;
         font-weight: 680;
         letter-spacing: -0.01em;
         text-wrap: balance;
-        text-shadow:
-          0 1px 3px rgba(0, 0, 0, 0.45),
-          0 2px 22px rgba(0, 0, 0, 0.55);
       }
       .lp-api-lede-sub {
         margin: 12px 0 0;
         color: rgba(255, 255, 255, 0.84);
         font-size: clamp(14px, 1.2vw, 17px);
         line-height: 1.6;
-        text-shadow:
-          0 1px 3px rgba(0, 0, 0, 0.4),
-          0 2px 14px rgba(0, 0, 0, 0.5);
       }
       /* full-bleed band: break out of the container to the viewport edges,
          capped to roughly the window height so it never runs too tall */
@@ -1729,11 +1979,11 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
         background:
           radial-gradient(
             circle at 88% 84%,
-            rgba(8, 10, 14, 0.6),
-            rgba(8, 10, 14, 0.3) 40%,
-            rgba(8, 10, 14, 0.1) 70%
+            color-mix(in srgb, var(--pri) 60%, transparent),
+            color-mix(in srgb, var(--pri) 30%, transparent) 40%,
+            color-mix(in srgb, var(--pri) 10%, transparent) 70%
           ),
-          linear-gradient(to top, rgba(8, 10, 14, 0.62), transparent 34%);
+          linear-gradient(to top, color-mix(in srgb, var(--pri) 62%, transparent), transparent 34%);
       }
       /* attribution: no background, white icon with a shadow, tucked into
          the top-right corner */
@@ -1745,7 +1995,7 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
       .lp-api-media .nv-attrib-btn:hover {
         padding: 2px;
         background: none;
-        color: #fff;
+        color: var(--on-dark);
         box-shadow: none;
         backdrop-filter: none;
         filter: drop-shadow(0 1px 5px rgba(0, 0, 0, 0.65));
@@ -1779,11 +2029,10 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
       }
       .lp-api-cap-title {
         margin: 0;
-        color: #fff;
+        color: var(--on-dark);
         font-size: 23px;
         font-weight: 660;
         letter-spacing: 0.02em;
-        text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
       }
       .lp-api-cap-scene {
         font-size: 14px;
@@ -1791,14 +2040,12 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
         color: rgba(255, 255, 255, 0.58);
         margin-left: 12px;
         letter-spacing: 0;
-        text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
       }
       .lp-api-cap-desc {
         margin: 10px 0 0;
         color: rgba(255, 255, 255, 0.9);
         font-size: 16.5px;
         line-height: 1.6;
-        text-shadow: 0 1px 6px rgba(0, 0, 0, 0.55);
       }
       /* editorial open ring, bottom-right; geometry authored at 240px */
       .lp-api-ring {
@@ -1844,7 +2091,6 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
         font-size: 16px;
         font-weight: 560;
         color: rgba(255, 255, 255, 0.6);
-        text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9);
         transition:
           color 0.3s ease,
           text-shadow 0.5s ease;
@@ -1852,18 +2098,19 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
       /* hover cue so it reads as clickable (pointer devices only) */
       @media (hover: hover) {
         .lp-api-node:hover span {
-          color: #fff;
+          color: var(--on-dark);
         }
       }
+      /* The active label keeps its accent glow — a design element, not a
+         readability shadow. */
       .lp-api-node.lp-tier-active span {
-        color: #fff;
+        color: var(--on-dark);
         font-weight: 640;
         text-shadow:
           0 0 7px var(--acc),
           0 0 16px var(--acc),
           0 0 30px color-mix(in oklab, var(--acc), transparent 35%),
-          0 0 48px color-mix(in oklab, var(--acc), transparent 60%),
-          0 1px 8px rgba(0, 0, 0, 0.85);
+          0 0 48px color-mix(in oklab, var(--acc), transparent 60%);
       }
       .lp-api-node:focus-visible {
         outline: 2px solid var(--acc);
@@ -1894,9 +2141,104 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
 
       /* Architecture (light, between the tinted "why" band and the black
          gallery) */
+      /* Hello world: the whole first program beside its rendered result, on
+         a dark band echoing the hero. */
+      .lp-hello {
+        /* One screen tall (minus the 68px fixed header): real height with
+           the content self-centering, not padding. */
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        box-sizing: border-box;
+        min-height: calc(100svh - var(--lp-header-h, 68px));
+        padding: 96px 48px;
+        background: var(--pri);
+        color: var(--on-dark);
+      }
+      .lp-hello .lp-eyebrow {
+        color: var(--acc);
+      }
+      /* The code card drives the row height; the visual fills the remaining
+         height of the side column (copy + CTA keep their natural size), so
+         the image bottom lines up with the code card no matter how long the
+         snippet is. */
+      .lp-hello-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 9fr) minmax(0, 11fr);
+        gap: 56px;
+        align-items: stretch;
+        margin-top: 44px;
+      }
+      .lp-hello-side {
+        display: flex;
+        flex-direction: column;
+      }
+      /* The code card is the section's visual anchor: the hero's dark ink as
+         a panel, with the Shiki css-variables theme mapped onto the LP
+         palette so a theme change in lp.json restyles the code too. */
+      .lp-hello-code {
+        border-radius: 14px;
+        /* A step lighter than the section band, with a hairline, so the card
+           still reads as a panel on the same-ink background. */
+        background: color-mix(in oklab, var(--pri), white 4%);
+        border: 1px solid color-mix(in srgb, #fff 10%, transparent);
+        --astro-code-background: transparent;
+        --astro-code-foreground: var(--on-dark);
+        --astro-code-color-background: transparent;
+        --astro-code-color-text: var(--on-dark);
+        --astro-code-token-keyword: var(--acc);
+        --astro-code-token-function: color-mix(in oklab, var(--acc), white 40%);
+        --astro-code-token-string: color-mix(in oklab, var(--acc), white 60%);
+        --astro-code-token-string-expression: color-mix(in oklab, var(--acc), white 60%);
+        --astro-code-token-constant: var(--on-dark);
+        --astro-code-token-parameter: var(--on-dark-soft);
+        --astro-code-token-punctuation: var(--on-dark-soft);
+        --astro-code-token-comment: color-mix(in srgb, var(--on-dark) 45%, transparent);
+        --astro-code-token-link: var(--acc);
+      }
+      .lp-hello-code pre {
+        margin: 0;
+        padding: 26px 30px;
+        overflow-x: auto;
+        border-radius: inherit;
+        font-size: 12.5px;
+        line-height: 1.8;
+      }
+      .lp-hello-code code {
+        font-family: "IBM Plex Mono", monospace;
+      }
+      .lp-hello-visual {
+        position: relative;
+        flex: 1;
+        min-height: 0;
+        border-radius: 14px;
+        border: 1px solid color-mix(in srgb, #fff 10%, transparent);
+        overflow: hidden;
+      }
+      .lp-hello-visual img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      /* Overlaid on the image, opposite the attribution icon. */
+      .lp-hello-cta {
+        position: absolute;
+        left: 22px;
+        bottom: 16px;
+        z-index: 1;
+        font-size: 13.5px;
+        font-weight: 700;
+      }
+      .lp .lp-hello-cta a {
+        color: var(--acc);
+      }
+      .lp .lp-hello-cta a:hover {
+        color: var(--on-dark);
+      }
+
       .lp-arch {
         padding: 120px 48px;
-        background: #fff;
+        background: var(--sub);
         text-align: center;
       }
       /* Diagram composed from the arch-* line-art SVGs. Two grid rows: a shared
@@ -1917,7 +2259,7 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
         row-gap: clamp(18px, 2.6vw, 34px);
         width: min(1060px, 100%);
         margin: clamp(36px, 6vw, 72px) auto 0;
-        color: #1a1a1a;
+        color: var(--ink);
       }
       /* Titles sit at the bottom of the head row, just above their body. */
       .lp-arch-head {
@@ -2030,7 +2372,7 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
         right: 0;
         z-index: 2;
         padding: 44px 48px 96px;
-        color: #fff;
+        color: var(--on-dark);
         /* Top scrim so the title reads over any screenshot; clicks pass
            through to the tile underneath. */
         background: linear-gradient(color-mix(in srgb, black 55%, transparent), transparent);
@@ -2085,7 +2427,7 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
         font: 700 16px "IBM Plex Mono", monospace;
         letter-spacing: 0.34em;
         writing-mode: vertical-rl;
-        color: #fff;
+        color: var(--on-dark);
         transition: color 0.4s ease;
       }
       .lp-gallery-side.lp-side-dark .lp-gallery-label {
@@ -2097,7 +2439,7 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
         font-weight: 700;
       }
       .lp .lp-gallery-link a {
-        color: #fff;
+        color: var(--on-dark);
         transition: color 0.4s ease;
       }
       .lp .lp-gallery-side.lp-side-dark .lp-gallery-link a {
@@ -2116,13 +2458,18 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
       .lp-tile-cell {
         position: relative;
       }
-      /* A cell showing its attribution has to outrank its siblings. While the
-         reveal fade is running the cell's opacity is < 1, which makes it a
-         stacking context: the tooltip is then trapped inside the cell, and the
-         next tile in DOM order (the one to its right) paints over it. Lifting
-         the whole cell keeps the tooltip on top through the fade. */
-      .lp-tile-cell:hover,
+      /* A hovered cell outranks its sibling tiles (while the reveal fade is
+         running the cell's opacity is < 1, making it a stacking context that
+         the next tile in DOM order would paint over) — but stays under the
+         gallery's overlay labels (z-index 2). */
+      .lp-tile-cell:hover {
+        z-index: 1;
+      }
+      /* Only while the attribution tooltip is showing (pinned, hovered, or
+         keyboard-focused) does the cell outrank the labels as well, so the
+         tooltip is never clipped by them. */
       .lp-tile-cell:has(.nv-attrib-open),
+      .lp-tile-cell:has(.nv-attrib:hover),
       .lp-tile-cell:has(:focus-visible) {
         z-index: 3;
       }
@@ -2153,7 +2500,7 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
         box-shadow: none;
         backdrop-filter: none;
         filter: none;
-        color: #fff;
+        color: var(--on-dark);
       }
       /* Over light imagery, flip to dark theme ink (the class is toggled per
          tile by the top-right luminance sampler). */
@@ -2196,7 +2543,7 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
         line-height: 1.32;
         letter-spacing: 0.01em;
         text-wrap: balance;
-        color: #fff;
+        color: var(--on-dark);
         background: rgba(0, 0, 0, 0.72);
         opacity: 0;
         transform: translateY(6px);
@@ -2344,9 +2691,75 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
       }
 
       /* Get started (footer) */
+      /* Closing call to action: a roomy band of its own, with the glow-globe
+         example still behind it; the scrim dims it for contrast and fades its
+         edges into the band. The hairline on the footer below keeps the two
+         from reading as one block. */
+      /* The closing band: one canvas holding the outro CTA and the footer,
+         with the glow-globe still spanning both. */
+      .lp-close {
+        /* Not a theme color: matched to the baked glow-globe screenshot's
+           own background (sampled pure black), so image and band are one. */
+        --outro-bg: #000;
+        position: relative;
+        overflow: hidden;
+        background: var(--outro-bg);
+      }
+      /* The footer is lifted out of flow (absolute, bottom) so the band's
+         height — and the image and vignette centered in it — is set by the
+         outro alone. One screen tall (minus the 68px fixed header), with the
+         content flex-centered; the symmetric padding keeps it clear of the
+         overlaid footer on short viewports. */
+      .lp-outro {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+        min-height: calc(100svh - var(--lp-header-h, 68px));
+        padding: 150px 48px;
+        text-align: center;
+      }
+      /* Height-driven sizing: the still is always 115% of the band's height
+         (its globe fills ~95% of the frame, so it slightly overflows top and
+         bottom), centered — the composition is identical on every screen. */
+      .lp-outro-bg {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: auto;
+        height: 115%;
+      }
+      /* Radial vignette: dims the middle a touch for text contrast and takes
+         every edge fully to the band color, so the contained image's frame
+         never shows. */
+      .lp-outro-scrim {
+        position: absolute;
+        inset: 0;
+        background: var(--outro-bg);
+        opacity: 0.5;
+      }
+      .lp-outro-content {
+        position: relative;
+        z-index: 1;
+      }
+      .lp-outro-h2 {
+        font: 700 48px "Arsenal", "Zen Kaku Gothic New", sans-serif;
+        color: var(--on-dark);
+      }
+      .lp-outro-ctas {
+        justify-content: center;
+        margin-top: 40px;
+      }
+
       .lp-footer {
-        padding: 72px 48px 56px;
-        background: var(--pri);
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1;
+        padding: 56px 48px 48px;
         color: var(--on-dark);
         text-align: center;
       }
@@ -2412,6 +2825,24 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
         .lp-api-ring {
           transform: scale(0.94);
         }
+        .lp-hello {
+          padding: 88px 32px;
+        }
+        /* Single column: the result first, code under it. minmax(0, …) lets
+           the long code lines scroll inside the card instead of widening it
+           past the viewport. Stacked, nothing drives the stretched image
+           height, so pin the visual to the source ratio. */
+        .lp-hello-grid {
+          grid-template-columns: minmax(0, 1fr);
+          gap: 36px;
+        }
+        .lp-hello-side {
+          order: -1;
+        }
+        .lp-hello-visual {
+          flex: none;
+          aspect-ratio: 16 / 9;
+        }
         .lp-arch {
           padding: 88px 32px;
         }
@@ -2425,8 +2856,25 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
           grid-template-columns: 1fr;
           gap: 36px;
         }
+        .lp-outro {
+          padding: 130px 32px;
+        }
+        /* On a narrow portrait viewport, fill the band instead (the sides
+           crop). */
+        .lp-outro-bg {
+          left: 0;
+          top: 0;
+          transform: none;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        /* Sized so the title holds one line on a 390px viewport. */
+        .lp-outro-h2 {
+          font-size: 24px;
+        }
         .lp-footer {
-          padding: 56px 32px 48px;
+          padding: 44px 32px 40px;
         }
       }
 
@@ -2444,10 +2892,6 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
         }
         .lp-wordmark {
           font-size: 19px;
-        }
-        .lp .lp-nav a.lp-nav-cta {
-          padding: 7px 14px;
-          font-size: 13px;
         }
 
         .lp-intro {
@@ -2515,6 +2959,17 @@ const maplibreAttrib = [SRC.osm, SRC.protomaps];
           transform-origin: bottom right;
         }
 
+        .lp-hello {
+          padding: 72px 20px;
+        }
+        .lp-hello-code pre {
+          padding: 20px 22px;
+          font-size: 11.5px;
+        }
+        .lp-hello-cta {
+          left: 16px;
+          bottom: 12px;
+        }
         .lp-arch {
           padding: 72px 6px;
         }

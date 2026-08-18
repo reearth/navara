@@ -28,6 +28,8 @@ To add a locale: add its `lp-locales/<code>.json` and a page rendering `<Landing
 - **Reveal-on-scroll:** mark elements `data-reveal` (individually) or a container `data-reveal-group` (staggers children via `--rd`/`--rd-base`). Hidden states only exist under `prefers-reduced-motion: no-preference`, so reduced motion is a no-op. Don't reinvent entrance animation — reuse these hooks.
 - **Theme-derived tints:** use `color-mix(in oklab, var(--pri), white NN%)` (matching the existing `--ink*`/`--line*` derivations) rather than raw hex, so a theme change in `lp.json` propagates.
 - **Pre-release:** the LP is parked under `/lp` (`lpPathOf`) and carries `<meta name="robots" content="noindex,nofollow">`. Leave both until release.
+- **Code snippets (`.lp-hello` HELLO WORLD section):** the snippet is language-agnostic, so it lives in the component frontmatter (`helloCode`), not the locale JSONs — explanations stay in localized copy, code comments in English. Rendered with Astro's `<Code theme="css-variables">`; the `--astro-code-*` vars on `.lp-hello-code` map Shiki onto the LP palette so a theme change propagates. Every API call must be real (it's a TileJSON-based variant of the docs' Getting Started example — the TileJSON document supplies tile URL, zoom range, and attribution); verify against the docs before editing.
+- **MapLibre section is parked** behind `SHOW_MAPLIBRE = false` in the component frontmatter (copy and image slots kept); flip to true to bring it back.
 
 ## Reusable components
 

@@ -9,8 +9,7 @@
   "nav": {
     "docs": "Docs",
     "examples": "Examples",
-    "github": "GitHub",
-    "getStarted": "Get started"
+    "github": "GitHub"
   },
   "hero": {
     "posterAlt": "Navaraプロモーション動画 — 軌道上から3D地球儀へのダイブ",
@@ -30,15 +29,15 @@
     "h2Html": "難しいことを簡単に、<br />そして<mark>美しく</mark>。",
     "values": [
       {
-        "title": "すぐに、美しく",
+        "title": "すぐに、高品質に",
         "desc": "ほんの数行のコードで、美しいシーンが立ち上がります。"
       },
       {
-        "title": "思いのままに",
-        "desc": "多様なエフェクトを細部まで調整でき、必要に応じて拡張もできます。"
+        "title": "細部まで、自在に",
+        "desc": "多様なエフェクトを、思いどおりに調整できます。"
       },
       {
-        "title": "高い表現力と、シンプルな設計",
+        "title": "作るだけで、終わらせない",
         "desc": "自分だけの表現を、作り・拡張し・再利用できる柔軟な基盤。"
       },
       {
@@ -74,6 +73,12 @@
     ],
     "mediaAttributionLabel": "データの帰属表示"
   },
+  "hello": {
+    "eyebrow": "HELLO WORLD",
+    "h2": "数行のコードで、地球を。",
+    "cta": "Getting Started ガイドへ",
+    "mediaAttributionLabel": "データの帰属表示"
+  },
   "arch": {
     "eyebrow": "ARCHITECTURE",
     "h2Html": "レンダリングエンジンから独立した、<br />ヘッドレスな GIS コア。",
@@ -107,6 +112,12 @@
     "roadmap": "Roadmap を見る",
     "mediaAttributionLabel": "データの帰属表示"
   },
+  "outro": {
+    "h2": "さっそく、始めましょう。",
+    "ctaPrimary": "Get started",
+    "ctaSecondary": "Try examples",
+    "mediaAttributionLabel": "データの帰属表示"
+  },
   "footer": {
     "docs": "Docs",
     "github": "GitHub",
@@ -119,6 +130,8 @@
     "why-tier-2": "プラグイン – 同じシーンにフォトリアルな大気が追加された様子",
     "why-tier-3": "空間演算 – 計測高さでフィーチャー単位に色分けされた建物",
     "why-tier-4": "カスタムシェーダ – 夜に切り替わり街灯の霧で照らされた同じシーン",
+    "hello-result": "実行結果 – NASA Blue Marble の衛星画像とフォトリアルな大気をまとった地球",
+    "outro-bg": "glow-globe サンプル – 都市の光に照らされた夜の地球",
     "tutorial-wide": "Realistic Atmosphere",
     "tutorial-left": "Arc Line Visualization",
     "tutorial-right": "Interior Explore",

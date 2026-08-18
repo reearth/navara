@@ -17,8 +17,6 @@ Navara's answer to the trade-off is a tiered API. Capabilities are organized int
 
 Under the hood, Navara implements the complex but reusable GIS logic in a Rust/WebAssembly core, and delegates drawing to libraries specialized in CG rendering — currently Three.js. Rendering is where GPU APIs and platforms vary the most, so keeping that layer swappable is what lets Navara expand to other rendering engines and platforms in the future.
 
-Navara is part of the [MapLibre](https://maplibre.org/) ecosystem. For discussions, join the `#maplibre` channel on the OSM-US Slack ([invite link](https://slack.openstreetmap.us)).
-
 - 📖 **Documentation**: https://navara-docs.reearth.workers.dev//
 - 🌏 **Live examples**: https://navara-preview.reearth.workers.dev/
 
