@@ -1,28 +1,60 @@
-# Navara
-
-![Navara — photorealistic globe rendered with Navara](./docs/src/assets/hero.png)
-
 <p align="center">
-  <sub><i>Imagery courtesy of <a href="https://earthdata.nasa.gov/gibs">NASA EOSDIS GIBS</a> · Blue Marble: Next Generation (public domain)</i></sub>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./docs/public/logo/white/white_Navara_Vertical_logo_260819.svg">
+    <img src="./docs/public/logo/black/black_Navara_Vertical_logo_260819.svg" alt="Navara logo" width="220">
+  </picture>
 </p>
 
-Web map engines have long forced a choice: engines with polished declarative APIs are easy to adopt but hard to extend beyond their built-in features, while engines that expose deep low-level control are powerful but demand steep expertise — and fully 3D globe applications usually leave no option but the latter. Navara is a general-purpose 3D globe map engine built to remove that trade-off. It streams real-world geospatial data — satellite imagery, terrain, 3D city models, and vector data — onto an interactive globe, and lets you present it the way your application needs: as a clean basemap for data visualization, styled per feature by attributes, or as a photorealistic scene with atmosphere, sunlight, and shadows.
+# Navara
 
-Navara's answer to the trade-off is a tiered API. Capabilities are organized into four tiers, so you start with the simplicity of a declarative engine and drop down — as far as the render pipeline itself — only when you need more control:
+Web map engines have long forced a choice: engines with polished declarative APIs are easy to adopt but hard to extend beyond their built-in features, while engines that expose deep low-level control are powerful but demand steep expertise. Fully 3D map applications usually leave no option but the latter. Navara is a highly extensible 3D map engine built to remove that trade-off. It streams real-world GIS data such as satellite imagery, terrain, 3D city models, and vector data onto an interactive globe, and lets you present it the way your application needs: as a clean basemap for data visualization, styled per feature by attributes, or as a photorealistic scene with atmosphere, sunlight, and shadows.
 
-- **Declarative API** — add sources and layers as plain config objects (basemaps, terrain, vector data, 3D Tiles); meshes, effects, and lights work the same declarative way.
-- **Plugins** — ready-made bundles such as the photorealistic scene, first-person walking, DOM overlays, and the attribution UI; anyone can package and share their own plugin.
-- **Low-level API** — per-feature styling by attributes (`FeatureEvaluator`), feature picking, terrain sampling, and standalone geodetic/ECEF math utilities usable without the map engine.
-- **Custom Descriptors** — write your own mesh/effect/light descriptors with full access to the rendering engine's scene graph and render pipeline.
+Navara's answer to the trade-off is a tiered API. Capabilities are organized into four tiers, so you start with the simplicity of a declarative engine and drop down, as far as the render pipeline itself, only when you need more control:
 
-Under the hood, Navara implements the complex but reusable GIS logic in a Rust/WebAssembly core, and delegates drawing to libraries specialized in CG rendering — currently Three.js. Rendering is where GPU APIs and platforms vary the most, so keeping that layer swappable is what lets Navara expand to other rendering engines and platforms in the future.
+- **Declarative**: declare sources and layers as plain config objects (basemaps, terrain, vector data, 3D Tiles); meshes, effects, and lights work the same declarative way.
+- **Plugin**: add purpose-built features as ready-made bundles, such as the photorealistic scene, first-person walking, DOM overlays, and the attribution UI; anyone can package and share their own plugin.
+- **API**: per-feature styling by attributes (`FeatureEvaluator`), feature picking, terrain sampling, camera control, and standalone geodetic/ECEF math utilities usable without the map engine.
+- **Shader**: full access to the rendering engine for your own shaders and effects, writing custom mesh/effect/light descriptors against its scene graph and render pipeline.
+
+Under the hood, Navara is a headless GIS core, independent of the rendering engine. The complex but reusable GIS logic (data parsing, geometry construction, and more) lives in Rust / WebAssembly, and drawing is delegated to libraries specialized in CG rendering, currently Three.js. Rendering is where GPU APIs and platforms vary the most, so keeping that layer swappable is what lets Navara expand to other rendering engines and platforms in the future.
+
+<table>
+  <tr>
+    <td width="50%">
+      <a href="https://navara-preview.reearth.workers.dev/weather/clouds">
+        <img src="./web/navara_three/example/public/screenshots/weather/clouds.avif" alt="Clouds drifting over mountain terrain">
+      </a>
+    </td>
+    <td width="50%">
+      <a href="https://navara-preview.reearth.workers.dev/effect/fog-light">
+        <img src="./web/navara_three/example/public/screenshots/effect/fog-light.avif" alt="Night hillside lit by fog lights, drawn with a custom shader">
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <a href="https://navara-preview.reearth.workers.dev/terrain/elevation-heatmap">
+        <img src="./web/navara_three/example/public/screenshots/terrain/elevation-heatmap.avif" alt="Terrain elevation visualized as a heatmap">
+      </a>
+    </td>
+    <td width="50%">
+      <a href="https://navara-preview.reearth.workers.dev/effect/ssr">
+        <img src="./web/navara_three/example/public/screenshots/effect/ssr.avif" alt="City buildings reflected on water with screen-space reflections">
+      </a>
+    </td>
+  </tr>
+</table>
+
+<p align="center">
+  <sub><i>Imagery: <a href="https://mapterhorn.com/attribution">© Mapterhorn</a> · <a href="https://maps.gsi.go.jp/development/ichiran.html">Geospatial Information Authority of Japan Tiles - Latest Nationwide Photo (Seamless)</a> · <a href="https://terrain.reearth.land/">© Re:Earth Terrain</a> · <a href="https://www.geospatial.jp/ckan/dataset/plateau-13102-chuo-ku-2023">3D City Model (Project PLATEAU) Chuo Ward (FY2023) - MLIT PLATEAU</a></i></sub>
+</p>
 
 - 📖 **Documentation**: https://navara-docs.reearth.workers.dev//
 - 🌏 **Live examples**: https://navara-preview.reearth.workers.dev/
 
 ## Usage
 
-See [What is Navara?](https://navara-docs.reearth.workers.dev//guides/introduction/what-is-navara/) for an overview and [Getting Started](https://navara-docs.reearth.workers.dev//guides/introduction/getting-started/) to build your first globe.
+See [What is Navara?](https://navara-docs.reearth.workers.dev//guides/introduction/what-is-navara/) for an overview and [Getting Started](https://navara-docs.reearth.workers.dev//guides/introduction/getting-started/) to build your first 3D map.
 
 ## Architecture
 

@@ -66,40 +66,40 @@
       "href": "https://navara-preview.reearth.workers.dev/weather/clouds"
     },
     "example-row2-left": {
-      "src": "web/navara_three/example/public/screenshots/evaluator/color.avif",
-      "href": "https://navara-preview.reearth.workers.dev/evaluator/color"
+      "src": "web/navara_three/example/public/screenshots/terrain/elevation-heatmap.avif",
+      "href": "https://navara-preview.reearth.workers.dev/terrain/elevation-heatmap"
     },
     "example-row2-center": {
       "src": "web/navara_three/example/public/screenshots/weather/precipitation.avif",
       "href": "https://navara-preview.reearth.workers.dev/weather/precipitation"
     },
     "example-row2-right": {
-      "src": "web/navara_three/example/public/screenshots/evaluator/text.avif",
-      "href": "https://navara-preview.reearth.workers.dev/evaluator/text"
-    },
-    "example-row3-left": {
-      "src": "web/navara_three/example/public/screenshots/mesh/instanced.avif",
-      "href": "https://navara-preview.reearth.workers.dev/mesh/instanced"
-    },
-    "example-row3-right": {
       "src": "web/navara_three/example/public/screenshots/sky/sun-time.avif",
       "href": "https://navara-preview.reearth.workers.dev/sky/sun-time"
     },
+    "example-row3-left": {
+      "src": "web/navara_three/example/public/screenshots/evaluator/text.avif",
+      "href": "https://navara-preview.reearth.workers.dev/evaluator/text"
+    },
+    "example-row3-right": {
+      "src": "web/navara_three/example/public/screenshots/effect/ssr.avif",
+      "href": "https://navara-preview.reearth.workers.dev/effect/ssr"
+    },
     "example-row4-left": {
-      "src": "web/navara_three/example/public/screenshots/gis/polyline.avif",
-      "href": "https://navara-preview.reearth.workers.dev/gis/polyline"
+      "src": "web/navara_three/example/public/screenshots/evaluator/color.avif",
+      "href": "https://navara-preview.reearth.workers.dev/evaluator/color"
     },
     "example-row4-center-left": {
-      "src": "web/navara_three/example/public/screenshots/effect/fog-light.avif",
-      "href": "https://navara-preview.reearth.workers.dev/effect/fog-light"
+      "src": "web/navara_three/example/public/screenshots/effect/selective-bloom.avif",
+      "href": "https://navara-preview.reearth.workers.dev/effect/selective-bloom"
     },
     "example-row4-center-right": {
       "src": "web/navara_three/example/public/screenshots/mesh/splat.avif",
       "href": "https://navara-preview.reearth.workers.dev/mesh/splat"
     },
     "example-row4-right": {
-      "src": "web/navara_three/example/public/screenshots/effect/selective-bloom.avif",
-      "href": "https://navara-preview.reearth.workers.dev/effect/selective-bloom"
+      "src": "web/navara_three/example/public/screenshots/effect/fog-light.avif",
+      "href": "https://navara-preview.reearth.workers.dev/effect/fog-light"
     },
     "maplibre-logo": {
       "src": "docs/src/assets/lp/maplibre-logo.svg"

@@ -158,6 +158,18 @@ const SRC = {
     text: "Sentinel-2 cloudless 2020 by EOX IT Services GmbH (contains modified Copernicus Sentinel data 2020)",
     href: "https://s2maps.eu",
   },
+  eoxS2016: {
+    text: "Sentinel-2 cloudless 2016 by EOX IT Services GmbH (contains modified Copernicus Sentinel data 2016 & 2017)",
+    href: "https://s2maps.eu",
+  },
+  naturalEarth: {
+    text: "Natural Earth (public domain)",
+    href: "https://www.naturalearthdata.com",
+  },
+  plateauKyoto: {
+    text: "3D City Model (Project PLATEAU) Kyoto City (FY2025) - MLIT PLATEAU",
+    href: "https://www.geospatial.jp/ckan/dataset/plateau-26100-kyoto-shi-2025",
+  },
   nasaClouds: {
     text: "NASA Blue Marble Clouds (converted as raster tiles)",
   },
@@ -190,18 +202,6 @@ const SRC = {
     text: "© OpenStreetMap contributors",
     href: "https://www.openstreetmap.org/copyright",
   },
-  fox: {
-    text: "Fox by PixelMannen (CC0), rig & animation by tomkranis (CC BY 4.0) - Khronos glTF Sample Assets",
-    href: "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Fox",
-  },
-  lantern: {
-    text: "Lantern by Microsoft & Frank Galligan (CC0) - Khronos glTF Sample Assets",
-    href: "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Lantern",
-  },
-  muscleCar: {
-    text: "Classic Muscle car by Lexyc16 (CC BY 4.0)",
-    href: "https://sketchfab.com/3d-models/classic-muscle-car-641efc889e5f4543bae51d0922e6f4b3",
-  },
   sunnyMeadow: {
     text: "Sunny Meadow by Jeremias Kieferle - CC BY 4.0",
     href: "https://assets.cms.reearth.io/assets/e2/e8e117-8059-4450-adde-7fa7a3c5908a/Sunny Meadow/LICENSE",
@@ -214,17 +214,17 @@ const TILE_SOURCES: Record<string, (keyof typeof SRC)[]> = {
   "tutorial-wide": ["gsiPhoto", "gsiDem", "gsiVector", "plateauChiyoda"],
   "tutorial-left": ["gsiPhoto", "nasaNight"],
   "tutorial-right": ["plateauTakanawa", "gsiDem", "gsiPhoto"],
-  "example-row1-left": ["google"],
-  "example-row1-right": ["mapterhorn", "gsiPhoto"],
-  "example-row2-left": ["reearthPapers", "fox"],
-  "example-row2-center": ["google"],
-  "example-row2-right": ["reearthPapers"],
-  "example-row3-left": ["reearthPapers", "lantern"],
-  "example-row3-right": ["google"],
-  "example-row4-left": ["reearthPapers", "sunnyMeadow"],
-  "example-row4-center-left": ["reearthPapers", "osm"],
-  "example-row4-center-right": ["reearthPapers", "muscleCar"],
-  "example-row4-right": ["reearthPapers", "osm"],
+  "example-row1-left": ["google"], // sky/atmosphere
+  "example-row1-right": ["mapterhorn", "gsiPhoto"], // weather/clouds
+  "example-row2-left": ["reearthTerrain", "mapterhorn"], // terrain/elevation-heatmap
+  "example-row2-center": ["google"], // weather/precipitation
+  "example-row2-right": ["google"], // sky/sun-time
+  "example-row3-left": ["reearthPapers", "naturalEarth"], // evaluator/text
+  "example-row3-right": ["reearthTerrain", "gsiPhoto", "plateauChuo"], // effect/ssr
+  "example-row4-left": ["reearthTerrain", "mapterhorn", "reearthPapers", "plateauKyoto"], // evaluator/color
+  "example-row4-center-left": ["reearthPapers", "osm"], // effect/selective-bloom
+  "example-row4-center-right": ["reearthPapers", "eoxS2016", "sunnyMeadow"], // mesh/splat
+  "example-row4-right": ["reearthTerrain", "reearthPapers", "osm"], // effect/fog-light
 };
 const attrib = (id: string) => (TILE_SOURCES[id] ?? []).map((k) => SRC[k]);
 const galleryAttribLabel = t.gallery.mediaAttributionLabel;
@@ -799,6 +799,8 @@ const heroScenes = [
             imgAlt={alt("example-row2-right")}
             items={attrib("example-row2-right")}
             label={galleryAttribLabel}
+            logo={googleLogoSrc}
+            logoAlt="Google Maps"
           />
           {/* Row 3 — 2:3 */}
           <GalleryTile
@@ -817,8 +819,6 @@ const heroScenes = [
             imgAlt={alt("example-row3-right")}
             items={attrib("example-row3-right")}
             label={galleryAttribLabel}
-            logo={googleLogoSrc}
-            logoAlt="Google Maps"
           />
           {/* Row 4 — 3:3:2:2 */}
           <GalleryTile
