@@ -288,11 +288,19 @@ export async function processRenderableFeatureAdded(
     );
   }
 
-  // The evaluator runs synchronously inside the emits above, so every async
-  // font preparation it kicked off is in flight now. Report the text batch
-  // rendered only once those land, so the Rust swap waits until this batch
-  // can actually draw. The timeout only bounds a hung font fetch — a late or
-  // post-removal report is a safe no-op on the Rust side.
+  // The evaluator runs synchronously inside the emits above, so any font
+  // preparation it *started* is in flight now. Report the text batch rendered
+  // only once those land, so the Rust swap waits until this batch can draw.
+  // The timeout only bounds a hung font fetch — a late or post-removal report
+  // is a safe no-op on the Rust side.
+  //
+  // With declutter on, the evaluator's setters park unprepared text on anchor
+  // visibility instead of preparing it (BatchedSdfTextMesh.setTextByBatchIndex),
+  // so nothing is in flight here and this resolves immediately. That is
+  // deliberate and must stay that way: promotion needs the batch visible,
+  // visibility needs this report, so waiting on parked labels would deadlock
+  // the cycle until the timeout and stall every text tile's swap. Continuity
+  // across decluttered swaps comes from the placement handoff in `setActive`.
   if (renderedType && obj instanceof BatchedSdfTextMesh) {
     void obj.whenLabelsSettled(TEXT_LABELS_SETTLE_TIMEOUT_MS).then(() => {
       featureHandler.markFeatureIsRendered(renderedType, bits);

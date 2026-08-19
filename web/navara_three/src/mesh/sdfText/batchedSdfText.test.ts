@@ -3,7 +3,7 @@ import type {
   TextMaterial as NavaraTextMaterial,
 } from "@navaramap/engine";
 import type { ShapeTextResult } from "@navaramap/font";
-import { Color } from "three";
+import { Color, PerspectiveCamera } from "three";
 import { describe, expect, it, vi } from "vitest";
 
 import type { EventContext } from "../../event/context";
@@ -200,5 +200,169 @@ describe("BatchedSdfTextMesh material updates vs per-feature values", () => {
 
     expect(fontManager.prepareText).toHaveBeenCalled();
     expect(sizeOf(mesh, 0)).toBe(24);
+  });
+});
+
+// Unprepared text costs a worker round-trip and font-face fetches, and a
+// low-zoom tile spans far more world than the screen shows. With declutter on,
+// `setTextByBatchIndex` therefore parks preparation until a placement pass
+// confirms the anchor could actually appear on screen.
+describe("BatchedSdfTextMesh deferred font preparation", () => {
+  /** Camera framing the origin, so anchors near it count as in view. */
+  function makeCamera(lookAtZ = 0): PerspectiveCamera {
+    const cam = new PerspectiveCamera(60, 1, 1, 1e9);
+    cam.position.set(0, 0, 100);
+    cam.lookAt(0, 0, lookAtZ);
+    cam.updateMatrixWorld(true);
+    cam.updateProjectionMatrix();
+    return cam;
+  }
+
+  /**
+   * Font manager whose `isTextPrepared` starts false and flips once
+   * `prepareText` resolves, as the real one does — a fake that answers false
+   * forever would make the re-prepare-on-show path loop.
+   */
+  function makeLazyFontManager() {
+    const prepared = new Set<string>();
+    const fontManager = {
+      ...makeFontManager(),
+      isTextPrepared: vi.fn((_font: string, text: string) =>
+        prepared.has(text),
+      ),
+      prepareText: vi.fn(async (_font: string, text: string) => {
+        prepared.add(text);
+      }),
+    };
+    return { fontManager, prepared };
+  }
+
+  function makeCtx(fontManager: unknown, declutter?: unknown) {
+    return {
+      buf: { removeF32: (d: Float32Array) => d },
+      fontManager,
+      declutter,
+      renderFlag: { forceUpdate: false },
+    } as unknown as EventContext;
+  }
+
+  /** As `makeMesh`, but with a declutter manager present so parking engages. */
+  function makeDeclutteredMesh() {
+    const { fontManager, prepared } = makeLazyFontManager();
+    const declutter = {
+      register: vi.fn(),
+      unregister: vi.fn(),
+      markDirty: vi.fn(),
+      wasRecentlyShown: vi.fn(() => false),
+    };
+    const mesh = new BatchedSdfTextMesh(
+      makeCtx(fontManager, declutter),
+      textMeshEvent(material()),
+      "font",
+      { layerId: "layer" },
+    );
+    return { mesh, fontManager, prepared };
+  }
+
+  const deferredCount = (mesh: BatchedSdfTextMesh) =>
+    (mesh as unknown as { _deferredCount: number })._deferredCount;
+
+  it("does not start preparation when declutter is enabled", async () => {
+    const { mesh, fontManager } = makeDeclutteredMesh();
+
+    mesh.setTextByBatchIndex(0, "Tokyo");
+    await flushMicrotasks();
+
+    expect(fontManager.prepareText).not.toHaveBeenCalled();
+    expect(deferredCount(mesh)).toBe(1);
+    // Nothing drawable yet, so the label stays hidden.
+    expect(showOf(mesh, 0)).toBe(0);
+  });
+
+  it("prepares immediately when there is no declutter pass to park on", async () => {
+    const { fontManager } = makeLazyFontManager();
+    const mesh = new BatchedSdfTextMesh(
+      makeCtx(fontManager),
+      textMeshEvent(material()),
+      "font",
+      { layerId: "layer" },
+    );
+
+    mesh.setTextByBatchIndex(0, "Tokyo");
+    await flushMicrotasks();
+
+    expect(fontManager.prepareText).toHaveBeenCalledTimes(1);
+  });
+
+  it("promotes a parked label once its anchor is potentially visible", async () => {
+    const { mesh, fontManager } = makeDeclutteredMesh();
+    mesh.setActive(true);
+    mesh.setTextByBatchIndex(0, "Tokyo");
+    await flushMicrotasks();
+    expect(fontManager.prepareText).not.toHaveBeenCalled();
+
+    // Anchor 0 sits at the origin; this camera frames it.
+    mesh.prepareDeferredLabels(makeCamera());
+    await flushMicrotasks();
+
+    expect(fontManager.prepareText).toHaveBeenCalledTimes(1);
+    expect(deferredCount(mesh)).toBe(0);
+    // The promoted text is applied, so the label becomes drawable.
+    expect(showOf(mesh, 0)).toBe(1);
+  });
+
+  it("leaves a parked label alone while its anchor is out of view", async () => {
+    const { mesh, fontManager } = makeDeclutteredMesh();
+    mesh.setActive(true);
+    mesh.setTextByBatchIndex(0, "Tokyo");
+    await flushMicrotasks();
+
+    // Looking away puts the anchor behind the camera.
+    mesh.prepareDeferredLabels(makeCamera(500));
+    await flushMicrotasks();
+
+    expect(fontManager.prepareText).not.toHaveBeenCalled();
+    // Still parked, so a later pass can promote it.
+    expect(deferredCount(mesh)).toBe(1);
+  });
+
+  // Promotion requires `this.visible`, which the tile-LOD swap only sets after
+  // the batch reports rendered — and that report waits on `whenLabelsSettled`.
+  // Counting parked labels as "in flight" would therefore deadlock that cycle
+  // until the timeout, stalling every text tile's swap. The gate deliberately
+  // covers only started preparations; see whenLabelsSettled's docs.
+  it("does not let parked labels hold the render-completion gate", async () => {
+    const { mesh } = makeDeclutteredMesh();
+    mesh.setTextByBatchIndex(0, "Tokyo");
+    await flushMicrotasks();
+
+    let settled = false;
+    void mesh.whenLabelsSettled(2000).then(() => (settled = true));
+    await flushMicrotasks();
+
+    expect(settled).toBe(true);
+  });
+
+  it("holds the gate while a promoted preparation is in flight", async () => {
+    const { mesh, fontManager } = makeDeclutteredMesh();
+    let finishPrepare!: () => void;
+    fontManager.prepareText = vi.fn(
+      (_font: string, _text: string) =>
+        new Promise<void>((r) => (finishPrepare = r)),
+    );
+
+    mesh.setActive(true);
+    mesh.setTextByBatchIndex(0, "Tokyo");
+    mesh.prepareDeferredLabels(makeCamera());
+    await flushMicrotasks();
+
+    let settled = false;
+    void mesh.whenLabelsSettled(2000).then(() => (settled = true));
+    await flushMicrotasks();
+    expect(settled).toBe(false);
+
+    finishPrepare();
+    await flushMicrotasks();
+    expect(settled).toBe(true);
   });
 });
