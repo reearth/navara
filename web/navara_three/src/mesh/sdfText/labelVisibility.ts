@@ -1,3 +1,7 @@
+import {
+  getWGS84SemiMajorAxis,
+  getWGS84SemiMinorAxis,
+} from "@navaramap/three-api";
 import { Matrix4, type PerspectiveCamera } from "three";
 
 /**
@@ -22,14 +26,32 @@ export const createAnchorVisibilityState = (): AnchorVisibilityState => ({
 });
 
 /**
- * Earth-surface radius band (meters). Anchors whose distance from the origin
- * falls inside it are treated as sitting on the globe and get the horizon
- * test; anchors outside (planar/local scenes, high-altitude points) rely on
- * the frustum test alone. Spans the polar radius minus deep depressions up to
- * the equatorial radius plus high terrain and label height offsets.
+ * Fractional tolerance on the Earth-surface radius band. An anchor whose
+ * distance from the origin lands within this fraction of the WGS84 radii is
+ * treated as sitting on the globe and gets the horizon test; anchors outside
+ * the band (planar/local scenes, points far above the surface) rely on the
+ * frustum test alone. 5% reaches from well below the polar radius up to the
+ * equatorial radius plus high terrain and label height offsets — the band is a
+ * "is this a globe anchor at all" filter, so it is deliberately loose.
  */
-const EARTH_BAND_MIN_M = 6_000_000;
-const EARTH_BAND_MAX_M = 6_600_000;
+const EARTH_BAND_TOLERANCE = 0.05;
+
+/**
+ * Squared band bounds, derived from the engine's WGS84 ellipsoid (Rust side)
+ * rather than from literals, so the band follows the engine's definition.
+ * Resolved on first use, not at module scope: `@navaramap/three-api` only
+ * answers once `view.init()` has initialized the WASM module. Memoized because
+ * the bounds are tested once per anchor in the label scan.
+ */
+let bandMin2 = 0;
+let bandMax2 = 0;
+
+const resolveEarthBand = () => {
+  const min = getWGS84SemiMinorAxis() * (1 - EARTH_BAND_TOLERANCE);
+  const max = getWGS84SemiMajorAxis() * (1 + EARTH_BAND_TOLERANCE);
+  bandMin2 = min * min;
+  bandMax2 = max * max;
+};
 
 /**
  * Relaxation factor for the horizon test. `1` is the exact tangent-plane
@@ -85,10 +107,11 @@ export function isAnchorPotentiallyVisible(
   // Horizon: an anchor on the globe is beyond the horizon when the camera
   // sits below the anchor's tangent plane — dot(C, P) < |P|². Only applied
   // inside the Earth-surface band so non-globe anchors are never culled by it.
+  if (bandMax2 === 0) resolveEarthBand();
   const r2 = x * x + y * y + z * z;
   if (
-    r2 > EARTH_BAND_MIN_M * EARTH_BAND_MIN_M &&
-    r2 < EARTH_BAND_MAX_M * EARTH_BAND_MAX_M &&
+    r2 > bandMin2 &&
+    r2 < bandMax2 &&
     x * state.camX + y * state.camY + z * state.camZ < r2 * HORIZON_MARGIN
   ) {
     return false;

@@ -1,11 +1,19 @@
 import { PerspectiveCamera } from "three";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   createAnchorVisibilityState,
   isAnchorPotentiallyVisible,
   syncAnchorVisibilityState,
 } from "./labelVisibility";
+
+// The ellipsoid getters cross into WASM, which is only initialized by
+// `view.init()`. Stub them with the f32 values the engine returns (navara_core
+// `WGS84_32`) so the radius band is exercised without a live view.
+vi.mock("@navaramap/three-api", () => ({
+  getWGS84SemiMajorAxis: () => 6_378_137,
+  getWGS84SemiMinorAxis: () => 6_356_752.5,
+}));
 
 /** Equatorial Earth radius (m); anchors at this length get the horizon test. */
 const R = 6_378_137;

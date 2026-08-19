@@ -11,6 +11,15 @@ import type { EventContext } from "../../event/context";
 import { BatchedSdfTextMesh } from "./batchedSdfText";
 import { LabelRow, type LabelDataTexture } from "./labelData";
 
+// `labelVisibility` derives its Earth radius band from the WASM ellipsoid
+// getters, which only answer after `view.init()`. Keep the rest of the module
+// real and stub just those two with the engine's f32 values.
+vi.mock("@navaramap/three-api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@navaramap/three-api")>()),
+  getWGS84SemiMajorAxis: () => 6_378_137,
+  getWGS84SemiMinorAxis: () => 6_356_752.5,
+}));
+
 /** Drains chained `.then` callbacks of the async font-preparation path. */
 const flushMicrotasks = async () => {
   for (let i = 0; i < 10; i++) await Promise.resolve();
