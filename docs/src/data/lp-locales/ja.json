@@ -14,7 +14,8 @@
   "hero": {
     "posterAlt": "Navaraプロモーション動画 — 軌道上から3D地球儀へのダイブ",
     "fullscreen": "動画を全画面で再生",
-    "play": "動画を再生"
+    "play": "動画を再生",
+    "mediaAttributionLabel": "データ帰属表示"
   },
   "intro": {
     "h1Html": "The beautiful globe,<br /><span>without the complexity.</span>",

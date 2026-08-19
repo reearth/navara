@@ -16,7 +16,7 @@ by data files for theme/config, copy, and images. Design reference:
 ## Files & the three-way split
 
 - `docs/src/components/LandingPage.astro` — the whole page (markup + `<style is:global>` + reveal/showcase scripts). Rendered per locale by pages that do `<LandingPage locale="..." />`.
-- `docs/src/data/lp.json` — **theme colors, image slots, external links** (not copy). Colors: `primary`/`accent`/`sub`/`maplibre` (fed as CSS vars `--pri`/`--acc`/`--sub`/`--ml`; the derived `--ink*`/`--on-dark*`/`--line*` vars come from these). `images.<slot>.src` is a **repo-root-relative** path into `docs/src/assets` or `web/navara_three/example/public/screenshots`, resolved by `resolveImage`.
+- `docs/src/data/lp.json` — **theme colors, image slots, external links** (not copy). Colors: `primary`/`accent`/`sub`/`maplibre` (fed as CSS vars `--pri`/`--acc`/`--sub`/`--ml`; the derived `--ink*`/`--on-dark*`/`--line*` vars come from these). `themeVariants` lists candidate primary/sub/accent sets (verbatim from the design palette sheet) for the header preview switcher, revealed only by `?color` in the URL (`?color=<name>` preselects one). Switching rewrites `--pri`/`--sub`/`--acc` at runtime; roles a candidate can't fill without losing contrast fall back to plain black/white via `--pri-ink` (always-dark ink/scrim source, = `--pri` normally), `--on-band` (text on `--pri` bands) and `--on-acc` — and a synthetic resize re-samples the adaptive gallery inks. `images.<slot>.src` is a **repo-root-relative** path into `docs/src/assets` or `web/navara_three/example/public/screenshots`, resolved by `resolveImage`.
 - `docs/src/data/lp-locales/<locale>.json` — **all copy**, per locale. `en` is `ROOT_LOCALE` (served at `/`, others under `/<locale>/`). Image **alt text lives here**, in `imageAlts` keyed by the lp.json slot id (a missing alt throws at build).
 
 To add a locale: add its `lp-locales/<code>.json` and a page rendering `<LandingPage locale="code" />`.
@@ -38,10 +38,17 @@ To add a locale: add its `lp-locales/<code>.json` and a page rendering `<Landing
   — `.lp-hello-visual img` is oversized (`height: 106%`) so the frame clips that
   band at every aspect ratio; don't crop the shared asset, docs pages use it.
 - **MapLibre section is parked** behind `SHOW_MAPLIBRE = false` in the component frontmatter (copy and image slots kept); flip to true to bring it back.
+- **`.lp-arch` line-art SVGs are inlined** (`?raw` + the `archSvg` helper, classes land on the `<svg>` so the img-era sizing rules still apply) and re-themed by CSS attribute selectors keyed to their baked hexes (`#F4F3EF` → `--sub`, `#090C11` → `--pri-ink`, `#C9C9C9` graticule). Re-exporting those SVGs must keep exactly those values, or the selectors in `LandingPage.astro` must be updated with them.
 
 ## Reusable components
 
 - **`docs/src/components/ImageAttribution.astro`** — data-attribution overlay: an info icon that reveals a per-source credit list on hover/focus (no plate, never overflows). Props: `items: string[]`, `label`, `corner` (`br`/`bl`/`tr`/`tl`), `class`. Drop inside any `position: relative` image wrapper. Use it for **any** credited image, not just the LP. Source the credit strings from `web/navara_three/example/helpers/constants.ts` `attribution` fields (+ a basemap tilejson's own credit).
+
+## Brand logo & favicon
+
+- Logo SVGs live in `docs/public/logo/{black,white}/` (horizontal + vertical), mirrored in `web/navara_three/example/public/logo/`. They are the delivered Illustrator exports with the `<i:aipgf>` round-trip block stripped (that block was ~97% of the file size) and the viewBox cropped to the tight content bbox — keep both properties if the assets are ever re-delivered.
+- The LP inlines the **black** variants via `?raw` + `logoSvg()` (the black paths carry no `fill` attributes, so CSS `fill: currentColor` re-inks them per surface): `.lp-hero-logo` is the vertical lockup centered over the hero video, `.lp-brand` the horizontal one in the header. The branding hands off on scroll: the header logo is `opacity: 0; visibility: hidden` until `lp-header-solid`, at which point the intro panel has covered the hero lockup. `.lp-video-blocked` clears the hero lockup so the fallback play button gets the center.
+- The favicon is the delivered white-bird-on-black-square mark, present as `favicon.png` (72×72, the referenced one) and `favicon.svg` (cleaned like the logos; kept but unreferenced) in both `docs/public/` and `web/.../example/public/`. Three places point at `/favicon.png`: the LP `<head>`, Starlight's `favicon` option in `docs/astro.config.mjs`, and the example's `template.html` (injected into every generated page).
 
 ## Build & verify
 
@@ -75,6 +82,31 @@ invariants — do not regress these:
   (`webkitEnterFullscreen` fallback for iPhones without
   `video.requestFullscreen`).
 - Reduced motion keeps the AVIF poster; no video src is ever set.
+- **Video credits are overlaid, not baked, and scene-synced**: the credit line
+  baked into the video's bottom ~3.3% is force-cropped at every aspect ratio —
+  poster and video are oversized (`height: 104.5%`, clipped by the hero's
+  `overflow: hidden`; cover alone only crops vertically on wide windows, so a
+  16:10 window would otherwise show the baked line under the overlay) — and
+  the hero
+  renders one `ImageAttribution` block per scene (`heroScenes` in the
+  frontmatter — credits + `end` boundary in seconds, read off the published
+  cut's frames) and a `timeupdate` handler swaps them with playback; past the
+  last boundary (the loop-closing still = the dive's first frame) it wraps to
+  the first block, which is also the no-JS/reduced-motion state matching the
+  poster. The Google logo rides only the Photorealistic-3D-Tiles scenes, whose
+  credit list transcribes the per-tile copyright line baked into those frames
+  (Google / Landsat / Copernicus / Data SIO… / Airbus for the current cut) —
+  read it from the frames, not from the shot code, which only registers the
+  static baseline. **Re-cutting the promo means re-reading `heroScenes`
+  boundaries and credits from the new take** (extract 1 s frames with ffmpeg;
+  zoom the bottom strip for the Google line). Generic
+  `.lp-hero img` CSS must stay scoped to `picture img`, or it swallows the
+  overlay's logo.
+- **`.lp-hero` must keep `overflow: hidden`.** The opening animation
+  (`nv-hero-in`) holds the full-viewport poster at scale ~1.045 for 3s;
+  unclipped, that widens the document's scrollable area and Chromium keeps the
+  stale horizontal scrollbar even after the animation ends (it only clears on
+  the next relayout, e.g. scrolling into the reveal sections).
 - **Verify on a real iPhone** (`pnpm dev:docs --host`), including Low Power
   Mode on/off — desktop Chromium allows muted autoplay everywhere and cannot
   reproduce any of the above.

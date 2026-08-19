@@ -14,7 +14,8 @@
   "hero": {
     "posterAlt": "Navara promotion video — a dive from orbit onto a 3D globe",
     "fullscreen": "Play the video fullscreen",
-    "play": "Play the video"
+    "play": "Play the video",
+    "mediaAttributionLabel": "Data attribution"
   },
   "intro": {
     "h1Html": "The beautiful globe,<br /><span>without the complexity.</span>",

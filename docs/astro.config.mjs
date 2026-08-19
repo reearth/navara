@@ -52,6 +52,7 @@ export default defineConfig({
   integrations: [
     starlight({
       title: "Navara",
+      favicon: "/favicon.png",
       social: [{ icon: "github", label: "GitHub", href: "https://github.com/eukarya-inc/navara-developer-docs" }],
       defaultLocale: "root",
       locales: {

@@ -1,5 +1,5 @@
 import { BufferView } from "@navaramap/three";
-import type { WebGLRenderer, WebGLRenderTarget } from "three";
+import type { Texture, WebGLRenderer, WebGLRenderTarget } from "three";
 
 /** Convert float pixels to Uint8Array with bitmask color visualization */
 function bitmaskToRgba(
@@ -59,13 +59,24 @@ function floatRgbToRgba(
   return result;
 }
 
+/** Snapshot of the current G-buffer, re-fetched every frame. */
+export type GBufferSnapshot = {
+  renderTarget: WebGLRenderTarget;
+  effectIdsTexture?: Texture;
+  emissiveTexture?: Texture;
+};
+
 /**
  * Set up SelectiveEffect buffer debug views using BufferView.
  * Reads HalfFloat MRT attachments and visualizes EffectIds (bitmask) + Emissive (RGB).
+ *
+ * The render target is rebuilt (and attachment indices shift) whenever the
+ * active effects change, so `getGBuffer` is called on every render instead of
+ * capturing the target once.
  */
 export function setupDebugViews(
   renderer: WebGLRenderer,
-  gbufferRT: WebGLRenderTarget,
+  getGBuffer: () => GBufferSnapshot,
 ): {
   views: {
     effectIds: BufferView;
@@ -90,8 +101,12 @@ export function setupDebugViews(
 
   function readMRTFloat(
     gbufferRT: WebGLRenderTarget,
-    attachmentIndex: number,
+    attachment?: Texture,
   ): Float32Array | null {
+    const attachmentIndex =
+      attachment === undefined ? -1 : gbufferRT.textures.indexOf(attachment);
+    if (attachmentIndex < 0) return null;
+
     const gl = renderer.getContext();
     if (!(gl instanceof WebGL2RenderingContext)) return null;
 
@@ -109,10 +124,11 @@ export function setupDebugViews(
 
   function renderDebugViews() {
     if (!enabled) return;
-    const w = gbufferRT.width;
-    const h = gbufferRT.height;
+    const { renderTarget, effectIdsTexture, emissiveTexture } = getGBuffer();
+    const w = renderTarget.width;
+    const h = renderTarget.height;
 
-    const effectIdsFloat = readMRTFloat(gbufferRT, 2);
+    const effectIdsFloat = readMRTFloat(renderTarget, effectIdsTexture);
     if (effectIdsFloat) {
       effectIdsView.renderFromPixels(
         bitmaskToRgba(effectIdsFloat, w * h),
@@ -121,7 +137,7 @@ export function setupDebugViews(
       );
     }
 
-    const emissiveFloat = readMRTFloat(gbufferRT, 3);
+    const emissiveFloat = readMRTFloat(renderTarget, emissiveTexture);
     if (emissiveFloat) {
       emissiveRgbView.renderFromPixels(
         floatRgbToRgba(emissiveFloat, w * h),

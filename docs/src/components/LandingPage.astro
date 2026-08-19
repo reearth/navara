@@ -18,6 +18,8 @@ import archTerrain from "../assets/lp/arch-terrain.svg?raw";
 import archBuildings from "../assets/lp/arch-buildings.svg?raw";
 import archMarker from "../assets/lp/arch-marker.svg?raw";
 import archArrow from "../assets/lp/arch-arrow.svg?raw";
+import logoHorizontal from "../../public/logo/black/black_Navara_Horizontal_logo_260819.svg?raw";
+import logoVertical from "../../public/logo/black/black_Navara_Vertical_logo_260819.svg?raw";
 
 // Inline an arch SVG so the page CSS can re-theme its baked fills/strokes
 // (an <img> would seal them off). The classes land on the <svg> itself, so
@@ -25,6 +27,12 @@ import archArrow from "../assets/lp/arch-arrow.svg?raw";
 // an <img>; the pieces are decorative, hence aria-hidden.
 const archSvg = (raw: string, className: string): string =>
   raw.replace("<svg ", `<svg class="${className}" aria-hidden="true" `);
+
+// Inline the brand logo (the black variant carries no fill attributes) so
+// `fill: currentColor` lets CSS hand it the on-dark / on-band ink that
+// matches whatever surface it sits on.
+const logoSvg = (raw: string, className: string): string =>
+  raw.replace("<svg ", `<svg class="${className}" role="img" aria-label="Navara" `);
 
 interface Props {
   locale: string;
@@ -142,6 +150,21 @@ const SRC = {
     text: "3D City Model (Project PLATEAU) - MLIT",
     href: "https://www.mlit.go.jp/plateau/",
   },
+  plateauChuo: {
+    text: "3D City Model (Project PLATEAU) Chuo Ward (FY2023) - MLIT PLATEAU",
+    href: "https://www.geospatial.jp/ckan/dataset/plateau-13102-chuo-ku-2023",
+  },
+  eoxS2: {
+    text: "Sentinel-2 cloudless 2020 by EOX IT Services GmbH (contains modified Copernicus Sentinel data 2020)",
+    href: "https://s2maps.eu",
+  },
+  nasaClouds: {
+    text: "NASA Blue Marble Clouds (converted as raster tiles)",
+  },
+  overture: {
+    text: "© Overture Maps Foundation",
+    href: "https://overturemaps.org",
+  },
   nasaNight: {
     text: "NASA Earth at Night imagery - NASA Earth Observatory",
     href: "https://earthobservatory.nasa.gov/features/NightLights",
@@ -249,6 +272,44 @@ view.addLayer({ type: "raster", source });`;
 
 const helloAttrib = [SRC.nasaGibs, SRC.reearthPapers];
 const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
+
+// Scene-synced credits for the looping promo video: the credit line baked
+// into the video's bottom edge is cropped away by the full-bleed cover fit,
+// so the LP overlays its own block per scene and swaps it with playback.
+// `end` is where each scene's credits stop applying (seconds in the published
+// 38 s cut, read off its frames; scene changes are ~0.6 s crossfades so
+// ±0.3 s is fine) — past the last end the loop-closing still repeats the
+// dive's first frame, and the script wraps back to the first block. The
+// Google scenes carry the always-visible Google logo, shown only while
+// Photorealistic 3D Tiles are on screen; their credit list transcribes the
+// per-tile copyright line the capture baked into those frames (identical for
+// both Google scenes of this cut, order aside). Re-cutting the promo means
+// re-reading these boundaries and credits from the new take.
+const heroScenes = [
+  // dive — EOX Sentinel-2 globe, Blue Marble clouds, Re:Earth terrain
+  { end: 8.5, items: [SRC.eoxS2, SRC.nasaClouds, SRC.reearthTerrain] },
+  // city (London) + storm (Shinjuku) — Google Photorealistic 3D Tiles
+  {
+    end: 19.0,
+    google: true,
+    items: [
+      SRC.google,
+      "Map data ©2026 Google",
+      "Google",
+      "Landsat / Copernicus",
+      "Data SIO, NOAA, U.S. Navy, NGA, GEBCO",
+      "Airbus",
+    ],
+  },
+  // river — SSR skim over PLATEAU Chuo on GSI photo + Re:Earth terrain
+  { end: 22.7, items: [SRC.reearthTerrain, SRC.gsiPhoto, SRC.plateauChuo] },
+  // vector — Cairo 2.5D Overture basemap
+  { end: 26.5, items: [SRC.osm, SRC.overture] },
+  // heights + night — Manhattan MVT extrusions on Re:Earth Papers styles
+  { end: 33.0, items: [SRC.reearthPapers, SRC.protomaps, SRC.osm] },
+  // pullback — Black Marble globe on Re:Earth terrain
+  { end: 37.2, items: [SRC.nasaBlackMarble, SRC.reearthPapers, SRC.reearthTerrain] },
+];
 ---
 
 <html lang={t.htmlLang} style={rootStyle}>
@@ -266,7 +327,7 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
     <meta name="theme-color" content="#000000" />
     {/* TODO: Remove when Navara is released. */}
     <meta name="robots" content="noindex,nofollow" />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.png" type="image/png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -276,9 +337,11 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
   </head>
   <body>
     <div class="lp">
-      <!-- Transparent header over hero -->
+      <!-- Transparent header over hero. The brand logo starts hidden — the
+           centered hero logo owns the branding — and fades in when the header
+           frosts on scroll (lp-header-solid). -->
       <header class="lp-header">
-        <span class="lp-wordmark">NAVARA</span>
+        <Fragment set:html={logoSvg(logoHorizontal, "lp-brand")} />
         <nav class="lp-nav">
           <a href={localizeHref(links.docs)}>{t.nav.docs}</a>
           <a href={links.examples}>{t.nav.examples}</a>
@@ -357,6 +420,9 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
             data-src="/promo/navara-promo.mp4"
             data-src-sp="/promo/navara-promo-sp.mp4"
           ></video>
+          <!-- Brand lockup centered over the video; the intro panel slides up
+               over it, at which point the header's own logo takes over. -->
+          <Fragment set:html={logoSvg(logoVertical, "lp-hero-logo")} />
           <button class="lp-hero-fs" type="button" aria-label={t.hero.fullscreen}>
             <Maximize2 size={18} stroke-width={2} aria-hidden="true" />
           </button>
@@ -371,6 +437,26 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
           <div class="lp-hero-scroll-cue" aria-hidden="true">
             <ChevronDown size={22} stroke-width={2} />
           </div>
+          <!-- The video's baked credit line sits on its bottom edge, which
+               the full-bleed cover fit crops away — so the LP overlays the
+               credits itself, one block per scene, swapped in sync with
+               playback (see the script below). Without JS only the first
+               block shows, matching the dive-frame poster. Bottom-left keeps
+               clear of the phone fullscreen button and scroll cue. -->
+          {
+            heroScenes.map((scene, i) => (
+              <div data-hero-scene-until={scene.end} hidden={i > 0}>
+                <ImageAttribution
+                  class="lp-hero-attrib"
+                  items={scene.items}
+                  label={t.hero.mediaAttributionLabel}
+                  corner="bl"
+                  logo={scene.google ? googleLogoSrc : undefined}
+                  logoAlt={scene.google ? "Google Maps" : ""}
+                />
+              </div>
+            ))
+          }
         </div>
         <!-- Catch copy + intro -->
         <section class="lp-intro">
@@ -1402,6 +1488,30 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
       // motion keeps the still.
       const heroEl = document.querySelector<HTMLElement>(".lp-hero");
       const heroVideo = document.querySelector<HTMLVideoElement>(".lp-hero-video");
+
+      // Scene-synced video credits: show the attribution block whose scene is
+      // under playback (boundaries in data-hero-scene-until, read off the
+      // published cut). Past the last boundary — the loop-closing still is the
+      // dive's first frame — wrap back to the first block.
+      const sceneAttribs = [
+        ...document.querySelectorAll<HTMLElement>("[data-hero-scene-until]"),
+      ];
+      if (heroVideo && sceneAttribs.length) {
+        let activeScene = 0;
+        heroVideo.addEventListener("timeupdate", () => {
+          const t = heroVideo.currentTime;
+          let next = sceneAttribs.findIndex(
+            (el) => t < Number(el.dataset.heroSceneUntil),
+          );
+          if (next === -1) next = 0;
+          if (next !== activeScene) {
+            sceneAttribs[activeScene].hidden = true;
+            sceneAttribs[next].hidden = false;
+            activeScene = next;
+          }
+        });
+      }
+
       // True from the priming pause until the post-fade restart has actually
       // resumed — the stopped-video watchdog below must not treat that
       // deliberate pause as a stall.
@@ -1510,7 +1620,7 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
 
       // The hero opening also waits for its image, fading it in only once it
       // can be painted in full.
-      const heroImg = document.querySelector<HTMLImageElement>(".lp-hero img");
+      const heroImg = document.querySelector<HTMLImageElement>(".lp-hero picture img");
       if (heroImg) {
         heroImg
           .decode()
@@ -1537,6 +1647,9 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
           transform: none !important;
         }
         .lp-hero img {
+          opacity: 1 !important;
+        }
+        .lp-hero-logo {
           opacity: 1 !important;
         }
       </style>
@@ -1648,10 +1761,12 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
             transform: none;
           }
         }
-        .lp-hero img {
+        /* Scoped to the poster: other hero imgs (the attribution's Google
+           logo) must stay visible. */
+        .lp-hero picture img {
           opacity: 0;
         }
-        .lp-hero img.lp-loaded {
+        .lp-hero picture img.lp-loaded {
           animation: nv-hero-in 3s cubic-bezier(0.3, 0.5, 0.2, 1) both;
         }
         @keyframes nv-header-in {
@@ -1662,6 +1777,25 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
         }
         .lp-header {
           animation: nv-header-in 1.6s 0.8s cubic-bezier(0.3, 0.5, 0.2, 1) both;
+        }
+        /* The centered lockup rides the poster's own entrance: hidden until
+           JS marks the hero image decoded (lp-loaded), then the same 3s
+           settle as nv-hero-in — the translate is repeated so the centering
+           survives the animation, and only `from` is spelled out so the fill
+           target stays whatever the cascade says (e.g. hidden while
+           lp-video-blocked). The hidden state is scoped to the un-loaded
+           hero for the same reason. */
+        .lp-hero:not(:has(img.lp-loaded)) .lp-hero-logo {
+          opacity: 0;
+        }
+        @keyframes nv-hero-logo-in {
+          from {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(1.045);
+          }
+        }
+        .lp-hero:has(img.lp-loaded) .lp-hero-logo {
+          animation: nv-hero-logo-in 3s cubic-bezier(0.3, 0.5, 0.2, 1) both;
         }
 
         [data-reveal],
@@ -1746,7 +1880,7 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
       }
-      .lp-header-solid .lp-wordmark,
+      .lp-header-solid .lp-brand,
       .lp .lp-header-solid .lp-nav a,
       .lp-header-solid .lp-lang {
         color: var(--on-band);
@@ -1755,10 +1889,27 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
       .lp-header-solid .lp-lang:hover {
         color: var(--acc);
       }
-      .lp-wordmark {
-        font: 700 22px "Arsenal", "Zen Kaku Gothic New", sans-serif;
-        letter-spacing: 0.04em;
+      /* Brand logo: invisible while the hero's centered logo carries the
+         branding; fades in together with the frosted backdrop once scrolled
+         past the hero. visibility keeps the hidden copy out of the
+         accessibility tree while the hero logo is the one on screen. */
+      .lp-brand {
+        display: block;
+        height: 24px;
+        width: auto;
         color: var(--on-dark);
+        opacity: 0;
+        visibility: hidden;
+        transition:
+          opacity 0.3s ease,
+          visibility 0.3s ease;
+      }
+      .lp-brand path {
+        fill: currentColor;
+      }
+      .lp-header-solid .lp-brand {
+        opacity: 1;
+        visibility: visible;
       }
       .lp-nav {
         display: flex;
@@ -1886,6 +2037,8 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
            scrolling resumes once the catch copy is fully visible. */
         position: sticky;
         top: 0;
+        /* Clips the oversized poster/video below (their baked credit band). */
+        overflow: hidden;
         /* Mobile dynamic toolbars: `svh` is the viewport with the toolbars
            shown, `lvh` with them collapsed. The pinned hero has to cover the
            larger one — sized to svh, the first scroll (which the browser spends
@@ -1897,17 +2050,31 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
         height: 100vh;
         height: 100lvh;
         min-height: 480px;
+        /* Clip the opening animation's scale overshoot (nv-hero-in holds the
+           poster at ~1.045 for 3s) — unclipped it widens the document's
+           scrollable area, and Chromium keeps that stale horizontal scrollbar
+           until the next relayout. */
+        overflow: hidden;
         /* The section band is the theme primary (the alternating rhythm is
            PRI / SUB / PRI / SUB down the page); the promo video covers it,
            so it only peeks while the poster is still decoding. */
         background: var(--pri);
       }
-      .lp-hero img,
+      /* Poster + video only — the attribution overlay's logo img must not be
+         stretched over the frame. */
+      .lp-hero picture img,
       .lp-hero video {
         position: absolute;
         inset: 0;
         width: 100%;
-        height: 100%;
+        /* The bottom ~3.3% of every frame bakes the capture page's credit
+           line (the LP overlays scene-synced credits instead, so it must
+           never co-show). Oversizing the media past the container bottom
+           makes the hero's overflow clip that band at EVERY aspect ratio —
+           cover alone only crops vertically on wide windows. Same trick as
+           .lp-hello-visual; fullscreen playback still shows the full frame,
+           baked credits included. */
+        height: 104.5%;
         /* Center crop: on phones the 16:9 frame is cut down to the portrait
            viewport around its middle (the fullscreen button shows it all). */
         object-fit: cover;
@@ -1922,6 +2089,34 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
       }
       .lp-hero.lp-video-live video {
         opacity: 1;
+      }
+      /* Brand lockup pinned to the center of the hero video. The intro panel
+         (z-index above the hero) slides over and hides it naturally; the
+         header's own logo appears at that same scroll point. */
+      .lp-hero-logo {
+        position: absolute;
+        left: 50%;
+        /* A touch above true center — optically balanced against the catch
+           copy rising from the bottom. */
+        top: 43%;
+        transform: translate(-50%, -50%);
+        z-index: 1;
+        width: clamp(180px, 24vw, 320px);
+        height: auto;
+        color: var(--on-dark);
+        pointer-events: none;
+        /* Soft scrim baked into the mark so it stays readable over the
+           video's bright frames. */
+        filter: drop-shadow(0 2px 20px color-mix(in srgb, #000 20%, transparent));
+        transition: opacity 0.3s ease;
+      }
+      .lp-hero-logo path {
+        fill: currentColor;
+      }
+      /* Autoplay refused: the centered play button needs the center — clear
+         the lockup out from under it. */
+      .lp-hero.lp-video-blocked .lp-hero-logo {
+        opacity: 0;
       }
       .lp-hero-fs {
         display: none;
@@ -1990,6 +2185,23 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
       }
       .lp-hero-scroll-cue.lp-cue-done {
         opacity: 0;
+      }
+      /* Video credits: the same quiet treatment as the API stills — bare
+         light icon with a shadow. Bottom-anchored hero chrome, so it pays
+         back the toolbar/safe-area offsets like the cue and fs button. */
+      .lp-hero .lp-hero-attrib {
+        z-index: 2;
+        left: calc(16px + var(--lp-safe-l));
+        bottom: calc(20px + var(--lp-toolbar-h, 0px) + var(--lp-safe-b));
+      }
+      .lp-hero-attrib .nv-attrib-btn,
+      .lp-hero-attrib .nv-attrib-btn:hover {
+        padding: 2px;
+        background: none;
+        box-shadow: none;
+        backdrop-filter: none;
+        color: var(--on-dark);
+        filter: drop-shadow(0 1px 5px rgba(0, 0, 0, 0.65));
       }
       @media (prefers-reduced-motion: no-preference) {
         .lp-hero-scroll-cue svg {
@@ -3171,8 +3383,8 @@ const outroAttrib = [SRC.nasaBlackMarble, SRC.reearthPapers];
         .lp-nav > a:not([class]) {
           display: none;
         }
-        .lp-wordmark {
-          font-size: 19px;
+        .lp-brand {
+          height: 21px;
         }
 
         .lp-intro {

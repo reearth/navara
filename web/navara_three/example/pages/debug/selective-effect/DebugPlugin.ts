@@ -8,7 +8,13 @@ export class DebugPlugin extends Plugin {
   async init(view: ThreeView, ctx: ViewContext): Promise<void> {
     const renderer = ctx.getRenderer();
 
-    this.debugView = setupDebugViews(renderer, ctx.getRenderTarget());
+    // The G-buffer target is rebuilt when the active effects change, so it is
+    // re-fetched per frame instead of captured here.
+    this.debugView = setupDebugViews(renderer, () => ({
+      renderTarget: ctx.getRenderTarget(),
+      effectIdsTexture: ctx.getEffectIdsTexture(),
+      emissiveTexture: ctx.getEmissiveTexture(),
+    }));
 
     view.on("postRender", () => {
       this.debugView?.renderDebugViews();
