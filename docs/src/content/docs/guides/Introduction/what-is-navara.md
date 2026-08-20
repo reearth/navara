@@ -68,7 +68,7 @@ Add [sources](../../../three/source/about/) and [layers](../../../three/layer/ab
 
 Ready-made [plugins](../../../three_plugins/about/) bundle purpose-built features: the photorealistic scene ([`addDefaultPhotorealScene()`](../../../three_default_plugin/about/)), first-person walking (`PersonViewPlugin`), DOM overlays pinned to geographic coordinates (`OverlayPlugin`), and the attribution UI. You can also [write your own plugin](../../../three/core/plugin/) to package reusable functionality.
 
-### Low-level API
+### Imperative API
 
 When config objects and ready-made plugins are not enough, drop down one tier: style individual features by their attributes with [`FeatureEvaluator`](../../../three/api/feature-evaluator/) — color-code buildings by height, or filter features by attribute values — pick features and query terrain interactively through the `pick` event and terrain sampling, and compute coordinate transforms and geodesic distances with the geodetic/ECEF math utilities. The GIS math is also available as a [standalone package](../../../three/api/navara_three_api/) (`@navaramap/three-api`) that works without the map engine.
 

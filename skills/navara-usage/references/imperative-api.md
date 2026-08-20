@@ -1,4 +1,4 @@
-# Low-level API — Feature evaluation, picking, geodetic math
+# Imperative API — Feature evaluation, picking, geodetic math
 
 Use these when declarative layer config isn't enough: data-driven styling per feature, spatial queries, or custom geometry placement.
 

@@ -65,7 +65,7 @@ Quantized-mesh terrain uses `type: "quantized-mesh"` sources (or `CesiumIonPlugi
 Layer → FeatureSet → Feature → Batch (each batch has a 24-bit `batchId`). Feature events fire per FeatureSet:
 
 ```typescript
-layer.on("featureUpdated", ({ evaluator }) => { /* see low-level-api.md */ });
+layer.on("featureUpdated", ({ evaluator }) => { /* see imperative-api.md */ });
 ```
 
 Layer events: `featureCreated` / `featureUpdated` / `featureVisibilityChanged` / `featureRemoved` / `deleted`. There is no per-layer "loaded" event — to know when everything has finished loading, use the view-level `idle` event (fires after `idleThreshold` ms without tile/data activity).

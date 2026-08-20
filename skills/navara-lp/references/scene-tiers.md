@@ -39,7 +39,7 @@ Shared base every scene: quantized-mesh terrain (`reearthQuantizedMesh`, `reques
 
 **Anti-aliasing:** the plain scenes (1 & 3) add `smaa {}` explicitly (`if (isPlainScene) view.addEffect({ smaa: {} })`); the photoreal scenes (2 & 4) already run SMAA via `addDefaultPhotorealScene()`, so adding it again there throws `duplicate name: smaa`. Keep the `isPlainScene` guard.
 2. **Plugins (photoreal).** `defaultPlugin.addDefaultPhotorealScene()` (sky+sun+skyLightProbe in one call) + `clouds {qualityPreset:"high"}`. HDR pipeline needs raised exposure (~5). Sun `castShadow: true`. This is the "one line and the world lights up" tier.
-3. **Low-level control (per-feature coloring, shadow-free).** Same plain look as scene 1 but shadows **off** so the data colors read flat. `layer.on("featureUpdated", ({evaluator}) => evaluator.evaluate(...))` colors each building by `bldg:measuredHeight` through `ORANGES_COLOR_MAP.linear(0.3 + t*0.7)` (skip the near-white low end). Data colors = warm (orange), contrasting the brand teal.
+3. **Imperative control (per-feature coloring, shadow-free).** Same plain look as scene 1 but shadows **off** so the data colors read flat. `layer.on("featureUpdated", ({evaluator}) => evaluator.evaluate(...))` colors each building by `bldg:measuredHeight` through `ORANGES_COLOR_MAP.linear(0.3 + t*0.7)` (skip the near-white low end). Data colors = warm (orange), contrasting the brand teal.
 4. **Custom shaders (night FogLight).** Night `NIGHT_DATE`; buildings tinted blue-gray (`#5d6884`) so warm lights pop; brighter stars (`intensity:150`), mild `skyLightProbe`, a night `lightProbe` (SH from `helpers/sh`). `FogLightEffectDesc` with `createCityLights()`. See "Night FogLight tuning".
 
 ## Night FogLight tuning (hard-won)
