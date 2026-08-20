@@ -1224,7 +1224,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
 
   /** Terrain height at a position in radians, or `undefined` if not loaded. */
   private sampleTerrain(lat: number, lng: number): number | undefined {
-    return this.view?.sampleTerrainHeight({ lat, lng, height: 0 });
+    return this.view?.sampleTerrainHeight({ lat, lng });
   }
 
   /**

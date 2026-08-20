@@ -2558,10 +2558,10 @@ export default class ThreeView<
 
   /**
    * Samples the terrain height at a given geodetic position synchronously.
-   * @param pos - Geodetic position (lat in radians, lng in radians; height is ignored)
+   * @param pos - Geodetic position (lat in radians, lng in radians)
    * @returns Terrain height in meters, or undefined if terrain data not loaded
    */
-  sampleTerrainHeight(pos: LatLngHeight): number | undefined {
+  sampleTerrainHeight(pos: LatLng): number | undefined {
     const lle = new LLE(pos.lat, pos.lng, 0);
     return this._core?.sampleTerrainHeight(lle);
   }

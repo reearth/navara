@@ -260,7 +260,6 @@ const updateModelTransform = (
   const terrainHeight = view.sampleTerrainHeight({
     lat: curLLE.lat,
     lng: curLLE.lng,
-    height: 0,
   });
 
   if (params.allowFly) {

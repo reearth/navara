@@ -715,7 +715,7 @@ This reads only tiles already resident for rendering, so while the camera is far
 **Syntax:**
 
 ```tsx
-sampleTerrainHeight(pos: LatLngHeight): number | undefined
+sampleTerrainHeight(pos: LatLng): number | undefined
 ```
 
 **Parameters:**
@@ -723,7 +723,6 @@ sampleTerrainHeight(pos: LatLngHeight): number | undefined
 - `pos`: Geodetic position
   - `lat`: Latitude (radians)
   - `lng`: Longitude (radians)
-  - `height`: Ignored
 
 **Returns:**
 
@@ -736,11 +735,7 @@ Terrain height (meters), or `undefined` if terrain data is not available
 const lat = degreeToRadian(35.6812);
 const lng = degreeToRadian(139.7671);
 
-const height = view.sampleTerrainHeight({
-  lat,
-  lng,
-  height: 0,
-});
+const height = view.sampleTerrainHeight({ lat, lng });
 
 if (height !== undefined) {
   console.log(`Terrain height: ${height}m`);

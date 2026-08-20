@@ -639,7 +639,7 @@ view.cameraFreeLook(false);
 **Syntax:**
 
 ```tsx
-sampleTerrainHeight(pos: LatLngHeight): number | undefined
+sampleTerrainHeight(pos: LatLng): number | undefined
 ```
 
 **Parameters:**
@@ -647,7 +647,6 @@ sampleTerrainHeight(pos: LatLngHeight): number | undefined
 - `pos`: 測地位置
   - `lat`: 緯度（ラジアン）
   - `lng`: 経度（ラジアン）
-  - `height`: 無視されます
 
 **Returns:**
 
@@ -660,11 +659,7 @@ sampleTerrainHeight(pos: LatLngHeight): number | undefined
 const lat = degreeToRadian(35.6812);
 const lng = degreeToRadian(139.7671);
 
-const height = view.sampleTerrainHeight({
-  lat,
-  lng,
-  height: 0,
-});
+const height = view.sampleTerrainHeight({ lat, lng });
 
 if (height !== undefined) {
   console.log(`地形の高さ: ${height}m`);
