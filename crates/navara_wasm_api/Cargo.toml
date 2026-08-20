@@ -16,7 +16,12 @@ serde.workspace = true
 serde-wasm-bindgen.workspace = true
 url.workspace = true
 navara_core.workspace = true
+# Path dep (not workspace-inherited) so default features can be disabled:
+# the `bevy` default only adds an ECS derive this crate never uses, and it
+# would pull bevy_ecs into the lightweight API module.
+navara_geometry = { path = "../navara_geometry", default-features = false }
 navara_math.workspace = true
+quantized-mesh.workspace = true
 navara_wasm_types.workspace = true
 navara_window.workspace = true
 navara_camera.workspace = true

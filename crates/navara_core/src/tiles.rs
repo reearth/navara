@@ -64,6 +64,54 @@ impl TilingScheme {
         }
     }
 
+    /// Tile containing `pos` at zoom `z` — the inverse of [`Self::tile_extent`].
+    ///
+    /// Returned `y` is XYZ-style (north-origin), matching `tile_extent`; apply
+    /// the TMS flip only when building URLs (see [`Self::tile_url`]).
+    /// Positions outside the scheme's domain clamp onto the nearest edge tile:
+    /// for WebMercator a latitude beyond the ~±85.05° band lands on the edge
+    /// row, and `lng = +π` lands in the last column.
+    pub fn position_to_tile_xy(&self, pos: LngLat<FloatType, Radians>, z: usize) -> TileXYZ {
+        match self {
+            TilingScheme::WebMercator { .. } => {
+                let n = 1usize << z;
+                let last = (n - 1) as FloatType;
+                // Clamp into the WM band first: beyond it `y` diverges.
+                let max_lat = web_mercator_world_pos_to_lnglat::<FloatType>(0., 0.)
+                    .lat
+                    .val();
+                let clamped = LngLat {
+                    lng: pos.lng,
+                    lat: Rad::new(pos.lat.val().clamp(-max_lat, max_lat)),
+                };
+                let (wx, wy) = web_mercator_lnglat_to_world_pos(clamped);
+                let nf = n as FloatType;
+                TileXYZ {
+                    x: (wx * nf).floor().clamp(0.0, last) as usize,
+                    y: (wy * nf).floor().clamp(0.0, last) as usize,
+                    z,
+                }
+            }
+            TilingScheme::Geographic { .. } => {
+                let n_x = (1usize << (z + 1)) as FloatType;
+                let n_y = (1usize << z) as FloatType;
+                let lng_deg = pos.lng.val().to_degrees();
+                let lat_deg = pos.lat.val().to_degrees();
+                let x = ((lng_deg + 180.0) / 360.0 * n_x)
+                    .floor()
+                    .clamp(0.0, n_x - 1.0);
+                let y = ((90.0 - lat_deg) / 180.0 * n_y)
+                    .floor()
+                    .clamp(0.0, n_y - 1.0);
+                TileXYZ {
+                    x: x as usize,
+                    y: y as usize,
+                    z,
+                }
+            }
+        }
+    }
+
     pub fn is_geographic(&self) -> bool {
         matches!(self, TilingScheme::Geographic { .. })
     }
@@ -570,6 +618,101 @@ mod tests {
             TilingScheme::Geographic { tms: false }.root_tiles().len(),
             2
         );
+    }
+
+    #[test]
+    fn position_to_tile_xy_round_trips_with_tile_extent() {
+        // The extent of the returned tile must contain the queried position,
+        // for both schemes across several zooms and positions.
+        let positions = [
+            (0.0, 0.0),
+            (139.0_f64.to_radians(), 35.0_f64.to_radians()), // Tokyo area
+            (-73.9_f64.to_radians(), 40.7_f64.to_radians()), // New York area
+            (170.0_f64.to_radians(), -45.0_f64.to_radians()), // NZ area
+        ];
+        for scheme in [
+            TilingScheme::WebMercator { tms: false },
+            TilingScheme::Geographic { tms: false },
+        ] {
+            for &(lng, lat) in &positions {
+                for z in [0usize, 1, 5, 10, 14] {
+                    let pos = LngLat {
+                        lng: Rad::new(lng),
+                        lat: Rad::new(lat),
+                    };
+                    let tile = scheme.position_to_tile_xy(pos, z);
+                    assert_eq!(tile.z, z);
+                    let extent = scheme.tile_extent(tile);
+                    assert!(
+                        extent.west.val() <= lng && lng <= extent.east.val(),
+                        "{scheme:?} z={z} lng {lng} outside {extent:?}"
+                    );
+                    assert!(
+                        extent.south.val() <= lat && lat <= extent.north.val(),
+                        "{scheme:?} z={z} lat {lat} outside {extent:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn position_to_tile_xy_geographic_roots() {
+        // z=0 Geographic: west hemisphere -> root (0,0,0), east -> (1,0,0).
+        let scheme = TilingScheme::Geographic { tms: false };
+        let west = scheme.position_to_tile_xy(
+            LngLat {
+                lng: Rad::new(-1.0),
+                lat: Rad::new(0.0),
+            },
+            0,
+        );
+        let east = scheme.position_to_tile_xy(
+            LngLat {
+                lng: Rad::new(1.0),
+                lat: Rad::new(0.0),
+            },
+            0,
+        );
+        assert_eq!(west, TileXYZ { x: 0, y: 0, z: 0 });
+        assert_eq!(east, TileXYZ { x: 1, y: 0, z: 0 });
+    }
+
+    #[test]
+    fn position_to_tile_xy_clamps_domain_edges() {
+        use std::f64::consts::PI;
+        // lng = +π and lat = ±90° clamp onto the last column / edge rows
+        // instead of overflowing the grid.
+        for scheme in [
+            TilingScheme::WebMercator { tms: false },
+            TilingScheme::Geographic { tms: false },
+        ] {
+            let z = 4;
+            let ne = scheme.position_to_tile_xy(
+                LngLat {
+                    lng: Rad::new(PI),
+                    lat: Rad::new(PI / 2.0),
+                },
+                z,
+            );
+            let cols = if scheme.is_geographic() {
+                1usize << (z + 1)
+            } else {
+                1usize << z
+            };
+            assert_eq!(ne.x, cols - 1, "{scheme:?} last column");
+            assert_eq!(ne.y, 0, "{scheme:?} north edge row");
+
+            let sw = scheme.position_to_tile_xy(
+                LngLat {
+                    lng: Rad::new(-PI),
+                    lat: Rad::new(-PI / 2.0),
+                },
+                z,
+            );
+            assert_eq!(sw.x, 0, "{scheme:?} first column");
+            assert_eq!(sw.y, (1usize << z) - 1, "{scheme:?} south edge row");
+        }
     }
 
     #[test]

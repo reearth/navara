@@ -2,12 +2,12 @@ use bevy_ecs::entity::Entity;
 use martini::Martini;
 use navara_buffer_store::{BufferStore, Handle};
 use navara_core::{
-    Aabb, Angle, ElevationDecoder, Ellipsoid, Extent, LLE, LngLat, Meters, Radians, TileRegion,
-    XYZ, lerp,
+    Aabb, Angle, ElevationDecoder, Ellipsoid, Extent, LLE, Meters, Radians, TileRegion, XYZ,
 };
 use navara_geometry::{
     Geometry, ReturnedConstructedTerrainMesh, UpsamplableTerrainGeometry, UpsampledTerrainGeometry,
-    decode_height_from_dem, mercator_y, mercator_y_to_lat, tile_triangles_with_terrain,
+    decode_height_from_dem, mercator_y, mercator_y_to_lat, sample_dem_grid_height,
+    tile_triangles_with_terrain,
 };
 use navara_math::FloatType;
 
@@ -77,7 +77,7 @@ impl TerrainData for RasterDEMData {
             buf.get_f32(&self.heights_handle.unwrap())?
         };
 
-        compute_terrain_height_from_tile(extent, heights, point)
+        sample_dem_grid_height(extent, heights, point)
     }
 
     fn current_max_height(&self) -> Option<FloatType> {
@@ -230,64 +230,16 @@ impl TerrainData for RasterDEMData {
     }
 }
 
-/// Compute a terrain height at specified point.
-/// Height is retrieved by a relative index of longitude and latitude to the specified point.
-fn compute_terrain_height_from_tile(
-    extent: &Extent<FloatType, Radians>,
-    heights: &[f32],
-    point: &LngLat<FloatType, Radians>,
-) -> Option<FloatType> {
-    let length = heights.len();
-    let width = (length as FloatType).sqrt() as usize;
-
-    let east = extent.east;
-    let north = extent.north;
-    let west = extent.west;
-    let south = extent.south;
-
-    let dist_ew = (east - west).val();
-    // The DEM grid is a WebMercator tile image: rows are uniform in Mercator
-    // northing, so the row lookup uses the Mercator fraction, not the latitude
-    // fraction.
-    let merc_south = mercator_y(south.val());
-    let merc_ns = mercator_y(north.val()) - merc_south;
-
-    let dist_wlng = (point.lng - west).val();
-    let merc_slat = mercator_y(point.lat.val()) - merc_south;
-
-    let last = (width - 1) as FloatType;
-    let fx = ((dist_wlng / dist_ew) * last).clamp(0., last);
-    let fy = ((merc_slat / merc_ns) * last).clamp(0., last);
-
-    // Bilinear between the four surrounding samples: rounding to the nearest
-    // holds one texel's height across its whole footprint, which stutters for
-    // anything tracking the surface as it moves. This reads the DEM grid, while
-    // the mesh drawn from it is a martini simplification of the same grid, so
-    // the two diverge by the mesh's error budget where samples were dropped.
-    let x0 = fx.floor() as usize;
-    let y0 = fy.floor() as usize;
-    let x1 = (x0 + 1).min(width - 1);
-    let y1 = (y0 + 1).min(width - 1);
-    let tx = fx - x0 as FloatType;
-    let ty = fy - y0 as FloatType;
-
-    // Both axes are clamped to the grid, so every index is in range.
-    let at = |x: usize, y: usize| heights[(x + y * width).min(length - 1)] as FloatType;
-    let bottom = lerp(at(x0, y0), at(x1, y0), tx);
-    let top = lerp(at(x0, y1), at(x1, y1), tx);
-    Some(lerp(bottom, top, ty))
-}
-
 #[cfg(test)]
 mod test {
     use navara_core::{Angle, LngLat, TileXYZ};
 
     use crate::TerrainTile;
 
-    use super::compute_terrain_height_from_tile;
+    use super::sample_dem_grid_height;
 
     #[test]
-    fn it_should_compute_terrain_height_from_tile() {
+    fn it_should_sample_dem_grid_height() {
         let tile = TerrainTile::new(TileXYZ { x: 3, y: 1, z: 2 }, 0., 0.);
         #[rustfmt::skip]
         let heights = &[
@@ -296,7 +248,7 @@ mod test {
             8., 9., 10., 11.,
             12., 13., 14., 15.,
         ];
-        let result = compute_terrain_height_from_tile(
+        let result = sample_dem_grid_height(
             &tile.extent,
             heights,
             &LngLat {
@@ -325,7 +277,7 @@ mod test {
         // Sweep west to east across the tile: the height must rise smoothly
         // rather than holding one sample's value and stepping to the next.
         let sample = |lng: f64| {
-            compute_terrain_height_from_tile(
+            sample_dem_grid_height(
                 &tile.extent,
                 heights,
                 &LngLat {

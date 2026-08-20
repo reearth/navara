@@ -513,6 +513,19 @@ impl Core {
         self.app.delete_source(source_id.as_str())
     }
 
+    /// Read back a stored source as the plain description object `addSource`
+    /// accepts — including engine defaults and partial-update merges (inline
+    /// GeoJSON `data` is not read back). `undefined` for unknown ids. Used by
+    /// `view.sampleTerrainMostDetailed` to sample against the exact config
+    /// the view renders with.
+    #[wasm_bindgen(js_name = getSourceDescription)]
+    pub fn get_source_description(&self, source_id: String) -> JsValue {
+        let Some(source) = self.app.get_source_description(&source_id) else {
+            return JsValue::UNDEFINED;
+        };
+        source_description_to_js(&source)
+    }
+
     #[wasm_bindgen(js_name = getLayerIndex)]
     pub fn get_layer_index(&self, layer_id: &str) -> Option<usize> {
         self.app.get_layer_index(layer_id)

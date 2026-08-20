@@ -6,6 +6,7 @@ mod declutter;
 mod ellipsoid;
 mod intersection;
 mod rte;
+mod terrain;
 mod transform;
 
 pub use css_font_family::*;
@@ -13,6 +14,7 @@ pub use declutter::*;
 pub use ellipsoid::*;
 pub use intersection::*;
 pub use rte::*;
+pub use terrain::*;
 pub use transform::*;
 
 #[wasm_bindgen]

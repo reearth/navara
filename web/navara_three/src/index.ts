@@ -125,6 +125,12 @@ import { TexturizedSceneByTileCoordinates, type Scenes } from "./scene";
 import { ShadowMapViewers } from "./ShadowMapViewers";
 import { Source } from "./source";
 import { RendererStats } from "./stats";
+import {
+  sampleTerrainMostDetailed,
+  type SampleTerrainOptions,
+  type SampledTerrainPosition,
+  type TerrainSampleSource,
+} from "./terrain/sampleTerrainMostDetailed";
 import type { TextureOptions } from "./textures";
 import { TileTextureCompositor } from "./tileTexture";
 import {
@@ -140,6 +146,7 @@ import {
   type WorkerPoolPromises,
   type RenderFlag,
   type TileMapByHandle,
+  type SourceRef,
 } from "./type";
 import type { CommonUniforms } from "./uniforms";
 import { isWorker, convertScreenPos, type TextureSlot } from "./utils";
@@ -2553,6 +2560,45 @@ export default class ThreeView<
   sampleTerrainHeight(pos: LatLngHeight): number | undefined {
     const lle = new LLE(pos.lat, pos.lng, 0);
     return this._core?.sampleTerrainHeight(lle);
+  }
+
+  /**
+   * Samples terrain heights at the most detailed zoom level the terrain
+   * source provides, fetching the needed tiles over the network — unlike
+   * {@link sampleTerrainHeight}, which reads only tiles already resident for
+   * rendering and returns coarse-LOD heights (or nothing) when the camera is
+   * far away. Use this to place objects on the ground before the camera has
+   * streamed the area in.
+   *
+   * `source` is a registered `quantized-mesh` / `raster-dem` source: the
+   * {@link Source} handle returned by `addSource`, or its id. The stored
+   * config (including engine defaults and partial-update merges) is what gets
+   * sampled. To sample a source without registering it, use the standalone
+   * {@link sampleTerrainMostDetailed} export with a source description.
+   *
+   * @param source - A registered terrain source (handle or id)
+   * @param positions - Geodetic positions (lat/lng in radians)
+   * @param options - Optional abort signal and fixed-level sampling
+   * @returns One result per input position, in the same order
+   */
+  async sampleTerrainMostDetailed(
+    source: SourceRef,
+    positions: LatLng[],
+    options?: SampleTerrainOptions,
+  ): Promise<SampledTerrainPosition[]> {
+    invariant(this._core);
+    const sourceId = source instanceof Source ? source.id : source;
+    const description = this._core.getSourceDescription(sourceId) as
+      TerrainSampleSource | undefined;
+    if (
+      description?.type !== "quantized-mesh" &&
+      description?.type !== "raster-dem"
+    ) {
+      throw new Error(
+        `sampleTerrainMostDetailed: source "${sourceId}" is not a registered quantized-mesh or raster-dem source`,
+      );
+    }
+    return sampleTerrainMostDetailed(description, positions, options);
   }
 
   /**

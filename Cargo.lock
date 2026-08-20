@@ -2737,10 +2737,12 @@ version = "0.1.0"
 dependencies = [
  "navara_camera",
  "navara_core",
+ "navara_geometry",
  "navara_math",
  "navara_wasm_types",
  "navara_wasm_utils",
  "navara_window",
+ "quantized-mesh",
  "serde",
  "serde-wasm-bindgen",
  "url",

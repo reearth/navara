@@ -634,6 +634,8 @@ view.cameraFreeLook(false);
 
 指定した測地位置での地形の高さを同期的に取得します。地形データがまだ読み込まれていない場合は `undefined` を返します。
 
+このメソッドはレンダリング用に常駐しているタイルしか読まないため、カメラが遠くにある間は粗い LOD タイルの高さ (真の地表高から数十メートルずれうる値) を返します。カメラの状態に関係なく正確な高さが必要な場合（例: オブジェクトの地表への設置）は、代わりに [`sampleTerrainMostDetailed()`](#sampleterrainmostdetailed) を使ってください。
+
 **Syntax:**
 
 ```tsx
@@ -668,6 +670,59 @@ if (height !== undefined) {
   console.log(`地形の高さ: ${height}m`);
 } else {
   console.log("地形データがまだ読み込まれていません");
+}
+```
+
+### sampleTerrainMostDetailed()
+
+地形ソースが提供する最も詳細なズームレベルで地形の高さを非同期にサンプリングします。必要なタイルはネットワークから取得されます。`sampleTerrainHeight()` はレンダリング用に常駐しているタイルしか読まないため、カメラが遠くにあると粗い高さ（または `undefined`）を返しますが、この API はカメラのストリーミング状態に関係なく正確な地表の高さを解決します。その場所へ移動する前にオブジェクトを地面に設置する用途に使ってください。
+
+位置はタイルごとにグループ化され、同じタイルは一度だけ取得されます。サンプリングはソースの `maxZoom` から始まり、404 の場合はデータが見つかるまで親タイルへフォールバックするので、実際のカバレッジが設定した `maxZoom` より浅いソースでも解決できます。`401`/`403` はトークンの問題が暗黙的に粗い高さとして返さないよう呼び出し全体を reject し、サーバーエラーはリトライ後、該当位置の `height` を `undefined` にします。
+
+**Syntax:**
+
+```tsx
+sampleTerrainMostDetailed(
+  source: SourceRef,
+  positions: LatLng[],
+  options?: SampleTerrainOptions,
+): Promise<SampledTerrainPosition[]>
+```
+
+**Parameters:**
+
+- `source`: 登録済みの `quantized-mesh` / `raster-dem` ソース — `addSource` が返す `Source` ハンドル、またはその id
+- `positions`: サンプリングする測地位置の配列
+  - `lat`: 緯度（ラジアン）
+  - `lng`: 経度（ラジアン）
+- `options.level`: ソースの `maxZoom` から探索する代わりに、この固定ズームレベルでサンプリングします。固定レベルでは親タイルへのフォールバックは行われません。
+- `options.signal`: 取得中のタイルフェッチをキャンセルする `AbortSignal`。
+
+**Returns:**
+
+入力位置ごとに 1 件、同じ順序で結果を返す Promise。各結果は `lat`/`lng` をそのまま返し、`height`（メートル。タイルを取得・デコードできなかった場合は `undefined`）と `level`（実際にサンプリングしたズームレベル）を持ちます。
+
+**Example:**
+
+```tsx
+const terrain = view.addSource({
+  type: "quantized-mesh",
+  url: "https://example.com/{z}/{x}/{y}.terrain",
+  maxZoom: 15,
+});
+view.addLayer({ type: "terrain", source: terrain });
+
+const lat = degreeToRadian(35.6812);
+const lng = degreeToRadian(139.7671);
+
+const [ground] = await view.sampleTerrainMostDetailed(terrain, [{ lat, lng }]);
+if (ground.height !== undefined) {
+  // カメラが遠くにあっても、モデルを地表にぴったり設置できる
+  const surface = geodeticToVector3({ lat, lng, height: ground.height });
+  view.addMesh({
+    gltfModel: { url: "https://example.com/model.glb" },
+    matrixWorld: northUpEastToFixedFrame(surface),
+  });
 }
 ```
 

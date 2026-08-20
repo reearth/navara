@@ -1,3 +1,8 @@
+use navara_core::{Extent, LngLat, Radians, lerp};
+use navara_math::FloatType;
+
+use crate::tile::mercator_y;
+
 /// Height of a triangle-mesh surface at a point in a tile's normalized (u, v)
 /// space, interpolated across the triangle containing it. Sampling the nearest
 /// vertex instead is piecewise constant, so anything following the surface as
@@ -87,6 +92,59 @@ pub fn sample_mesh_height(
 /// How far outside a triangle, relative to its area, a point may sit and still
 /// be treated as inside it.
 const EDGE_TOLERANCE: f32 = 1e-5;
+
+/// Height of a raster-DEM tile at a point, bilinear between the four
+/// surrounding grid samples. `heights` is the decoded square grid with row 0
+/// at the tile's south edge. The grid is a WebMercator tile image: rows are
+/// uniform in Mercator northing, so the row lookup uses the Mercator fraction,
+/// not the latitude fraction. Rounding to the nearest sample instead holds one
+/// texel's height across its whole footprint, which stutters for anything
+/// tracking the surface as it moves. This reads the DEM grid, while the mesh
+/// drawn from it is a martini simplification of the same grid, so the two
+/// diverge by the mesh's error budget where samples were dropped.
+pub fn sample_dem_grid_height(
+    extent: &Extent<FloatType, Radians>,
+    heights: &[f32],
+    point: &LngLat<FloatType, Radians>,
+) -> Option<FloatType> {
+    let length = heights.len();
+    let width = (length as FloatType).sqrt() as usize;
+    if width == 0 {
+        return None;
+    }
+
+    let east = extent.east;
+    let north = extent.north;
+    let west = extent.west;
+    let south = extent.south;
+
+    let dist_ew = (east - west).val();
+    let merc_south = mercator_y(south.val());
+    let merc_ns = mercator_y(north.val()) - merc_south;
+    if dist_ew == 0.0 || merc_ns == 0.0 {
+        return None;
+    }
+
+    let dist_wlng = (point.lng - west).val();
+    let merc_slat = mercator_y(point.lat.val()) - merc_south;
+
+    let last = (width - 1) as FloatType;
+    let fx = ((dist_wlng / dist_ew) * last).clamp(0., last);
+    let fy = ((merc_slat / merc_ns) * last).clamp(0., last);
+
+    let x0 = fx.floor() as usize;
+    let y0 = fy.floor() as usize;
+    let x1 = (x0 + 1).min(width - 1);
+    let y1 = (y0 + 1).min(width - 1);
+    let tx = fx - x0 as FloatType;
+    let ty = fy - y0 as FloatType;
+
+    // Both axes are clamped to the grid, so every index is in range.
+    let at = |x: usize, y: usize| heights[(x + y * width).min(length - 1)] as FloatType;
+    let bottom = lerp(at(x0, y0), at(x1, y0), tx);
+    let top = lerp(at(x0, y1), at(x1, y1), tx);
+    Some(lerp(bottom, top, ty))
+}
 
 #[cfg(test)]
 mod test {

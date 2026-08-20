@@ -22,7 +22,7 @@ use navara_wasm_types::{
     ModelMaterial, PointMaterial, PolygonMaterial, PolylineMaterial, RasterMaterial,
     TerrainMaterial, TextMaterial,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
 use crate::SourceData;
@@ -47,7 +47,7 @@ macro_rules! old_source {
 }
 
 #[wasm_bindgen]
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GeoJsonSourceDescription {
     #[wasm_bindgen(getter_with_clone)]
     pub r#type: Option<String>,
@@ -60,14 +60,14 @@ pub struct GeoJsonSourceDescription {
     /// Inline GeoJSON document (`FeatureCollection` / `Feature` / `Geometry`).
     /// Used when `url` is not given.
     #[wasm_bindgen(getter_with_clone)]
-    #[serde(skip_deserializing)]
+    #[serde(skip)]
     pub data: JsValue,
     /// Whether to build a tiled spatial index (GeoJSON-VT) for large datasets.
     pub tiled: Option<bool>,
 }
 
 #[wasm_bindgen]
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VectorTileSourceDescription {
     #[wasm_bindgen(getter_with_clone)]
     pub r#type: Option<String>,
@@ -95,7 +95,7 @@ pub struct VectorTileSourceDescription {
 }
 
 #[wasm_bindgen]
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RasterTileSourceDescription {
     #[wasm_bindgen(getter_with_clone)]
     pub r#type: Option<String>,
@@ -114,7 +114,7 @@ pub struct RasterTileSourceDescription {
 }
 
 #[wasm_bindgen]
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RasterDemSourceDescription {
     #[wasm_bindgen(getter_with_clone)]
     pub r#type: Option<String>,
@@ -140,7 +140,7 @@ pub struct RasterDemSourceDescription {
 }
 
 #[wasm_bindgen]
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QuantizedMeshSourceDescription {
     #[wasm_bindgen(getter_with_clone)]
     pub r#type: Option<String>,
@@ -168,7 +168,7 @@ pub struct QuantizedMeshSourceDescription {
 }
 
 #[wasm_bindgen]
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Tiles3dSourceDescription {
     #[wasm_bindgen(getter_with_clone)]
     pub r#type: Option<String>,
@@ -857,6 +857,138 @@ pub fn build_sourceless_layer(
 /// Deserialize a JS value into a layer description, returning `None` on error.
 fn from_js<T: serde::de::DeserializeOwned>(value: JsValue) -> Option<T> {
     serde_wasm_bindgen::from_value(value).ok()
+}
+
+// Readback conversions — the inverse of [`SourceDescription::to`]: each
+// stored [`Source`] variant maps back onto the same description struct
+// `addSource` deserializes, so the readback shape can never drift from the
+// input shape. The stored config is authoritative: it includes the engine
+// defaults and any partial-update merges.
+
+impl From<&GeoJsonSource> for GeoJsonSourceDescription {
+    fn from(s: &GeoJsonSource) -> Self {
+        Self {
+            r#type: Some("geojson".to_string()),
+            crs: s.crs.as_ref().map(|c| c.as_str().to_string()),
+            // Inline GeoJSON is not read back; only a URL-backed source
+            // reports its `url`.
+            url: match &s.data {
+                Some(GeoJsonData::Url(url)) => Some(url.clone()),
+                _ => None,
+            },
+            data: JsValue::UNDEFINED,
+            tiled: Some(s.tiled),
+        }
+    }
+}
+
+impl From<&VectorTileSource> for VectorTileSourceDescription {
+    fn from(s: &VectorTileSource) -> Self {
+        Self {
+            r#type: Some("vector-tile".to_string()),
+            url: Some(s.url.clone()),
+            crs: s.crs.as_ref().map(|c| c.as_str().to_string()),
+            min_zoom: Some(s.min_zoom),
+            max_zoom: Some(s.max_zoom),
+            overscaled_max_zoom: Some(s.overscaled_max_zoom),
+            max_sse: Some(s.max_sse),
+            dynamic_sse_scale: s.dynamic_sse_scale,
+        }
+    }
+}
+
+impl From<&RasterTileSource> for RasterTileSourceDescription {
+    fn from(s: &RasterTileSource) -> Self {
+        Self {
+            r#type: Some("raster-tile".to_string()),
+            url: Some(s.url.clone()),
+            tms: Some(s.tms),
+            min_zoom: Some(s.min_zoom),
+            max_zoom: Some(s.max_zoom),
+            overscaled_max_zoom: Some(s.overscaled_max_zoom),
+        }
+    }
+}
+
+impl From<&RasterDemSource> for RasterDemSourceDescription {
+    fn from(s: &RasterDemSource) -> Self {
+        Self {
+            r#type: Some("raster-dem".to_string()),
+            url: Some(s.url.clone()),
+            tms: Some(s.tms),
+            elevation_decoder: Some(s.elevation_decoder.into()),
+            tile_size: Some(s.tile_size),
+            min_zoom: Some(s.min_zoom),
+            max_zoom: Some(s.max_zoom),
+            overscaled_max_zoom: Some(s.overscaled_max_zoom),
+        }
+    }
+}
+
+impl From<&QuantizedMeshSource> for QuantizedMeshSourceDescription {
+    fn from(s: &QuantizedMeshSource) -> Self {
+        Self {
+            r#type: Some("quantized-mesh".to_string()),
+            url: Some(s.url.clone()),
+            tms: Some(s.tiling_scheme.tms()),
+            geographic: Some(s.tiling_scheme.is_geographic()),
+            request_vertex_normals: Some(s.request_vertex_normals),
+            request_water_mask: Some(s.request_water_mask),
+            token: s.token.clone(),
+            min_zoom: Some(s.min_zoom),
+            max_zoom: Some(s.max_zoom),
+            overscaled_max_zoom: Some(s.overscaled_max_zoom),
+        }
+    }
+}
+
+// `3d-tiles` / `b3dm` / `pnts` share one description shape; each variant's
+// From carries its own type tag.
+impl From<&Tiles3dSource> for Tiles3dSourceDescription {
+    fn from(s: &Tiles3dSource) -> Self {
+        Self {
+            r#type: Some("3d-tiles".to_string()),
+            url: Some(s.url.clone()),
+            crs: s.crs.as_ref().map(|c| c.as_str().to_string()),
+        }
+    }
+}
+
+impl From<&B3dmSource> for Tiles3dSourceDescription {
+    fn from(s: &B3dmSource) -> Self {
+        Self {
+            r#type: Some("b3dm".to_string()),
+            url: Some(s.url.clone()),
+            crs: s.crs.as_ref().map(|c| c.as_str().to_string()),
+        }
+    }
+}
+
+impl From<&PntsSource> for Tiles3dSourceDescription {
+    fn from(s: &PntsSource) -> Self {
+        Self {
+            r#type: Some("pnts".to_string()),
+            url: Some(s.url.clone()),
+            crs: s.crs.as_ref().map(|c| c.as_str().to_string()),
+        }
+    }
+}
+
+/// A stored source serialized back into the plain description object
+/// `addSource` accepts. `undefined` when serialization fails.
+pub fn source_description_to_js(source: &Source) -> JsValue {
+    use serde_wasm_bindgen::to_value;
+    match source {
+        Source::GeoJson(s) => to_value(&GeoJsonSourceDescription::from(s)),
+        Source::VectorTile(s) => to_value(&VectorTileSourceDescription::from(s)),
+        Source::RasterTile(s) => to_value(&RasterTileSourceDescription::from(s)),
+        Source::RasterDem(s) => to_value(&RasterDemSourceDescription::from(s)),
+        Source::QuantizedMesh(s) => to_value(&QuantizedMeshSourceDescription::from(s)),
+        Source::Tiles3d(s) => to_value(&Tiles3dSourceDescription::from(s)),
+        Source::B3dm(s) => to_value(&Tiles3dSourceDescription::from(s)),
+        Source::Pnts(s) => to_value(&Tiles3dSourceDescription::from(s)),
+    }
+    .unwrap_or(JsValue::UNDEFINED)
 }
 
 #[cfg(test)]

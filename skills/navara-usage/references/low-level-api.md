@@ -38,7 +38,10 @@ const ecef = view.pickTerrainPosition(x, y);                  // terrain only
 const ecef2 = view.pickDepthPosition(x, y);                   // anything in the depth buffer
 const h = view.sampleTerrainHeight({ lat, lng, height: 0 });  // RADIANS in; height required by the type, ignored at runtime
 const unobserve = view.observeTerrainHeightAt({ lat, lng }, (height) => { ... });
+const [g] = await view.sampleTerrainMostDetailed(terrainSource, [{ lat, lng }]); // fetches max-LOD tiles; g.height / g.level
 ```
+
+**Which terrain-height API:** `sampleTerrainHeight` reads only tiles already resident for rendering — from a distant camera it returns a coarse-LOD height (e.g. ~77 m off at z≈6) or `undefined`, and `observeTerrainHeightAt` fires only while tiles are (re)meshing (never on a static camera). For placing objects on the ground, use `await view.sampleTerrainMostDetailed(source, positions)` where `source` is the registered terrain source's handle or id (always explicit — there is no implicit "the view's terrain source"): it fetches the source's most detailed tiles over the network, independent of the camera. A standalone `sampleTerrainMostDetailed(sourceDescription, positions)` export works without a view. `height` is `undefined` on fetch failure; 401/403 rejects (bad token).
 
 Mouse events (`click`, `mousemove`, …) deliver `MapMouseEvent` with `.clientX/Y` and `.map` (ECEF coords). The `idle` event fires after `idleThreshold` ms without tile/data activity.
 

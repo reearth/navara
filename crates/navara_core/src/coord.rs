@@ -212,6 +212,15 @@ impl CRS {
         }
     }
 
+    /// Inverse of [`Self::from_str`].
+    pub fn as_str(&self) -> &str {
+        match self {
+            CRS::Geographic => "EPSG:4326",
+            CRS::Geocentric => "EPSG:4978",
+            CRS::ESPG { code } => code,
+        }
+    }
+
     pub fn to_vec3(&self, ellipsoid: Ellipsoid<f64>, coords: Vec3, height: f32) -> Vec3 {
         match self {
             CRS::Geographic => {

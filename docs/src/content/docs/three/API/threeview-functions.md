@@ -710,6 +710,8 @@ view.cameraFreeLook(false);
 
 Synchronously gets the terrain height at a specified geodetic position. Returns `undefined` if terrain data has not yet been loaded.
 
+This reads only tiles already resident for rendering, so while the camera is far away it returns the height of a coarse LOD tile which can be tens of meters off the true ground height. When you need an accurate height regardless of the camera (for example to place an object on the ground), use [`sampleTerrainMostDetailed()`](#sampleterrainmostdetailed) instead.
+
 **Syntax:**
 
 ```tsx
@@ -744,6 +746,59 @@ if (height !== undefined) {
   console.log(`Terrain height: ${height}m`);
 } else {
   console.log("Terrain data has not been loaded yet");
+}
+```
+
+### sampleTerrainMostDetailed()
+
+Asynchronously samples terrain heights at the most detailed zoom level the terrain source provides, fetching the needed tiles over the network. Unlike `sampleTerrainHeight()`, which reads only tiles already resident for rendering — and therefore returns coarse heights (or `undefined`) while the camera is far away — this resolves accurate ground heights regardless of what the camera has streamed in. Use it to place objects on the ground before flying there.
+
+Positions are grouped by tile and each unique tile is fetched once. Sampling starts at the source's `maxZoom` and falls back to parent tiles on 404 until data is found, so sources whose real coverage is shallower than the configured `maxZoom` still resolve. A `401`/`403` response rejects the whole call (a token problem should not silently degrade into coarse heights), while server errors are retried and then yield `height: undefined` for the affected positions.
+
+**Syntax:**
+
+```tsx
+sampleTerrainMostDetailed(
+  source: SourceRef,
+  positions: LatLng[],
+  options?: SampleTerrainOptions,
+): Promise<SampledTerrainPosition[]>
+```
+
+**Parameters:**
+
+- `source`: A registered `quantized-mesh` / `raster-dem` source — the `Source` handle returned by `addSource`, or its id
+- `positions`: Geodetic positions to sample
+  - `lat`: Latitude (radians)
+  - `lng`: Longitude (radians)
+- `options.level`: Sample at this fixed zoom level instead of probing down from the source's `maxZoom`. With a fixed level there is no fallback to parent tiles.
+- `options.signal`: `AbortSignal` to cancel in-flight tile fetches.
+
+**Returns:**
+
+A promise resolving to one result per input position, in the same order. Each result echoes `lat`/`lng` and carries `height` (meters, or `undefined` when no tile could be fetched or decoded) and `level` (the zoom level actually sampled).
+
+**Example:**
+
+```tsx
+const terrain = view.addSource({
+  type: "quantized-mesh",
+  url: "https://example.com/{z}/{x}/{y}.terrain",
+  maxZoom: 15,
+});
+view.addLayer({ type: "terrain", source: terrain });
+
+const lat = degreeToRadian(35.6812);
+const lng = degreeToRadian(139.7671);
+
+const [ground] = await view.sampleTerrainMostDetailed(terrain, [{ lat, lng }]);
+if (ground.height !== undefined) {
+  // Place a model exactly on the terrain surface, even from far away
+  const surface = geodeticToVector3({ lat, lng, height: ground.height });
+  view.addMesh({
+    gltfModel: { url: "https://example.com/model.glb" },
+    matrixWorld: northUpEastToFixedFrame(surface),
+  });
 }
 ```
 
