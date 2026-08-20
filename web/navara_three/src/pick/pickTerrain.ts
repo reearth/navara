@@ -123,12 +123,22 @@ export class TerrainPicker {
       1.0 / PackFactors[3],
     ];
 
-    // Calculate dot product
+    // readRenderTargetPixels returns bytes 0..255; a GLSL texel channel is byte / 255.
     return (
-      (rgba[0] / 256.0) * UnpackFactors4[0] +
-      (rgba[1] / 256.0) * UnpackFactors4[1] +
-      (rgba[2] / 256.0) * UnpackFactors4[2] +
-      (rgba[3] / 256.0) * UnpackFactors4[3]
+      (rgba[0] / 255.0) * UnpackFactors4[0] +
+      (rgba[1] / 255.0) * UnpackFactors4[1] +
+      (rgba[2] / 255.0) * UnpackFactors4[2] +
+      (rgba[3] / 255.0) * UnpackFactors4[3]
+    );
+  }
+
+  // Clamped device-pixel center for a CSS-pixel screen coordinate. Sampling
+  // and ray reconstruction must both use this exact point: the depth copy
+  // target is linearly filtered, and any off-center coordinate would blend
+  // neighboring packed-RGBA texels into meaningless depth values.
+  private _texelCenter(cssCoord: number, size: number, pixelRatio: number) {
+    return (
+      Math.max(0, Math.min(size - 1, Math.floor(cssCoord * pixelRatio))) + 0.5
     );
   }
 
@@ -147,18 +157,11 @@ export class TerrainPicker {
     const height = renderer.getContext().drawingBufferHeight;
     const pixelRatio = renderer.getPixelRatio();
 
-    // Clamp coordinates to screen bounds
-    const clampedX = Math.max(
-      0,
-      Math.min(width - 1, Math.floor(x * pixelRatio)),
-    );
-    const clampedY = Math.max(
-      0,
-      Math.min(height - 1, Math.floor(y * pixelRatio)),
-    );
+    const centerX = this._texelCenter(x, width, pixelRatio);
+    const centerY = this._texelCenter(y, height, pixelRatio);
 
     // Update the depth pick pass with current parameters
-    const samplePos = new Vector2(clampedX / width, 1.0 - clampedY / height); // Flip Y
+    const samplePos = new Vector2(centerX / width, 1.0 - centerY / height); // Flip Y
     this.depthPickPass.update(depthTexture, samplePos);
 
     // Render and get pixels
@@ -186,10 +189,11 @@ export class TerrainPicker {
     const height = renderer.getContext().drawingBufferHeight;
     const pixelRatio = renderer.getPixelRatio();
 
-    // Convert screen coordinates to NDC [-1,1]
+    // Convert the sampled texel's center to NDC [-1,1], so the reconstructed
+    // ray goes through the exact pixel whose depth was read.
     const screenCoords = new Vector2(
-      ((x * pixelRatio) / width) * 2.0 - 1.0,
-      -(((y * pixelRatio) / height) * 2.0 - 1.0),
+      (this._texelCenter(x, width, pixelRatio) / width) * 2.0 - 1.0,
+      -((this._texelCenter(y, height, pixelRatio) / height) * 2.0 - 1.0),
     );
 
     let clipCoords: Vector4;
