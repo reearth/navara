@@ -12,9 +12,7 @@ import type { QuantizedMeshSource, RasterDemSource } from "../type";
 
 /**
  * A terrain source `sampleTerrainMostDetailed` can sample: the same
- * `quantized-mesh` / `raster-dem` descriptions `addSource` accepts. The
- * source does not need to be added to a view — sampling fetches tiles
- * itself, independent of rendering.
+ * `quantized-mesh` / `raster-dem` descriptions `addSource` accepts.
  */
 export type TerrainSampleSource = QuantizedMeshSource | RasterDemSource;
 
@@ -101,12 +99,11 @@ type SourceConfig = {
  * network errors are retried, then yield `height: undefined` for the
  * affected positions.
  *
- * Like the other standalone `@navaramap/three-api` functions, this requires
- * the API WASM module to be initialized: `ThreeView.init()` does it for you;
- * callers without a view must `await initNavaraApi()` first.
+ * Requires the API WASM module to be initialized (`ThreeView.init()` does
+ * this).
  *
  * @param source - A `quantized-mesh` or `raster-dem` source description (the
- *   same object `addSource` accepts; it does not need to be added to a view)
+ *   same shape `addSource` accepts)
  * @param positions - Geodetic positions (lat/lng in radians)
  * @param options - Optional abort signal and fixed-level sampling
  * @returns One result per input position, in the same order (the input

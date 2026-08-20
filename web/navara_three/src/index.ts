@@ -175,6 +175,10 @@ export { CameraDirection } from "@navaramap/engine";
 export { CascadedShadowMaps, CSMHelper } from "@navaramap/three-csm";
 
 export * from "./type";
+export type {
+  SampleTerrainOptions,
+  SampledTerrainPosition,
+} from "./terrain/sampleTerrainMostDetailed";
 export * from "./constants";
 export * from "./light";
 export * from "./mesh";
@@ -2573,8 +2577,7 @@ export default class ThreeView<
    * `source` is a registered `quantized-mesh` / `raster-dem` source: the
    * {@link Source} handle returned by `addSource`, or its id. The stored
    * config (including engine defaults and partial-update merges) is what gets
-   * sampled. To sample a source without registering it, use the standalone
-   * {@link sampleTerrainMostDetailed} export with a source description.
+   * sampled.
    *
    * @param source - A registered terrain source (handle or id)
    * @param positions - Geodetic positions (lat/lng in radians)
