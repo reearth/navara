@@ -1123,7 +1123,7 @@ view.setSseMultiplierRange(1, 1);
 ```
 
 :::tip[関連ドキュメント]
-デバイス依存のデフォルトは [`memoryBudget` オプション](./threeview-class#memorybudget)（`sseMultiplierMin` / `sseMultiplierMax`）で設定できます。
+デバイス依存のデフォルトは [`memoryBudget` オプション](../threeview-class#memorybudget)（`sseMultiplierMin` / `sseMultiplierMax`）で設定できます。
 :::
 
 ### memoryStats()

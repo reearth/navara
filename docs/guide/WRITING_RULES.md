@@ -33,3 +33,13 @@ Spaces in directory names become hyphens (e.g., `Resource Layer/` → `resource-
 - Link to a page: `[Page name](../../../link/to/page)`, not `/link/to/page`.
 - Link to a asset: `![Alt](@assets/image.png)`
 - Import a component: `import { Button } from "@components/Button"`
+
+### Never use `./` for a sibling page
+
+Every page is served at a directory URL with a trailing slash (`three_default_descs/Mesh Desc/about.md` → `/three_default_descs/mesh-desc/about/`), and Astro emits markdown link hrefs verbatim. The browser therefore resolves `./sibling` *inside* the current page's own URL and 404s:
+
+- `[ArclineMeshDesc](../arcline-mesh-desc)` — resolves to `/three_default_descs/mesh-desc/arcline-mesh-desc`
+- `[ArclineMeshDesc](./arcline-mesh-desc)` — resolves to `/three_default_descs/mesh-desc/about/arcline-mesh-desc` (404)
+
+Use `../` to reach a sibling page, `../../` to reach a sibling directory, and so on. This applies to every page, not just `about.md` index pages.
+

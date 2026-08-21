@@ -15,4 +15,4 @@ Effect descriptors are split across two packages. This page lists only the few t
 
 | Descriptor Type | Description |
 |------------|------|
-| [SkyEnvMapEffectDesc](./sky-env-map-effect-desc) | A pass that renders the sky environment map |
+| [SkyEnvMapEffectDesc](../sky-env-map-effect-desc) | A pass that renders the sky environment map |

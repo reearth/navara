@@ -1199,7 +1199,7 @@ view.setSseMultiplierRange(1, 1);
 ```
 
 :::tip[Related Documentation]
-The device-dependent defaults can be set via the [`memoryBudget` option](./threeview-class#memorybudget) (`sseMultiplierMin` / `sseMultiplierMax`).
+The device-dependent defaults can be set via the [`memoryBudget` option](../threeview-class#memorybudget) (`sseMultiplierMin` / `sseMultiplierMax`).
 :::
 
 ### memoryStats()

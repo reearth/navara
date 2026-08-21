@@ -7,7 +7,7 @@ sidebar:
 
 `MeshDesc` is a descriptor type for adding 3D mesh objects to the scene. It can display various 3D objects.
 
-All mesh descriptors inherit from [`MeshDesc`](./mesh-desc-base), which provides common properties such as `position`, `rotation`, `scale`, `matrix`, `matrixWorld`, and `pickable`. See the [MeshDesc](./mesh-desc-base) page for details on transform composition, picking, and coordinate transformation.
+All mesh descriptors inherit from [`MeshDesc`](../mesh-desc-base), which provides common properties such as `position`, `rotation`, `scale`, `matrix`, `matrixWorld`, and `pickable`. See the [MeshDesc](../mesh-desc-base) page for details on transform composition, picking, and coordinate transformation.
 
 ## Available Mesh Descriptor Types
 
@@ -15,28 +15,28 @@ The following MeshDescriptor types are available in navara_three:
 
 | Descriptor Type | Description |
 |------------|------|
-| [ArclineMeshDesc](./arcline-mesh-desc) | A Descriptor that draws arc-shaped lines connecting two points |
-| [BoxMeshDesc](./box-mesh-desc) | A Descriptor that draws box geometry |
-| [InstancedBoxMeshDesc](./instanced-box-mesh-desc) | A GPU-instanced Descriptor that renders multiple boxes in a single draw call |
-| [CylinderMeshDesc](./cylinder-mesh-desc) | A Descriptor that draws cylinder geometry |
-| [InstancedCylinderMeshDesc](./instanced-cylinder-mesh-desc) | A GPU-instanced Descriptor that renders multiple cylinders in a single draw call |
-| [GLTFModelDesc](./gltf-model-desc) | A Descriptor that loads and displays GLTF/GLB format 3D models |
-| [InstancedGltfModelMeshDesc](./instanced-gltf-model-mesh-desc) | A GPU-instanced Descriptor that renders multiple copies of a GLTF/GLB model |
-| [GlowGlobeMeshDesc](./glow-globe-mesh-desc) | A Descriptor that displays a Fresnel-effect glow around the globe |
-| [PlaneMeshDesc](./plane-mesh-desc) | A Descriptor that draws plane geometry |
-| [InstancedPlaneMeshDesc](./instanced-plane-mesh-desc) | A GPU-instanced Descriptor that renders multiple planes in a single draw call |
-| [RainMeshDesc](./rain-mesh-desc) | A Descriptor that displays rain particle effects |
-| [SkyBoxMeshDesc](./sky-box-mesh-desc) | A Descriptor that draws a simple skybox |
-| [SkyMeshDesc](./sky-mesh-desc) | A Descriptor that draws the sky, sun, and moon using atmospheric scattering |
-| [SmoothLineMeshDesc](./smooth-line-mesh-desc) | A Descriptor that draws smooth lines using Catmull-Rom curves |
-| [SnowMeshDesc](./snow-mesh-desc) | A Descriptor that displays snow particle effects |
-| [SphereMeshDesc](./sphere-mesh-desc) | A Descriptor that draws sphere geometry |
-| [SplatMeshDesc](./splat-mesh-desc) | A Descriptor that renders 3D Gaussian Splat assets via SparkJS |
-| [InstancedSphereMeshDesc](./instanced-sphere-mesh-desc) | A GPU-instanced Descriptor that renders multiple spheres in a single draw call |
-| [StarsDesc](./stars-desc) | A Descriptor that draws a starry sky |
-| [TubeMeshDesc](./tube-mesh-desc) | A Descriptor that draws tube geometry |
-| [AxesHelperDesc](./axes-helper-desc) | A debug helper Descriptor that visualizes the 3 axes |
-| [ArrowHelperDesc](./arrow-helper-desc) | A debug helper Descriptor that visualizes vector directions |
+| [ArclineMeshDesc](../arcline-mesh-desc) | A Descriptor that draws arc-shaped lines connecting two points |
+| [BoxMeshDesc](../box-mesh-desc) | A Descriptor that draws box geometry |
+| [InstancedBoxMeshDesc](../instanced-box-mesh-desc) | A GPU-instanced Descriptor that renders multiple boxes in a single draw call |
+| [CylinderMeshDesc](../cylinder-mesh-desc) | A Descriptor that draws cylinder geometry |
+| [InstancedCylinderMeshDesc](../instanced-cylinder-mesh-desc) | A GPU-instanced Descriptor that renders multiple cylinders in a single draw call |
+| [GLTFModelDesc](../gltf-model-desc) | A Descriptor that loads and displays GLTF/GLB format 3D models |
+| [InstancedGltfModelMeshDesc](../instanced-gltf-model-mesh-desc) | A GPU-instanced Descriptor that renders multiple copies of a GLTF/GLB model |
+| [GlowGlobeMeshDesc](../glow-globe-mesh-desc) | A Descriptor that displays a Fresnel-effect glow around the globe |
+| [PlaneMeshDesc](../plane-mesh-desc) | A Descriptor that draws plane geometry |
+| [InstancedPlaneMeshDesc](../instanced-plane-mesh-desc) | A GPU-instanced Descriptor that renders multiple planes in a single draw call |
+| [RainMeshDesc](../rain-mesh-desc) | A Descriptor that displays rain particle effects |
+| [SkyBoxMeshDesc](../sky-box-mesh-desc) | A Descriptor that draws a simple skybox |
+| [SkyMeshDesc](../sky-mesh-desc) | A Descriptor that draws the sky, sun, and moon using atmospheric scattering |
+| [SmoothLineMeshDesc](../smooth-line-mesh-desc) | A Descriptor that draws smooth lines using Catmull-Rom curves |
+| [SnowMeshDesc](../snow-mesh-desc) | A Descriptor that displays snow particle effects |
+| [SphereMeshDesc](../sphere-mesh-desc) | A Descriptor that draws sphere geometry |
+| [SplatMeshDesc](../splat-mesh-desc) | A Descriptor that renders 3D Gaussian Splat assets via SparkJS |
+| [InstancedSphereMeshDesc](../instanced-sphere-mesh-desc) | A GPU-instanced Descriptor that renders multiple spheres in a single draw call |
+| [StarsDesc](../stars-desc) | A Descriptor that draws a starry sky |
+| [TubeMeshDesc](../tube-mesh-desc) | A Descriptor that draws tube geometry |
+| [AxesHelperDesc](../axes-helper-desc) | A debug helper Descriptor that visualizes the 3 axes |
+| [ArrowHelperDesc](../arrow-helper-desc) | A debug helper Descriptor that visualizes vector directions |
 
 ## Basic Usage
 

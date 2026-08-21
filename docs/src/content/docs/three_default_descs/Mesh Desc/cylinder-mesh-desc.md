@@ -7,7 +7,7 @@ sidebar:
 
 The `CylinderMeshDesc` class is a mesh descriptor for drawing cylinder geometry. You can create cylinders and cones by specifying top radius, bottom radius, height, and other parameters.
 
-In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-desc-base) for details.
+In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshDesc](../mesh-desc-base) for details.
 
 ## Properties
 

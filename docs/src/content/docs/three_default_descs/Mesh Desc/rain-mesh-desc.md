@@ -7,7 +7,7 @@ sidebar:
 
 The `RainMeshDesc` class is a mesh descriptor that displays rain particle effects. It creates realistic rainfall effects using a shader-based particle system.
 
-In addition to the properties below, the common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `visible`) are available. See [MeshDesc](./mesh-desc-base) for details.
+In addition to the properties below, the common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `visible`) are available. See [MeshDesc](../mesh-desc-base) for details.
 
 ## Common Properties
 

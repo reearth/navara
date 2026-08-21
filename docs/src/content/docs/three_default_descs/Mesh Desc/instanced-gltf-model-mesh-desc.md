@@ -7,7 +7,7 @@ sidebar:
 
 The `InstancedGltfModelMeshDesc` class is a mesh descriptor that loads a single GLTF/GLB model and renders multiple transformed copies (instances) of it. It loads the GLTF once, then fans out every `Mesh` node into a sibling `InstancedMesh` sharing one per-instance matrix slot per model instance.
 
-In addition to the properties below, the common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `visible`) are available. See [MeshDesc](./mesh-desc-base) for details.
+In addition to the properties below, the common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `visible`) are available. See [MeshDesc](../mesh-desc-base) for details.
 
 The descriptor selects one of two internal rendering paths automatically based on the GLTF contents:
 

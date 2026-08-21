@@ -100,7 +100,7 @@ layer.forceUpdate();
 ### Events
 
 :::note
-For the data structure behind these events (Layer, FeatureSet, Feature, Batch), see [Layers & Descriptors](../../introduction/about-layer/#layer-data-structure). For the `FeatureEvaluator` class used in event callbacks, see [FeatureEvaluator](./feature-evaluator/).
+For the data structure behind these events (Layer, FeatureSet, Feature, Batch), see [Layers & Descriptors](../../introduction/about-layer/#layer-data-structure). For the `FeatureEvaluator` class used in event callbacks, see [FeatureEvaluator](../feature-evaluator/).
 :::
 
 #### featureCreated

@@ -7,7 +7,7 @@ sidebar:
 
 `ArrowHelperDesc` は、Three.js の `ArrowHelper` をシーンに追加するためのヘルパーDescriptorです。方向ベクトルの可視化、風向きや進行方向などの表現、デバッグ用途に適しています。
 
-以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-desc-base) を参照してください。
+以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`visible`）が利用できます。詳細は [MeshDesc](../mesh-desc-base) を参照してください。
 
 ## Properties
 

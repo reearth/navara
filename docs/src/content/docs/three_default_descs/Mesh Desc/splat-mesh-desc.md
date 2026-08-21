@@ -9,7 +9,7 @@ The `SplatMeshDesc` class is a mesh descriptor that renders 3D Gaussian Splat as
 
 It is registered as the `"splat"` mesh key by `DefaultPlugin`, so any `view.addMesh({ splat: { ... } })` call routes to this descriptor.
 
-In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `visible`) are available. See [MeshDesc](./mesh-desc-base) for details.
+In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `visible`) are available. See [MeshDesc](../mesh-desc-base) for details.
 
 ## Properties
 

@@ -17,20 +17,20 @@ The following EffectDescriptor types are available in navara_three:
 
 | Descriptor Type | Description |
 |------------|------|
-| [AerialPerspectiveEffectDesc](./aerial-perspective-effect-desc) | An effect that simulates light scattering and transmittance through the atmosphere |
-| [CloudsEffectDesc](./clouds-effect-desc) | An effect that renders real-time volumetric clouds |
-| [ColorGradingLUTEffectDesc](./color-grading-lut-effect-desc) | An effect that applies color grading using a LUT |
-| [DepthOfFieldEffectDesc](./depth-of-field-effect-desc) | An effect that applies bokeh based on the camera's focal plane |
-| [FogLightEffectDesc](./fog-light-effect-desc) | An effect that generates volumetric fog from point lights |
-| [FXAAEffectDesc](./fxaa-effect-desc) | An effect that applies FXAA (Fast Approximate Anti-Aliasing) |
-| [LensFlareEffectDesc](./lens-flare-effect-desc) | An effect that generates lens flares from the sun and moon |
-| [RainDropEffectDesc](./rain-drop-effect-desc) | An effect that applies raindrop refraction to the screen |
-| [SelectiveBloomEffectDesc](./selective-bloom-effect-desc) | An effect that applies selective bloom |
-| [SelectiveOutlineEffectDesc](./selective-outline-effect-desc) | An effect that applies selective outlines |
-| [SMAAEffectDesc](./smaa-effect-desc) | An effect that applies SMAA (Subpixel Morphological Anti-Aliasing) |
-| [SSAOEffectDesc](./ssao-effect-desc) | An effect that applies screen-space ambient occlusion |
-| [SSREffectDesc](./ssr-effect-desc) | An effect that generates real-time screen-space reflections |
-| [ToneMappingEffectDesc](./tone-mapping-effect-desc) | An effect that performs HDR to LDR color adjustment |
+| [AerialPerspectiveEffectDesc](../aerial-perspective-effect-desc) | An effect that simulates light scattering and transmittance through the atmosphere |
+| [CloudsEffectDesc](../clouds-effect-desc) | An effect that renders real-time volumetric clouds |
+| [ColorGradingLUTEffectDesc](../color-grading-lut-effect-desc) | An effect that applies color grading using a LUT |
+| [DepthOfFieldEffectDesc](../depth-of-field-effect-desc) | An effect that applies bokeh based on the camera's focal plane |
+| [FogLightEffectDesc](../fog-light-effect-desc) | An effect that generates volumetric fog from point lights |
+| [FXAAEffectDesc](../fxaa-effect-desc) | An effect that applies FXAA (Fast Approximate Anti-Aliasing) |
+| [LensFlareEffectDesc](../lens-flare-effect-desc) | An effect that generates lens flares from the sun and moon |
+| [RainDropEffectDesc](../rain-drop-effect-desc) | An effect that applies raindrop refraction to the screen |
+| [SelectiveBloomEffectDesc](../selective-bloom-effect-desc) | An effect that applies selective bloom |
+| [SelectiveOutlineEffectDesc](../selective-outline-effect-desc) | An effect that applies selective outlines |
+| [SMAAEffectDesc](../smaa-effect-desc) | An effect that applies SMAA (Subpixel Morphological Anti-Aliasing) |
+| [SSAOEffectDesc](../ssao-effect-desc) | An effect that applies screen-space ambient occlusion |
+| [SSREffectDesc](../ssr-effect-desc) | An effect that generates real-time screen-space reflections |
+| [ToneMappingEffectDesc](../tone-mapping-effect-desc) | An effect that performs HDR to LDR color adjustment |
 
 ## Basic Usage
 

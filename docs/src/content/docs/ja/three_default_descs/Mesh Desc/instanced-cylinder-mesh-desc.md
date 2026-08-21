@@ -7,7 +7,7 @@ sidebar:
 
 `InstancedCylinderMeshDesc` クラスは、GPU インスタンシングを使用して複数の円柱インスタンスをレンダリングするメッシュです。すべての円柱が 1 つのジオメトリとマテリアルを共有し、1 回の描画コールで高パフォーマンスにレンダリングされます。`InstancedMeshDesc` を継承しています。
 
-以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-desc-base) を参照してください。
+以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](../mesh-desc-base) を参照してください。
 
 テーパー比（`radiusTop` / `radiusBottom`）、セグメント、キャップ、弧（arc）はすべてのインスタンス間で共有され、共有ジオメトリに焼き込まれます。インスタンスごとの `radius` は XZ 方向の均等乗数、`height` は Y 方向の乗数として、共有された単位高さジオメトリに適用されます。
 

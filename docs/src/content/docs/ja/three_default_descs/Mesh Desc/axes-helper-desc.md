@@ -7,7 +7,7 @@ sidebar:
 
 `AxesHelperDesc` は、Three.js の `AxesHelper` をシーンに追加するためのヘルパーDescriptorです。X(赤)/Y(緑)/Z(青) の3軸を可視化し、座標系の確認やデバッグに役立ちます。
 
-以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-desc-base) を参照してください。
+以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`visible`）が利用できます。詳細は [MeshDesc](../mesh-desc-base) を参照してください。
 
 ## Properties
 

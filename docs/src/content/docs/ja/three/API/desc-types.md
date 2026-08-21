@@ -100,7 +100,7 @@ layer.forceUpdate();
 ### Events
 
 :::note
-これらのイベントの背景にあるデータ構造（Layer、FeatureSet、Feature、Batch）については [レイヤーと Descriptor](../../introduction/about-layer/#レイヤーのデータ構造) を参照してください。イベントコールバックで使用する `FeatureEvaluator` クラスについては [FeatureEvaluator](./feature-evaluator/) を参照してください。
+これらのイベントの背景にあるデータ構造（Layer、FeatureSet、Feature、Batch）については [レイヤーと Descriptor](../../introduction/about-layer/#レイヤーのデータ構造) を参照してください。イベントコールバックで使用する `FeatureEvaluator` クラスについては [FeatureEvaluator](../feature-evaluator/) を参照してください。
 :::
 
 #### featureCreated

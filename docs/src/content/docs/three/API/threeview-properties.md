@@ -230,7 +230,7 @@ view.shadowMapViewersEnabled = false;
 
 **Type:** `number | undefined`
 
-Gets or sets the tile-cache memory budget in bytes (see the [`cacheBytes` option](./threeview-class#cachebytes)). The getter returns the resolved budget (`undefined` before `init()` when no explicit option was given). Lowering it at runtime evicts retained tiles down to the new budget over the next frames. Setting `undefined` disables budgeting entirely, restoring the original destroy-on-unvisited tile lifecycle.
+Gets or sets the tile-cache memory budget in bytes (see the [`cacheBytes` option](../threeview-class#cachebytes)). The getter returns the resolved budget (`undefined` before `init()` when no explicit option was given). Lowering it at runtime evicts retained tiles down to the new budget over the next frames. Setting `undefined` disables budgeting entirely, restoring the original destroy-on-unvisited tile lifecycle.
 
 **Example:**
 
@@ -249,7 +249,7 @@ view.cacheBytes = undefined;
 
 **Type:** getter `LodFogSettings | undefined` / setter `Partial<LodFogSettings>`
 
-Gets or sets the LOD fog settings (see the [`lodFog` option](./threeview-class#lodfog)): a distance-based screen-space-error relaxation that keeps far tiles coarser. The getter returns the resolved settings (`undefined` before `init()`). Partial values assigned to the setter merge over the current settings; the next traversal re-selects tile LODs with the new curve.
+Gets or sets the LOD fog settings (see the [`lodFog` option](../threeview-class#lodfog)): a distance-based screen-space-error relaxation that keeps far tiles coarser. The getter returns the resolved settings (`undefined` before `init()`). Partial values assigned to the setter merge over the current settings; the next traversal re-selects tile LODs with the new curve.
 
 **Example:**
 
@@ -265,7 +265,7 @@ view.lodFog = { sseFactor: 4.0 };
 
 **Type:** getter `DynamicSseSettings | undefined` / setter `Partial<DynamicSseSettings>`
 
-Gets or sets the dynamic screen-space-error settings (see the [`dynamicSse` option](./threeview-class#dynamicsse)): tilted, street-level horizon views tolerate a larger error for far tiles. The getter returns the resolved settings (`undefined` before `init()`). Partial values assigned to the setter merge over the current settings; the next traversal re-selects tile LODs with the new curve.
+Gets or sets the dynamic screen-space-error settings (see the [`dynamicSse` option](../threeview-class#dynamicsse)): tilted, street-level horizon views tolerate a larger error for far tiles. The getter returns the resolved settings (`undefined` before `init()`). Partial values assigned to the setter merge over the current settings; the next traversal re-selects tile LODs with the new curve.
 
 **Example:**
 

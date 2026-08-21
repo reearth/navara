@@ -15,4 +15,4 @@ sidebar:
 
 | Descriptor タイプ                                | 説明                                   |
 | ------------------------------------------------ | -------------------------------------- |
-| [SkyEnvMapEffectDesc](./sky-env-map-effect-desc) | スカイ環境マップをレンダリングするパス |
+| [SkyEnvMapEffectDesc](../sky-env-map-effect-desc) | スカイ環境マップをレンダリングするパス |

@@ -52,7 +52,7 @@ import { Color } from "@navaramap/three";
 ```
 
 :::note
-`maxSse` や `segments` のようなグローブ全体の設定は、このマテリアルではなく [Globe](/three/api/globe/) API で設定します。
+`maxSse` や `segments` のようなグローブ全体の設定は、このマテリアルではなく [Globe](../../api/globe/) API で設定します。
 :::
 
 ## 関連リソース

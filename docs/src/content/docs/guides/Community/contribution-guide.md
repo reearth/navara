@@ -49,6 +49,6 @@ Improvements to this documentation site are also very welcome:
 
 ### Steps
 
-1. Create an Issue or PR in the [documentation repository](https://github.com/reearth/navara-developer-docs)
+1. Create an Issue or PR in the [documentation repository](https://github.com/eukarya-inc/navara)
 2. Clearly describe the changes
 3. If possible, attach before-and-after screenshots

@@ -7,7 +7,7 @@ sidebar:
 
 The `SnowMeshDesc` class is a mesh descriptor that displays snow particle effects. It creates realistic snowfall effects using texture-based point sprites.
 
-In addition to the properties below, the common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `visible`) are available. See [MeshDesc](./mesh-desc-base) for details.
+In addition to the properties below, the common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `visible`) are available. See [MeshDesc](../mesh-desc-base) for details.
 
 ## Common Properties
 

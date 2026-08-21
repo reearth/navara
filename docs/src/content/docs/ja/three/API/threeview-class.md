@@ -345,7 +345,7 @@ view.on("idle", () => {
 ```
 
 :::tip[関連ドキュメント]
-このイベントが発火するタイミングの詳細は [`idle` イベント](./threeview-events#idle) を参照してください。
+このイベントが発火するタイミングの詳細は [`idle` イベント](../threeview-events#idle) を参照してください。
 :::
 
 ### mobileOptimization
@@ -381,7 +381,7 @@ const view = new ThreeView({
 ```
 
 :::tip[関連ドキュメント]
-実行時にも [`cacheBytes` プロパティ](./threeview-properties#cachebytes)で変更できます。
+実行時にも [`cacheBytes` プロパティ](../threeview-properties#cachebytes)で変更できます。
 :::
 
 ### lodFog
@@ -475,7 +475,7 @@ const view = new ThreeView({
 ```
 
 :::tip[関連ドキュメント]
-SSE 乗数の範囲は実行時にも [`setSseMultiplierRange()`](./threeview-functions#setssemultiplierrange) で変更できます。
+SSE 乗数の範囲は実行時にも [`setSseMultiplierRange()`](../threeview-functions#setssemultiplierrange) で変更できます。
 :::
 
 ### waterTexture

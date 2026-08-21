@@ -7,7 +7,7 @@ sidebar:
 
 `InstancedBoxMeshDesc` クラスは、GPU インスタンシングを使用して複数のボックスインスタンスをレンダリングするメッシュです。すべてのボックスが1つのジオメトリとマテリアルを共有し、1回の描画コールで高パフォーマンスにレンダリングされます。`InstancedMeshDesc` を継承しています。
 
-以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-desc-base) を参照してください。
+以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](../mesh-desc-base) を参照してください。
 
 ## 共有マテリアルプロパティ
 

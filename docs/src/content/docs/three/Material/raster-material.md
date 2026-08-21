@@ -52,7 +52,7 @@ import { Color } from "@navaramap/three";
 ```
 
 :::note
-Globe-level settings such as `maxSse` and `segments` are configured via the [Globe](/three/api/globe/) API, not on this material.
+Globe-level settings such as `maxSse` and `segments` are configured via the [Globe](../../api/globe/) API, not on this material.
 :::
 
 ## Related Resources
