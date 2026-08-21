@@ -171,6 +171,21 @@ fn densify_ring(ring: &[Position], granularity: f64) -> Option<Vec<Position>> {
     Some(out)
 }
 
+/// Shifts `lng` by whole revolutions so it lands within 180° of `prev_lng`.
+/// Single-step modular arithmetic bounded for any input magnitude. Returns
+/// `lng` bit-exact when it is already in range, so untouched lines compare
+/// equal to their input.
+fn unwrap_lng(prev_lng: f64, lng: f64) -> f64 {
+    if (lng - prev_lng).abs() <= 180. {
+        return lng;
+    }
+    let mut delta = (lng - prev_lng).rem_euclid(360.);
+    if delta > 180. {
+        delta -= 360.;
+    }
+    prev_lng + delta
+}
+
 fn densify_line(coords: &[Position], granularity: f64) -> Option<Vec<Position>> {
     if coords.len() < 2 || granularity <= 0. {
         return None;
@@ -183,7 +198,7 @@ fn densify_line(coords: &[Position], granularity: f64) -> Option<Vec<Position>> 
     let mut prev: Option<(f64, f64)> = None;
 
     for p in coords {
-        if p.len() < 2 {
+        if p.len() < 2 || !p[0].is_finite() || !p[1].is_finite() {
             // Malformed vertex: keep verbatim and restart continuity after it.
             out.push(p.clone());
             prev = None;
@@ -196,35 +211,26 @@ fn densify_line(coords: &[Position], granularity: f64) -> Option<Vec<Position>> 
             continue;
         };
 
-        let mut lng = lng_raw;
-        while lng - prev_lng > 180. {
-            lng -= 360.;
-        }
-        while lng - prev_lng < -180. {
-            lng += 360.;
-        }
+        let lng = unwrap_lng(prev_lng, lng_raw);
 
         let start =
             LLE::<f64, Radians>::from_float(prev_lng.to_radians(), prev_lat.to_radians(), 0.);
         let end = LLE::<f64, Radians>::from_float(lng.to_radians(), lat.to_radians(), 0.);
         let line = EllipsoidGeodesic::new(start, end, &ellipsoid);
         let distance = line.distance;
-        // Vincenty's iteration is bounded in EllipsoidGeodesic (near-antipodal
-        // endpoints yield a finite estimate); the finite check guards NaN
-        // input coordinates, which keep the segment as-is.
-        if distance.is_finite() && distance >= granularity {
+        // A non-converged solve (near-antipodal endpoints) carries a state
+        // that would interpolate an incorrect route, so keep such segments
+        // as-is. The finite check guards degenerate distances the same way.
+        if line.converged && distance.is_finite() && distance >= granularity {
             let segments = (distance / granularity).ceil() as usize;
             let step = distance / segments as f64;
             let mut interp_prev_lng = prev_lng;
             for k in 1..segments {
                 let c = line.interpolate_distance(&ellipsoid, step * k as f64);
-                let mut interp_lng = c.lng.val().to_degrees();
                 let interp_lat = c.lat.val().to_degrees();
-                while interp_lng - interp_prev_lng > 180. {
-                    interp_lng -= 360.;
-                }
-                while interp_lng - interp_prev_lng < -180. {
-                    interp_lng += 360.;
+                let interp_lng = unwrap_lng(interp_prev_lng, c.lng.val().to_degrees());
+                if !interp_lng.is_finite() || !interp_lat.is_finite() {
+                    continue;
                 }
                 out.push(Position::from([interp_lng, interp_lat]));
                 interp_prev_lng = interp_lng;
@@ -302,6 +308,23 @@ mod test {
         for pair in coords.windows(2) {
             assert!((pair[1][0] - pair[0][0]).abs() < 180.);
         }
+    }
+
+    #[test]
+    fn near_antipodal_segment_is_kept_as_is() {
+        // Vincenty does not converge for this pair; instead of interpolating
+        // along a bogus non-converged route, the segment stays untouched.
+        let geojson = line_geojson(vec![[0., 0.5], [179.8, -0.4]]);
+        assert!(densify_geojson(&geojson, 9999.).is_none());
+    }
+
+    #[test]
+    fn non_finite_vertices_are_passed_through() {
+        let geojson = line_geojson(vec![[f64::INFINITY, 0.], [10., 0.], [20., 0.]]);
+        let densified = densify_geojson(&geojson, 9999.).expect("finite tail must densify");
+        let coords = line_coords(&densified);
+        assert_eq!(coords[0][0], f64::INFINITY);
+        assert!(coords.len() > 100);
     }
 
     #[test]

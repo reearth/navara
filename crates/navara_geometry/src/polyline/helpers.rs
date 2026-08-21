@@ -40,7 +40,11 @@ pub fn interpolate_segment<F>(
     let ellipsoid_line = EllipsoidGeodesic::new(start, end, &ellipsoid);
 
     let surface_distance = ellipsoid_line.distance;
-    if !surface_distance.is_finite() || surface_distance < granularity {
+    // A non-converged solve (near-antipodal endpoints) would interpolate an
+    // incorrect route — keep the raw segment. A NaN distance would otherwise
+    // pass the `<` check and underflow `segments - 1`.
+    if !ellipsoid_line.converged || !surface_distance.is_finite() || surface_distance < granularity
+    {
         return;
     }
 

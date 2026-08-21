@@ -10,6 +10,11 @@ pub struct EllipsoidGeodesic {
     pub distance: f64,
     pub start_heading: f64,
     pub end_heading: f64,
+    /// Whether Vincenty's inverse iteration converged. `false` for
+    /// near-antipodal endpoints (or NaN input), where `distance` is only a
+    /// rough estimate and interpolation would follow an incorrect route, so
+    /// callers must not interpolate along a non-converged geodesic.
+    pub converged: bool,
     pub constants: VincentyDirectFormulaConstants,
 }
 
@@ -31,6 +36,7 @@ impl EllipsoidGeodesic {
             distance: inverse_formula_result.distance,
             start_heading: inverse_formula_result.start_heading,
             end_heading: inverse_formula_result.end_heading,
+            converged: inverse_formula_result.converged,
         }
     }
 
@@ -48,6 +54,9 @@ impl EllipsoidGeodesic {
             distance,
             start_heading,
             end_heading,
+            // Reconstructed from precomputed constants, which only exist for
+            // a solved geodesic.
+            converged: true,
             constants,
         }
     }
@@ -134,6 +143,7 @@ struct VincentyInverseFormulaResult {
     end_heading: f64,
     u_squared: f64,
     eff: f64,
+    converged: bool,
 }
 
 // Ref: https://en.wikipedia.org/wiki/Vincenty%27s_formulae#Inverse%20problem:~:text=and%20the%20equator-,Inverse%20problem,-%5Bedit%5D
@@ -178,7 +188,7 @@ fn vincenty_inverse_formula(
     const MAX_ITERATIONS: u32 = 200;
     let mut iterations = 0;
 
-    loop {
+    let converged = loop {
         cosine_lambda = lambda.cos();
         sine_lambda = lambda.sin();
 
@@ -217,14 +227,14 @@ fn vincenty_inverse_formula(
         );
 
         if ((lambda - lambda_dot).abs()) <= EPSILON12 {
-            break;
+            break true;
         }
 
         iterations += 1;
         if iterations >= MAX_ITERATIONS || !lambda.is_finite() {
-            break;
+            break false;
         }
-    }
+    };
 
     let u_squared = (cosine_squared_alpha * (a * a - b * b)) / (b * b);
 
@@ -258,6 +268,7 @@ fn vincenty_inverse_formula(
         end_heading,
         u_squared,
         eff,
+        converged,
     }
 }
 
@@ -497,6 +508,7 @@ mod test {
         };
         let g = EllipsoidGeodesic::new(start, end, &WGS84_64);
 
+        assert!(!g.converged);
         assert!(g.distance.is_finite());
         // Roughly half the circumference; the capped estimate only needs to
         // be in the right ballpark.
@@ -505,5 +517,22 @@ mod test {
             "got {}",
             g.distance
         );
+    }
+
+    #[test]
+    fn it_reports_convergence_for_regular_points() {
+        let start = LLE {
+            lng: Angle::new(0.),
+            lat: Angle::new(0.),
+            height: Meters::new(0.),
+        };
+        let end = LLE {
+            lng: Angle::new(PI / 2.),
+            lat: Angle::new(0.),
+            height: Meters::new(0.),
+        };
+        let g = EllipsoidGeodesic::new(start, end, &WGS84_64);
+
+        assert!(g.converged);
     }
 }
