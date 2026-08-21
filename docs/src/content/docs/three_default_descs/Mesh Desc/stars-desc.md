@@ -9,7 +9,7 @@ The `StarsDesc` class is a mesh descriptor that draws a starry sky. It uses poin
 
 Star positions account for the Earth's rotation based on `view.atmosphere.date`, and visibility is automatically adjusted based on the sun's position.
 
-In addition to the properties below, the common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `visible`) are available. See [MeshDesc](./mesh-desc-base) for details.
+In addition to the properties below, the common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `geodetic`, `visible`) are available. See [MeshDesc](./mesh-desc-base) for details.
 
 :::tip[Related Documentation]
 For details on the atmosphere system, see the [Atmosphere class](../../../three/api/atmosphere/).

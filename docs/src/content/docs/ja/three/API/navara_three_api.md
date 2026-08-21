@@ -612,6 +612,89 @@ function northWestUpToFixedFrame(origin: Vector3): Matrix4;
 
 4x4 変換行列（Three.js Matrix4）
 
+### westUpNorthToFixedFrame(origin)
+
+West-Up-North 座標系から固定フレームへの変換行列を取得します。
+
+WUN は `+Z` 軸が北を指す唯一の右手系 Y-up 接線フレームであり、glTF 自身の規約（前方 `+Z`、上方 `+Y`、右方 `-X`）と3軸すべてで一致します。加工されていない glTF アセットをこのフレームに配置する場合、`Rx(+90°)` の軸補正は**不要**です — その補正は、オブジェクトごとに適用するのではなく、ここで一度だけフレームの定義自体に吸収されています。[軸の向きの規約](../../../three_default_descs/mesh-desc/mesh-desc-base/#軸の向きの規約gltf-の-y-up-とタイルの-z-up) を参照してください。
+
+**Syntax:**
+
+```typescript
+function westUpNorthToFixedFrame(origin: Vector3): Matrix4;
+```
+
+**Parameters:**
+
+- `origin`: 原点の ECEF 座標（Three.js Vector3）
+
+**Returns:**
+
+WUN から ECEF への 4x4 変換行列（Three.js Matrix4）
+
+**Example:**
+
+```typescript
+import {
+  westUpNorthToFixedFrame,
+  geodeticToVector3,
+  degreeToRadian,
+} from "@navaramap/three-api";
+
+const origin = geodeticToVector3({
+  lat: degreeToRadian(35.681236),
+  lng: degreeToRadian(139.767125),
+  height: 0,
+});
+const matrix = westUpNorthToFixedFrame(origin);
+```
+
+### headingPitchRollToFixedFrame(placement)
+
+地理的な位置に WUN 接線フレームを構築し、そこに heading・pitch・roll・scale を合成します — 地理的な配置をワールド行列に変換する単一の呼び出しです。
+
+**この関数は度単位を取ります。** このページの [geodeticToVector3(lle)](#geodetictovector3lle) や他のヘルパー関数がラジアンを取るのとは異なり、`lng`/`lat` とここでのすべての角度は度単位です — `setCamera` や `geodetic` メッシュ Descriptor フィールドと同じです。
+
+**Syntax:**
+
+```typescript
+function headingPitchRollToFixedFrame(
+  placement: Omit<GeodeticPlacement, "heightReference">
+): Matrix4;
+```
+
+**Parameters:**
+
+- `placement`: 度とメートルで指定する地理的配置
+  - `lng`: 経度（度、必須）
+  - `lat`: 緯度（度、必須）
+  - `height`: 楕円体からの高さ（メートル、デフォルト `0`）
+  - `heading`: アセットの前方（glTF の `+Z`）が向く、北からの時計回りの角度（度、デフォルト `0`）
+  - `pitch`: ノーズアップを正とする角度（度、デフォルト `0`）
+  - `roll`: 右翼下げを正とする角度（度、デフォルト `0`）
+  - `scale`: フレームの一様または軸ごとのスケール（デフォルト `1`）
+
+`heightReference` は、この型では意図的に受け付けていません。地形相対の高さの解決には view からのサンプリングが必要なため、これはメッシュ Descriptor の `geodetic` フィールドの役割です。
+
+**Returns:**
+
+配置されたローカルフレームから ECEF への 4x4 変換行列（Three.js Matrix4）
+
+**Example:**
+
+```typescript
+import { headingPitchRollToFixedFrame } from "@navaramap/three-api";
+
+const matrix = headingPitchRollToFixedFrame({
+  lng: 138.036142,
+  lat: 36.085621,
+  height: 1,
+  heading: 321,
+});
+```
+
+`heading` はアセットの前方が向くコンパス方位で、前方とは glTF 自身の `+Z` です — `setCamera` と同じ規約です。他の地球エンジンではアセットの前方として扱う軸が異なるため、他エンジンから移植したモデルでは heading に 90° の倍数を加える必要がある場合があります。
+
 ## RTE (Relative to Eye) Rendering
 
 大規模な座標系で高精度レンダリングを実現するための RTE レンダリング機能です。

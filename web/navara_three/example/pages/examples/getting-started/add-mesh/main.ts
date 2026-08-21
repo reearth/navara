@@ -51,7 +51,8 @@ view.addLayer({ type: "raster", source: basemap });
 
 // Mesh transforms are ECEF by default; a tangent frame at the target
 // coordinate turns position/rotation/scale into local offsets (x north,
-// y up, z east).
+// y up, z east). One frame shared across several meshes is why this page
+// uses `matrixWorld` — for a single mesh, `geodetic` is simpler.
 const frame = northUpEastToFixedFrame(
   geodeticToVector3({
     lng: degreeToRadian(STAGE.lng),

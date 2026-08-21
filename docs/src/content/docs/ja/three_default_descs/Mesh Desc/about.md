@@ -7,7 +7,7 @@ sidebar:
 
 `MeshDesc`は、3Dメッシュオブジェクトをシーンに追加するためのDescriptorタイプです。様々な3Dオブジェクトを表示できます。
 
-すべてのメッシュは [`MeshDesc`](./mesh-desc-base) を継承しており、`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable` などの共通プロパティを提供します。トランスフォーム合成、ピッキング、座標変換の詳細については [MeshDesc](./mesh-desc-base) ページを参照してください。
+すべてのメッシュは [`MeshDesc`](./mesh-desc-base) を継承しており、`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`geodetic`、`pickable` などの共通プロパティを提供します。トランスフォーム合成、ピッキング、座標変換の詳細については [MeshDesc](./mesh-desc-base) ページを参照してください。
 
 ## 利用可能なMeshDescタイプ
 

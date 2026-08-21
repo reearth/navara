@@ -228,6 +228,22 @@ export class SplatMeshDesc extends MeshDesc<
     this.controller.register(mesh, mesh.matrixWorld.clone());
   }
 
+  /**
+   * A terrain-height observation (under `geodetic` + `heightReference:
+   * "terrain"`) makes the base class re-write `mesh.matrixWorld` to the
+   * freshly-resolved ECEF matrix. The RTC controller caches its own copy of
+   * that matrix to re-derive the recentered one on every origin snap, so it
+   * must be re-registered here — otherwise the splat keeps rendering at the
+   * height captured when it was created (or last moved).
+   */
+  protected override reapplyGeodeticFrame(): void {
+    super.reapplyGeodeticFrame();
+    const mesh = this.raw;
+    if (mesh && this.controller) {
+      this.controller.register(mesh, mesh.matrixWorld.clone());
+    }
+  }
+
   private releaseSlot(): void {
     if (this.holdsSlot) {
       this.ctx.concurrencyManager.decrement();
@@ -264,12 +280,13 @@ export class SplatMeshDesc extends MeshDesc<
     // `mesh.matrixWorld` (undoing the RTC recenter). Refresh the controller's
     // cached matrix from it and re-recenter now, otherwise the splat renders at
     // ECEF until the next origin change — which would then snap it back to the
-    // *original* placement captured at creation. Only the matrixWorld/matrix
-    // path is RTC-managed (the base recomputes `matrixWorld` there); the
-    // auto-update position-only path is moved by the base class directly.
+    // *original* placement captured at creation. Only the matrixWorld/matrix/
+    // geodetic path is RTC-managed (the base recomputes `matrixWorld` there);
+    // the auto-update position-only path is moved by the base class directly.
     const spatialChanged =
       updates.matrix !== undefined ||
       updates.matrixWorld !== undefined ||
+      updates.geodetic !== undefined ||
       updates.position !== undefined ||
       updates.scale !== undefined ||
       updates.rotation !== undefined;
@@ -278,7 +295,7 @@ export class SplatMeshDesc extends MeshDesc<
       spatialChanged &&
       mesh &&
       this.controller &&
-      (this.matrixWorld || this.matrix)
+      (this.matrixWorld || this.matrix || this.geodetic)
     ) {
       this.controller.register(mesh, mesh.matrixWorld.clone());
     }

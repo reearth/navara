@@ -14,3 +14,12 @@ export class UnknownTypeError extends Error {
     );
   }
 }
+
+export class ConflictingTransformError extends Error {
+  constructor(field: string, conflictsWith: string) {
+    super(
+      `\`${field}\` cannot be combined with \`${conflictsWith}\`: both define the object's placement. ` +
+        `Use \`${field}\` for geographic placement, or \`${conflictsWith}\` to supply a matrix yourself.`,
+    );
+  }
+}

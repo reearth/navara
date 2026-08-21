@@ -23,7 +23,13 @@ import initApi, {
   getWGS84Flattening as nvGetWGS84Flattening,
   getWGS84Eccentricity as nvGetWGS84Eccentricity,
 } from "@navaramap/engine-api";
-import { Vector3, Vector2, Matrix4, PerspectiveCamera } from "three";
+import { Vector3, Vector2, Matrix4, MathUtils, PerspectiveCamera } from "three";
+
+import {
+  composeHeadingPitchRoll,
+  nueToWunBasis,
+  type GeodeticPlacement,
+} from "./frames";
 
 export type { LatLngHeight, LatLng } from "@navaramap/core";
 export type {
@@ -35,6 +41,7 @@ export type {
   Vec2,
   Vec3,
 } from "@navaramap/core";
+export type { GeodeticPlacement } from "./frames";
 
 export * from "./intersection";
 export * from "./rte";
@@ -204,6 +211,54 @@ export function northWestUpToFixedFrame(origin: Vector3): Matrix4 {
   const arr = nvNorthWestUpToFixedFrame(vec3);
   const matrix = new Matrix4().fromArray(arr);
   return matrix;
+}
+
+/**
+ * Creates a local West-Up-North (WUN) reference frame transformation matrix at
+ * a position.
+ *
+ * WUN is the only right-handed, Y-up tangent frame whose `+Z` axis is north, so
+ * it agrees with glTF's own convention (front `+Z`, up `+Y`, right `-X`) on all
+ * three axes. An unmodified glTF asset placed in this frame needs **no**
+ * `Rx(+90°)` up-axis correction — the correction is absorbed here, once, as the
+ * `Ry(+90°)` basis change from NUE.
+ *
+ * @param origin - Origin position in ECEF coordinates
+ * @returns 4x4 transformation matrix from WUN to ECEF
+ */
+export function westUpNorthToFixedFrame(origin: Vector3): Matrix4 {
+  return northUpEastToFixedFrame(origin).multiply(nueToWunBasis());
+}
+
+/**
+ * Builds a WUN tangent frame at a geodetic position and composes heading,
+ * pitch, roll and scale onto it — the single call that turns a geographic
+ * placement into a world matrix.
+ *
+ * `heading` is the compass bearing the asset's front faces, where the front is
+ * glTF's own `+Z` — the same convention as `ThreeView.setCamera`. Other globe
+ * engines differ in which axis they treat as an asset's front, so a model
+ * ported from one may need a multiple of 90° added to its heading.
+ *
+ * NOTE: unlike {@link geodeticToVector3} and the other helpers in this module,
+ * `lng`/`lat` and all angles here are in **degrees**, matching
+ * `setCamera` and the `geodetic` mesh Descriptor field.
+ *
+ * `heightReference` is intentionally not accepted: resolving terrain-relative
+ * height needs a view to sample from, so it is the Descriptor's job.
+ *
+ * @param placement - Geographic placement in degrees and metres
+ * @returns 4x4 transformation matrix from the placed local frame to ECEF
+ */
+export function headingPitchRollToFixedFrame(
+  placement: Omit<GeodeticPlacement, "heightReference">,
+): Matrix4 {
+  const origin = geodeticToVector3({
+    lng: MathUtils.degToRad(placement.lng),
+    lat: MathUtils.degToRad(placement.lat),
+    height: placement.height ?? 0,
+  });
+  return composeHeadingPitchRoll(westUpNorthToFixedFrame(origin), placement);
 }
 
 /**

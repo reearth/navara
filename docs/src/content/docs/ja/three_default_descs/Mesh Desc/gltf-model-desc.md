@@ -7,7 +7,7 @@ sidebar:
 
 `GLTFModelDesc`クラスは、GLTF/GLB形式の3Dモデルを読み込み・表示するメッシュです。アニメーション再生、影の設定、動的な更新などの機能を提供します。
 
-以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-desc-base) を参照してください。
+以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`geodetic`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-desc-base) を参照してください。
 
 ## Properties
 

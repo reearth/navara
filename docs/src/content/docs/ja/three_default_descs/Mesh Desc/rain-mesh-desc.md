@@ -7,7 +7,7 @@ sidebar:
 
 `RainMeshDesc`クラスは、雨のパーティクルエフェクトを表示するメッシュです。シェーダーベースのパーティクルシステムを使用して、リアルな降雨効果を作成します。
 
-以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-desc-base) を参照してください。
+以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`geodetic`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-desc-base) を参照してください。
 
 ## Common Properties
 

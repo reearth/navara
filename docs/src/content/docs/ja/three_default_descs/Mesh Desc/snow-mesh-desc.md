@@ -7,7 +7,7 @@ sidebar:
 
 `SnowMeshDesc`クラスは、雪のパーティクルエフェクトを表示するメッシュです。テクスチャベースのポイントスプライトを使用して、リアルな降雪効果を作成します。
 
-以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-desc-base) を参照してください。
+以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`geodetic`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-desc-base) を参照してください。
 
 ## Common Properties
 

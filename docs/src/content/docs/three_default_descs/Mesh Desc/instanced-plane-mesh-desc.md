@@ -7,7 +7,7 @@ sidebar:
 
 The `InstancedPlaneMeshDesc` class is a mesh descriptor that renders multiple plane instances using GPU instancing. All planes share a single geometry and material, rendered in one draw call for high performance. It extends `InstancedMeshDesc`.
 
-In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-desc-base) for details.
+In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `geodetic`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-desc-base) for details.
 
 ## Shared Material Properties
 

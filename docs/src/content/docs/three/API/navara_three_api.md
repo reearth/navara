@@ -612,6 +612,89 @@ function northWestUpToFixedFrame(origin: Vector3): Matrix4;
 
 4x4 transformation matrix (Three.js Matrix4)
 
+### westUpNorthToFixedFrame(origin)
+
+Gets the transformation matrix from the West-Up-North coordinate system to the fixed frame.
+
+WUN is the only right-handed, Y-up tangent frame whose `+Z` axis is north, so it agrees with glTF's own convention (front `+Z`, up `+Y`, right `-X`) on all three axes. An unmodified glTF asset placed in this frame needs **no** `Rx(+90°)` up-axis correction — the correction is absorbed here, once, rather than applied per object. See [Up-Axis Conventions](../../../three_default_descs/mesh-desc/mesh-desc-base/#up-axis-conventions-gltf-y-up-and-tile-z-up).
+
+**Syntax:**
+
+```typescript
+function westUpNorthToFixedFrame(origin: Vector3): Matrix4;
+```
+
+**Parameters:**
+
+- `origin`: Origin ECEF coordinates (Three.js Vector3)
+
+**Returns:**
+
+4x4 transformation matrix from WUN to ECEF (Three.js Matrix4)
+
+**Example:**
+
+```typescript
+import {
+  westUpNorthToFixedFrame,
+  geodeticToVector3,
+  degreeToRadian,
+} from "@navaramap/three-api";
+
+const origin = geodeticToVector3({
+  lat: degreeToRadian(35.681236),
+  lng: degreeToRadian(139.767125),
+  height: 0,
+});
+const matrix = westUpNorthToFixedFrame(origin);
+```
+
+### headingPitchRollToFixedFrame(placement)
+
+Builds a WUN tangent frame at a geodetic position and composes heading, pitch, roll, and scale onto it — the single call that turns a geographic placement into a world matrix.
+
+**This function takes degrees.** Unlike [geodeticToVector3(lle)](#geodetictovector3lle) and the other helpers on this page, which take radians, `lng`/`lat` and all angles here are in degrees — matching `setCamera` and the `geodetic` mesh Descriptor field.
+
+**Syntax:**
+
+```typescript
+function headingPitchRollToFixedFrame(
+  placement: Omit<GeodeticPlacement, "heightReference">
+): Matrix4;
+```
+
+**Parameters:**
+
+- `placement`: Geographic placement in degrees and metres
+  - `lng`: Longitude in degrees (required)
+  - `lat`: Latitude in degrees (required)
+  - `height`: Metres above the ellipsoid (default `0`)
+  - `heading`: Degrees clockwise from north that the asset's front (glTF `+Z`) faces (default `0`)
+  - `pitch`: Degrees, nose up positive (default `0`)
+  - `roll`: Degrees, right wing down positive (default `0`)
+  - `scale`: Uniform or per-axis scale of the frame (default `1`)
+
+`heightReference` is intentionally rejected by the type: resolving a terrain-relative height needs a view to sample from, so it is handled by the `geodetic` field on a mesh Descriptor instead.
+
+**Returns:**
+
+4x4 transformation matrix from the placed local frame to ECEF (Three.js Matrix4)
+
+**Example:**
+
+```typescript
+import { headingPitchRollToFixedFrame } from "@navaramap/three-api";
+
+const matrix = headingPitchRollToFixedFrame({
+  lng: 138.036142,
+  lat: 36.085621,
+  height: 1,
+  heading: 321,
+});
+```
+
+`heading` is the compass bearing the asset's front faces, where the front is glTF's own `+Z` — the same convention as `setCamera`. Other globe engines differ in which axis they treat as an asset's front, so a model ported from one may need a multiple of 90° added to its heading.
+
 ## RTE (Relative to Eye) Rendering
 
 RTE rendering functionality for achieving high-precision rendering in large-scale coordinate systems.

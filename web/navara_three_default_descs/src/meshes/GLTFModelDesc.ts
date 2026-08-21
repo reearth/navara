@@ -1,7 +1,9 @@
 import type ThreeView from "@navaramap/three";
 import {
   Color,
+  assertNoTransformConflict,
   MeshDesc,
+  mergeGeodetic,
   PickableMeshWrapper,
   type MeshConfig,
   type MeshUpdate,
@@ -177,7 +179,12 @@ export class GLTFModelDesc extends MeshDesc<
   override onCreate() {
     this._instance = this.createMesh();
 
-    if (this.matrixWorld || this.matrix) {
+    if (this.matrixWorld || this.matrix || this.geodetic) {
+      // `geodetic` resolves to a world frame the same way `matrixWorld`
+      // does (see `resolveGeodeticFrame`), so it shares the RTE
+      // decomposition below. Terrain height (`heightReference: "terrain"`)
+      // must be sampled before that resolution.
+      this.subscribeTerrainHeight();
       // Decompose effective transform into RTE position + rotation/scale matrix
       this.applyRTETransform();
     } else {
@@ -261,9 +268,10 @@ export class GLTFModelDesc extends MeshDesc<
 
     if (!modelConfig) return;
 
-    // When matrixWorld/matrix is set, applyRTETransform() already encoded the world position.
-    // Only encode from this.position when there is no base frame matrix.
-    if (!this.matrixWorld && !this.matrix && this.position) {
+    // When matrixWorld/matrix/geodetic is set, applyRTETransform() already
+    // encoded the world position. Only encode from this.position when there
+    // is no base frame matrix.
+    if (!this.matrixWorld && !this.matrix && !this.geodetic && this.position) {
       this.setPositionRTE(
         new Vector3(this.position.x, this.position.y, this.position.z),
       );
@@ -416,7 +424,15 @@ export class GLTFModelDesc extends MeshDesc<
     // far-from-origin position survives f32 precision.
     let position: Vector3;
     let rotationScale: Matrix4;
-    if (this.matrixWorld) {
+    if (this.geodetic) {
+      // `geodetic` occupies the same slot as `matrixWorld` (mutually
+      // exclusive by construction, see `ConflictingTransformError`), so it
+      // gets the same RTE split: resolve it to a world frame first.
+      ({ position, rotationScale } = composeWorldMatrixForRTE(
+        this.resolveGeodeticFrame(this.geodetic),
+        this.composeLocalTransform(),
+      ));
+    } else if (this.matrixWorld) {
       // Frame * local: matrixWorld carries the ECEF placement.
       ({ position, rotationScale } = composeWorldMatrixForRTE(
         this.matrixWorld,
@@ -442,6 +458,16 @@ export class GLTFModelDesc extends MeshDesc<
     this.raw.matrixWorldAutoUpdate = false;
     this.raw.matrixWorld.copy(rotationScale);
     this.raw.updateMatrixWorld();
+  }
+
+  /**
+   * A terrain-height observation (under `geodetic` + `heightReference:
+   * "terrain"`) must redo the RTE split, not the base class's direct
+   * `matrixWorld` write — the encoded RTE position uniforms would otherwise
+   * go stale while `matrixWorld` moved out from under them.
+   */
+  protected override reapplyGeodeticFrame(): void {
+    this.applyRTETransform();
   }
 
   private setupRTEShadersForMesh(mesh: Mesh): void {
@@ -592,17 +618,55 @@ export class GLTFModelDesc extends MeshDesc<
     const hasSpatialChange =
       updates.matrixWorld !== undefined ||
       updates.matrix !== undefined ||
+      updates.geodetic !== undefined ||
       updates.position !== undefined ||
       updates.scale !== undefined ||
       updates.rotation !== undefined;
 
     if (
       hasSpatialChange &&
-      (this.matrixWorld || updates.matrixWorld || this.matrix || updates.matrix)
+      (this.matrixWorld ||
+        updates.matrixWorld ||
+        this.matrix ||
+        updates.matrix ||
+        this.geodetic ||
+        updates.geodetic)
     ) {
-      // matrixWorld / matrix path: recompute the full RTE decomposition
-      if (updates.matrixWorld !== undefined)
+      // Validate the prospective state up front, exactly as MeshDesc does: a
+      // throw must not leave a partially-applied update behind. Hand-rolled
+      // per-field checks also get `ConflictingTransformError`'s argument
+      // order wrong — it reads `(geodeticField, matrixField)` and its
+      // message says "use the first for geographic placement", so inverting
+      // them prints advice that is backwards.
+      const nextGeodetic =
+        updates.geodetic !== undefined
+          ? mergeGeodetic(this.geodetic, updates.geodetic)
+          : this.geodetic;
+      const nextMatrix =
+        updates.matrix !== undefined ? updates.matrix : this.matrix;
+      const nextMatrixWorld =
+        updates.matrixWorld !== undefined
+          ? updates.matrixWorld
+          : this.matrixWorld;
+      assertNoTransformConflict(nextGeodetic, nextMatrix, nextMatrixWorld);
+
+      // matrixWorld / matrix / geodetic path: recompute the full RTE decomposition
+      if (updates.geodetic !== undefined) {
+        const prevGeodetic = this.geodetic;
+        this.geodetic = nextGeodetic;
+
+        // Only these three change what's sampled; heading/pitch/roll/scale
+        // leave the sampled position and the reference untouched (mirrors
+        // the base class's own resubscribe condition).
+        const resubscribe =
+          nextGeodetic?.lng !== prevGeodetic?.lng ||
+          nextGeodetic?.lat !== prevGeodetic?.lat ||
+          nextGeodetic?.heightReference !== prevGeodetic?.heightReference;
+        if (resubscribe) this.subscribeTerrainHeight();
+      }
+      if (updates.matrixWorld !== undefined) {
         this.matrixWorld = updates.matrixWorld;
+      }
       if (updates.matrix !== undefined) this.matrix = updates.matrix;
       if (updates.position !== undefined) this.position = updates.position;
       if (updates.scale !== undefined) this.scale = updates.scale;
@@ -611,8 +675,15 @@ export class GLTFModelDesc extends MeshDesc<
       this.applyRTETransform();
 
       // Strip spatial properties so super doesn't also apply them
-      const { position, matrixWorld, matrix, scale, rotation, ...restUpdates } =
-        updates;
+      const {
+        position,
+        matrixWorld,
+        matrix,
+        geodetic,
+        scale,
+        rotation,
+        ...restUpdates
+      } = updates;
       super.onUpdateConfig(restUpdates as GLTFModelUpdate);
     } else if (updates.position !== undefined) {
       // RTE-only path (no frame matrix)

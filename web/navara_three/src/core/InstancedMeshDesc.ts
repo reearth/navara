@@ -58,7 +58,7 @@ const _swapColor = new ThreeColor();
  * Per-instance variation is achieved through `instanceMatrix` (position, rotation, scale)
  * and `instanceColor` (per-instance color).
  *
- * The parent's transform fields (position, scale, rotation, matrix, matrixWorld)
+ * The parent's transform fields (position, scale, rotation, matrix, matrixWorld, geodetic)
  * define the parent coordinate space. Each instance's transform is local to the parent.
  *
  * Subclasses that maintain external per-instance state (e.g. picking batchIds)

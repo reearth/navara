@@ -289,13 +289,15 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
     if (!this.raw) return;
 
     // `MeshDesc.applyTransform` only writes `raw.matrixWorld` directly when
-    // the descriptor's `matrixWorld` is set. For the `matrix`-only and
-    // local-TRS paths it leaves matrixWorld stale, so decomposing it would
-    // pull an identity anchor on the first capture. Also, after our first
-    // capture we disable `matrixAutoUpdate`/`matrixWorldAutoUpdate` below,
-    // so we can't rely on three.js to recompute matrixWorld on subsequent
-    // captures either — refresh it explicitly from the authoritative source.
-    if (this.matrixWorld) {
+    // the descriptor's `matrixWorld` (or `geodetic`, which resolves to a
+    // world frame the same way — see `MeshDesc.applyTransform`) is set. For
+    // the `matrix`-only and local-TRS paths it leaves matrixWorld stale, so
+    // decomposing it would pull an identity anchor on the first capture.
+    // Also, after our first capture we disable
+    // `matrixAutoUpdate`/`matrixWorldAutoUpdate` below, so we can't rely on
+    // three.js to recompute matrixWorld on subsequent captures either —
+    // refresh it explicitly from the authoritative source.
+    if (this.matrixWorld || this.geodetic) {
       // applyTransform already populated raw.matrixWorld.
     } else if (this.matrix) {
       // applyTransform already populated raw.matrix (including any local TRS).
@@ -327,6 +329,17 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
     this.raw.position.set(0, 0, 0);
     this.raw.quaternion.copy(q);
     this.raw.scale.copy(s);
+  }
+
+  /**
+   * A terrain-height observation (under `geodetic` + `heightReference:
+   * "terrain"`) must redo the RTE anchor capture, not just the base class's
+   * direct `matrixWorld` write — the rtePosHigh/rtePosLow uniforms would
+   * otherwise go stale while `matrixWorld` moved out from under them.
+   */
+  protected override reapplyGeodeticFrame(): void {
+    super.reapplyGeodeticFrame();
+    this.captureAnchorFromMatrixWorld();
   }
 
   /**
@@ -1070,6 +1083,7 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
     const spatialChanged =
       updates.matrix !== undefined ||
       updates.matrixWorld !== undefined ||
+      updates.geodetic !== undefined ||
       updates.position !== undefined ||
       updates.scale !== undefined ||
       updates.rotation !== undefined;

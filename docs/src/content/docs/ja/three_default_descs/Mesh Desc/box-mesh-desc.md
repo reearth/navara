@@ -7,7 +7,7 @@ sidebar:
 
 `BoxMeshDesc`クラスは、立方体(Box)ジオメトリを描画するためのメッシュです。幅・高さ・奥行きを指定して立方体を作成できます。
 
-以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-desc-base) を参照してください。
+以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`geodetic`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-desc-base) を参照してください。
 
 ## Properties
 

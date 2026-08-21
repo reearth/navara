@@ -18,6 +18,7 @@ sidebar:
 | `scale`       | `{ x: number, y: number, z: number }`  | -              | Scale, or local offset when `matrix`/`matrixWorld` is set                                      |
 | `matrix`      | `Matrix4`                              | -              | Local transform matrix. When set, `position`/`rotation`/`scale` become offsets within this frame |
 | `matrixWorld` | `Matrix4`                              | -              | World transform matrix. When set, `position`/`rotation`/`scale` become offsets within this frame |
+| `geodetic`    | `GeodeticPlacement`                    | -              | Geographic placement in degrees — see [Geographic Placement](#geographic-placement-geodetic). Mutually exclusive with `matrix`/`matrixWorld` |
 | `lit`         | `boolean`                              | -              | Lighting override applied to every material of the mesh. Unset follows `view.lit` — see [Lighting](#lighting-lit) |
 | `pickable`    | `boolean`                              | `false`        | Enable GPU-based click picking. Defined per Descriptor by picking-capable mesh Descriptors, not on the base config |
 
@@ -72,19 +73,146 @@ const origin = geodeticToVector3({
 });
 const enuFrame = eastNorthUpToFixedFrame(origin);
 
-// Place a box 200m east and 50m above the origin
+// Place a box 200m east and 50m north of the origin
 const box1 = view.addMesh<BoxMeshDesc>({
   box: { width: 50, height: 100, depth: 50, color: new Color().setHex(0xff0000) },
   matrixWorld: enuFrame,
   position: { x: 200, y: 50, z: 0 },
 });
 
-// Place another box 100m north
+// Place another box 40m north and 100m above the origin
 const box2 = view.addMesh<BoxMeshDesc>({
   box: { width: 50, height: 80, depth: 50, color: new Color().setHex(0x00ff00) },
   matrixWorld: enuFrame,
   position: { x: 0, y: 40, z: 100 },
 });
+```
+
+## Geographic Placement (`geodetic`)
+
+`geodetic` is the high-level way to place an object on the globe. Everything is
+in degrees and metres, matching `setCamera`:
+
+```typescript
+import ThreeView from "@navaramap/three";
+import { GLTFModelDesc } from "@navaramap/three-default-descs";
+
+const car = view.addMesh<GLTFModelDesc>({
+  gltfModel: { url: "/glTF/car/scene.gltf" },
+  geodetic: {
+    lng: 138.036142,
+    lat: 36.085621,
+    height: 1,
+    heading: 321,
+    pitch: 0,
+    roll: 0,
+  },
+});
+
+// Rotate it in place — a partial update keeps lng/lat/height.
+car.update({ geodetic: { heading: 330 } });
+```
+
+| Property | Unit | Positive direction | Default |
+| --- | --- | --- | --- |
+| `lng`, `lat` | degrees | - | required |
+| `height` | metres | up | `0` |
+| `heading` | degrees | clockwise from north | `0` |
+| `pitch` | degrees | nose up | `0` |
+| `roll` | degrees | right wing down | `0` |
+| `scale` | ratio | - | `1` |
+| `heightReference` | `"ellipsoid"` \| `"terrain"` | - | `"ellipsoid"` |
+
+`heading` is the compass bearing the object's front faces — the same convention
+as `setCamera`'s heading.
+
+### Composition
+
+`geodetic` occupies the same slot as `matrixWorld`, so the composition rule is
+the one already described above:
+
+```
+effective = geodetic · T(position) · R(rotation) · S(scale)
+```
+
+`position`, `rotation`, and `scale` therefore remain offsets *inside* the
+placed frame. Setting `geodetic` together with `matrix` or `matrixWorld` throws
+`ConflictingTransformError`, because both would define the same placement.
+
+`geodetic.scale` and the top-level `scale` are both allowed and are not the
+same thing: `geodetic.scale` scales the frame, so it also scales `position`
+offsets, while `scale` scales only the object.
+
+### Terrain-relative height
+
+With `heightReference: "terrain"`, `height` is metres above the terrain rather
+than above the ellipsoid:
+
+```typescript
+view.addMesh<GLTFModelDesc>({
+  gltfModel: { url: "/glTF/car/scene.gltf" },
+  geodetic: {
+    lng: 138.036142,
+    lat: 36.085621,
+    height: 0,
+    heightReference: "terrain",
+    heading: 321,
+  },
+});
+```
+
+Three behaviours are worth knowing:
+
+- The object **settles visibly** as terrain refines. Height is seeded from
+  tiles already resident and updated as more detailed tiles arrive.
+- Clamping follows the **active terrain**, not a source you name.
+- With **no terrain layer** added, the placement behaves as
+  `"ellipsoid"` — terrain layers can be added after the object.
+
+## Up-Axis Conventions (glTF Y-up and tile Z-up)
+
+glTF is Y-up: `GLTFLoader` preserves the asset's own axes, and the glTF 2.0
+specification puts an asset's front at `+Z`, its up at `+Y`, and its right at
+`-X`. The 3D Tiles convention — and `eastNorthUpToFixedFrame`, the frame that
+feels most natural to reach for — is Z-up. Bridging the two by hand means
+inserting an `Rx(+90°)` correction, and getting the remaining 90° of heading
+right on top of it.
+
+**With `geodetic` there is nothing to correct.** `geodetic` builds a
+**West-Up-North (WUN)** tangent frame: `+x` west, `+y` up, `+z` north. WUN is
+the only right-handed, Y-up tangent frame whose `+Z` axis is north, so it
+agrees with glTF on all three axes — front, up, and right. The `Rx(+90°)` has
+been absorbed once into the frame definition itself, as the `Ry(+90°)` basis
+change from NUE, rather than applied per object.
+
+This holds for every mesh Descriptor, not just glTF ones. Three.js primitives
+are Y-up too (a `CylinderGeometry`'s axis is `+Y`), so the same frame is
+correct for `BoxMeshDesc`, `CylinderMeshDesc`, and custom Descriptors.
+
+You still need to think about axes when you supply a frame yourself:
+
+| Frame | Axes (x, y, z) | Up | Needs correction for glTF? |
+| --- | --- | --- | --- |
+| `geodetic` (WUN) | west, up, north | Y | **No** |
+| `westUpNorthToFixedFrame` | west, up, north | Y | **No** |
+| `northUpEastToFixedFrame` | north, up, east | Y | Y-up is fine, but the asset faces **east** at zero rotation |
+| `eastNorthUpToFixedFrame` | east, north, up | Z | Yes — `Rx(+90°)` |
+| `northWestUpToFixedFrame` | north, west, up | Z | Yes — `Rx(+90°)` |
+| `northEastDownToFixedFrame` | north, east, down | −Z | Yes |
+
+### Migrating from another engine
+
+Rotation conventions differ between 3D globe engines, and a frequent difference
+is which axis of a glTF asset is treated as its front. If a ported model comes
+out rotated by a multiple of 90°, that is the thing to check first.
+
+Navara's rule has no special cases: `heading` is the compass bearing the
+asset's front faces, where the front is glTF's own `+Z`. A model on a road
+bearing 321° gets `heading: 321`, at every latitude, for every mesh
+Descriptor.
+
+```typescript
+geodetic: { lng, lat, height, heading: 321 }
 ```
 
 ## Lighting (`lit`)

@@ -7,7 +7,7 @@ sidebar:
 
 `MeshDesc` is a descriptor type for adding 3D mesh objects to the scene. It can display various 3D objects.
 
-All mesh descriptors inherit from [`MeshDesc`](./mesh-desc-base), which provides common properties such as `position`, `rotation`, `scale`, `matrix`, `matrixWorld`, and `pickable`. See the [MeshDesc](./mesh-desc-base) page for details on transform composition, picking, and coordinate transformation.
+All mesh descriptors inherit from [`MeshDesc`](./mesh-desc-base), which provides common properties such as `position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `geodetic`, and `pickable`. See the [MeshDesc](./mesh-desc-base) page for details on transform composition, picking, and coordinate transformation.
 
 ## Available Mesh Descriptor Types
 

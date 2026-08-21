@@ -1,16 +1,10 @@
-import ThreeView, {
-  Color,
-  degreeToRadian,
-  geodeticSurfaceNormal,
-  geodeticToVector3,
-} from "@navaramap/three";
+import ThreeView, { Color } from "@navaramap/three";
 import type { GLTFModelDesc } from "@navaramap/three-default-descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navaramap/three-default-plugin";
 import { TileJsonPlugin } from "@navaramap/three-plugins";
-import { Euler, Quaternion, Vector3 } from "three";
 
 import { initializeExample } from "../../../../helpers/initialize";
 
@@ -49,31 +43,11 @@ const basemap = await tilejson.addSource({
 });
 view.addLayer({ type: "raster", source: basemap });
 
-const carGeodetic = {
-  lng: degreeToRadian(CAR.lng),
-  lat: degreeToRadian(CAR.lat),
-  height: CAR.height,
-};
-const position = geodeticToVector3(carGeodetic);
-const rotation = new Euler().setFromQuaternion(
-  new Quaternion()
-    .setFromUnitVectors(
-      new Vector3(0, 1, 0),
-      geodeticSurfaceNormal(carGeodetic),
-    )
-    .multiply(
-      new Quaternion().setFromAxisAngle(
-        new Vector3(0, 1, 0),
-        Math.PI - degreeToRadian(ROAD_BEARING),
-      ),
-    ),
-);
-
 const car = view.addMesh<GLTFModelDesc>({
   gltfModel: { url: "/glTF/car/scene.gltf" },
-  position: { x: position.x, y: position.y, z: position.z },
-  rotation: { x: rotation.x, y: rotation.y, z: rotation.z },
-  scale: { x: 1.0, y: 1.0, z: 1.0 },
+  // `heading` is the bearing the model's front faces; the West-Up-North frame
+  // `geodetic` builds matches glTF's own Y-up axes, so no up-axis correction.
+  geodetic: { ...CAR, heading: ROAD_BEARING },
 });
 
 view.attribution?.add([

@@ -7,7 +7,7 @@ sidebar:
 
 The `InstancedCylinderMeshDesc` class is a mesh descriptor that renders multiple cylinder instances using GPU instancing. All cylinders share a single geometry and material, rendered in one draw call for high performance. It extends `InstancedMeshDesc`.
 
-In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-desc-base) for details.
+In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `geodetic`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-desc-base) for details.
 
 The taper ratio (`radiusTop` / `radiusBottom`), segments, caps, and arc are shared across all instances and baked into the shared geometry. Per-instance `radius` is a uniform XZ multiplier and `height` is a Y multiplier applied to the shared unit-height geometry.
 

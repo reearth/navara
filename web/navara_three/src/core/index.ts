@@ -8,6 +8,8 @@ export {
 } from "./BaseDesc";
 export {
   MeshDesc,
+  assertNoTransformConflict,
+  mergeGeodetic,
   type MeshUpdate,
   type MeshConfig,
   type PassKey,
