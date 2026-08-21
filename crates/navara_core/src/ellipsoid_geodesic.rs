@@ -171,6 +171,13 @@ fn vincenty_inverse_formula(
     let mut cosine_squared_alpha: f64;
     let mut cosine_twice_sigma_midpoint: f64;
 
+    // Vincenty's inverse method oscillates without converging for
+    // near-antipodal endpoints, and a NaN lambda can never satisfy the
+    // epsilon check, then the loop must be bounded or it hangs. Past the cap the
+    // last estimate is still a usable approximation of the geodesic.
+    const MAX_ITERATIONS: u32 = 200;
+    let mut iterations = 0;
+
     loop {
         cosine_lambda = lambda.cos();
         sine_lambda = lambda.sin();
@@ -210,6 +217,11 @@ fn vincenty_inverse_formula(
         );
 
         if ((lambda - lambda_dot).abs()) <= EPSILON12 {
+            break;
+        }
+
+        iterations += 1;
+        if iterations >= MAX_ITERATIONS || !lambda.is_finite() {
             break;
         }
     }
@@ -465,5 +477,33 @@ mod test {
         assert_abs_diff_eq!(start.lat.val(), first.lat.val(), epsilon = EPSILON7);
         assert_abs_diff_eq!(end.lng.val(), last.lng.val(), epsilon = EPSILON7);
         assert_abs_diff_eq!(end.lat.val(), last.lat.val(), epsilon = EPSILON7);
+    }
+
+    // Vincenty's inverse method oscillates without ever converging for this
+    // near-antipodal pair (verified far beyond 100k iterations on the
+    // unbounded loop); the iteration bound must terminate it with a finite
+    // estimate instead of hanging.
+    #[test]
+    fn it_terminates_for_near_antipodal_points() {
+        let start = LLE {
+            lng: Angle::new(0.),
+            lat: Angle::new(0.5_f64.to_radians()),
+            height: Meters::new(0.),
+        };
+        let end = LLE {
+            lng: Angle::new(179.8_f64.to_radians()),
+            lat: Angle::new((-0.4_f64).to_radians()),
+            height: Meters::new(0.),
+        };
+        let g = EllipsoidGeodesic::new(start, end, &WGS84_64);
+
+        assert!(g.distance.is_finite());
+        // Roughly half the circumference; the capped estimate only needs to
+        // be in the right ballpark.
+        assert!(
+            g.distance > 19_000_000. && g.distance < 21_000_000.,
+            "got {}",
+            g.distance
+        );
     }
 }

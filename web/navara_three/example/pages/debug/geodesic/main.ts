@@ -5,6 +5,8 @@ import {
 } from "@navaramap/three-default-plugin";
 import { Pane } from "tweakpane";
 
+import { TILE_DATASETS } from "../../../helpers/constants";
+
 const view = new ThreeView<DefaultDescriptions>({});
 const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
@@ -14,7 +16,7 @@ view.addLight({ ambient: { intensity: 1 } });
 
 const basemap = view.addSource({
   type: "raster-tile",
-  url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  url: TILE_DATASETS.openstreetmap.url,
   maxZoom: 18,
 });
 view.addLayer({ type: "raster", source: basemap });
@@ -159,3 +161,5 @@ pane
 pane
   .addBinding(PARAMS, "polygon", { options: MODE_OPTIONS })
   .on("change", (ev) => rebuild(polygonLayers, polygonLayer, ev.value));
+
+view.attribution?.add([TILE_DATASETS.openstreetmap]);

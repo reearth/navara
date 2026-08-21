@@ -40,7 +40,7 @@ pub fn interpolate_segment<F>(
     let ellipsoid_line = EllipsoidGeodesic::new(start, end, &ellipsoid);
 
     let surface_distance = ellipsoid_line.distance;
-    if surface_distance < granularity {
+    if !surface_distance.is_finite() || surface_distance < granularity {
         return;
     }
 

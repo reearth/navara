@@ -209,8 +209,9 @@ fn densify_line(coords: &[Position], granularity: f64) -> Option<Vec<Position>> 
         let end = LLE::<f64, Radians>::from_float(lng.to_radians(), lat.to_radians(), 0.);
         let line = EllipsoidGeodesic::new(start, end, &ellipsoid);
         let distance = line.distance;
-        // Vincenty does not converge for coincident or near-antipodal
-        // endpoints; a non-finite distance keeps the segment as-is.
+        // Vincenty's iteration is bounded in EllipsoidGeodesic (near-antipodal
+        // endpoints yield a finite estimate); the finite check guards NaN
+        // input coordinates, which keep the segment as-is.
         if distance.is_finite() && distance >= granularity {
             let segments = (distance / granularity).ceil() as usize;
             let step = distance / segments as f64;
