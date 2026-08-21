@@ -855,6 +855,30 @@ const geodesic = new EllipsoidGeodesic(start, end);
 console.log(`Distance: ${geodesic.distance} m`); // Distance: 401747.8... m
 ```
 
+### converged
+
+Gets whether the geodesic computation converged. Returns `false` when the start and end points are nearly antipodal (on opposite sides of the earth), where no shortest path can be determined reliably. In that case `distance` is only a rough estimate, and the interpolation methods snap to the endpoints instead of following the unreliable solution.
+
+**Syntax:**
+
+```typescript
+get converged(): boolean
+```
+
+**Returns:**
+
+`true` when the computation converged, `false` for nearly antipodal endpoints
+
+**Example:**
+
+```typescript
+const geodesic = new EllipsoidGeodesic(start, end);
+
+if (!geodesic.converged) {
+  console.warn("Nearly antipodal endpoints: the distance is approximate");
+}
+```
+
 ### startHeading
 
 Gets the azimuth at the start point (radians).
@@ -936,7 +960,7 @@ interpolatePoints(granularity?: number): LatLngHeight[]
 
 **Returns:**
 
-An array of interpolated geodetic coordinates
+An array of interpolated geodetic coordinates. When `converged` is `false`, only the start and end points are returned
 
 **Example:**
 
@@ -968,7 +992,7 @@ interpolateDistance(distance: number): LatLngHeight
 
 **Returns:**
 
-Geodetic coordinates at the specified distance
+Geodetic coordinates at the specified distance. When `converged` is `false`, the nearest endpoint is returned instead
 
 **Example:**
 

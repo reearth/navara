@@ -855,6 +855,30 @@ const geodesic = new EllipsoidGeodesic(start, end);
 console.log(`距離: ${geodesic.distance} m`); // 距離: 401747.8... m
 ```
 
+### converged
+
+測地線計算が収束したかどうかを取得します。開始点と終了点がほぼ対蹠点（地球の反対側）にある場合は最短経路を確実に求められないため `false` を返します。この場合 `distance` はおおよその推定値であり、補間メソッドは信頼できない経路をたどる代わりに端点にスナップします。
+
+**Syntax:**
+
+```typescript
+get converged(): boolean
+```
+
+**Returns:**
+
+計算が収束した場合は `true`、ほぼ対蹠点の場合は `false`
+
+**Example:**
+
+```typescript
+const geodesic = new EllipsoidGeodesic(start, end);
+
+if (!geodesic.converged) {
+  console.warn("ほぼ対蹠点のため距離は概算値です");
+}
+```
+
 ### startHeading
 
 開始点での方位角（ラジアン）を取得します。
@@ -936,7 +960,7 @@ interpolatePoints(granularity?: number): LatLngHeight[]
 
 **Returns:**
 
-補間された測地座標の配列
+補間された測地座標の配列。`converged` が `false` の場合は開始点と終了点のみを返します
 
 **Example:**
 
@@ -968,7 +992,7 @@ interpolateDistance(distance: number): LatLngHeight
 
 **Returns:**
 
-指定距離の位置の測地座標
+指定距離の位置の測地座標。`converged` が `false` の場合は近い方の端点を返します
 
 **Example:**
 

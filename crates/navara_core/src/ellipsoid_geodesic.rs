@@ -46,6 +46,7 @@ impl EllipsoidGeodesic {
         distance: f64,
         start_heading: f64,
         end_heading: f64,
+        converged: bool,
         constants: VincentyDirectFormulaConstants,
     ) -> Self {
         Self {
@@ -54,9 +55,7 @@ impl EllipsoidGeodesic {
             distance,
             start_heading,
             end_heading,
-            // Reconstructed from precomputed constants, which only exist for
-            // a solved geodesic.
-            converged: true,
+            converged,
             constants,
         }
     }

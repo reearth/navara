@@ -42,6 +42,16 @@ export class EllipsoidGeodesic {
     return this._raw.distance;
   }
 
+  /**
+   * Whether the geodesic solve converged. `false` for near-antipodal
+   * endpoints, where `distance` is only a rough estimate and the
+   * interpolation methods snap to the endpoints instead of following the
+   * unreliable solution.
+   */
+  get converged(): boolean {
+    return this._raw.converged;
+  }
+
   /** Heading at the start point in radians */
   get startHeading(): number {
     return this._raw.start_heading;

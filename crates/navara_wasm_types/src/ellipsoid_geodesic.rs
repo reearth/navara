@@ -13,6 +13,11 @@ pub struct EllipsoidGeodesic {
     pub distance: FloatType,
     pub start_heading: FloatType,
     pub end_heading: FloatType,
+    /// Whether Vincenty's inverse iteration converged. `false` for
+    /// near-antipodal endpoints, where `distance` is only a rough estimate
+    /// and interpolation snaps to the endpoints instead of following the
+    /// (unreliable) capped solution.
+    pub converged: bool,
     constants: navara_core::VincentyDirectFormulaConstants,
 }
 
@@ -31,6 +36,7 @@ impl EllipsoidGeodesic {
             distance: inner.distance,
             start_heading: inner.start_heading,
             end_heading: inner.end_heading,
+            converged: inner.converged,
             constants: inner.constants,
         }
     }
@@ -42,6 +48,7 @@ impl EllipsoidGeodesic {
             self.distance,
             self.start_heading,
             self.end_heading,
+            self.converged,
             self.constants.clone(),
         )
     }
@@ -50,7 +57,14 @@ impl EllipsoidGeodesic {
     pub fn interpolate_geodetic_points(&self, granularity: Option<f64>) -> Vec<LLE> {
         let granularity = granularity.unwrap_or(9999.0);
 
-        if granularity == 0.0 || self.distance < granularity {
+        // A non-converged solve (near-antipodal endpoints) would interpolate
+        // an incorrect route; a non-finite distance would underflow
+        // `segments - 1` below.
+        if !self.converged
+            || !self.distance.is_finite()
+            || granularity == 0.0
+            || self.distance < granularity
+        {
             return vec![self.start, self.end];
         }
 
@@ -76,6 +90,18 @@ impl EllipsoidGeodesic {
 
     #[wasm_bindgen(js_name = "interpolateDistance")]
     pub fn interpolate_distance(&self, distance: f64) -> LLE {
+        // Without convergence there is no trustworthy route between the
+        // endpoints, so snap to the nearest endpoint instead of emitting a
+        // point from the capped, incorrect solution. Callers can detect the
+        // case via `converged`.
+        if !self.converged {
+            return if distance * 2. < self.distance {
+                self.start
+            } else {
+                self.end
+            };
+        }
+
         let inner = self.inner();
         inner
             .interpolate_distance(&navara_core::WGS84_64, distance)
