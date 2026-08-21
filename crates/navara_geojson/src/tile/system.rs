@@ -9,6 +9,9 @@ use navara_vector_tile::{
     VectorTileSourceResources,
 };
 
+use navara_geometry::DEFAULT_POLYLINE_GRANULARITY_METERS;
+
+use super::densify::densify_geojson;
 use super::source::GeoJsonTileSource;
 
 #[derive(Component)]
@@ -67,6 +70,9 @@ pub fn setup_tiled_geojson(
         };
         let max_zoom = opts.max_zoom;
         let extent = opts.extent;
+
+        let densified = densify_geojson(geojson, DEFAULT_POLYLINE_GRANULARITY_METERS);
+        let geojson = densified.as_ref().unwrap_or(geojson);
         let vt = GeoJsonVt::new(geojson, opts);
 
         // GeoJSON is client-tiled from a single document, so it has data at

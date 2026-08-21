@@ -1,3 +1,4 @@
+mod densify;
 mod geometry;
 pub(crate) mod source;
 mod system;

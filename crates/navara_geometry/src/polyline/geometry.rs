@@ -16,6 +16,8 @@ pub struct PolylineGeometry {
     pub indices: Vec<u32>,
 }
 
+pub const DEFAULT_POLYLINE_GRANULARITY_METERS: f64 = 9999.;
+
 pub struct PolylineGeometryOptions {
     pub positions: Vec<LLE<f64, Radians>>,
     pub granularity: f64,
@@ -29,7 +31,7 @@ impl Default for PolylineGeometryOptions {
         Self {
             positions: Default::default(),
             crs: Default::default(),
-            granularity: 9999.,
+            granularity: DEFAULT_POLYLINE_GRANULARITY_METERS,
             clamp_to_ground: false,
             use_rte: false,
         }
