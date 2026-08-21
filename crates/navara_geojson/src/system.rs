@@ -16,8 +16,8 @@ use navara_feature_component::{
 
 use navara_tile_component::VectorTileQuadtree;
 use navara_vector_tile::{
-    LayerResources, RenderedTile, TileCacheManager, TileSource, VectorTileSourceCache,
-    VectorTileSourceResources,
+    LayerResources, RenderedTile, TileCacheManager, TileSource, VectorTileFeatureMarker,
+    VectorTileSourceCache, VectorTileSourceResources,
 };
 
 use navara_buffer_store::BufferStore;
@@ -171,7 +171,10 @@ pub fn delete_geo_json_layer(
     mut layer_store: ResMut<LayerStore>,
     deleted: Query<(Entity, &DeleteGeoJsonLayerMarker)>,
     layers: Query<(Entity, &GeoJsonLayer, Option<&LayerResources>)>,
-    batched_features: Query<(Entity, &LayerId, &BatchedFeature), Without<RenderableFeature>>,
+    batched_features: Query<
+        (Entity, &LayerId, &BatchedFeature),
+        (Without<RenderableFeature>, Without<VectorTileFeatureMarker>),
+    >,
     // For tiled layer cleanup (passed to LayerResources::destroy):
     feature_ids: Query<(&FeatureId, &LayerId)>,
     all_batched_features: Query<&BatchedFeature>,
@@ -203,13 +206,19 @@ pub fn delete_geo_json_layer(
                     &mut sources,
                     &mut source_cache,
                 );
-            } else {
-                // Non-tiled path: clean up BatchedFeature entities
-                for (entity, l_id, batched) in batched_features.iter() {
-                    if l_id.0 == d.0 {
-                        batched.despawn_recursively(&mut commands);
-                        commands.entity(entity).insert(Deleted);
-                    }
+            }
+
+            // Clean up direct-path BatchedFeature entities regardless of the
+            // tiled path: points/billboards/texts (and non-clamped
+            // polylines/polygons) always go through the direct path even when
+            // the layer is tiled, so they are invisible to
+            // LayerResources::destroy(). The query excludes
+            // VectorTileFeatureMarker so tile-derived batches are not
+            // processed twice.
+            for (entity, l_id, batched) in batched_features.iter() {
+                if l_id.0 == d.0 {
+                    batched.despawn_recursively(&mut commands);
+                    commands.entity(entity).insert(Deleted);
                 }
             }
             commands.entity(layer_entity).despawn();
@@ -275,5 +284,118 @@ pub fn parse_geojson(
             source_store.set_geojson_data(&source_id, geojson);
             l.set_changed();
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use bevy_app::{App, Update};
+    use navara_vector_tile::VectorTileFeatureMarker;
+
+    fn make_layer(layer_id: &str) -> GeoJsonLayer {
+        GeoJsonLayer {
+            layer_id: layer_id.to_string(),
+            source_id: None,
+            appearances: vec![],
+            crs: None,
+            dynamic_sse_scale: None,
+        }
+    }
+
+    // Points/billboards/texts always render through the direct (non-tiled)
+    // path even when the layer is tiled because of clamp-to-ground
+    // polylines/polygons. Deleting such a layer must mark those direct-path
+    // batches Deleted too, not only the tile-derived ones.
+    #[test]
+    fn delete_tiled_layer_cleans_up_direct_path_features() {
+        let mut app = App::new();
+        app.init_resource::<LayerStore>();
+        app.init_resource::<VectorTileSourceCache>();
+        app.add_systems(Update, delete_geo_json_layer);
+
+        let world = app.world_mut();
+        let source = world.spawn_empty().id();
+        let quadtree = world.spawn_empty().id();
+        let tile_cache_manager = world.spawn_empty().id();
+
+        world.spawn((
+            make_layer("layer"),
+            LayerResources {
+                layer_id: "layer".to_string(),
+                source,
+                quadtree,
+                tile_cache_manager,
+            },
+        ));
+
+        let direct_feature = world
+            .spawn((
+                LayerId("layer".to_string()),
+                BatchedFeature {
+                    construct_polygon_feature: None,
+                    construct_polyline_feature: None,
+                    default_active: true,
+                },
+            ))
+            .id();
+
+        // Tile-derived batches are cleaned up by LayerResources::destroy();
+        // the direct-path sweep must not touch them.
+        let tiled_feature = world
+            .spawn((
+                LayerId("layer".to_string()),
+                BatchedFeature {
+                    construct_polygon_feature: None,
+                    construct_polyline_feature: None,
+                    default_active: false,
+                },
+                VectorTileFeatureMarker,
+            ))
+            .id();
+
+        world.spawn(DeleteGeoJsonLayerMarker("layer".to_string()));
+
+        app.update();
+
+        assert!(
+            app.world().entity(direct_feature).contains::<Deleted>(),
+            "direct-path feature must be marked Deleted when a tiled layer is removed"
+        );
+        assert!(
+            !app.world().entity(tiled_feature).contains::<Deleted>(),
+            "tile-derived feature is owned by LayerResources::destroy() and must not be double-processed"
+        );
+    }
+
+    #[test]
+    fn delete_non_tiled_layer_cleans_up_direct_path_features() {
+        let mut app = App::new();
+        app.init_resource::<LayerStore>();
+        app.init_resource::<VectorTileSourceCache>();
+        app.add_systems(Update, delete_geo_json_layer);
+
+        let world = app.world_mut();
+        world.spawn(make_layer("layer"));
+
+        let direct_feature = world
+            .spawn((
+                LayerId("layer".to_string()),
+                BatchedFeature {
+                    construct_polygon_feature: None,
+                    construct_polyline_feature: None,
+                    default_active: true,
+                },
+            ))
+            .id();
+
+        world.spawn(DeleteGeoJsonLayerMarker("layer".to_string()));
+
+        app.update();
+
+        assert!(
+            app.world().entity(direct_feature).contains::<Deleted>(),
+            "direct-path feature must be marked Deleted when a non-tiled layer is removed"
+        );
     }
 }
