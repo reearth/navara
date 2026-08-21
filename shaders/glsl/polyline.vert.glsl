@@ -3,6 +3,7 @@
 #include chunks/branchFreeTernary;
 #include chunks/planeDistance;
 #include chunks/metersPerPixel;
+#include chunks/horizon_culling_pars_vertex;
 
 in float attrBatchId;
 
@@ -48,6 +49,24 @@ out vec3 vNormal;
 
 
 void main() {
+    #ifdef USE_RTE
+        // Horizon culling per segment: collapse only when BOTH endpoints are
+        // beyond the ellipsoidal horizon. All shadow-volume vertices of a
+        // segment share start/end, so the test cannot split a primitive.
+        // Testing the vertex's own position instead would collapse one end of
+        // a horizon-crossing segment and distort it. Must run before any flat
+        // varying is written, and all vertices of the segment return together.
+        vec3 segmentStartAbs = start_3d_high + start_3d_low;
+        vec3 segmentEndAbs = end_3d_high + end_3d_low;
+        if (nvr_horizon_culled(segmentStartAbs, cameraPosition)
+            && nvr_horizon_culled(segmentEndAbs, cameraPosition)) {
+            vHorizonCulled = 1;
+            gl_Position = vec4(0.0);
+            return;
+        }
+        vHorizonCulled = 0;
+    #endif
+
     #ifdef USE_RTE
         #include chunks/rte_vertex;
         // Now 'transformed' contains camera-relative position
@@ -196,6 +215,11 @@ void main() {
     positionEC.xyz += lineWidth * normalEC;
     gl_Position = projectionMatrix * positionEC;
     vViewPosition = -positionEC.xyz;
+
+    // Alias for three's chunk convention: the CSM view-space shadow patch
+    // (applyViewSpaceShadowReceive) requires `mvPosition` in scope at
+    // #include <shadowmap_vertex>.
+    vec4 mvPosition = positionEC;
 
     #include <worldpos_vertex>
     #include <shadowmap_vertex>
