@@ -19,7 +19,7 @@ export type PickHelperOptions = {
 };
 
 /**
- * Max travel in CSS pixels between mousedown and mouseup for a click.
+ * Travel tolerance in CSS pixels between mousedown and mouseup to count as a click.
  * Follows Cesium's `_clickPixelTolerance` (MapLibre uses 3px).
  * ref: https://github.com/CesiumGS/cesium/blob/9fda7ab97a762e40c74b1d0e1814c98a2de43337/packages/engine/Source/Core/ScreenSpaceEventHandler.js#L1012
  * ref: https://github.com/maplibre/maplibre-gl-js/blob/3a0a4f795fef5b2a29034d71833475589c344eaf/src/ui/map.ts#L542
