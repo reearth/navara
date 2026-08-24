@@ -246,8 +246,7 @@ pub fn sync_flight_events(
 ) {
     for mut flight in query.iter_mut() {
         if !flight.ended.is_empty() {
-            let drained: Vec<_> = flight.ended.drain(..).collect();
-            events.camera_flight_ended.extend(drained);
+            events.camera_flight_ended.extend(flight.ended.drain(..));
         }
     }
 }
