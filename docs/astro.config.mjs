@@ -83,8 +83,8 @@ export default defineConfig({
         },
         {
           tag: "link",
-          attrs: { rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: true },
-        },
+          attrs: { rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: "anonymous" },
+        }
         {
           tag: "link",
           attrs: {
