@@ -2,7 +2,7 @@ use bevy_ecs::world::World;
 use navara_camera::CameraFrustum;
 use navara_data_requester::DataRequester;
 use navara_event_store::{
-    ComponentEvent, ComponentEventWithResource, EntityEvent, EventStore,
+    CameraFlightEnded, ComponentEvent, ComponentEventWithResource, EntityEvent, EventStore,
     ReconstructableComponentEvent,
 };
 use navara_feature_component::render::RenderableFeature;
@@ -22,6 +22,7 @@ use navara_worker::DelegatedWorkerTasksParameters;
 pub struct Events<'a> {
     pub camera_transform_updated: Option<&'a Transform>,
     pub camera_frustum_updated: Option<&'a CameraFrustum>,
+    pub camera_flight_ended: Vec<CameraFlightEnded>,
     pub object_transform_updated: Vec<ComponentEvent<&'a Transform>>,
     pub mesh_removed: Vec<EntityEvent>,
     #[allow(clippy::type_complexity)]
@@ -82,6 +83,11 @@ impl<'a> Events<'a> {
 
         if let Some(e) = store.camera_frustum_updated {
             events.camera_frustum_updated = world.get::<CameraFrustum>(e);
+            is_changed = true;
+        }
+
+        for e in store.camera_flight_ended.iter() {
+            events.camera_flight_ended.push(*e);
             is_changed = true;
         }
 

@@ -19,6 +19,21 @@ export type PickHelperOptions = {
 };
 
 /**
+ * Travel tolerance in CSS pixels between mousedown and mouseup to count as a click.
+ * Follows Cesium's `_clickPixelTolerance` (MapLibre uses 3px).
+ * ref: https://github.com/CesiumGS/cesium/blob/9fda7ab97a762e40c74b1d0e1814c98a2de43337/packages/engine/Source/Core/ScreenSpaceEventHandler.js#L1012
+ * ref: https://github.com/maplibre/maplibre-gl-js/blob/3a0a4f795fef5b2a29034d71833475589c344eaf/src/ui/map.ts#L542
+ */
+const CLICK_PIXEL_TOLERANCE = 5;
+
+export function isClickGesture(
+  downPosition: Vector2,
+  upPosition: Vector2,
+): boolean {
+  return downPosition.distanceTo(upPosition) < CLICK_PIXEL_TOLERANCE;
+}
+
+/**
  * GPU picking using a dedicated single-pixel render pass.
  *
  * The pick pass does NOT reuse the main render pipeline (globe / MRT /
@@ -49,9 +64,8 @@ export class PickHelper {
   /** Full-size render target used for click picking with scissor restriction. */
   private pickRenderTarget: WebGLRenderTarget;
 
-  private mouseMoved: boolean;
+  private mouseDownPosition?: Vector2;
   private mouseDownHandler: (event: MouseEvent) => void;
-  private mouseMoveHandler: (event: MouseEvent) => void;
   private mouseUpHandler: (event: MouseEvent) => void;
 
   constructor(
@@ -69,9 +83,7 @@ export class PickHelper {
     this._meshes = meshes;
     this.onPickCallback = onPickCallback;
 
-    this.mouseMoved = false;
     this.mouseDownHandler = (event: MouseEvent) => this.onMouseDown(event);
-    this.mouseMoveHandler = (event: MouseEvent) => this.onMouseMove(event);
     this.mouseUpHandler = (event: MouseEvent) => this.onMouseUp(event);
 
     const width = this._renderer.getContext().drawingBufferWidth;
@@ -93,16 +105,18 @@ export class PickHelper {
     }
   }
 
-  private onMouseDown(_event: MouseEvent) {
-    this.mouseMoved = false;
-  }
-
-  private onMouseMove(_event: MouseEvent) {
-    this.mouseMoved = true;
+  private onMouseDown(event: MouseEvent) {
+    this.mouseDownPosition = new Vector2(event.clientX, event.clientY);
   }
 
   private onMouseUp(event: MouseEvent) {
-    if (!this.mouseMoved) {
+    const downPosition = this.mouseDownPosition;
+    this.mouseDownPosition = undefined;
+    if (!downPosition) return;
+
+    if (
+      isClickGesture(downPosition, new Vector2(event.clientX, event.clientY))
+    ) {
       this.onMouseClick(event);
     }
   }
@@ -110,11 +124,9 @@ export class PickHelper {
   enablePick(bPick: boolean) {
     if (bPick) {
       this.element.addEventListener("mousedown", this.mouseDownHandler);
-      this.element.addEventListener("mousemove", this.mouseMoveHandler);
       this.element.addEventListener("mouseup", this.mouseUpHandler);
     } else {
       this.element.removeEventListener("mousedown", this.mouseDownHandler);
-      this.element.removeEventListener("mousemove", this.mouseMoveHandler);
       this.element.removeEventListener("mouseup", this.mouseUpHandler);
     }
   }

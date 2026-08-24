@@ -36,7 +36,7 @@ const tilesSource = view.addSource({
 const tiles = view.addLayer({
   type: "3d-tiles",
   source: tilesSource,
-  model: { maxSse: 40 },
+  model: { maxSse: 20 },
 });
 
 view.attribution?.add([

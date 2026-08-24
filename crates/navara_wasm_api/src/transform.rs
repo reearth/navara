@@ -51,7 +51,6 @@ pub fn screen_to_world(
         frustum.far,
         frustum.fov,
         frustum.aspect_ratio,
-        0.0,
     );
 
     let ray = get_pick_ray_from_camera(&window, &transform, &frustum, screen_pos.into());
@@ -110,7 +109,6 @@ pub fn world_to_screen(
         frustum.far,
         frustum.fov,
         frustum.aspect_ratio,
-        0.0,
     );
 
     let world_pos: Vec3 = world_pos.into();
@@ -141,7 +139,9 @@ pub fn world_to_screen(
     let x_offset = offset.dot(right);
     let y_offset = offset.dot(up);
 
-    // Calculate screen coordinates using perspective projection
+    // Calculate screen coordinates using perspective projection. `fov` is
+    // the vertical field of view, so `tan_phi` is the vertical near-plane
+    // half-extent.
     let tan_phi = (frustum.fov * 0.5).tan() as f64;
     let tan_theta = frustum.aspect_ratio * tan_phi as f64;
 

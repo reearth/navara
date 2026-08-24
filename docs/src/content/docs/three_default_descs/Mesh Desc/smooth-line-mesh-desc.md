@@ -7,7 +7,7 @@ sidebar:
 
 The `SmoothLineMeshDesc` class is a mesh descriptor for drawing smooth lines using Catmull-Rom curves. It generates smooth curves from an array of points and also supports dashed patterns and point marker display.
 
-In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `geodetic`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-desc-base) for details.
+In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `geodetic`, `pickable`, `visible`) are available. See [MeshDesc](../mesh-desc-base) for details.
 
 ## Properties
 
@@ -15,7 +15,7 @@ In addition to the properties below, all common properties from the base class (
 
 **Type:** `number`
 
-**Description:** Specifies the tension of the curve. 0 produces a straight line; higher values produce smoother curves.
+**Description:** Specifies the tension of the curve. 0 produces a straight line. Higher values produce smoother curves.
 
 **Default:** `0.5`
 

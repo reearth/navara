@@ -45,8 +45,8 @@ Descriptor の種類に応じて、対応する基底クラスを継承して実
 
 カスタム Descriptor は `this.view` と `this.ctx` の2つのプロパティを通じて内部 API にアクセスします。
 
-- **`this.view`** (`ThreeView`) — 高レベルなビュー状態：カメラ、大気、地球
-- **`this.ctx`** (`ViewContext`) — レンダリング内部：シーン、ポストプロセッシングパス、バッファ、テクスチャ
+- **`this.view`** (`ThreeView`): 高レベルなビュー状態：カメラ、大気、地球
+- **`this.ctx`** (`ViewContext`): レンダリング内部：シーン、ポストプロセッシングパス、バッファ、テクスチャ
 
 #### view プロパティ
 
@@ -165,8 +165,8 @@ setupMaterialForMRT(lineMaterial);
 
 必要なのは 2 つで、**どちらか一方でも欠けると、深度・法線ベースのエフェクトに一切参加しないメッシュが黙って出来上がります**。
 
-1. `setupMaterialForMRT()` — マテリアルがアタッチメントに書き込むようにする
-2. `getPassKey()` が `"mrt"` を返す — メッシュを G-buffer パスで描画する。既定は `"opaque"` で、これは G-buffer のコピー**後**に合成されるため、そこに置かれたメッシュはマテリアルが何をしていても書き込みません
+1. `setupMaterialForMRT()`: マテリアルがアタッチメントに書き込むようにする
+2. `getPassKey()` が `"mrt"` を返す、すなわちメッシュを G-buffer パスで描画する。既定は `"opaque"` で、これは G-buffer のコピー**後**に合成されるため、そこに置かれたメッシュはマテリアルが何をしていても書き込みません
 
 ```typescript
 import ThreeView, {
@@ -246,7 +246,7 @@ view.addMesh<GlowSphereDesc>({
 サンプリング時に注意すべきエンコーディング:
 
 - 法線バッファの RG チャンネルは**ビュー空間法線の octahedral エンコード**です。`@navaramap/three` がエクスポートする `NORMAL_PACKING_SHADER` GLSL 文字列の `unpackVec2ToNormal()` でデコードしてください（単純な `xy * 2 - 1` の再構成では誤った陰影になります）。
-- シャドウバッファは `R = 影の量`（0=非影..1=完全な影）、`G = albedo 出力フラグ`（[`lit`](../../../three/api/threeview-properties/#lit) オプションで color が素の albedo のとき 1 — deferred lighting パスが「このピクセルを照らす」マスクとして使います）を保持します。
+- シャドウバッファは `R = 影の量`（0=非影..1=完全な影）、`G = albedo 出力フラグ`（[`lit`](../../../three/api/threeview-properties/#lit) オプションで color が素の albedo のとき 1。deferred lighting パスが「このピクセルを照らす」マスクとして使います）を保持します。
 - 深度テクスチャは Three.js の packing 規約に従います。MRT パスの `depthBufferPacking` / `globeDepthBufferPacking` を確認し、`@navaramap/three` がエクスポートする `DEPTH_PACKING_SHADER` GLSL 文字列（Three.js の `packing` チャンク）のヘルパーでアンパックしてください。
 
 ## カスタムメッシュ
@@ -747,7 +747,7 @@ export class MyPointLightDesc extends LightDesc<
 
 ## カスタム Descriptor でのピッキング実装
 
-ユーザー向けのピッキング概要については [MeshDesc — ピッキング](../../../three_default_descs/mesh-desc/mesh-desc-base/#ピッキング) を参照してください。このセクションでは、カスタム Descriptor を作成する際にピッキングサポートを実装する方法を説明します。
+ユーザー向けのピッキング概要については [MeshDesc: ピッキング](../../../three_default_descs/mesh-desc/mesh-desc-base/#ピッキング) を参照してください。このセクションでは、カスタム Descriptor を作成する際にピッキングサポートを実装する方法を説明します。
 
 ### PickableMeshWrapper によるターンキーピッキング
 

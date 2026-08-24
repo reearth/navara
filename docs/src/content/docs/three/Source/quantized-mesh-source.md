@@ -13,7 +13,7 @@ A `quantized-mesh` source describes Cesium quantized-mesh terrain. Render it wit
 | ---------------------- | ------------------ | ---------- | ---------------------------------------------------------------------- |
 | `type`                 | `"quantized-mesh"` | (required) | Source type.                                                          |
 | `url`                  | `string`           | (required) | Tile URL template (contains `{z}/{x}/{y}`).                          |
-| `geographic`           | `boolean`          | `true`     | Use a geographic (EPSG:4326) tiling scheme; otherwise WebMercator.   |
+| `geographic`           | `boolean`          | `true`     | Use a geographic (EPSG:4326) tiling scheme. Otherwise WebMercator.   |
 | `tms`                  | `boolean`          | `true`     | Whether the tile Y axis is south-origin (TMS).                       |
 | `requestVertexNormals` | `boolean`          | `false`    | Request the oct-encoded per-vertex normals extension (`octvertexnormals` Accept header). |
 | `requestWaterMask`     | `boolean`          | `false`    | Request the watermask extension (`watermask` Accept header).         |
@@ -46,4 +46,4 @@ view.addLayer({
 ## Related Resources
 
 - [About Source](../../../three/source/about/)
-- [TerrainMaterial](../../../three/material/terrain-material/) — terrain rendering options
+- [TerrainMaterial](../../../three/material/terrain-material/): terrain rendering options

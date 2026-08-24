@@ -87,7 +87,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       type: "3d-tiles",
       source: tilesSource,
       model: {
-        maxSse: 60,
+        maxSse: 8,
         normals: true,
       },
     });

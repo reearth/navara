@@ -181,7 +181,7 @@ That's it. The character now responds to the keyboard and the camera follows it.
 | Alt (hold)        | Free-orbit camera                  |
 | V                 | Toggle third-person / first-person |
 
-The default chase view (TPV) is third person. Press **V** to switch to first person (FPV); the character mesh is hidden automatically. Hold **Alt** to take manual control of the camera while keeping it focused on the character.
+The default chase view (TPV) is third person. Press **V** to switch to first person (FPV). The character mesh is hidden automatically. Hold **Alt** to take manual control of the camera while keeping it focused on the character.
 
 ## Reacting to Movement
 

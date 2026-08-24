@@ -7,21 +7,23 @@ sidebar:
 
 `HillshadeMaterial` holds the render options for hillshade (shaded relief) on a [`raster`](../../../three/layer/raster-layer/) layer. It computes surface normals from DEM elevation values and shades the tile based on lighting direction, emphasizing terrain features such as ridges and valleys. Set it via the `hillshade` key.
 
-Because it decodes DEM tiles, it requires a [`raster-dem`](../../../three/source/raster-dem-source/) source; the elevation decoder is taken from the source, not from this material.
+Because it decodes DEM tiles, it requires a [`raster-dem`](../../../three/source/raster-dem-source/) source. The elevation decoder is taken from the source, not from this material.
 
 ## Use Cases
 
 - Emphasizing terrain undulation on flat (2D) basemaps
-- Computing accurate terrain normals from DEM tiles on top of [3D terrain layers](../../../three/layer/terrain-layer/) (the geometry's vertex normals are coarse-grained; hillshade derives per-pixel normals directly from the elevation tile)
+- Computing accurate terrain normals from DEM tiles on top of [3D terrain layers](../../../three/layer/terrain-layer/) (the geometry's vertex normals are coarse-grained. Hillshade derives per-pixel normals directly from the elevation tile)
 - Drawing attention to subtle topographic features that are hard to perceive from a raster basemap alone
 
 ## Properties
 
 ### exaggeration
 
-**Type:** `number | undefined` — **Default:** `1.0`
+**Type:** `number | undefined`
 
-**Description:** Exaggeration factor applied to elevation differences when computing the hillshade. Larger values produce stronger shading; smaller values produce more subtle shading.
+**Default:** `1.0`
+
+**Description:** Exaggeration factor applied to elevation differences when computing the hillshade. Larger values produce stronger shading. Smaller values produce more subtle shading.
 
 ```typescript
 { hillshade: { exaggeration: 0.5 } }
@@ -56,7 +58,7 @@ Reuse the same `raster-dem` source for both a [`terrain`](../../../three/layer/t
 
 ## Related Resources
 
-- [Raster Layer](../../../three/layer/raster-layer/) — how to use this material
-- [Raster DEM Source](../../../three/source/raster-dem-source/) — DEM source and its elevation decoder
-- [Terrain Layer](../../../three/layer/terrain-layer/) — 3D terrain rendering
-- [ElevationHeatmapMaterial](../../../three/material/elevation-heatmap-material/) — visualize elevation data as a heatmap
+- [Raster Layer](../../../three/layer/raster-layer/): how to use this material
+- [Raster DEM Source](../../../three/source/raster-dem-source/): DEM source and its elevation decoder
+- [Terrain Layer](../../../three/layer/terrain-layer/): 3D terrain rendering
+- [ElevationHeatmapMaterial](../../../three/material/elevation-heatmap-material/): visualize elevation data as a heatmap

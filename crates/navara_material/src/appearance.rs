@@ -531,7 +531,7 @@ impl Default for ModelMaterial {
             height: 1.,
             url: "".to_string(),
             should_rotate_in_default: true,
-            max_sse: 16.,
+            max_sse: 8.,
             color: 0xffffff,
             metalness: 0.0,
             roughness: 1.0,

@@ -32,7 +32,6 @@ pub fn get_pick_ray(
         frustum.far,
         frustum.fov,
         frustum.aspect_ratio,
-        0.0,
     );
 
     let ray = get_pick_ray_from_camera(&window, &transform, &frustum, screen_pos.into());

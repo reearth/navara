@@ -101,30 +101,13 @@ console.log(`方位: ${heading}°, 仰俯角: ${pitch}°, ロール: ${roll}°`)
 
 ---
 
-### fovy
-
-**Type:** `number | undefined`
-
-**Read-only**
-
-現在の垂直視野角（度）。エンジン未初期化の場合は `undefined` を返します。
-
-**Example:**
-
-```typescript
-const fov = view.camera.fovy;
-if (fov !== undefined) {
-  console.log(`垂直視野角: ${fov}°`);
-}
-```
-
----
-
 ### fov
 
-**Type:** `number` (setter)
+**Type:** `number | undefined` (getter) / `number` (setter)
 
-垂直視野角を設定します（度）。有効範囲は `1`〜`180`。範囲外の値は無視されます。
+垂直視野角（度）。水平方向の広がりはビューポートのアスペクト比から決まります。
+
+設定時の有効範囲は `1`〜`180` で、範囲外の値は無視されます。読み取りはエンジン未初期化の場合 `undefined` を返します。
 
 **Example:**
 
@@ -134,6 +117,8 @@ view.camera.fov = 30;
 
 // パノラマ効果（広い視野角）
 view.camera.fov = 90;
+
+console.log(`視野角: ${view.camera.fov}°`);
 ```
 
 ---
@@ -298,7 +283,7 @@ view.camera.on("moveend", () => {
 
 ```typescript
 view.camera.on("frustumChanged", () => {
-  console.log(`FOV: ${view.camera.fovy}°`);
+  console.log(`FOV: ${view.camera.fov}°`);
 });
 ```
 
@@ -361,5 +346,5 @@ view.camera.once("moveend", () => {
 
 ## 関連項目
 
-- [ThreeView プロパティ](../../../three/api/threeview-properties/) — `view.camera` やその他のビュープロパティ
-- [ThreeView 関数](../../../three/api/threeview-functions/) — `setCamera()`、`flyTo()`、`lookAt()` などのカメラ移動メソッド
+- [ThreeView プロパティ](../../../three/api/threeview-properties/): `view.camera` やその他のビュープロパティ
+- [ThreeView 関数](../../../three/api/threeview-functions/): `setCamera()`、`flyTo()`、`lookAt()` などのカメラ移動メソッド

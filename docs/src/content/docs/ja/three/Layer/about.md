@@ -59,6 +59,6 @@ layer.delete();
 
 ## 関連リソース
 
-- [About Source](../../../three/source/about/) — データ側
-- [ThreeView functions](../../../three/api/threeview-functions/) — `addLayer` / `addSource`
-- [Materials](../../../three/material/about/) — マテリアル（スタイリング）のリファレンス
+- [About Source](../../../three/source/about/): データ側
+- [ThreeView functions](../../../three/api/threeview-functions/): `addLayer` / `addSource`
+- [Materials](../../../three/material/about/): マテリアル（スタイリング）のリファレンス

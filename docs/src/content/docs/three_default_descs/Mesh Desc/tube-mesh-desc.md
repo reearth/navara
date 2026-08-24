@@ -7,7 +7,7 @@ sidebar:
 
 The `TubeMeshDesc` class is a mesh descriptor for drawing tube geometry. It can create tube shapes along a Catmull-Rom curve.
 
-In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `geodetic`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-desc-base) for details.
+In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `geodetic`, `pickable`, `visible`) are available. See [MeshDesc](../mesh-desc-base) for details.
 
 ## Properties
 

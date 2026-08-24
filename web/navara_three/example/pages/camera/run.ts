@@ -1,6 +1,7 @@
 import ThreeView, {
   type CameraOrientation,
   CameraDirection,
+  type FlyToEasing,
   JAPAN_GSI_ELEVATION_DECODER,
   type LatLngHeight,
 } from "@navaramap/three";
@@ -262,7 +263,9 @@ const addFlyToOption = (pane: Pane, view: ThreeView<CustomDescriptions>) => {
     pitch: -90.0, // -180 to 0
     roll: 0, // -180 to 180
     duration: 2000,
+    use_default_duration: false,
     max_height: 0,
+    easing: "default" as FlyToEasing | "default",
   };
   const distanceParams = { use_distance: false, distance: 10000.0 };
 
@@ -271,35 +274,43 @@ const addFlyToOption = (pane: Pane, view: ThreeView<CustomDescriptions>) => {
     expanded: false,
   });
 
-  const clickFunc = () => {
-    if (distanceParams.use_distance) {
-      view.flyTo(
-        {
-          lng: cameraParams.longitude,
-          lat: cameraParams.latitude,
-          height: cameraParams.altitude,
-          distance: distanceParams.distance,
-          heading: cameraParams.heading,
-          pitch: cameraParams.pitch,
-          roll: cameraParams.roll,
-        },
-        cameraParams.duration,
+  const clickFunc = async () => {
+    const options = {
+      duration: cameraParams.use_default_duration
+        ? undefined
+        : cameraParams.duration,
+      maxHeight:
         cameraParams.max_height > 1 ? cameraParams.max_height : undefined,
-      );
-    } else {
-      view.flyTo(
-        {
-          lng: cameraParams.longitude,
-          lat: cameraParams.latitude,
-          height: cameraParams.altitude,
-          heading: cameraParams.heading,
-          pitch: cameraParams.pitch,
-          roll: cameraParams.roll,
-        },
-        cameraParams.duration,
-        cameraParams.max_height > 1 ? cameraParams.max_height : undefined,
-      );
-    }
+      easing:
+        cameraParams.easing === "default" ? undefined : cameraParams.easing,
+    };
+    const completed = distanceParams.use_distance
+      ? await view.flyTo(
+          {
+            lng: cameraParams.longitude,
+            lat: cameraParams.latitude,
+            height: cameraParams.altitude,
+            distance: distanceParams.distance,
+            heading: cameraParams.heading,
+            pitch: cameraParams.pitch,
+            roll: cameraParams.roll,
+          },
+          options,
+        )
+      : await view.flyTo(
+          {
+            lng: cameraParams.longitude,
+            lat: cameraParams.latitude,
+            height: cameraParams.altitude,
+            heading: cameraParams.heading,
+            pitch: cameraParams.pitch,
+            roll: cameraParams.roll,
+          },
+          options,
+        );
+    // Clicking "Fly To" again mid-flight interrupts the previous flight,
+    // resolving its promise with `false`.
+    console.log(`flyTo ${completed ? "completed" : "interrupted"}`);
   };
 
   folder.addBinding(cameraParams, "longitude", { min: -180.0, max: 180.0 });
@@ -309,13 +320,26 @@ const addFlyToOption = (pane: Pane, view: ThreeView<CustomDescriptions>) => {
   folder.addBinding(cameraParams, "pitch", { min: -180.0, max: 0.0 });
   folder.addBinding(cameraParams, "roll", { min: -180.0, max: 180.0 });
   folder.addBinding(cameraParams, "duration");
+  folder.addBinding(cameraParams, "use_default_duration", {
+    label: "default duration",
+  });
   folder.addBinding(cameraParams, "max_height");
+  folder.addBinding(cameraParams, "easing", {
+    options: {
+      default: "default",
+      linear: "linear",
+      quadInOut: "quadInOut",
+      cubicInOut: "cubicInOut",
+      cubicOut: "cubicOut",
+      quinticInOut: "quinticInOut",
+    },
+  });
 
   folder.addBinding(distanceParams, "use_distance", { label: "use distance" });
   folder.addBinding(distanceParams, "distance", { min: 1, max: 19070256 });
 
   folder.addButton({ title: "Fly To", label: "" }).on("click", () => {
-    clickFunc();
+    void clickFunc();
   });
 };
 

@@ -17,7 +17,7 @@ You need [Node.js](https://nodejs.org/) (v18 or later) and a package manager suc
 
 ## Install the Packages
 
-Navara is published on npm under the [`@navaramap`](https://www.npmjs.com/org/navaramap) scope. In your project — any bundler setup works; a plain [Vite](https://vite.dev/) TypeScript project is enough — install the Three.js renderer `@navaramap/three`, the default plugin `@navaramap/three-default-plugin`, and the peer dependencies `three` and `postprocessing`:
+Navara is published on npm under the [`@navaramap`](https://www.npmjs.com/org/navaramap) scope. Any bundler setup works. A plain [Vite](https://vite.dev/) TypeScript project is enough. In your project, install the Three.js renderer `@navaramap/three`, the default plugin `@navaramap/three-default-plugin`, and the peer dependencies `three` and `postprocessing`:
 
 <Tabs syncKey="pkg">
 
@@ -49,7 +49,7 @@ pnpm add @navaramap/three @navaramap/three-default-plugin three postprocessing
 
 ## Minimal Example
 
-Here is the core code — the same example shown in [What is Navara?](../what-is-navara/) — that creates a 3D globe, displays satellite imagery, and enables the photorealistic sky and atmosphere. Add it to your project's entry point (for example `src/main.ts` in a Vite project) and start the dev server:
+Here is the core code, the same example shown in [What is Navara?](../what-is-navara/). It creates a 3D globe, displays satellite imagery, and enables the photorealistic sky and atmosphere. Add it to your project's entry point (for example `src/main.ts` in a Vite project) and start the dev server:
 
 ![Hero](@assets/hero.png)
 
@@ -92,17 +92,17 @@ view.attribution?.add([{ attributionHtml: `Imagery courtesy of <a href="https://
 
 ## What This Code Does
 
-The `ThreeView` class is the main entry point for Navara. Creating an instance sets up the Three.js renderer, scene graph, and rendering pipeline. The `useNormal: true` option enables surface normals on the globe, which the sunlight added later uses for lighting calculations. It is needed when the scene has no terrain or hillshade layer — those provide normals themselves.
+The `ThreeView` class is the main entry point for Navara. Creating an instance sets up the Three.js renderer, scene graph, and rendering pipeline. The `useNormal: true` option enables surface normals on the globe, which the sunlight added later uses for lighting calculations. It is needed when the scene has no terrain or hillshade layer, because those layers provide normals themselves.
 
-Before calling `init()`, you register plugins. The `DefaultPlugin` registers over 30 descriptor types — sky, atmosphere, lighting, terrain, and post-processing effects — so they are available for use after initialization. You can also create and register your own plugins for custom descriptor types.
+Before calling `init()`, you register plugins. The `DefaultPlugin` registers all the built-in Descriptor types, including sky, atmosphere, lighting, terrain, and post-processing effects, so they are available for use after initialization. You can also create and register your own plugins for custom Descriptor types.
 
 The `init()` call initializes the WASM GIS engine, sets up Web Workers for background processing, and prepares the rendering pipeline. This is an asynchronous operation that must complete before you add layers.
 
-After initialization, `addDefaultPhotorealScene()` adds the sky, stars, sunlight, and atmospheric effects in one call. Setting `view.atmosphere.date` determines the sun's position — use a UTC string (`"...Z"`) so the scene looks the same on every machine — and `toneMappingExposure` adjusts the overall brightness of the tone-mapped output.
+After initialization, `addDefaultPhotorealScene()` adds the sky, stars, sunlight, and atmospheric effects in one call. Setting `view.atmosphere.date` determines the sun's position. Use a UTC string (`"...Z"`) so the scene looks the same on every machine. `toneMappingExposure` adjusts the overall brightness of the tone-mapped output.
 
 `addSource()` registers where and how data is fetched, and `addLayer()` renders it on the globe. In this example, a raster tile source loads NASA's Blue Marble satellite imagery. Navara's GIS engine handles tile management, level-of-detail, and spatial indexing automatically.
 
-Finally, `view.attribution` is the built-in attribution UI; `add()` displays credits for the data sources you use.
+Finally, `view.attribution` is the built-in attribution UI. `add()` displays credits for the data sources you use.
 
 This example keeps the default camera, which shows the whole globe. To move somewhere specific, use `setCamera()` for an instant jump or `flyTo()` for an animated transition.
 

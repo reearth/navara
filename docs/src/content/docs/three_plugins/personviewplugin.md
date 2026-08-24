@@ -9,7 +9,7 @@ sidebar:
 
 `PersonViewPlugin` is a keyboard-driven first-/third-person view controller. It drives a virtual position on the globe and runs a chase camera (TPV) or first-person camera (FPV) that follows it. Optionally, you can attach a GLTF character: the plugin will load it, drive its position and heading, and cross-fade between an idle and a dash animation clip.
 
-The character is optional. When omitted, the plugin still drives the virtual position and the camera follows it — useful as a pure person-view camera controller for scenes that already have their own avatar or for empty-world fly-throughs.
+The character is optional. When omitted, the plugin still drives the virtual position and the camera follows it, which is useful as a pure person-view camera controller for scenes that already have their own avatar or for empty-world fly-throughs.
 
 The plugin broadcasts its position, heading, speed, and current view mode on every frame, making it easy to build HUDs and other UI on top.
 
@@ -69,24 +69,24 @@ personView.dispose();
 | A / D             | Turn left / right                                                   |
 | Arrow Up / Space  | Ascend                                                              |
 | Arrow Down / Ctrl | Descend                                                             |
-| Shift             | Dash (× `dashSpeedMultiplier`, default 2.5; switches to `dashClip`) |
+| Shift             | Dash (× `dashSpeedMultiplier`, default 2.5. Switches to `dashClip`) |
 | Alt (hold)        | Free-orbit camera (TPV) / free-look (FPV)                           |
 | V                 | Toggle TPV / FPV                                                    |
 
-All bindings can be remapped via the `keys` option (see [KeyBindings](#keybindings)). Ascend and descend have no effect while terrain collision runs in `"ground"` mode, where the terrain drives the altitude — see [Terrain Collision](#terrain-collision).
+All bindings can be remapped via the `keys` option (see [KeyBindings](#keybindings)). Ascend and descend have no effect while terrain collision runs in `"ground"` mode, where the terrain drives the altitude. See [Terrain Collision](#terrain-collision).
 
-Keyboard input is automatically suppressed when focus is on `<input>`, `<textarea>`, or `contenteditable` elements. You can also set `personView.movementSuppressed = true` to temporarily disable all movement keys — for example, while a modal dialog is open.
+Keyboard input is automatically suppressed when focus is on `<input>`, `<textarea>`, or `contenteditable` elements. You can also set `personView.movementSuppressed = true` to temporarily disable all movement keys (for example, while a modal dialog is open).
 
 ## Camera Behavior
 
 The camera operates in one of two modes:
 
-- **TPV (third-person view)** — Chase camera positioned behind and above the character, smoothly interpolating its heading toward the character's heading.
-- **FPV (first-person view)** — Camera placed at the character's eye, looking forward along the heading. The character mesh is hidden by default in FPV (configurable via `character.hideModelInFpv`).
+- **TPV (third-person view)**: Chase camera positioned behind and above the character, smoothly interpolating its heading toward the character's heading.
+- **FPV (first-person view)**: Camera placed at the character's eye, looking forward along the heading. The character mesh is hidden by default in FPV (configurable via `character.hideModelInFpv`).
 
-Press **V** (or call `toggleViewMode()`) to switch. Hold **Alt** to take manual control of the camera: in TPV the camera orbits around the character; in FPV the camera stays planted at the eye and mouse drag rotates the view direction in place (free-look). Set `allowCameraControl: true` in the config to make the camera always free without needing Alt.
+Press **V** (or call `toggleViewMode()`) to switch. Hold **Alt** to take manual control of the camera: in TPV the camera orbits around the character. In FPV the camera stays planted at the eye and mouse drag rotates the view direction in place (free-look). Set `allowCameraControl: true` in the config to make the camera always free without needing Alt.
 
-After releasing Alt, the camera **keeps the orientation** you left it at — useful for dwelling at a custom angle. The free-camera state stays active until you press any movement key (forward/backward/turn/ascend/descend), at which point the camera snaps back to its default chase or FPV position. Dash and `V` do not exit the free-camera state.
+After releasing Alt, the camera **keeps the orientation** you left it at, which is useful for dwelling at a custom angle. The free-camera state stays active until you press any movement key (forward/backward/turn/ascend/descend), at which point the camera snaps back to its default chase or FPV position. Dash and `V` do not exit the free-camera state.
 
 ## Terrain Collision
 
@@ -104,29 +104,29 @@ const personView = new PersonViewPlugin({
 personView.setCollision({ mode: "off" });
 ```
 
-`mode` is the only field most scenes need: the remaining defaults are tuned for walking real terrain, and the plugin handles the terrain loading described below on its own. Give `startHeight` a value near the terrain at `startLat` / `startLng` — the character settles onto the surface from there.
+`mode` is the only field most scenes need: the remaining defaults are tuned for walking real terrain, and the plugin handles the terrain loading described below on its own. Give `startHeight` a value near the terrain at `startLat` / `startLng`. The character settles onto the surface from there.
 
 There are three modes:
 
-- **`"off"`** (default) — the terrain is ignored and the character flies freely.
-- **`"clamp"`** — the character still flies, but the terrain acts as a floor and pushes it up whenever it would sink below the surface. Use it for a flying character that must not pass through the ground.
-- **`"ground"`** — the character is glued to the surface, so it walks up and down slopes and can climb a mountain on foot. The ascend and descend keys do nothing in this mode, and the `minAlt` / `maxAlt` limits no longer apply because the terrain sets the altitude.
+- **`"off"`** (default): the terrain is ignored and the character flies freely.
+- **`"clamp"`**: the character still flies, but the terrain acts as a floor and pushes it up whenever it would sink below the surface. Use it for a flying character that must not pass through the ground.
+- **`"ground"`**: the character is glued to the surface, so it walks up and down slopes and can climb a mountain on foot. The ascend and descend keys do nothing in this mode, and the `minAlt` / `maxAlt` limits no longer apply because the terrain sets the altitude.
 
 `groundOffset` lifts the character above the sampled surface, for models whose origin is not at their feet. `alignToSlope` (on by default) tilts the character to match the ground it stands on, and fades back to upright as a `"clamp"` mode character climbs away from the terrain.
 
 ### Terrain that loads while you walk on it
 
-A spot whose terrain tiles have not loaded yet returns no height, and collision then leaves the altitude alone until the data arrives — the character never drops to sea level while it waits. Once tiles do arrive they keep being replaced by finer ones, which moves the surface under a character who has not gone anywhere, by hundreds of meters right after load. The plugin bounds how fast the character follows that: it falls onto the surface rather than chasing it, so a second of tile churn moves it a few meters while a surface that turns out to be hundreds of meters out is still reached in seconds. Measured at the example's start point, that is a drift of a few meters against jumps of 300 m and 545 m. The slope tilt is bounded the same way, and for the same reason: without it a single frame swings the character by 13°.
+A spot whose terrain tiles have not loaded yet returns no height, and collision then leaves the altitude alone until the data arrives. The character never drops to sea level while it waits. Once tiles do arrive they keep being replaced by finer ones, which moves the surface under a character who has not gone anywhere, by hundreds of meters right after load. The plugin bounds how fast the character follows that: it falls onto the surface rather than chasing it, so a second of tile churn moves it a few meters while a surface that turns out to be hundreds of meters out is still reached in seconds. Measured at the example's start point, that is a drift of a few meters against jumps of 300 m and 545 m. The slope tilt is bounded the same way, and for the same reason: without it a single frame swings the character by 13°.
 
 There is nothing to configure here. Ground the character *walks* onto is never bounded, so slopes are followed exactly even in a full-speed dash uphill, and a teleport lands outright.
 
 ### Keeping the tilt steady
 
-Terrain height is continuous across a triangle mesh but its slope is not, so the tilt from `alignToSlope` can step at triangle edges. `slopeSampleDistance` is the footprint the slope is averaged over — the default suits the triangle spacing terrain meshes arrive at, so a single edge cannot swing the whole character. Raise it for a larger character or a coarser terrain source. `maxSlopeTilt` caps the lean, since matching a near-vertical face exactly would lay the character flat against it.
+Terrain height is continuous across a triangle mesh but its slope is not, so the tilt from `alignToSlope` can step at triangle edges. `slopeSampleDistance` is the footprint the slope is averaged over. The default suits the triangle spacing terrain meshes arrive at, so a single edge cannot swing the whole character. Raise it for a larger character or a coarser terrain source. `maxSlopeTilt` caps the lean, since matching a near-vertical face exactly would lay the character flat against it.
 
 ### Keeping the view out of the hillside
 
-A fixed `cameraPitch` hugs a horizontal plane, which the ground stops resembling on a steep slope: climbing one leaves the camera staring into the hillside with nothing of where the character is going. `cameraSlopeFollow` tilts the view with the slope instead — looking up a climb and down a descent — for the third-person camera and the first-person eye line alike. `1` (the default) runs parallel to the slope and `0` restores the fixed pitch. Ground far steeper than anything walkable stops swinging the view at 45°.
+A fixed `cameraPitch` hugs a horizontal plane, which the ground stops resembling on a steep slope: climbing one leaves the camera staring into the hillside with nothing of where the character is going. `cameraSlopeFollow` tilts the view with the slope instead (looking up a climb and down a descent) for the third-person camera and the first-person eye line alike. `1` (the default) runs parallel to the slope and `0` restores the fixed pitch. Ground far steeper than anything walkable stops swinging the view at 45°.
 
 ## Constructor
 
@@ -139,7 +139,7 @@ new PersonViewPlugin(config?: PersonViewConfig)
 | Property              | Type              | Default         | Description                                                                                                  |
 | --------------------- | ----------------- | --------------- | ------------------------------------------------------------------------------------------------------------ |
 | `character`           | `CharacterConfig` | _(none)_        | Optional character. When omitted, the plugin runs as a pure camera controller.                               |
-| `collision`           | `CollisionConfig` | _(off)_         | Terrain collision — see [CollisionConfig](#collisionconfig).                                                 |
+| `collision`           | `CollisionConfig` | _(off)_         | Terrain collision. See [CollisionConfig](#collisionconfig).                                                 |
 | `allowCameraControl`  | `boolean`         | `false`         | When `true`, the camera is always free (no Alt-hold required).                                               |
 | `initialView`         | `"tpv" \| "fpv"`  | `"tpv"`         | Initial view mode.                                                                                           |
 | `moveSpeed`           | `number`          | `50`            | Forward/backward speed in m/s.                                                                               |
@@ -158,7 +158,7 @@ new PersonViewPlugin(config?: PersonViewConfig)
 | `startLng`            | `number`          | `139.7671`      | Starting longitude in degrees.                                                                               |
 | `startHeight`         | `number`          | `500`           | Starting altitude in meters.                                                                                 |
 | `startHeading`        | `number`          | `Math.PI * 1.3` | Starting heading in radians (0 = north).                                                                     |
-| `keys`                | `KeyBindings`     | _defaults_      | Keyboard bindings — see [KeyBindings](#keybindings).                                                         |
+| `keys`                | `KeyBindings`     | _defaults_      | Keyboard bindings. See [KeyBindings](#keybindings).                                                         |
 
 ### CharacterConfig
 
@@ -179,7 +179,7 @@ See [Terrain Collision](#terrain-collision) for how the modes behave.
 | Property              | Type                              | Default | Description                                                                                                                     |
 | --------------------- | --------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | `mode`                | `"off" \| "clamp" \| "ground"`    | `"off"` | How the altitude reacts to the terrain: ignore it, treat it as a floor, or stick to it.                                          |
-| `groundOffset`        | `number`                          | `0`     | Height (m) kept above the sampled surface — the character's feet in `"ground"` mode, the floor it cannot sink below in `"clamp"`. |
+| `groundOffset`        | `number`                          | `0`     | Height (m) kept above the sampled surface: the character's feet in `"ground"` mode, the floor it cannot sink below in `"clamp"`. |
 | `alignToSlope`        | `boolean`                         | `true`  | Tilt the character to match the slope it stands on. Costs several extra terrain lookups per frame.                              |
 | `slopeSampleDistance` | `number`                          | `4`     | Footprint (m) the slope is averaged over, matched to the triangle spacing of terrain meshes.                                    |
 | `maxSlopeTilt`        | `number`                          | `π / 4` | Largest tilt (radians) `alignToSlope` may apply, so near-vertical ground does not lay the character flat against it.            |
@@ -190,7 +190,7 @@ See [Terrain Collision](#terrain-collision) for how the modes behave.
 | Property            | Type      | Description                                                                                                                |
 | ------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------- |
 | `idleClip`          | `string`  | Clip played while the model is idle (no movement keys held).                                                               |
-| `walkClip`          | `string?` | Clip played while the model is moving without dashing. Omit to keep `idleClip` running — useful for idle+dash-only models. |
+| `walkClip`          | `string?` | Clip played while the model is moving without dashing. Omit to keep `idleClip` running (useful for idle+dash-only models). |
 | `dashClip`          | `string`  | Clip played while the model is dashing (dash key held).                                                                    |
 | `speed`     | `number?` | Playback speed for any clip without a per-clip override below. Defaults to `1`. |
 | `idleSpeed` | `number?` | Playback speed for the idle clip. Falls back to `speed` (default `1`).         |
@@ -238,7 +238,7 @@ Loads the GLTF model (when configured), takes over the camera and starts reading
 stop(): void
 ```
 
-The counterpart to `start()`: hands the camera back to the view's own controls and stops reading the movement keys, leaving the character standing where it is. Use it to step out of person view temporarily – for a map overview, a cutscene, or a UI mode – and call `start()` to take control back.
+The counterpart to `start()`: hands the camera back to the view's own controls and stops reading the movement keys, leaving the character standing where it is. Use it to step out of person view temporarily (for a map overview, a cutscene, or a UI mode) and call `start()` to take control back.
 
 ```typescript
 overviewButton.addEventListener("click", () => {
@@ -261,7 +261,7 @@ teleport(options: {
 }): void
 ```
 
-Instantly moves to a new geographic position. When `heading` is omitted, the current camera heading is kept. With [terrain collision](#terrain-collision) enabled, the character lands on the terrain at the destination right away — settling never delays a teleport. To rotate in place without moving, use [`setHeading()`](#setheadingradians--getheading); for the camera pitch, use [`setCameraPitch()` / `setFpvPitch()`](#setcamerapitchradians--setfpvpitchradians).
+Instantly moves to a new geographic position. When `heading` is omitted, the current camera heading is kept. With [terrain collision](#terrain-collision) enabled, the character lands on the terrain at the destination right away. Settling never delays a teleport. To rotate in place without moving, use [`setHeading()`](#setheadingradians--getheading). For the camera pitch, use [`setCameraPitch()` / `setFpvPitch()`](#setcamerapitchradians--setfpvpitchradians).
 
 | Field     | Type                  | Description                                                    |
 | --------- | --------------------- | -------------------------------------------------------------- |
@@ -277,7 +277,7 @@ setHeading(radians: number): void
 getHeading(): number
 ```
 
-Rotates the character to the given heading in radians (0 = north, increasing clockwise) **without changing position**. The chase camera snaps to match; in free-camera mode only the model rotates. `getHeading()` returns the current heading.
+Rotates the character to the given heading in radians (0 = north, increasing clockwise) **without changing position**. The chase camera snaps to match. In free-camera mode only the model rotates. `getHeading()` returns the current heading.
 
 ### setCameraPitch(radians) / setFpvPitch(radians)
 
@@ -306,9 +306,9 @@ setAnimationSpeed(speed: number): void
 getAnimationSpeed(): number
 ```
 
-Set the **base** animation playback speed — the fallback used by any clip without a per-clip override (`idleSpeed` / `walkSpeed` / `dashSpeed` on [`AnimationConfig`](#animationconfig)). It takes effect immediately, re-applying to the clip currently playing. `getAnimationSpeed()` returns the current base speed.
+Set the **base** animation playback speed, the fallback used by any clip without a per-clip override (`idleSpeed` / `walkSpeed` / `dashSpeed` on [`AnimationConfig`](#animationconfig)). It takes effect immediately, re-applying to the clip currently playing. `getAnimationSpeed()` returns the current base speed.
 
-Per-clip speeds let the idle, walk, and dash animations play at independent rates — for example, a calm idle next to a brisk run — while `speed` covers the rest:
+Per-clip speeds let the idle, walk, and dash animations play at independent rates (for example, a calm idle next to a brisk run) while `speed` covers the rest:
 
 ```typescript
 const personView = new PersonViewPlugin({
@@ -334,7 +334,7 @@ const personView = new PersonViewPlugin({
 get model(): MeshHandle<GLTFModelDesc> | null
 ```
 
-The loaded character model's mesh handle, or `null` before [`start()`](#start) has loaded it (or when no character is configured). Its `ref` is the `GLTFModelDesc` — reach the model itself through it, for example `model.ref.raw` for the underlying three.js object, or `model.ref.getWorldPosition()`.
+The loaded character model's mesh handle, or `null` before [`start()`](#start) has loaded it (or when no character is configured). Its `ref` is the `GLTFModelDesc`. Reach the model itself through it, for example `model.ref.raw` for the underlying three.js object, or `model.ref.getWorldPosition()`.
 
 ### setViewMode(mode) / toggleViewMode()
 
@@ -406,12 +406,12 @@ The state object emitted by `onStateChange()`:
 | `lat`            | `number`         | Current latitude in degrees.                                                                                       |
 | `alt`            | `number`         | Current altitude in meters.                                                                                        |
 | `heading`        | `number`         | Current heading in radians (0 = north, increasing clockwise).                                                      |
-| `speed`          | `number`         | Configured movement speed in m/s (`moveSpeed`, multiplied by `dashSpeedMultiplier` — default 2.5 — while dashing). |
-| `animationState` | `string \| null` | Name of the currently playing clip; `null` when no character.                                                      |
+| `speed`          | `number`         | Configured movement speed in m/s (`moveSpeed`, multiplied by `dashSpeedMultiplier`, default 2.5, while dashing). |
+| `animationState` | `string \| null` | Name of the currently playing clip. `null` when no character.                                                      |
 | `mode`           | `"tpv" \| "fpv"` | Current view mode.                                                                                                 |
 
 ## Related Resources
 
-- [Interior Explore Tutorial](../../three/tutorial/interior-explore/) — Walks through using `PersonViewPlugin` inside a 3D Tiles building
-- [OverlayPlugin](../overlayplugin/) — Combine with `PersonViewPlugin` for world-space HTML overlays
-- [About three_plugins](../about/) — Package overview
+- [Interior Explore Tutorial](../../three/tutorial/interior-explore/): Walks through using `PersonViewPlugin` inside a 3D Tiles building
+- [OverlayPlugin](../overlayplugin/): Combine with `PersonViewPlugin` for world-space HTML overlays
+- [About three_plugins](../about/): Package overview

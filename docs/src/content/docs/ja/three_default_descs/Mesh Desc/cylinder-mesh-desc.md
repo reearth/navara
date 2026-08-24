@@ -7,7 +7,7 @@ sidebar:
 
 `CylinderMeshDesc`クラスは、円柱(Cylinder)ジオメトリを描画するためのメッシュです。上部半径・下部半径・高さなどを指定して円柱や円錐を作成できます。
 
-以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`geodetic`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-desc-base) を参照してください。
+以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`geodetic`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](../mesh-desc-base) を参照してください。
 
 ## Properties
 

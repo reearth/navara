@@ -5,13 +5,15 @@ sidebar:
   order: 560
 ---
 
-`TerrainMaterial` holds the render options for a [`terrain`](../../../three/layer/terrain-layer/) layer's mesh. It is set via the `terrain` key and applies regardless of the source's data format — [`raster-dem`](../../../three/source/raster-dem-source/) (RGB-encoded elevation) or [`quantized-mesh`](../../../three/source/quantized-mesh-source/). All fetch/geometry config (zoom range, tiling scheme, elevation decoder, extensions, token) lives on the referenced source, not here.
+`TerrainMaterial` holds the render options for a [`terrain`](../../../three/layer/terrain-layer/) layer's mesh. It is set via the `terrain` key and applies regardless of the source's data format: [`raster-dem`](../../../three/source/raster-dem-source/) (RGB-encoded elevation) or [`quantized-mesh`](../../../three/source/quantized-mesh-source/). All fetch/geometry config (zoom range, tiling scheme, elevation decoder, extensions, token) lives on the referenced source, not here.
 
 ## Properties
 
 ### show
 
-**Type:** `boolean | undefined` — **Default:** `true`
+**Type:** `boolean | undefined`
+
+**Default:** `true`
 
 **Description:** Whether to show the terrain.
 
@@ -21,7 +23,9 @@ sidebar:
 
 ### castShadow
 
-**Type:** `boolean | undefined` — **Default:** `false`
+**Type:** `boolean | undefined`
+
+**Default:** `false`
 
 **Description:** Whether the terrain casts shadows.
 
@@ -31,7 +35,9 @@ sidebar:
 
 ### receiveShadow
 
-**Type:** `boolean | undefined` — **Default:** `false`
+**Type:** `boolean | undefined`
+
+**Default:** `false`
 
 **Description:** Whether the terrain receives shadows.
 
@@ -41,21 +47,25 @@ sidebar:
 
 ### lit
 
-**Type:** `boolean | undefined` — **Default:** `undefined` (follows `view.lit`)
+**Type:** `boolean | undefined`
 
-**Description:** Applies the lighting equation to the color output. When `false`, the terrain renders as plain albedo — the rest of the lit pipeline still runs, so normals and the shadow G-buffer keep being written. Leaving it unset follows the scene default, [`view.lit`](../../../three/api/threeview-properties/#lit); setting it explicitly overrides that default in either direction.
+**Default:** `undefined` (follows `view.lit`)
+
+**Description:** Applies the lighting equation to the color output. When `false`, the terrain renders as plain albedo. The rest of the lit pipeline still runs, so normals and the shadow G-buffer keep being written. Leaving it unset follows the scene default, [`view.lit`](../../../three/api/threeview-properties/#lit). Setting it explicitly overrides that default in either direction.
 
 ```typescript
 { terrain: { lit: false } }
 ```
 
 :::note
-The terrain only takes the lit path when the tiles have normals — use a [`quantized-mesh`](../../../three/source/quantized-mesh-source/) source with `requestVertexNormals: true`, or a hillshade layer. Without normals the tiles are unlit already and `lit` changes nothing.
+The terrain only takes the lit path when the tiles have normals: use a [`quantized-mesh`](../../../three/source/quantized-mesh-source/) source with `requestVertexNormals: true`, or a hillshade layer. Without normals the tiles are unlit already and `lit` changes nothing.
 :::
 
 ### showBoundingBox
 
-**Type:** `boolean | undefined` — **Default:** `false`
+**Type:** `boolean | undefined`
+
+**Default:** `false`
 
 **Description:** Whether to show per-tile bounding boxes. Used for debugging.
 
@@ -65,7 +75,9 @@ The terrain only takes the lit path when the tiles have normals — use a [`quan
 
 ### skirt
 
-**Type:** `boolean | undefined` — **Default:** `true`
+**Type:** `boolean | undefined`
+
+**Default:** `true`
 
 **Description:** Whether to render skirts along tile boundaries to hide gaps between neighboring tiles at different LODs. Disable this if you want to visualize underground models.
 
@@ -75,7 +87,9 @@ The terrain only takes the lit path when the tiles have normals — use a [`quan
 
 ### skirtExaggeration
 
-**Type:** `number | undefined` — **Default:** `1.0`
+**Type:** `number | undefined`
+
+**Default:** `1.0`
 
 **Description:** Multiplier applied to the auto-calculated skirt height. `1.0` uses the default calculated height.
 
@@ -95,6 +109,6 @@ A terrain layer provides only the 3D surface. Drape imagery or shaded relief on 
 
 ## Related Resources
 
-- [Terrain Layer](../../../three/layer/terrain-layer/) — how to use this material
-- [Raster DEM Source](../../../three/source/raster-dem-source/) / [Quantized Mesh Source](../../../three/source/quantized-mesh-source/) — terrain data sources
-- [CesiumIonPlugin](../../../three_plugins/cesiumionplugin/) — Cesium Ion quantized-mesh assets
+- [Terrain Layer](../../../three/layer/terrain-layer/): how to use this material
+- [Raster DEM Source](../../../three/source/raster-dem-source/) / [Quantized Mesh Source](../../../three/source/quantized-mesh-source/): terrain data sources
+- [CesiumIonPlugin](../../../three_plugins/cesiumionplugin/): Cesium Ion quantized-mesh assets

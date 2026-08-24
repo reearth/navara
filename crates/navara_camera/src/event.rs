@@ -1,6 +1,8 @@
 use bevy_ecs::message::Message;
 use navara_math::{FloatType, Vec3};
 
+use crate::FlyToEasing;
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CameraOrientation {
     pub pitch: Option<FloatType>,   // pitch in degrees, -180 to 0
@@ -68,6 +70,8 @@ pub enum CameraEvent {
         duration: Option<FloatType>,            // duration in milliseconds(ms)
         max_height: Option<FloatType>,          // The maximum height at the peak of the flight.
         distance: Option<FloatType>, // distance from target point along camera forward (meters)
+        easing: Option<FlyToEasing>, // easing applied to the flight time; None = default rule
+        id: u32,                     // flight id echoed back through `CameraFlightEnded`
     },
     LookAt {
         target: Vec3, // [longitude, latitude, altitude]

@@ -107,9 +107,11 @@ view.toneMappingExposure = 0.8;
 
 ### lit
 
-**Type:** `boolean` — **Default:** `true`
+**Type:** `boolean`
 
-Gets or sets the scene-level default of the `lit` material option. When `false`, every material that does not set `lit` explicitly outputs **plain albedo**: the lighting equation is skipped on the color output, while the rest of the lit pipeline keeps running — normals and the shadow G-buffer are still written. That combination is the input a deferred lighting pass needs.
+**Default:** `true`
+
+Gets or sets the scene-level default of the `lit` material option. When `false`, every material that does not set `lit` explicitly outputs **plain albedo**: the lighting equation is skipped on the color output, while the rest of the lit pipeline keeps running: normals and the shadow G-buffer are still written. That combination is the input a deferred lighting pass needs.
 
 Resolution is three-state, and the more specific setting always wins:
 
@@ -136,11 +138,11 @@ view.addMesh<SphereMeshDesc>({
 ```
 
 :::note
-Toggling `lit` — on the view, a material, or a mesh — recompiles the affected shaders once. It is a configuration switch, not a per-frame control.
+Toggling `lit` (on the view, a material, or a mesh) recompiles the affected shaders once. It is a configuration switch, not a per-frame control.
 :::
 
 :::tip[Related Documentation]
-For a worked deferred lighting effect that consumes the albedo output together with the normal and shadow G-buffers, see [Custom Descriptor — Buffer / Texture Access](../../../three/core/custom-desc/#buffer--texture-access).
+For a worked deferred lighting effect that consumes the albedo output together with the normal and shadow G-buffers, see [Custom Descriptor: Buffer / Texture Access](../../../three/core/custom-desc/#buffer--texture-access).
 :::
 
 ### buffers
@@ -151,7 +153,7 @@ For a worked deferred lighting effect that consumes the albedo output together w
 
 The buffers currently allocated, as `{ selectiveEffect, emissive, shadow, globeNormal }` booleans. This is **derived**, not configured: the view allocates the union of the `static requiredBuffers` declared by the active effect Descriptors, and releases a buffer when the last effect needing it is removed.
 
-The first three are G-buffer attachments; `globeNormal` is a separate screen-space copy of the terrain normal, so it takes no attachment slot (see [Custom Descriptor — Buffer / Texture Access](../../../three/core/custom-desc/#buffer--texture-access)).
+The first three are G-buffer attachments. `globeNormal` is a separate screen-space copy of the terrain normal, so it takes no attachment slot (see [Custom Descriptor: Buffer / Texture Access](../../../three/core/custom-desc/#buffer--texture-access)).
 
 **Example:**
 
@@ -161,14 +163,14 @@ console.log(view.buffers);
 ```
 
 :::tip[Related Documentation]
-For declaring `requiredBuffers` and reading the buffers from a custom effect, see [Custom Descriptor — Buffer / Texture Access](../../../three/core/custom-desc/#buffer--texture-access).
+For declaring `requiredBuffers` and reading the buffers from a custom effect, see [Custom Descriptor: Buffer / Texture Access](../../../three/core/custom-desc/#buffer--texture-access).
 :::
 
 ### animation
 
 **Type:** `boolean`
 
-Gets or sets whether continuous animation mode is enabled. When `true`, renders every frame; when `false`, renders only on changes.
+Gets or sets whether continuous animation mode is enabled. When `true`, renders every frame. When `false`, renders only on changes.
 
 **Example:**
 
@@ -230,7 +232,7 @@ view.shadowMapViewersEnabled = false;
 
 **Type:** `number | undefined`
 
-Gets or sets the tile-cache memory budget in bytes (see the [`cacheBytes` option](./threeview-class#cachebytes)). The getter returns the resolved budget (`undefined` before `init()` when no explicit option was given). Lowering it at runtime evicts retained tiles down to the new budget over the next frames. Setting `undefined` disables budgeting entirely, restoring the original destroy-on-unvisited tile lifecycle.
+Gets or sets the tile-cache memory budget in bytes (see the [`cacheBytes` option](../threeview-class#cachebytes)). The getter returns the resolved budget (`undefined` before `init()` when no explicit option was given). Lowering it at runtime evicts retained tiles down to the new budget over the next frames. Setting `undefined` disables budgeting entirely, restoring the original destroy-on-unvisited tile lifecycle.
 
 **Example:**
 
@@ -249,7 +251,7 @@ view.cacheBytes = undefined;
 
 **Type:** getter `LodFogSettings | undefined` / setter `Partial<LodFogSettings>`
 
-Gets or sets the LOD fog settings (see the [`lodFog` option](./threeview-class#lodfog)): a distance-based screen-space-error relaxation that keeps far tiles coarser. The getter returns the resolved settings (`undefined` before `init()`). Partial values assigned to the setter merge over the current settings; the next traversal re-selects tile LODs with the new curve.
+Gets or sets the LOD fog settings (see the [`lodFog` option](../threeview-class#lodfog)): a distance-based screen-space-error relaxation that keeps far tiles coarser. The getter returns the resolved settings (`undefined` before `init()`). Partial values assigned to the setter merge over the current settings. The next traversal re-selects tile LODs with the new curve.
 
 **Example:**
 
@@ -265,7 +267,7 @@ view.lodFog = { sseFactor: 4.0 };
 
 **Type:** getter `DynamicSseSettings | undefined` / setter `Partial<DynamicSseSettings>`
 
-Gets or sets the dynamic screen-space-error settings (see the [`dynamicSse` option](./threeview-class#dynamicsse)): tilted, street-level horizon views tolerate a larger error for far tiles. The getter returns the resolved settings (`undefined` before `init()`). Partial values assigned to the setter merge over the current settings; the next traversal re-selects tile LODs with the new curve.
+Gets or sets the dynamic screen-space-error settings (see the [`dynamicSse` option](../threeview-class#dynamicsse)): tilted, street-level horizon views tolerate a larger error for far tiles. The getter returns the resolved settings (`undefined` before `init()`). Partial values assigned to the setter merge over the current settings. The next traversal re-selects tile LODs with the new curve.
 
 **Example:**
 

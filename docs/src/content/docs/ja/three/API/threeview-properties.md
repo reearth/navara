@@ -107,7 +107,9 @@ view.toneMappingExposure = 0.8;
 
 ### lit
 
-**Type:** `boolean` — **デフォルト:** `true`
+**Type:** `boolean`
+
+**デフォルト:** `true`
 
 マテリアルの `lit` オプションのシーン既定値を取得または設定します。`false` にすると、`lit` を明示していないすべてのマテリアルが**アルベドのみ**を出力します。カラー出力でライティング計算がスキップされるだけで、lit パイプライン自体は動き続けるため、法線とシャドウ G-buffer は書き込まれたままです。この組み合わせが、ディファードライティングパスが必要とする入力になります。
 
@@ -140,7 +142,7 @@ view.addMesh<SphereMeshDesc>({
 :::
 
 :::tip[関連ドキュメント]
-アルベド出力を法線・シャドウ G-buffer と組み合わせて利用するディファードライティングエフェクトの実例は、[カスタム Descriptor — G-Buffer の読み取り](../../../three/core/custom-desc/#g-buffer-の読み取り) を参照してください。
+アルベド出力を法線・シャドウ G-buffer と組み合わせて利用するディファードライティングエフェクトの実例は、[カスタム Descriptor: G-Buffer の読み取り](../../../three/core/custom-desc/#g-buffer-の読み取り) を参照してください。
 :::
 
 ### buffers
@@ -151,7 +153,7 @@ view.addMesh<SphereMeshDesc>({
 
 現在確保されているバッファを `{ selectiveEffect, emissive, shadow, globeNormal }` の真偽値として返します。これは設定値ではなく**導出値**です。view はアクティブなエフェクト Descriptor が宣言する `static requiredBuffers` の和集合を確保し、そのバッファを必要とする最後のエフェクトが削除された時点で解放します。
 
-前 3 つは G-buffer のアタッチメントですが、`globeNormal` だけは地形法線の画面座標コピーであり、アタッチメント枠を消費しません（[カスタム Descriptor — G-Buffer の読み取り](../../../three/core/custom-desc/#g-buffer-の読み取り)を参照）。
+前 3 つは G-buffer のアタッチメントですが、`globeNormal` だけは地形法線の画面座標コピーであり、アタッチメント枠を消費しません（[カスタム Descriptor: G-Buffer の読み取り](../../../three/core/custom-desc/#g-buffer-の読み取り)を参照）。
 
 **Example:**
 
@@ -161,7 +163,7 @@ console.log(view.buffers);
 ```
 
 :::tip[関連ドキュメント]
-`requiredBuffers` の宣言方法とカスタムエフェクトからの読み取りについては、[カスタム Descriptor — G-Buffer の読み取り](../../../three/core/custom-desc/#g-buffer-の読み取り) を参照してください。
+`requiredBuffers` の宣言方法とカスタムエフェクトからの読み取りについては、[カスタム Descriptor: G-Buffer の読み取り](../../../three/core/custom-desc/#g-buffer-の読み取り) を参照してください。
 :::
 
 ### animation
@@ -230,7 +232,7 @@ view.shadowMapViewersEnabled = false;
 
 **Type:** `number | undefined`
 
-タイルキャッシュのメモリバジェット（バイト単位）を取得または設定します（[`cacheBytes` オプション](./threeview-class#cachebytes)を参照）。ゲッターは解決済みのバジェットを返します（オプション未指定かつ `init()` 前は `undefined`）。実行時に値を下げると、以降の数フレームで保持中のタイルが新しいバジェットまで破棄されます。`undefined` を設定するとバジェット管理が完全に無効化され、ビューから外れたタイルを即座に破棄する元のライフサイクルに戻ります。
+タイルキャッシュのメモリバジェット（バイト単位）を取得または設定します（[`cacheBytes` オプション](../threeview-class#cachebytes)を参照）。ゲッターは解決済みのバジェットを返します（オプション未指定かつ `init()` 前は `undefined`）。実行時に値を下げると、以降の数フレームで保持中のタイルが新しいバジェットまで破棄されます。`undefined` を設定するとバジェット管理が完全に無効化され、ビューから外れたタイルを即座に破棄する元のライフサイクルに戻ります。
 
 **Example:**
 
@@ -249,7 +251,7 @@ view.cacheBytes = undefined;
 
 **Type:** getter `LodFogSettings | undefined` / setter `Partial<LodFogSettings>`
 
-LOD fog の設定を取得または設定します（[`lodFog` オプション](./threeview-class#lodfog)を参照）。遠くのタイルを粗いまま保つ、距離ベースの screen-space error 緩和です。ゲッターは解決済みの設定を返します（`init()` 前は `undefined`）。セッターへの部分的な指定は現在の設定にマージされ、次のトラバーサルで新しいカーブによりタイル LOD が再選択されます。
+LOD fog の設定を取得または設定します（[`lodFog` オプション](../threeview-class#lodfog)を参照）。遠くのタイルを粗いまま保つ、距離ベースの screen-space error 緩和です。ゲッターは解決済みの設定を返します（`init()` 前は `undefined`）。セッターへの部分的な指定は現在の設定にマージされ、次のトラバーサルで新しいカーブによりタイル LOD が再選択されます。
 
 **Example:**
 
@@ -265,7 +267,7 @@ view.lodFog = { sseFactor: 4.0 };
 
 **Type:** getter `DynamicSseSettings | undefined` / setter `Partial<DynamicSseSettings>`
 
-Dynamic screen-space error の設定を取得または設定します（[`dynamicSse` オプション](./threeview-class#dynamicsse)を参照）。地表付近で地平線を望むような傾いたビューでは、遠くのタイルに大きな誤差を許容します。ゲッターは解決済みの設定を返します（`init()` 前は `undefined`）。セッターへの部分的な指定は現在の設定にマージされ、次のトラバーサルで新しいカーブによりタイル LOD が再選択されます。
+Dynamic screen-space error の設定を取得または設定します（[`dynamicSse` オプション](../threeview-class#dynamicsse)を参照）。地表付近で地平線を望むような傾いたビューでは、遠くのタイルに大きな誤差を許容します。ゲッターは解決済みの設定を返します（`init()` 前は `undefined`）。セッターへの部分的な指定は現在の設定にマージされ、次のトラバーサルで新しいカーブによりタイル LOD が再選択されます。
 
 **Example:**
 

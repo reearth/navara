@@ -1,0 +1,7 @@
+{
+  "name": "navara-preview",
+  "compatibility_date": "2026-07-29",
+  "assets": {
+    "directory": "./web/navara_three/dist-example"
+  }
+}

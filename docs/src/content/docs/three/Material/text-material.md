@@ -127,7 +127,7 @@ import { Color } from "@navaramap/three";
 
 **Type:** `boolean | undefined`
 
-**Description:** Participate in screen-space decluttering: when labels/sprites overlap on screen, lower-priority ones are hidden. Enabled by default; set to `false` to draw every label unconditionally.
+**Description:** Participate in screen-space decluttering: when labels/sprites overlap on screen, lower-priority ones are hidden. Enabled by default. Set to `false` to draw every label unconditionally.
 
 **Default:** `true`
 
@@ -145,7 +145,7 @@ import { Color } from "@navaramap/three";
 
 **Type:** `number | undefined`
 
-**Description:** Placement priority for decluttering; higher wins. Only meaningful when [`declutter`](#declutter) is enabled. Can be overridden per feature via [`FeatureEvaluator.evaluate()`](../../api/feature-evaluator/#evaluate).
+**Description:** Placement priority for decluttering. Higher wins. Only meaningful when [`declutter`](#declutter) is enabled. Can be overridden per feature via [`FeatureEvaluator.evaluate()`](../../api/feature-evaluator/#evaluate).
 
 **Default:** `0.0`
 
@@ -188,7 +188,7 @@ When a family name is used, only the face files whose unicode ranges cover the c
 
 For each codepoint, the first face (in `faces` order) whose `unicodeRanges` include the codepoint is used, so earlier entries win when ranges overlap. Codepoints not covered by any face fall back to the first face (`faces[0]`), which may therefore be downloaded even for characters outside its declared ranges. See [`addFontFamily()`](../../api/threeview-functions/#addfontfamily) for details.
 
-Faces and their unicode ranges can also be derived from a stylesheet's `@font-face` rules (e.g. the Google Fonts CSS API) instead of being written by hand — see [Font Family from CSS](../../api/font-family-from-css/).
+Faces and their unicode ranges can also be derived from a stylesheet's `@font-face` rules (e.g. the Google Fonts CSS API) instead of being written by hand. See [Font Family from CSS](../../api/font-family-from-css/).
 
 **Default:** `undefined` (no font is loaded, and the text layer will not render until a font is specified).
 

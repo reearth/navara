@@ -35,7 +35,7 @@ A source has an `id` (used to reference it from layers) and a `type`.
 
 ### Providing an id
 
-An `id` is optional; when omitted a random one is generated. You may pass your own id instead, and adding a source with an existing id **overrides** it (later definition wins):
+An `id` is optional. When omitted a random one is generated. You may pass your own id instead, and adding a source with an existing id **overrides** it (later definition wins):
 
 ```typescript
 view.addSource({
@@ -49,7 +49,7 @@ Because a layer can reference a source by its id string, this lets you define th
 
 ## Referencing a source from a layer
 
-Source-based layers take a `source` property — either the `Source` handle returned by `addSource`, or its `id` string:
+Source-based layers take a `source` property, either the `Source` handle returned by `addSource`, or its `id` string:
 
 ```typescript
 // By handle
@@ -83,7 +83,7 @@ The `Source` handle returned by `addSource` exposes two methods for managing the
 
 Changes the source configuration and re-fetches its data. Every layer that references this source is **reset** (its loaded resources are torn down) and then **reloaded** against the new configuration, so a changed URL, zoom range, tiling scheme, or inline data takes effect on the already-visible layers, not just future tile requests. This applies uniformly to every layer type, including terrain: updating a terrain source tears the terrain down and re-meshes the globe against the new configuration, so a changed URL fully reloads rather than being masked by cached tiles.
 
-The update is **partial**, the same way [`Layer.update()`](../../../three/layer/about/) merges materials: any field you omit keeps its current value instead of resetting to a default. `type` (which cannot change) is always required, and `url` is required by the type — set it to the unchanged value to leave the fetched URL as-is.
+The update is **partial**, the same way [`Layer.update()`](../../../three/layer/about/) merges materials: any field you omit keeps its current value instead of resetting to a default. `type` (which cannot change) is always required, and `url` is required by the type. Set it to the unchanged value to leave the fetched URL as-is.
 
 ```typescript
 const imagery = view.addSource({
@@ -109,13 +109,13 @@ imagery.update({
 });
 ```
 
-Layer-only settings (materials, and a vector layer's `sourceLayers`) are preserved across the reset; only the source's fetch/decode configuration changes.
+Layer-only settings (materials, and a vector layer's `sourceLayers`) are preserved across the reset. Only the source's fetch/decode configuration changes.
 
 ### delete()
 
 Removes the source and its resources. The engine reference-counts sources and **refuses to delete a source while any layer still references it**.
 
-**Returns:** `false` (and removes nothing) while at least one layer references the source; `true` once the source has been removed.
+**Returns:** `false` (and removes nothing) while at least one layer references the source. `true` once the source has been removed.
 
 ```typescript
 const layer = view.addLayer({ type: "raster", source: imagery });
@@ -135,7 +135,7 @@ Delete the referencing layers before the source. To swap the data of an existing
 | Type                                                                        | Description                                      |
 | --------------------------------------------------------------------------- | ------------------------------------------------ |
 | [`geojson`](../../../three/source/geojson-source/)                          | GeoJSON, from a URL or inline                    |
-| [`vector-tile`](../../../three/source/vector-tile-source/)                  | Mapbox Vector Tiles (MVT) tileset — `{z}/{x}/{y}` template or `.pmtiles` archive |
+| [`vector-tile`](../../../three/source/vector-tile-source/)                  | Mapbox Vector Tiles (MVT) tileset: `{z}/{x}/{y}` template or `.pmtiles` archive |
 | [`raster-tile`](../../../three/source/raster-tile-source/)                  | Raster imagery tiles (XYZ / TMS)                 |
 | [`raster-dem`](../../../three/source/raster-dem-source/)                    | RGB-encoded elevation tiles (terrain / hillshade)|
 | [`quantized-mesh`](../../../three/source/quantized-mesh-source/)            | Cesium quantized-mesh terrain                    |
@@ -143,6 +143,6 @@ Delete the referencing layers before the source. To swap the data of an existing
 
 ## Related Resources
 
-- [ThreeView functions](../../../three/api/threeview-functions/) — `addSource` (see [Updating and deleting a source](#updating-and-deleting-a-source) for the returned handle's `update()` / `delete()`)
-- [Layer Types](../../../three/layer/about/) — layer types
-- [Materials](../../../three/material/about/) — materials (styling) reference
+- [ThreeView functions](../../../three/api/threeview-functions/): `addSource` (see [Updating and deleting a source](#updating-and-deleting-a-source) for the returned handle's `update()` / `delete()`)
+- [Layer Types](../../../three/layer/about/): layer types
+- [Materials](../../../three/material/about/): materials (styling) reference

@@ -99,7 +99,7 @@ view.addLayer({
 ## 関連リソース
 
 - [Raster DEM Source](../../../three/source/raster-dem-source/) / [Quantized Mesh Source](../../../three/source/quantized-mesh-source/)
-- [TerrainMaterial](../../../three/material/terrain-material/) — 地形の詳細設定
-- [Raster Layer](../../../three/layer/raster-layer/) — 地形の上に画像をドレープ／陰影起伏を追加
-- [Vector Layer](../../../three/layer/vector-layer/) — clamp-to-ground のベクター地物を地形にドレープ
-- [CesiumIonPlugin](../../../three_plugins/cesiumionplugin/) — Cesium Ion の quantized-mesh アセット
+- [TerrainMaterial](../../../three/material/terrain-material/): 地形の詳細設定
+- [Raster Layer](../../../three/layer/raster-layer/): 地形の上に画像をドレープ／陰影起伏を追加
+- [Vector Layer](../../../three/layer/vector-layer/): clamp-to-ground のベクター地物を地形にドレープ
+- [CesiumIonPlugin](../../../three_plugins/cesiumionplugin/): Cesium Ion の quantized-mesh アセット

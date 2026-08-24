@@ -46,4 +46,4 @@ view.addLayer({
 ## 関連リソース
 
 - [About Source](../../../three/source/about/)
-- [TerrainMaterial](../../../three/material/terrain-material/) — 地形の描画オプション
+- [TerrainMaterial](../../../three/material/terrain-material/): 地形の描画オプション

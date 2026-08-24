@@ -7,7 +7,7 @@ sidebar:
 
 `SkyBoxMeshDesc`は、シンプルなスカイボックスをシーンに追加するDescriptorです。昼夜の空の色と太陽の色を設定でき、大気散乱シミュレーション（`SkyMeshDesc`）を使用せずに軽量な空の表現が可能です。
 
-以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`geodetic`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-desc-base) を参照してください。
+以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`geodetic`、`visible`）が利用できます。詳細は [MeshDesc](../mesh-desc-base) を参照してください。
 
 ## Properties
 

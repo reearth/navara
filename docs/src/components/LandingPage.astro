@@ -7,18 +7,17 @@
 // or web/navara_three/example/public/screenshots.
 import type { ImageMetadata } from "astro";
 import { Code } from "astro:components";
-import { ArrowUpRight, Check, ChevronDown, Globe, Maximize2, Play } from "@lucide/astro";
+import { ArrowUpRight, Check, ChevronDown, Maximize2, Play } from "@lucide/astro";
 import lp from "../data/lp.json";
 import ImageAttribution from "./ImageAttribution.astro";
 import GalleryTile from "./GalleryTile.astro";
+import LpHeader from "./LpHeader.astro";
 import googleMapsLogo from "../assets/lp/google-maps-logo.png";
-import githubIcon from "../assets/lp/github-invertocat.svg?raw";
 import archGlobe from "../assets/lp/arch-globe.svg?raw";
 import archTerrain from "../assets/lp/arch-terrain.svg?raw";
 import archBuildings from "../assets/lp/arch-buildings.svg?raw";
 import archMarker from "../assets/lp/arch-marker.svg?raw";
 import archArrow from "../assets/lp/arch-arrow.svg?raw";
-import logoHorizontal from "../../public/logo/black/black_Navara_Horizontal_logo_260819.svg?raw";
 import logoVertical from "../../public/logo/black/black_Navara_Vertical_logo_260819.svg?raw";
 
 // Inline an arch SVG so the page CSS can re-theme its baked fills/strokes
@@ -59,10 +58,6 @@ function localizeHref(href: string): string {
   if (!href.startsWith("/") || locale === ROOT_LOCALE) return href;
   return `/${locale}${href}`;
 }
-// Pre-release the LP is parked under /lp (the docs top pages own the locale
-// roots); at release this returns to the locale roots — see astro.config.mjs.
-const lpPathOf = (code: string): string => (code === ROOT_LOCALE ? "/lp/" : `/${code}/lp/`);
-
 const imageModules = import.meta.glob<{ default: ImageMetadata }>(
   [
     "../assets/**/*.{png,jpg,jpeg,gif,webp,avif,svg}",
@@ -102,25 +97,7 @@ const alt = (id: string): string => {
 };
 
 const { colors, links } = lp;
-const rootStyle = `--pri:${colors.primary};--pri-ink:${colors.primary};--acc:${colors.accent};--sub:${colors.sub};--ml:${colors.maplibre}`;
-
-// Theme candidates (primary/sub/accent sets) for the header preview switcher —
-// only revealed when the URL carries `?color` (`?color=<name>` preselects one).
-// Values live in lp.json (themeVariants) like the rest of the theme. Each
-// candidate is also offered with primary/sub exchanged ("<name>-swap") to
-// preview the other color carrying the bands — except "current", whose
-// near-black primary as a page background has no readable counterpart.
-type ThemeVariant = { primary: string; sub: string; accent: string };
-const themeVariants: [string, ThemeVariant][] = Object.entries(
-  lp.themeVariants ?? {},
-).flatMap(([name, v]: [string, ThemeVariant]): [string, ThemeVariant][] =>
-  name === "current"
-    ? [[name, v]]
-    : [
-        [name, v],
-        [`${name}-swap`, { primary: v.sub, sub: v.primary, accent: v.accent }],
-      ],
-);
+const rootStyle = `--pri:${colors.primary};--pri-ink:${colors.primary};--acc:${colors.accent};--sub:${colors.sub};--ml:${colors.maplibre};--acc-hero:${colors.heroAccent};--mark-why:${colors.whyUnderline};--mark-arch:${colors.archUnderline}`;
 
 // Attribution credits (text + link to each source's terms). The strings are
 // language-agnostic, so they live here rather than duplicated per locale; only
@@ -230,6 +207,94 @@ const attrib = (id: string) => (TILE_SOURCES[id] ?? []).map((k) => SRC[k]);
 const galleryAttribLabel = t.gallery.mediaAttributionLabel;
 const googleLogoSrc = googleMapsLogo.src;
 
+// Showcases: sites built with Navara, a third grid in the gallery strip
+// (after tutorial and example). Items are the `showcase-*` slots in lp.json
+// (numeric order; `href` is each site's URL, alt — reused as the hover title —
+// in imageAlts). If a showcase ever uses Google Photorealistic 3D Tiles, its
+// tile must carry the Google logo (see the example tiles' `logo` prop).
+const showcaseIds = Object.keys(images)
+  .filter((id) => id.startsWith("showcase-"))
+  .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
+// Showcase tile credits, extracted verbatim from each site's own Navara
+// attribution UI (minus its Navara self-credits, redundant on Navara's LP).
+// Rows that carried several links in the source UI are split so every credit
+// keeps its link. Re-extract these when a site's data sources change.
+const SHOWCASE_ATTRIB: Record<string, { text: string; href?: string }[]> = {
+  "showcase-1": [
+    {
+      text: "出典：地理院タイル（シームレス空中写真）／色調を編集・加工して使用",
+      href: "https://maps.gsi.go.jp/development/ichiran.html",
+    },
+    {
+      text: "出典：国土交通省 PLATEAU 3D都市モデル（東京都台東区・墨田区 建築物）／色を編集・加工して使用",
+      href: "https://www.mlit.go.jp/plateau/",
+    },
+    { text: "© Re:Earth Terrain", href: "https://terrain.reearth.land/" },
+    {
+      text: "出典：地理院タイル（ベクトルタイル提供実験）／道路データの表現を編集・加工して使用",
+      href: "https://maps.gsi.go.jp/development/vt_expt.html",
+    },
+    { text: "© Mapterhorn", href: "https://mapterhorn.com/" },
+  ],
+  "showcase-2": [
+    {
+      text: "国土地理院 標高タイル・陰影起伏図",
+      href: "https://maps.gsi.go.jp/development/ichiran.html",
+    },
+    { text: "© OpenStreetMap contributors", href: "https://www.openstreetmap.org/copyright" },
+    { text: "© CARTO", href: "https://carto.com/attributions" },
+  ],
+  "showcase-3": [
+    { text: "Basemap by CARTO", href: "https://carto.com/attributions" },
+    {
+      text: "Data by OpenStreetMap contributors",
+      href: "https://www.openstreetmap.org/copyright",
+    },
+    {
+      text: "Territory outlines from historical-basemaps (GPL-3.0)",
+      href: "https://github.com/aourednik/historical-basemaps",
+    },
+    { text: "Ship model by Kenney (CC0), via Poly Pizza", href: "https://poly.pizza/m/SPxFN3Oazd" },
+    {
+      text: "Camel model by jeremy (CC BY 3.0), via Poly Pizza",
+      href: "https://poly.pizza/m/9mu4MbU4QtJ",
+    },
+  ],
+  "showcase-4": [
+    { text: "Re:Earth Papers", href: "https://papers.reearth.land/attribution" },
+    { text: "© OpenStreetMap contributors", href: "https://www.openstreetmap.org/copyright" },
+    { text: "© Re:Earth Terrain", href: "https://terrain.reearth.land/" },
+    { text: "Earthquake data: USGS", href: "https://earthquake.usgs.gov/" },
+    { text: "Plate Boundaries: USGS — Bird, P. (2003)", href: "https://www.usgs.gov/" },
+    { text: "Land data: Natural Earth", href: "https://www.naturalearthdata.com/" },
+    { text: "Elevation: Mapzen Terrain Tiles", href: "https://github.com/tilezen/joerd" },
+  ],
+  "showcase-5": [
+    { text: "Re:Earth Papers", href: "https://papers.reearth.land/attribution" },
+    { text: "© OpenStreetMap contributors", href: "https://www.openstreetmap.org/copyright" },
+    {
+      text: "3D City Model (Project PLATEAU) Chiyoda Ward (FY2023) - MLIT PLATEAU",
+      href: "https://www.geospatial.jp/ckan/dataset/plateau-13101-chiyoda-ku-2023",
+    },
+    {
+      text: "3D City Model (Project PLATEAU) Chuo Ward (FY2023) - MLIT PLATEAU",
+      href: "https://www.geospatial.jp/ckan/dataset/plateau-13102-chuo-ku-2023",
+    },
+    {
+      text: "3D City Model (Project PLATEAU) Kyoto City Shimogyo Ward (FY2025) - MLIT PLATEAU",
+      href: "https://www.geospatial.jp/ckan/dataset/plateau-26100-kyoto-shi-2025",
+    },
+    { text: "© Re:Earth Terrain", href: "https://terrain.reearth.land/" },
+  ],
+  "showcase-6": [
+    {
+      text: "3D City Model (Project PLATEAU) Shinjuku Ward (FY2025) - MLIT",
+      href: "https://www.mlit.go.jp/plateau/",
+    },
+  ],
+};
+
 // The "4 API tiers" showcase still and the MapLibre still, credited inline.
 const whyAttrib = [
   SRC.plateauGeneric,
@@ -321,6 +386,14 @@ const heroScenes = [
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>{t.meta.title}</title>
     <meta name="description" content={t.meta.description} />
+    {/* Social thumbnail: the docs-wide promo poster crop (public/og.jpg). */}
+    <meta property="og:site_name" content="Navara" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={t.meta.title} />
+    <meta property="og:description" content={t.meta.description} />
+    <meta property="og:image" content="https://navara-docs.reearth.workers.dev/og.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://navara-docs.reearth.workers.dev/og.jpg" />
     {/* iOS Safari tints its toolbars with this (it samples the page background
         otherwise): black, so the closing band reads as continuing past the URL
         bar — the page itself can never paint that area. */}
@@ -337,61 +410,11 @@ const heroScenes = [
   </head>
   <body>
     <div class="lp">
-      <!-- Transparent header over hero. The brand logo starts hidden — the
-           centered hero logo owns the branding — and fades in when the header
-           frosts on scroll (lp-header-solid). -->
-      <header class="lp-header">
-        <Fragment set:html={logoSvg(logoHorizontal, "lp-brand")} />
-        <nav class="lp-nav">
-          <a href={localizeHref(links.docs)}>{t.nav.docs}</a>
-          <a href={links.examples}>{t.nav.examples}</a>
-          <a
-            class="lp-nav-github"
-            href={links.github}
-            aria-label={t.nav.github}
-            set:html={githubIcon}
-          />
-          <label class="lp-lang">
-            <Globe size={16} stroke-width={1.8} aria-hidden="true" />
-            <span class="lp-lang-label" aria-hidden="true">{t.short}</span>
-            <ChevronDown class="lp-lang-chevron" size={14} stroke-width={2} aria-hidden="true" />
-            <!-- Invisible select stretched over the whole switcher, so a
-                 click anywhere on it opens the native dropdown. -->
-            <select aria-label="Language" data-lp-lang>
-              {
-                Object.entries(locales).map(([code, strings]: [string, any]) => (
-                  <option value={lpPathOf(code)} selected={code === locale} lang={strings.htmlLang}>
-                    {strings.short}
-                  </option>
-                ))
-              }
-            </select>
-          </label>
-          <!-- Theme preview switcher: hidden unless the URL carries `?color`
-               (see the script below). Each option carries its full
-               primary/sub/accent set; the striped dot paints the live vars, so
-               it doubles as the "current theme" indicator. -->
-          <label class="lp-lang lp-color" data-lp-color hidden>
-            <span class="lp-color-dot" aria-hidden="true"></span>
-            <ChevronDown class="lp-lang-chevron" size={14} stroke-width={2} aria-hidden="true" />
-            <select aria-label="Theme colors">
-              {
-                themeVariants.map(([name, v]) => (
-                  <option
-                    value={name}
-                    data-pri={v.primary}
-                    data-sub={v.sub}
-                    data-acc={v.accent}
-                    selected={v.accent === colors.accent && v.primary === colors.primary}
-                  >
-                    {name}
-                  </option>
-                ))
-              }
-            </select>
-          </label>
-        </nav>
-      </header>
+      <!-- Transparent header over hero (shared with the docs site — see
+           LpHeader.astro). The brand logo starts hidden — the centered hero
+           logo owns the branding — and fades in when the header frosts on
+           scroll (lp-header-solid). -->
+      <LpHeader locale={locale} variant="lp" />
 
       <!-- Hero stage: the hero image stays pinned while the transparent
            catch-copy section slides up over it; once that section is fully
@@ -468,7 +491,7 @@ const heroScenes = [
           <div class="lp-intro-right">
             <p class="lp-intro-copy" set:html={t.intro.copyHtml} />
             <div class="lp-cta-row">
-              <a class="lp-btn-primary" href={links.examples}>{t.intro.ctaShowcase}</a>
+              <a class="lp-btn-primary" href={links.examples}>{t.intro.ctaExamples}</a>
               <a class="lp-btn-outline" href={localizeHref(links.docs)}>{t.intro.ctaDocs}</a>
             </div>
             <p class="lp-getting-started">
@@ -518,7 +541,6 @@ const heroScenes = [
                     />
                   ))
                 }
-                <div class="lp-api-scrim" aria-hidden="true" />
                 <div class="lp-api-lede">
                   <h3 class="lp-api-lede-title">{t.why.apiLede.title}</h3>
                   <p class="lp-api-lede-sub">{t.why.apiLede.sub}</p>
@@ -626,7 +648,7 @@ const heroScenes = [
         </div>
       </section>
 
-      <!-- Architecture (light) -->
+      <!-- Architecture (primary band) -->
       <section class="lp-arch">
         <div class="lp-container">
           <p class="lp-eyebrow" data-reveal>{t.arch.eyebrow}</p>
@@ -703,19 +725,12 @@ const heroScenes = [
             <div class="lp-gallery-side-inner">
               <div class="lp-gallery-side-set lp-set-active" data-gallery-set="tutorial">
                 <p class="lp-gallery-label">{t.gallery.tutorial.label}</p>
-                <p class="lp-gallery-link">
-                  <a href={localizeHref(links.tutorial)}
-                    >{t.gallery.tutorial.link}<ArrowUpRight class="lp-link-icon" size={15} /></a
-                  >
-                </p>
               </div>
               <div class="lp-gallery-side-set" data-gallery-set="example">
                 <p class="lp-gallery-label">{t.gallery.example.label}</p>
-                <p class="lp-gallery-link">
-                  <a href={links.examples}
-                    >{t.gallery.example.link}<ArrowUpRight class="lp-link-icon" size={15} /></a
-                  >
-                </p>
+              </div>
+              <div class="lp-gallery-side-set" data-gallery-set="showcase">
+                <p class="lp-gallery-label">{t.gallery.showcase.label}</p>
               </div>
             </div>
           </aside>
@@ -857,6 +872,23 @@ const heroScenes = [
             label={galleryAttribLabel}
           />
           </div>
+          {/* Showcases — sites built with Navara: a third grid of square
+              tiles, three per row. */}
+          <div class="lp-showcase-grid">
+            {
+              showcaseIds.map((id, i) => (
+                <GalleryTile
+                  cellClass="lp-tile-sq"
+                  rd={i % 3}
+                  href={slot(id).href ?? "#"}
+                  imgSrc={src(id)}
+                  imgAlt={alt(id)}
+                  items={SHOWCASE_ATTRIB[id] ?? []}
+                  label={galleryAttribLabel}
+                />
+              ))
+            }
+          </div>
           </div>
         </div>
       </section>
@@ -953,27 +985,8 @@ const heroScenes = [
     </div>
 
     <script>
-      // A native select drops its list on mousedown; suppress that and open
-      // on the completed click instead (where showPicker is available —
-      // otherwise the native behavior stays).
-      const openPickerOnClick = (el: HTMLSelectElement) => {
-        if (typeof el.showPicker !== "function") return;
-        el.addEventListener("mousedown", (e) => {
-          e.preventDefault();
-          el.focus();
-        });
-        el.addEventListener("click", () => el.showPicker());
-      };
-
-      // Navigate to the selected locale's landing page.
-      document.querySelectorAll<HTMLSelectElement>("select[data-lp-lang]").forEach((el) => {
-        el.addEventListener("change", () => {
-          location.href = el.value;
-        });
-        openPickerOnClick(el);
-      });
-
-      // Theme preview: `?color` in the URL reveals the header switcher;
+      // Theme preview: `?color` in the URL reveals the header switcher
+      // (markup in LpHeader.astro, which also owns the language select);
       // picking a candidate rewrites the full --pri/--sub/--acc set on <html>
       // with the palette sheet's colors verbatim. Roles a candidate color
       // cannot fill without losing contrast fall back to the sheet's plain
@@ -1145,23 +1158,35 @@ const heroScenes = [
         updateHeaderSolid();
       }
 
-      // Crossfade the gallery overlay label when it crosses into the example
-      // grid (and back, when scrolling up).
-      const exampleGrid = document.querySelector(".lp-example-grid");
+      // Crossfade the gallery overlay label as it crosses grid boundaries.
+      // One observer per grid below the first; the deepest intersecting grid
+      // wins (while the label sits over the showcase grid, the example grid
+      // can still be partly on screen above it).
       const gallerySets = document.querySelectorAll<HTMLElement>(".lp-gallery-side-set");
-      if (exampleGrid && gallerySets.length) {
-        const galleryObserver = new IntersectionObserver(
-          ([entry]) => {
-            const active = entry.isIntersecting ? "example" : "tutorial";
-            gallerySets.forEach((set) => {
-              set.classList.toggle("lp-set-active", set.dataset.gallerySet === active);
-            });
-          },
-          // Shrink the viewport bottom to roughly the overlay label position,
-          // so the swap happens as the label meets the example images.
-          { rootMargin: "0px 0px -140px 0px" },
-        );
-        galleryObserver.observe(exampleGrid);
+      {
+        const labelGrids: [string, Element | null][] = [
+          ["example", document.querySelector(".lp-example-grid")],
+          ["showcase", document.querySelector(".lp-showcase-grid")],
+        ];
+        const overGrid: Record<string, boolean> = {};
+        const applyGallerySet = () => {
+          const active = overGrid.showcase ? "showcase" : overGrid.example ? "example" : "tutorial";
+          gallerySets.forEach((set) => {
+            set.classList.toggle("lp-set-active", set.dataset.gallerySet === active);
+          });
+        };
+        for (const [name, grid] of labelGrids) {
+          if (!grid) continue;
+          new IntersectionObserver(
+            ([entry]) => {
+              overGrid[name] = entry.isIntersecting;
+              applyGallerySet();
+            },
+            // Shrink the viewport bottom to roughly the overlay label position,
+            // so the swap happens as the label meets the grid's images.
+            { rootMargin: "0px 0px -180px 0px" },
+          ).observe(grid);
+        }
       }
 
       // Adaptive gallery label ink: sample the luminance of the tile image
@@ -1352,6 +1377,18 @@ const heroScenes = [
           .querySelector(".lp-gallery-scroll")
           ?.addEventListener("scroll", requestSideInk, { passive: true });
         requestSideInk();
+
+        // The label's start line: --side-h feeds the container's `top` calc
+        // (see .lp-gallery-side) so the label's bottom first aligns just above
+        // the first tile's bottom edge. The vertical-text height depends on
+        // the font and wording, so it is measured — again once the webfont
+        // lands, and on resize (the phone breakpoint changes the label size).
+        const syncSideStart = () => {
+          gallerySide.style.setProperty("--side-h", `${gallerySideInner.offsetHeight}px`);
+        };
+        syncSideStart();
+        document.fonts?.ready.then(syncSideStart);
+        window.addEventListener("resize", syncSideStart);
       }
 
       // Gallery tiles: open in a new tab, and reveal the example/tutorial name
@@ -1673,8 +1710,12 @@ const heroScenes = [
            hairlines and media scrims never go light. Bands keep --pri. */
         --ink: color-mix(in oklab, var(--pri-ink), black 20%);
         --ink-soft: color-mix(in oklab, var(--pri-ink), white 35%);
-        --on-dark: color-mix(in oklab, var(--pri-ink), white 88%);
-        --on-dark-soft: color-mix(in oklab, var(--pri-ink), white 60%);
+        /* Pure white per the design handoff — dark-band text no longer takes
+           a primary tint. */
+        --on-dark: #fff;
+        /* Bright enough to read comfortably on the primary band — at lower
+           white shares this went muddy gray against the navy. */
+        --on-dark-soft: color-mix(in oklab, var(--pri-ink), white 85%);
         --line: color-mix(in oklab, var(--pri-ink), white 85%);
         --line-dark: color-mix(in oklab, var(--pri-ink), white 14%);
         /* Text on --pri-painted bands / on --acc surfaces. The preview flips
@@ -1858,154 +1899,10 @@ const heroScenes = [
         }
       }
 
-      /* Header: always fixed; gains a dark backdrop once the hero is gone
-         so the light sections keep it readable. */
-      .lp-header {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        z-index: 10;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 20px max(48px, var(--lp-safe-r)) 20px max(48px, var(--lp-safe-l));
-        transition: background 0.3s ease;
-      }
-      /* Scrolled past the hero, the header frosts with the same primary
-         glass as the intro panel, so both read as one surface; the chrome
-         uses the matching on-band ink. */
-      .lp-header.lp-header-solid {
-        background: color-mix(in srgb, var(--pri) 60%, transparent);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-      }
-      .lp-header-solid .lp-brand,
-      .lp .lp-header-solid .lp-nav a,
-      .lp-header-solid .lp-lang {
-        color: var(--on-band);
-      }
-      .lp .lp-header-solid .lp-nav a:hover,
-      .lp-header-solid .lp-lang:hover {
-        color: var(--acc);
-      }
-      /* Brand logo: invisible while the hero's centered logo carries the
-         branding; fades in together with the frosted backdrop once scrolled
-         past the hero. visibility keeps the hidden copy out of the
-         accessibility tree while the hero logo is the one on screen. */
-      .lp-brand {
-        display: block;
-        height: 24px;
-        width: auto;
-        color: var(--on-dark);
-        opacity: 0;
-        visibility: hidden;
-        transition:
-          opacity 0.3s ease,
-          visibility 0.3s ease;
-      }
-      .lp-brand path {
-        fill: currentColor;
-      }
-      .lp-header-solid .lp-brand {
-        opacity: 1;
-        visibility: visible;
-      }
-      .lp-nav {
-        display: flex;
-        align-items: center;
-        gap: 28px;
-        font-size: 14px;
-        font-weight: 500;
-      }
-      .lp .lp-nav a {
-        color: var(--on-dark);
-      }
-      .lp .lp-nav a:hover {
-        color: var(--acc);
-      }
-      .lp-nav-github svg {
-        display: block;
-        width: 20px;
-        height: 20px;
-      }
-      .lp-nav-github svg path {
-        fill: currentColor;
-      }
-      .lp-lang {
-        position: relative;
-        display: flex;
-        align-items: center;
-        gap: 7px;
-        color: var(--on-dark);
-        cursor: pointer;
-      }
-      .lp-lang:hover {
-        color: var(--acc);
-      }
-      .lp-lang svg {
-        display: block;
-        flex: none;
-      }
-      .lp-lang-label {
-        /* Tall enough that Latin descenders are not clipped. */
-        font: 500 13px/18px "Arsenal", "Zen Kaku Gothic New", sans-serif;
-        padding-right: 16px;
-      }
-      /* The select is an invisible hit area over the whole switcher — the
-         visible text is the span; only the native dropdown list shows. */
-      .lp-lang select {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        appearance: none;
-        border: none;
-        opacity: 0;
-        cursor: pointer;
-      }
-      /* Draw the focus ring around the whole switcher (icon + label + arrow). */
-      .lp-lang select:focus-visible {
-        outline: none;
-      }
-      .lp-lang:has(select:focus-visible) {
-        outline: 1px solid var(--acc);
-        outline-offset: 5px;
-        border-radius: 2px;
-      }
-      /* Native dropdown list opens on a light background. */
-      .lp-lang select option {
-        color: var(--pri-ink);
-      }
-      .lp-lang .lp-lang-chevron {
-        position: absolute;
-        right: 0;
-        top: 50%;
-        transform: translateY(-50%);
-        pointer-events: none;
-      }
-      /* Theme preview switcher (`?color`): a swatch dot instead of a label,
-         striped with the live primary/sub/accent set. .lp-lang's
-         display: flex would defeat [hidden], so restate it. */
-      .lp-color {
-        padding-right: 16px;
-      }
-      .lp-color[hidden] {
-        display: none;
-      }
-      .lp-color-dot {
-        width: 14px;
-        height: 14px;
-        border-radius: 50%;
-        background: linear-gradient(
-          135deg,
-          var(--pri) 33.3%,
-          var(--sub) 33.3% 66.6%,
-          var(--acc) 66.6%
-        );
-        box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.35);
-      }
-      /* Inline arrow icons sit on the text baseline row of their link. */
+      /* Header styles live in LpHeader.astro (shared with the docs site);
+         the nv-header-in drop-in above and the lp-header-solid frost toggled
+         by the script below still target its classes. */
+      /* Inline arrow icons sit on the text baseline row of their link. */      /* Inline arrow icons sit on the text baseline row of their link. */
       .lp .lp-getting-started a,
       .lp .lp-gallery-link a,
       .lp .lp-maplibre-roadmap a {
@@ -2101,9 +1998,9 @@ const heroScenes = [
         top: 43%;
         transform: translate(-50%, -50%);
         z-index: 1;
-        width: clamp(180px, 24vw, 320px);
+        width: clamp(225px, 30vw, 400px);
         height: auto;
-        color: var(--on-dark);
+        color: #fff;
         pointer-events: none;
         /* Soft scrim baked into the mark so it stays readable over the
            video's bright frames. */
@@ -2249,6 +2146,9 @@ const heroScenes = [
         background: color-mix(in srgb, var(--pri) 60%, transparent);
         backdrop-filter: blur(14px);
         -webkit-backdrop-filter: blur(14px);
+        /* The hero panel accents in the handoff's cream, not the global
+           accent — scoped so the H1 span, CTAs and links inside follow. */
+        --acc: var(--acc-hero);
       }
       .lp-intro-grid {
         display: grid;
@@ -2354,10 +2254,7 @@ const heroScenes = [
       }
       .lp-why-h2 mark {
         color: inherit;
-        background: linear-gradient(
-          transparent 62%,
-          color-mix(in srgb, var(--acc) 45%, transparent) 62%
-        );
+        background: linear-gradient(transparent 62%, var(--mark-why) 62%);
       }
       /* the four values are text-only — no rules, just columns and space,
          sitting close under the heading and close to the showcase below */
@@ -2431,18 +2328,6 @@ const heroScenes = [
       }
       .lp-api-media img.lp-tier-visible {
         opacity: 1;
-      }
-      /* keep the still readable under the captions (bottom fade only — the
-         ring itself sits on the plain still, no halo) */
-      .lp-api-scrim {
-        position: absolute;
-        inset: 0;
-        z-index: 1;
-        background: linear-gradient(
-          to top,
-          color-mix(in srgb, var(--pri-ink) 62%, transparent),
-          transparent 34%
-        );
       }
       /* attribution: no background, white icon with a shadow, tucked into
          the top-right corner */
@@ -2598,10 +2483,8 @@ const heroScenes = [
         transform: translate(-50%, -50%);
       }
 
-      /* Architecture (light, between the tinted "why" band and the black
-         gallery) */
       /* Hello world: the whole first program beside its rendered result, on
-         a dark band echoing the hero. */
+         a light band — the dark code card carries the contrast. */
       .lp-hello {
         /* One screen tall (minus the 68px fixed header): real height with
            the content self-centering, not padding. */
@@ -2611,11 +2494,8 @@ const heroScenes = [
         box-sizing: border-box;
         min-height: calc(100svh - var(--lp-header-h, 68px));
         padding: 96px 48px;
-        background: var(--pri);
-        color: var(--on-band);
-      }
-      .lp-hello .lp-eyebrow {
-        color: var(--acc);
+        background: var(--sub);
+        color: var(--ink);
       }
       /* The code card drives the row height; the visual fills the remaining
          height of the side column (copy + CTA keep their natural size), so
@@ -2671,7 +2551,7 @@ const heroScenes = [
         flex: 1;
         min-height: 0;
         border-radius: 14px;
-        border: 1px solid color-mix(in srgb, var(--on-band) 10%, transparent);
+        border: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
         overflow: hidden;
       }
       .lp-hello-visual img {
@@ -2699,17 +2579,29 @@ const heroScenes = [
         color: var(--on-dark);
       }
 
+      /* Architecture: primary band between the light hello band and the
+         black gallery. */
       .lp-arch {
         padding: 120px 48px;
-        background: var(--sub);
+        background: var(--pri);
+        color: var(--on-band);
         text-align: center;
+      }
+      .lp-arch .lp-eyebrow {
+        color: var(--acc);
+      }
+      .lp-arch .lp-h2 mark {
+        color: inherit;
+        /* Same highlighter treatment as .lp-why-h2 mark, in the arch tint. */
+        background: linear-gradient(transparent 62%, var(--mark-arch) 62%);
       }
       /* Diagram composed from the arch-* line-art SVGs. Two grid rows: a shared
          head row (titles) and a fixed-height body row (source pieces → arrows →
          globe). Isolating the bodies in one aligned row keeps the arrow
          convergence, the globe center and the middle source piece on one line,
          no matter how many lines each title wraps to. The arch-* strokes are
-         near-black, so this reads as clean line art on the white band. */
+         re-inked to the on-band white below, so this reads as clean line art
+         on the primary band. */
       .lp-arch-flow {
         --arch-body-h: clamp(320px, 36vw, 400px);
         display: grid;
@@ -2722,7 +2614,7 @@ const heroScenes = [
         row-gap: clamp(18px, 2.6vw, 34px);
         width: min(1060px, 100%);
         margin: clamp(36px, 6vw, 72px) auto 0;
-        color: var(--ink);
+        color: var(--on-band);
       }
       /* Titles sit at the bottom of the head row, just above their body. */
       .lp-arch-head {
@@ -2749,7 +2641,7 @@ const heroScenes = [
         margin: 10px 0 0;
         font-size: clamp(13px, 1.1vw, 15px);
         line-height: 1.55;
-        color: var(--ink-soft);
+        color: var(--on-band-soft);
         text-wrap: balance;
       }
       .lp-arch-body {
@@ -2823,19 +2715,21 @@ const heroScenes = [
         height: 100%;
       }
       /* Re-theme the inlined arch line-art: CSS outranks the SVGs' baked
-         presentation attributes, so their fixed palette (sub-colored fills,
-         ink strokes, gray graticule) maps onto the live theme vars. */
+         presentation attributes, so their fixed light-band palette (fills
+         matching the band, ink strokes, gray graticule) is inverted for the
+         primary band: fills become the band color (cutouts), strokes/solid
+         fills the on-band white, the graticule a lighter primary tint. */
       .lp-arch-flow svg [fill="#F4F3EF"] {
-        fill: var(--sub);
+        fill: var(--pri);
       }
       .lp-arch-flow svg [stroke="#090C11"] {
-        stroke: var(--pri-ink);
+        stroke: var(--on-band);
       }
       .lp-arch-flow svg [fill="#090C11"] {
-        fill: var(--pri-ink);
+        fill: var(--on-band);
       }
       .lp-arch-flow svg [stroke="#C9C9C9"] {
-        stroke: color-mix(in oklab, var(--pri-ink), white 75%);
+        stroke: color-mix(in oklab, var(--pri), white 35%);
       }
 
       /* Gallery — seamless image strip on black; the section title floats
@@ -2870,7 +2764,13 @@ const heroScenes = [
          was dropped — it produces mid-gray on mid-gray backdrops). */
       .lp-gallery-side {
         position: absolute;
-        top: 0;
+        /* The sticky label is clamped to this container: its top starts one
+           label-height (--side-h, measured by script — vertical text, so it
+           depends on font and wording) above the first tile's bottom edge, so
+           the label first appears with its BOTTOM on that edge and can never
+           ride above it. The tile term must stay in sync with .lp-tile-wide's
+           height at each breakpoint. */
+        top: calc(min(48vw, 780px) - var(--side-h, 320px) - 44px);
         bottom: 0;
         left: 0;
         z-index: 2;
@@ -2881,8 +2781,8 @@ const heroScenes = [
       }
       .lp-gallery-side-inner {
         position: sticky;
-        bottom: 28px;
-        margin: 28px 0 28px 24px;
+        bottom: 44px;
+        margin: 0 0 44px 40px;
         display: grid;
       }
       /* Both label sets are stacked in the same cell and crossfade when the
@@ -2897,12 +2797,16 @@ const heroScenes = [
         transition: opacity 0.35s ease;
         pointer-events: none;
       }
+      /* The whole overlay is click-transparent (no links inside since the
+         "See more" line was dropped) — clicks land on the tile underneath. */
       .lp-gallery-side-set.lp-set-active {
         opacity: 1;
-        pointer-events: auto;
       }
       .lp-gallery-label {
-        font: 700 16px "IBM Plex Mono", monospace;
+        /* Fluid with the viewport (≈32px on desktop, floors at 20px on
+           phones); --side-h is re-measured on resize, so the label's start
+           alignment follows the size. */
+        font: 700 clamp(20px, 2.4vw, 32px) "IBM Plex Mono", monospace;
         letter-spacing: 0.34em;
         writing-mode: vertical-rl;
         color: var(--on-dark);
@@ -2911,24 +2815,17 @@ const heroScenes = [
       .lp-gallery-side.lp-side-dark .lp-gallery-label {
         color: var(--pri-ink);
       }
-      .lp-gallery-link {
-        margin-top: 26px;
-        font-size: 14px;
-        font-weight: 700;
-      }
-      .lp .lp-gallery-link a {
-        color: var(--on-dark);
-        transition: color 0.4s ease;
-      }
-      .lp .lp-gallery-side.lp-side-dark .lp-gallery-link a {
-        color: var(--pri-ink);
-      }
-      .lp .lp-gallery-link a:hover {
-        text-decoration: underline;
-      }
       .lp-tutorial-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
+      }
+      /* Showcase grid — square tiles continuing the strip, three per row. */
+      .lp-showcase-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+      }
+      .lp-tile-sq {
+        aspect-ratio: 1;
       }
       /* Grid item wrapping each tile: carries the column-span / height classes
          and hosts the per-tile attribution overlay (a sibling of the link, so
@@ -3076,6 +2973,14 @@ const heroScenes = [
         grid-column: span 36;
       }
 
+      /* Showcases — a full-bleed, gapless strip of site screenshots that
+         auto-scrolls sideways. Two identical rows sit side by side in the
+         track and the loop slides the track exactly one row-width
+         (translateX(-50%)), so the film reads as endless. The tiles are
+         links, so hover (and keyboard focus inside) pauses the ride; under
+         reduced motion the clone row is dropped and the strip becomes a
+         plain manual scroller. White on purpose (not --sub): the strip sits
+         between two black bands and the screenshots supply the color. */
       /* MapLibre family */
       .lp-maplibre {
         padding: 120px 48px;
@@ -3280,9 +3185,6 @@ const heroScenes = [
          the gallery into a horizontal scroller that preserves the desktop
          layout at a fixed 900px composition width. */
       @media (max-width: 960px) {
-        .lp-header {
-          padding: 18px max(28px, var(--lp-safe-r)) 18px max(28px, var(--lp-safe-l));
-        }
         .lp-intro {
           padding: 72px 32px calc(60px + var(--lp-safe-b));
         }
@@ -3372,21 +3274,6 @@ const heroScenes = [
       }
 
       @media (max-width: 640px) {
-        .lp-header {
-          padding: 14px max(20px, var(--lp-safe-r)) 14px max(20px, var(--lp-safe-l));
-        }
-        .lp-nav {
-          gap: 18px;
-        }
-        /* Docs/Examples text links don't fit; both stay reachable from the
-           footer. */
-        .lp-nav > a:not([class]) {
-          display: none;
-        }
-        .lp-brand {
-          height: 21px;
-        }
-
         .lp-intro {
           padding: 52px 20px calc(44px + var(--lp-safe-b));
         }
@@ -3573,7 +3460,8 @@ const heroScenes = [
           display: none;
         }
         .lp-tutorial-grid,
-        .lp-example-grid {
+        .lp-example-grid,
+        .lp-showcase-grid {
           width: 900px;
         }
         .lp-tile-wide {
@@ -3585,17 +3473,15 @@ const heroScenes = [
         .lp-example-grid {
           grid-auto-rows: 320px;
         }
+        .lp-gallery-side {
+          top: calc(440px - var(--side-h, 220px) - 32px);
+        }
         .lp-gallery-side-inner {
-          margin: 20px 0 20px 12px;
-          bottom: 20px;
+          margin: 0 0 32px 20px;
+          bottom: 32px;
         }
         .lp-gallery-label {
-          font-size: 13px;
           letter-spacing: 0.3em;
-        }
-        .lp-gallery-link {
-          margin-top: 18px;
-          font-size: 13px;
         }
 
         .lp-maplibre {

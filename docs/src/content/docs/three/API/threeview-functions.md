@@ -51,7 +51,7 @@ const layer = view.addLayer({
 
 ### addSource()
 
-Registers a data [source](../../../three/source/about/) and returns a `Source` handle. A source describes where data comes from and how it is fetched/decoded; reference it from a resource layer via the layer's `source` property (the handle or its `id`).
+Registers a data [source](../../../three/source/about/) and returns a `Source` handle. A source describes where data comes from and how it is fetched/decoded. Reference it from a resource layer via the layer's `source` property (the handle or its `id`).
 
 **Syntax:**
 
@@ -458,7 +458,7 @@ type CameraPosition = {
 |---|---|---|
 | `lng` | `number` | Longitude (degrees) |
 | `lat` | `number` | Latitude (degrees) |
-| `height` | `number` | Height above the ellipsoid (meters). When `distance` is also set, this is used as the **target point elevation** — the camera is placed `distance` meters from that elevated target. |
+| `height` | `number` | Height above the ellipsoid (meters). When `distance` is also set, this is used as the **target point elevation**: the camera is placed `distance` meters from that elevated target. |
 | `pitch` | `number` | Pitch angle (degrees) |
 | `heading` | `number` | Heading angle (degrees) |
 | `roll` | `number` | Roll angle (degrees) |
@@ -548,36 +548,56 @@ view.moveCameraWithDirection([1, 0, 0], 100);
 
 ### flyTo()
 
-Animates the camera to a target position. Moves smoothly along a flight arc.
+Animates the camera to a target position. Moves smoothly along a flight arc: the longitude takes the short way across the antimeridian, and the height follows an arc that peaks at `maxHeight`.
+
+The returned promise resolves to `true` when the flight completes, or `false` when it is interrupted by another camera operation, such as a newer `flyTo()` or a [`setCamera()`](#setcamera) call. Issuing a new `flyTo()` while a flight is in progress interrupts the current flight and starts the new one from the current camera pose.
 
 **Syntax:**
 
 ```tsx
 flyTo(
-  camPos: CameraPosition & Required<Pick<CameraPosition, "lng" | "lat" | "height">>,
-  duration?: number,
-  maxHeight?: number
-): void
+  camPos: CameraPosition &
+    Required<Pick<CameraPosition, "lng" | "lat">> &
+    ({ height: number } | { distance: number }),
+  options?: FlyToOptions
+): Promise<boolean>
+
+type FlyToOptions = {
+  duration?: number;
+  maxHeight?: number;
+  easing?: FlyToEasing;
+};
+
+type FlyToEasing =
+  | "linear"
+  | "quadInOut"
+  | "cubicInOut"
+  | "cubicOut"
+  | "quinticInOut";
 ```
 
 **Parameters:**
 
-- `camPos`: Target position. `lng`, `lat`, and `height` are required.
-  - `lng`: Longitude (degrees) — **required**
-  - `lat`: Latitude (degrees) — **required**
-  - `height`: Height above the ellipsoid (meters) — **required**. When `distance` is also set, this is used as the **target point elevation** rather than the camera's own altitude.
+- `camPos`: Target position. `lng` and `lat` are required, plus either `height` or `distance`.
+  - `lng`: Longitude (degrees), **required**
+  - `lat`: Latitude (degrees), **required**
+  - `height`: Height above the ellipsoid (meters). When `distance` is also set, this is used as the **target point elevation** rather than the camera's own altitude.
   - `pitch`: Pitch angle (degrees)
   - `heading`: Heading angle (degrees)
   - `roll`: Roll angle (degrees)
   - `distance`: Distance from the target point along the camera forward direction (meters). When specified, the camera is placed so that its forward ray reaches the `lng`/`lat`/`height` target from this distance. If omitted, `height` is used as the camera's own altitude above the surface normal.
-- `duration`: Animation duration (milliseconds)
-- `maxHeight`: Maximum height during the flight arc (meters)
+- `options`: Flight options.
+  - `duration`: Animation duration (milliseconds). When omitted, the duration is derived from the flight distance (2–3 seconds). Pass `0` to jump instantly.
+  - `maxHeight`: Maximum height during the flight arc (meters)
+  - `easing`: Easing preset applied to the flight time. When omitted, `"quinticInOut"` is used, or `"cubicOut"` when descending from above 11,500 m.
+
+**Returns:** `Promise<boolean>`: `true` when the flight completed, `false` when it was interrupted.
 
 **Example:**
 
 ```tsx
 // Altitude-based: fly to Tokyo over 3 seconds (maximum height 5000 m)
-view.flyTo(
+const completed = await view.flyTo(
   {
     lng: 139.7671,
     lat: 35.6812,
@@ -585,11 +605,14 @@ view.flyTo(
     pitch: -45,
     heading: 0,
   },
-  3000,
-  5000
+  { duration: 3000, maxHeight: 5000 }
 );
+if (!completed) {
+  // Interrupted by another camera operation (a newer flyTo, setCamera, etc.).
+}
 
-// Distance-based: approach Tokyo Tower (at ground level) from 2000 m away
+// Distance-based: approach Tokyo Tower (at ground level) from 2000 m away,
+// with an explicit easing
 view.flyTo(
   {
     lng: 139.7454,
@@ -599,7 +622,7 @@ view.flyTo(
     pitch: -30,
     heading: 45,
   },
-  4000
+  { duration: 4000, easing: "cubicInOut" }
 );
 ```
 
@@ -694,7 +717,7 @@ cameraFreeLook(enabled: boolean, target?: LatLngHeight): void
   - `lat`: Latitude (degrees)
   - `height`: Height (meters)
 
-When the target moves between calls (e.g. the player walks), the camera translates with it; orientation is preserved. Mouse wheel zoom is disabled in this mode (the camera is at zero distance from the pivot).
+When the target moves between calls (e.g. the player walks), the camera translates with it. Orientation is preserved. Mouse wheel zoom is disabled in this mode (the camera is at zero distance from the pivot).
 
 **Example:**
 
@@ -746,7 +769,7 @@ if (height !== undefined) {
 
 ### sampleTerrainMostDetailed()
 
-Asynchronously samples terrain heights at the most detailed zoom level the terrain source provides, fetching the needed tiles over the network. Unlike `sampleTerrainHeight()`, which reads only tiles already resident for rendering — and therefore returns coarse heights (or `undefined`) while the camera is far away — this resolves accurate ground heights regardless of what the camera has streamed in. Use it to place objects on the ground before flying there.
+Asynchronously samples terrain heights at the most detailed zoom level the terrain source provides, fetching the needed tiles over the network. Unlike `sampleTerrainHeight()`, which reads only tiles already resident for rendering, and therefore returns coarse heights (or `undefined`) while the camera is far away, this resolves accurate ground heights regardless of what the camera has streamed in. Use it to place objects on the ground before flying there.
 
 Positions are grouped by tile and each unique tile is fetched once. Sampling starts at the source's `maxZoom` and falls back to parent tiles on 404 until data is found, so sources whose real coverage is shallower than the configured `maxZoom` still resolve. A `401`/`403` response rejects the whole call (a token problem should not silently degrade into coarse heights), while server errors are retried and then yield `height: undefined` for the affected positions.
 
@@ -762,7 +785,7 @@ sampleTerrainMostDetailed(
 
 **Parameters:**
 
-- `source`: A registered `quantized-mesh` / `raster-dem` source — the `Source` handle returned by `addSource`, or its id
+- `source`: A registered `quantized-mesh` / `raster-dem` source: either the `Source` handle returned by `addSource`, or its id
 - `positions`: Geodetic positions to sample
   - `lat`: Latitude (radians)
   - `lng`: Longitude (radians)
@@ -1071,11 +1094,11 @@ await view.init();
 
 ### addFontFamily()
 
-Registers a font family composed of multiple faces. Each face covers a set of unicode ranges and points to a separate font file URL (ttf, otf, woff, or woff2). Once a family is registered, a text layer can reference it by its `family` name through [`material.font`](../../../three/material/text-material/#font); only the faces whose unicode ranges cover the characters in the label's `text` are downloaded.
+Registers a font family composed of multiple faces. Each face covers a set of unicode ranges and points to a separate font file URL (ttf, otf, woff, or woff2). Once a family is registered, a text layer can reference it by its `family` name through [`material.font`](../../../three/material/text-material/#font). Only the faces whose unicode ranges cover the characters in the label's `text` are downloaded.
 
 **Face priority and fallback:**
 
-- Faces are evaluated in the order they appear in `faces`. For each codepoint in `text`, the first face whose `unicodeRanges` contain the codepoint is used — so if ranges overlap, the earlier entry wins.
+- Faces are evaluated in the order they appear in `faces`. For each codepoint in `text`, the first face whose `unicodeRanges` contain the codepoint is used, so if ranges overlap, the earlier entry wins.
 - Codepoints that are not covered by any face fall back to the first face (`faces[0]`). This means the first face may also be downloaded for uncovered characters, even if its declared `unicodeRanges` do not include them.
 
 To make this behavior predictable, put the face you want used as the fallback at index `0`. Then order the remaining faces after it so that, when their ranges overlap, earlier entries have higher priority.
@@ -1175,7 +1198,7 @@ view.removeFontFamily("MapFont");
 
 ### setSseMultiplierRange()
 
-Updates the memory-pressure SSE degrade range at runtime. `min` is the resting multiplier applied even without budget pressure (a value greater than 1 coarsens far tiles at rest); `max` is the ceiling the dynamic degrade can climb to under memory pressure. The next traversal re-selects tile LODs with the new range. Setting `min = max = 1` fully disables the pressure degrade.
+Updates the memory-pressure SSE degrade range at runtime. `min` is the resting multiplier applied even without budget pressure (a value greater than 1 coarsens far tiles at rest). `max` is the ceiling the dynamic degrade can climb to under memory pressure. The next traversal re-selects tile LODs with the new range. Setting `min = max = 1` fully disables the pressure degrade.
 
 **Syntax:**
 
@@ -1199,7 +1222,7 @@ view.setSseMultiplierRange(1, 1);
 ```
 
 :::tip[Related Documentation]
-The device-dependent defaults can be set via the [`memoryBudget` option](./threeview-class#memorybudget) (`sseMultiplierMin` / `sseMultiplierMax`).
+The device-dependent defaults can be set via the [`memoryBudget` option](../threeview-class#memorybudget) (`sseMultiplierMin` / `sseMultiplierMax`).
 :::
 
 ### memoryStats()
@@ -1259,7 +1282,7 @@ if (stats) {
 
 ### workerMemoryStats()
 
-Returns a snapshot of worker-side memory: per-tile-worker WASM heaps (point-in-time samples from the pool's post-task probes — this call also requests fresh probes, whose results show up on the *next* call) and the font worker's heap/cache breakdown. Returns `undefined` before `init()`.
+Returns a snapshot of worker-side memory: per-tile-worker WASM heaps (point-in-time samples from the pool's post-task probes. This call also requests fresh probes, whose results show up on the *next* call) and the font worker's heap/cache breakdown. Returns `undefined` before `init()`.
 
 **Syntax:**
 

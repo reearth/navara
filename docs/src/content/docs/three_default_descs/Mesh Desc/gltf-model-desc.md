@@ -7,7 +7,7 @@ sidebar:
 
 The `GLTFModelDesc` class is a mesh descriptor for loading and displaying GLTF/GLB format 3D models. It provides features such as animation playback, shadow settings, and dynamic updates.
 
-In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `geodetic`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-desc-base) for details.
+In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `geodetic`, `pickable`, `visible`) are available. See [MeshDesc](../mesh-desc-base) for details.
 
 ## Properties
 
@@ -202,7 +202,7 @@ console.log(clips); // ["Walk", "Run", "Jump"]
 
 ### getAnimationDetails(name?: string)
 
-**Description:** Gets detailed information about animations. If a name is specified, returns details for that specific animation; otherwise, returns details for all animations.
+**Description:** Gets detailed information about animations. If a name is specified, returns details for that specific animation. Otherwise, returns details for all animations.
 
 **Parameters:**
 

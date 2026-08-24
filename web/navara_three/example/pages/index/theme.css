@@ -1,0 +1,58 @@
+/*
+ * Navy single-theme for the gallery top page and the example detail pages —
+ * light mode is disabled for now, so these override the neutral palettes in
+ * globals.css wherever this file is imported (the dev pages keep the
+ * provisional monochrome look). Base values mirror the landing page / docs
+ * theme: background #143c6e, text #ffffff, accent #faf5dc — see
+ * docs/src/data/lp.json and docs/src/styles/theme.css.
+ */
+@import url("https://fonts.googleapis.com/css2?family=Arsenal:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap");
+
+/* html:root outranks globals.css's `:root` and `.dark` — necessary because
+   the bundler emits this page-only file before the shared globals.css, so
+   source order alone would let the neutral palette win. */
+html:root {
+  color-scheme: dark;
+  --background: 213 69% 25%; /* #143c6e */
+  --foreground: 0 0% 100%;
+  --card: 213 60% 30%;
+  --card-foreground: 0 0% 100%;
+  --popover: 213 65% 20%;
+  --popover-foreground: 0 0% 100%;
+  --primary: 50 75% 92%; /* #faf5dc */
+  --primary-foreground: 213 69% 18%;
+  --secondary: 213 55% 33%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 213 55% 32%;
+  --muted-foreground: 213 45% 85%;
+  --accent: 213 55% 35%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 62% 62%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 213 45% 42%;
+  --input: 213 45% 48%;
+  --ring: 50 75% 85%;
+  --chart-1: 50 75% 92%;
+  --chart-2: 213 45% 80%;
+  --chart-3: 213 50% 65%;
+  --chart-4: 213 55% 50%;
+  --chart-5: 213 60% 38%;
+}
+
+/* The header font set shared with the landing page (html body outranks
+   main.css's `body` for the same load-order reason as above). */
+html body {
+  font-family: "Arsenal", "Zen Kaku Gothic New", Arial, sans-serif;
+}
+
+/* Shiki example source (detail pages): always the dark theme — there is no
+   html.dark class anymore, so this replaces main.css's `html.dark` rules.
+   The background sits darker than the navy page so code stands off it,
+   matching the docs' code blocks. */
+html:root .shiki-source .shiki {
+  background-color: hsl(213 69% 15%);
+}
+html:root .shiki-source .shiki,
+html:root .shiki-source .shiki span {
+  color: var(--shiki-dark);
+}

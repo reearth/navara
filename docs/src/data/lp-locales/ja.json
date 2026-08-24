@@ -3,7 +3,7 @@
   "short": "JA",
   "htmlLang": "ja",
   "meta": {
-    "title": "Navara – オープンソースの 3D 地図エンジン",
+    "title": "オープンソースの 3D 地図エンジン Navara",
     "description": "Navara は、拡張性を重視して設計された 3D 地図エンジンです。衛星画像・地形・3D 都市モデル・ベクターデータといった多様な GIS データを読み込み、宣言的な可視化やプラグイン、独自実装によって自由に表現を重ねられます。"
   },
   "nav": {
@@ -12,7 +12,7 @@
     "github": "GitHub"
   },
   "hero": {
-    "posterAlt": "Navaraプロモーション動画 — 軌道上から3D地球儀へのダイブ",
+    "posterAlt": "軌道上から 3D 地球儀へダイブする Navara のプロモーション動画",
     "fullscreen": "動画を全画面で再生",
     "play": "動画を再生",
     "mediaAttributionLabel": "データ帰属表示"
@@ -20,8 +20,8 @@
   "intro": {
     "h1Html": "The beautiful globe,<br /><span>without the complexity.</span>",
     "h1Sub": null,
-    "copyHtml": "Navara は、<b>拡張性を重視して設計された 3D 地図エンジン</b>です。衛星画像・地形・3D 都市モデル・ベクターデータといった多様な GIS データを読み込み、その上に自由に表現を重ねられます。GIS データは宣言的に可視化でき、プラグインを追加するだけで高度な機能を手軽に組み込めます。さらに、アプリケーションの要件に応じた独自の表現を、自分の手で実装することも可能です。",
-    "ctaShowcase": "Try the showcase",
+    "copyHtml": "Navara は、<b>拡張性を重視して設計された 3D 地図エンジン</b>です。衛星画像・地形・3D 都市モデル・ベクターデータといった多様な GIS データを読み込み、その上に自由に表現を重ねられます。まずは宣言的に。プラグインで高度な機能を加え、さらにアプリケーションの要件に応じた独自の表現も自分の手で実装できます。",
+    "ctaExamples": "Try examples",
     "ctaDocs": "Read the docs",
     "gettingStarted": "Getting Started ガイド"
   },
@@ -82,7 +82,7 @@
   },
   "arch": {
     "eyebrow": "ARCHITECTURE",
-    "h2Html": "レンダリングエンジンから独立した、<br />ヘッドレスな GIS コア。",
+    "h2Html": "レンダリングエンジンから独立した、<br /><mark>ヘッドレスな GIS コア</mark>。",
     "sourceTitle": "Rust / WASM",
     "sourceSub": "データのパース、ジオメトリ生成、その他",
     "renderTitle": "Three.js、さらに対応予定",
@@ -93,17 +93,18 @@
     "eyebrow": "GALLERY",
     "h2": "一枚の絵として成立する GIS。",
     "tutorial": {
-      "label": "TUTORIALS",
-      "link": "もっと見る"
+      "label": "TUTORIALS"
     },
     "example": {
-      "label": "EXAMPLES",
-      "link": "もっと見る"
+      "label": "EXAMPLES"
+    },
+    "showcase": {
+      "label": "SHOWCASES"
     },
     "mediaAttributionLabel": "データの帰属表示"
   },
   "maplibre": {
-    "eyebrow": "OPEN SOURCE – MAPLIBRE FAMILY",
+    "eyebrow": "OPEN SOURCE, MAPLIBRE FAMILY",
     "h2": "スタイルもタイルも、そのまま 3D へ。",
     "copy": "MapLibre はオープンソースコミュニティとともに、現代の Web 地図のかたちを築いてきました。Navara も同じオープンソース（MIT / Apache-2.0）として、その世界を 3D へ広げていきます。",
     "items": [
@@ -127,12 +128,12 @@
   },
   "imageAlts": {
     "hero": "Navara で描画した地球儀のメインビジュアル",
-    "why-tier-1": "宣言的スタイル – ペーパーホワイトの地図の上の PLATEAU 建物と地形",
-    "why-tier-2": "プラグイン – 同じシーンにフォトリアルな大気が追加された様子",
-    "why-tier-3": "空間演算 – 計測高さでフィーチャー単位に色分けされた建物",
-    "why-tier-4": "カスタムシェーダ – 夜に切り替わり街灯の霧で照らされた同じシーン",
-    "hello-result": "実行結果 – NASA Blue Marble の衛星画像とフォトリアルな大気をまとった地球",
-    "outro-bg": "glow-globe サンプル – 都市の光に照らされた夜の地球",
+    "why-tier-1": "宣言的スタイルで描いた、ペーパーホワイトの地図の上の PLATEAU 建物と地形",
+    "why-tier-2": "プラグインによって同じシーンにフォトリアルな大気が追加された様子",
+    "why-tier-3": "空間演算を使って計測高さでフィーチャー単位に色分けされた建物",
+    "why-tier-4": "カスタムシェーダで夜に切り替わり、街灯の霧で照らされた同じシーン",
+    "hello-result": "実行結果として表示された、NASA Blue Marble の衛星画像とフォトリアルな大気をまとった地球",
+    "outro-bg": "glow-globe サンプルが描く、都市の光に照らされた夜の地球",
     "tutorial-wide": "Realistic Atmosphere",
     "tutorial-left": "Arc Line Visualization",
     "tutorial-right": "Interior Explore",
@@ -147,6 +148,12 @@
     "example-row4-center-left": "選択ブルーム",
     "example-row4-center-right": "ガウシアンスプラット",
     "example-row4-right": "フォグライト",
+    "showcase-1": "隅田川花火大会 3Dシミュレーション",
+    "showcase-2": "日本の季節前線",
+    "showcase-3": "Pax Atlas",
+    "showcase-4": "Earthquake Pulse",
+    "showcase-5": "Toon Navara",
+    "showcase-6": "新宿・子ども目線迷子体験 - 地下街",
     "maplibre-logo": "MapLibre ロゴ",
     "maplibre-visual": "MapLibre スタイルで描いた地図"
   }

@@ -22,7 +22,7 @@ navara_three (core: ThreeView, Plugin, addPlugin)
         └── TileJsonPlugin (TileJSON 3.0.0 tile source registration)
 ```
 
-`three_plugins` depends on `navara_three` for the `Plugin` base class and core APIs, and on `three_default_plugin` for the `DefaultDescriptions` type. Each plugin is independent — you can use one without the other.
+`three_plugins` depends on `navara_three` for the `Plugin` base class and core APIs, and on `three_default_plugin` for the `DefaultDescriptions` type. Each plugin is independent. You can use one without the other.
 
 ## Installation
 
@@ -52,7 +52,7 @@ Resolves a Cesium Ion asset endpoint at `init()` time and registers it as a quan
 
 ### TileJsonPlugin
 
-Fetches a TileJSON 3.0.0 document and registers it as a single raster, vector, or raster-DEM (elevation) tile source via `addSource()`, deriving the tile URL, zoom range, scheme, attribution — and, for raster-DEM, the MapLibre-compatible `tileSize` / `encoding` — from the document. See [TileJsonPlugin](../tilejsonplugin/) for details.
+Fetches a TileJSON 3.0.0 document and registers it as a single raster, vector, or raster-DEM (elevation) tile source via `addSource()`, deriving the tile URL, zoom range, scheme, attribution (and, for raster-DEM, the MapLibre-compatible `tileSize` / `encoding`) from the document. See [TileJsonPlugin](../tilejsonplugin/) for details.
 
 ## Usage
 
@@ -90,6 +90,6 @@ personView.start();
 
 ## Related Resources
 
-- [About Plugin](../../three/introduction/about-plugin/) — Plugin system concepts
-- [Plugin API](../../three/core/plugin/) — How to implement plugins
-- [three_default_plugin](../../three_default_plugin/about/) — DefaultPlugin details
+- [About Plugin](../../three/introduction/about-plugin/): Plugin system concepts
+- [Plugin API](../../three/core/plugin/): How to implement plugins
+- [three_default_plugin](../../three_default_plugin/about/): DefaultPlugin details

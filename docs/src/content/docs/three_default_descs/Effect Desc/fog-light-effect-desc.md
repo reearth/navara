@@ -21,7 +21,7 @@ The `FogLightEffectDesc` class is a Descriptor that generates volumetric lightin
 
 **Type:** `FogLightDefinition[] | undefined`
 
-**Description:** Specifies an array of fog lights. Each light has a position, color, intensity, and an optional influence radius (`radius`, default `500`). Positions are world (ECEF) coordinates — build them with `geodeticToVector3()`. `color` accepts either a numeric hex value or a `Color`.
+**Description:** Specifies an array of fog lights. Each light has a position, color, intensity, and an optional influence radius (`radius`, default `500`). Positions are world (ECEF) coordinates. Build them with `geodeticToVector3()`. `color` accepts either a numeric hex value or a `Color`.
 
 **Default:** `[]`
 
@@ -232,11 +232,11 @@ view.addEffect({
 
 ## Performance
 
-- **`downsample` is the biggest lever.** The default `4` renders the fog at quarter resolution; the depth-aware upsampling keeps silhouettes clean. Use `2` (or `1`) only when the fog needs to stay crisp on close inspection.
-- **`maxLightsPerTile` trades halo completeness for shader cost** almost linearly. With many broad-radius lights, lowering it to `32` roughly halves the fog pass; the weakest halos blend into the residual haze.
-- **`radius` caps each light's reach.** The effective reach is derived automatically from `intensity`, `fogDensity`, and `haloFalloff`, then clamped by `radius` — so tightening `radius` (or raising `haloFalloff`) directly shrinks how many tiles each light touches.
+- **`downsample` is the biggest lever.** The default `4` renders the fog at quarter resolution. The depth-aware upsampling keeps silhouettes clean. Use `2` (or `1`) only when the fog needs to stay crisp on close inspection.
+- **`maxLightsPerTile` trades halo completeness for shader cost** almost linearly. With many broad-radius lights, lowering it to `32` roughly halves the fog pass. The weakest halos blend into the residual haze.
+- **`radius` caps each light's reach.** The effective reach is derived automatically from `intensity`, `fogDensity`, and `haloFalloff`, then clamped by `radius`, so tightening `radius` (or raising `haloFalloff`) directly shrinks how many tiles each light touches.
 - **Pass the expected light count as `maxLights`** to avoid a texture reallocation when lights are added later.
-- The tile grid only rebuilds when the camera, lights, or fog parameters change; a static view costs no CPU time.
+- The tile grid only rebuilds when the camera, lights, or fog parameters change. A static view costs no CPU time.
 
 ## Usage Examples
 

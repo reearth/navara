@@ -49,6 +49,7 @@ export type {
   FeatureHandler,
   MeshHandler,
   LayerHandler,
+  FlightHandler,
 } from "./context";
 export { EventContext } from "./context";
 export { HillshadeContext } from "./HillshadeContext";
@@ -71,6 +72,10 @@ export function processEvent(ctx: EventContext, event: Events | undefined) {
 
   eventManager.forEachStack("camera_frustum_updated", (ev) =>
     processCameraFrustumUpdated(ctx, ev),
+  );
+
+  eventManager.forEachStack("camera_flight_ended", (ev) =>
+    ctx.flightHandler(ev.id, ev.completed),
   );
 
   eventManager.forEachStack("object_transform_updated", (ev) =>
@@ -318,6 +323,8 @@ function processCameraFrustumUpdated(
 
   ctx.camera.raw.near = frustum.near;
   ctx.camera.raw.far = frustum.far;
+  // The engine's `fov` is the vertical fov, matching what
+  // `PerspectiveCamera.fov` expects.
   ctx.camera.raw.fov = radianToDegree(frustum.fov);
   ctx.camera.raw.updateProjectionMatrix();
   ctx.camera.emit("frustumChanged");

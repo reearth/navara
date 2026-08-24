@@ -3,8 +3,8 @@
   "short": "EN",
   "htmlLang": "en",
   "meta": {
-    "title": "Navara – an open-source 3D map engine",
-    "description": "Navara is a highly extensible 3D map engine. Load GIS data - satellite imagery, terrain, 3D city models, and vector data - and layer your own visualizations on top: declaratively, with plugins, or by implementing custom representations for your application's needs."
+    "title": "Navara, an open-source 3D map engine",
+    "description": "Navara is a highly extensible 3D map engine. Load GIS data, from satellite imagery and terrain to 3D city models and vector data, then layer your own visualizations on top."
   },
   "nav": {
     "docs": "Docs",
@@ -12,7 +12,7 @@
     "github": "GitHub"
   },
   "hero": {
-    "posterAlt": "Navara promotion video — a dive from orbit onto a 3D globe",
+    "posterAlt": "The Navara promotion video, diving from orbit onto a 3D globe",
     "fullscreen": "Play the video fullscreen",
     "play": "Play the video",
     "mediaAttributionLabel": "Data attribution"
@@ -20,14 +20,14 @@
   "intro": {
     "h1Html": "The beautiful globe,<br /><span>without the complexity.</span>",
     "h1Sub": null,
-    "copyHtml": "Navara is a <b>highly extensible 3D map engine</b>. Load a wide range of GIS data - satellite imagery, terrain, 3D city models, and vector data - and freely layer your own visualizations on top. Visualize GIS data declaratively, add advanced features with plugins, and go further by implementing custom representations tailored to your application's needs.",
-    "ctaShowcase": "Try the showcase",
+    "copyHtml": "Navara is a <b>highly extensible 3D map engine</b>. Load a wide range of GIS data, from satellite imagery and terrain to 3D city models and vector data, then freely layer your own visualizations on top. Start with declarative styling, add advanced features with plugins, and go further with custom representations tailored to your application's needs.",
+    "ctaExamples": "Try examples",
     "ctaDocs": "Read the docs",
     "gettingStarted": "Getting Started guide"
   },
   "why": {
     "eyebrow": "WHY NAVARA",
-    "h2Html": "Complexity, made simple –<br />and <mark>beautiful</mark>.",
+    "h2Html": "Complexity, made simple<br />and <mark>beautiful</mark>.",
     "values": [
       {
         "title": "High quality, instantly",
@@ -48,7 +48,7 @@
     ],
     "apiLede": {
       "title": "Declarative and extensible.",
-      "sub": "Plugin, API, and Shader – your way."
+      "sub": "Extend it your way with plugins, APIs, and shaders."
     },
     "apiSegments": [
       {
@@ -82,7 +82,7 @@
   },
   "arch": {
     "eyebrow": "ARCHITECTURE",
-    "h2Html": "A headless GIS core,<br />independent of the rendering engine.",
+    "h2Html": "A <mark>headless GIS core</mark>,<br />independent of the rendering engine.",
     "sourceTitle": "Rust / WASM",
     "sourceSub": "Data parsing, geometry construction, and more",
     "renderTitle": "Three.js and more",
@@ -93,19 +93,20 @@
     "eyebrow": "GALLERY",
     "h2": "GIS that stands as a picture.",
     "tutorial": {
-      "label": "TUTORIALS",
-      "link": "See more"
+      "label": "TUTORIALS"
     },
     "example": {
-      "label": "EXAMPLES",
-      "link": "See more"
+      "label": "EXAMPLES"
+    },
+    "showcase": {
+      "label": "SHOWCASES"
     },
     "mediaAttributionLabel": "Data attribution"
   },
   "maplibre": {
-    "eyebrow": "OPEN SOURCE – MAPLIBRE FAMILY",
+    "eyebrow": "OPEN SOURCE, MAPLIBRE FAMILY",
     "h2": "Your styles and tiles, straight to 3D.",
-    "copy": "MapLibre, together with its open-source community, shaped modern web mapping. Navara is open source too (MIT / Apache-2.0) – and extends it into 3D.",
+    "copy": "MapLibre, together with its open-source community, shaped modern web mapping. Navara is open source too (MIT / Apache-2.0), and it extends that mapping into 3D.",
     "items": [
       "Supports MapLibre styles (MapLibre Style Plugin, in development), so you can reuse your existing MapLibre assets as-is.",
       "Support planned for MapLibre Tile (MLT), the next-generation format."
@@ -127,12 +128,12 @@
   },
   "imageAlts": {
     "hero": "Main visual: a globe rendered with Navara",
-    "why-tier-1": "Declarative style – PLATEAU buildings and terrain on the paper-white basemap",
-    "why-tier-2": "Plugins – the same scene with the photoreal atmosphere added",
-    "why-tier-3": "Spatial operations – buildings colored by their measured height",
-    "why-tier-4": "Custom shaders – the same scene at night, lit by fog lights",
-    "hello-result": "The rendered result: the globe with a photorealistic atmosphere over NASA Blue Marble imagery",
-    "outro-bg": "The glow-globe example: the night globe lit by city lights",
+    "why-tier-1": "PLATEAU buildings and terrain on the paper-white basemap, styled declaratively",
+    "why-tier-2": "The same scene with the photoreal atmosphere added by a plugin",
+    "why-tier-3": "Buildings colored by their measured height using spatial operations",
+    "why-tier-4": "The same scene switched to night by a custom shader, lit by fog lights",
+    "hello-result": "The rendered result shows the globe with a photorealistic atmosphere over NASA Blue Marble imagery",
+    "outro-bg": "The glow-globe example renders the night globe lit by city lights",
     "tutorial-wide": "Realistic Atmosphere",
     "tutorial-left": "Arc Line Visualization",
     "tutorial-right": "Interior Explore",
@@ -147,6 +148,12 @@
     "example-row4-center-left": "Selective Bloom",
     "example-row4-center-right": "Gaussian Splat",
     "example-row4-right": "Fog Light",
+    "showcase-1": "Sumida River Fireworks - 3D Simulation",
+    "showcase-2": "Japan's Seasonal Fronts",
+    "showcase-3": "Pax Atlas",
+    "showcase-4": "Earthquake Pulse",
+    "showcase-5": "Toon Navara",
+    "showcase-6": "Shinjuku Underground - A Child's-Eye Maze",
     "maplibre-logo": "MapLibre logo",
     "maplibre-visual": "A map rendered with a MapLibre style"
   }

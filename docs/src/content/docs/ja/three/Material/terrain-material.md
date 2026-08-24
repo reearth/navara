@@ -11,7 +11,9 @@ sidebar:
 
 ### show
 
-**型:** `boolean | undefined` — **デフォルト:** `true`
+**型:** `boolean | undefined`
+
+**デフォルト:** `true`
 
 **説明:** 地形を表示するかどうか。
 
@@ -21,7 +23,9 @@ sidebar:
 
 ### castShadow
 
-**型:** `boolean | undefined` — **デフォルト:** `false`
+**型:** `boolean | undefined`
+
+**デフォルト:** `false`
 
 **説明:** 地形が影を落とすかどうか。
 
@@ -31,7 +35,9 @@ sidebar:
 
 ### receiveShadow
 
-**型:** `boolean | undefined` — **デフォルト:** `false`
+**型:** `boolean | undefined`
+
+**デフォルト:** `false`
 
 **説明:** 地形が影を受けるかどうか。
 
@@ -41,7 +47,9 @@ sidebar:
 
 ### lit
 
-**型:** `boolean | undefined` — **デフォルト:** `undefined`（`view.lit` に従う）
+**型:** `boolean | undefined`
+
+**デフォルト:** `undefined`（`view.lit` に従う）
 
 **説明:** カラー出力にライティング計算を適用するかどうか。`false` の場合、地形はアルベドのみで描画されます。lit パイプライン自体は動き続けるため、法線とシャドウ G-buffer は書き込まれたままです。未設定の場合はシーン既定値 [`view.lit`](../../../three/api/threeview-properties/#lit) に従い、明示的に指定するとその既定値をどちらの方向にも上書きします。
 
@@ -55,7 +63,9 @@ sidebar:
 
 ### showBoundingBox
 
-**型:** `boolean | undefined` — **デフォルト:** `false`
+**型:** `boolean | undefined`
+
+**デフォルト:** `false`
 
 **説明:** タイルごとのバウンディングボックスを表示するかどうか。デバッグ用です。
 
@@ -65,7 +75,9 @@ sidebar:
 
 ### skirt
 
-**型:** `boolean | undefined` — **デフォルト:** `true`
+**型:** `boolean | undefined`
+
+**デフォルト:** `true`
 
 **説明:** 異なる LOD の隣接するタイル間の隙間を隠すために、タイル境界に沿ってスカートを描画するかどうか。地下のモデルを可視化したい場合は無効にします。
 
@@ -75,7 +87,9 @@ sidebar:
 
 ### skirtExaggeration
 
-**型:** `number | undefined` — **デフォルト:** `1.0`
+**型:** `number | undefined`
+
+**デフォルト:** `1.0`
 
 **説明:** 自動計算されたスカートの高さに適用する乗数。`1.0` はデフォルトの計算された高さを使用します。
 
@@ -95,6 +109,6 @@ terrain レイヤーは 3D の地表のみを提供します。[`raster`](../../
 
 ## 関連リソース
 
-- [Terrain Layer](../../../three/layer/terrain-layer/) — このマテリアルの使い方
-- [Raster DEM Source](../../../three/source/raster-dem-source/) / [Quantized Mesh Source](../../../three/source/quantized-mesh-source/) — 地形データの Source
-- [CesiumIonPlugin](../../../three_plugins/cesiumionplugin/) — Cesium Ion の quantized-mesh アセット
+- [Terrain Layer](../../../three/layer/terrain-layer/): このマテリアルの使い方
+- [Raster DEM Source](../../../three/source/raster-dem-source/) / [Quantized Mesh Source](../../../three/source/quantized-mesh-source/): 地形データの Source
+- [CesiumIonPlugin](../../../three_plugins/cesiumionplugin/): Cesium Ion の quantized-mesh アセット

@@ -45,4 +45,4 @@ view.addLayer({ type: "vector", source: pins, point: { color: 0xff0000, size: 8 
 ## 関連リソース
 
 - [About Source](../../../three/source/about/)
-- [Vector Layer](../../../three/layer/vector-layer/) — `point`, `polyline`, `polygon`, `text`, `billboard`
+- [Vector Layer](../../../three/layer/vector-layer/): `point`, `polyline`, `polygon`, `text`, `billboard`

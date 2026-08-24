@@ -1,12 +1,15 @@
 {
   "colors": {
-    "primary": "#10141B",
+    "primary": "#143c6e",
     "accent": "#4FB3C6",
-    "sub": "#F4F3EF",
-    "maplibre": "#285DAA"
+    "sub": "#ffffff",
+    "maplibre": "#285DAA",
+    "heroAccent": "#fdf5dc",
+    "whyUnderline": "#faf5dc",
+    "archUnderline": "#d2eaec"
   },
   "themeVariants": {
-    "current": { "primary": "#10141B", "sub": "#F4F3EF", "accent": "#4FB3C6" },
+    "current": { "primary": "#143c6e", "sub": "#ffffff", "accent": "#4FB3C6" },
     "reco-1": { "primary": "#d7b400", "sub": "#fafafa", "accent": "#3c64d2" },
     "reco-2": { "primary": "#c8ebfa", "sub": "#faf0c8", "accent": "#143c6e" },
     "ml-blue": { "primary": "#9baff5", "sub": "#e6f0fa", "accent": "#325abe" },
@@ -100,6 +103,30 @@
     "example-row4-right": {
       "src": "web/navara_three/example/public/screenshots/effect/fog-light.avif",
       "href": "https://navara-preview.reearth.workers.dev/effect/fog-light"
+    },
+    "showcase-1": {
+      "src": "docs/src/assets/showcases/sumidagawa-hanabi-navara.avif",
+      "href": "https://eukarya-biz.github.io/sumidagawa-hanabi-navara/"
+    },
+    "showcase-2": {
+      "src": "docs/src/assets/showcases/navara-hw-mykyta.avif",
+      "href": "https://eukarya-biz.github.io/navara-hw-mykyta/"
+    },
+    "showcase-3": {
+      "src": "docs/src/assets/showcases/navara-study-bill.avif",
+      "href": "https://eukarya-biz.github.io/navara-study-bill/?empire=roman&goods=grain%2CwineOil%2Cgarum%2CsilkSpice%2Cmetals%2Cmarble%2CtextileDye"
+    },
+    "showcase-4": {
+      "src": "docs/src/assets/showcases/earthquake-pulse.avif",
+      "href": "https://eukarya-biz.github.io/earthquake-pulse/"
+    },
+    "showcase-5": {
+      "src": "docs/src/assets/showcases/toon-navara.avif",
+      "href": "https://eukarya-biz.github.io/toon-navara/"
+    },
+    "showcase-6": {
+      "src": "docs/src/assets/showcases/navara-hw-yamasaki.avif",
+      "href": "https://eukarya-biz.github.io/navara-hw-yamasaki/"
     },
     "maplibre-logo": {
       "src": "docs/src/assets/lp/maplibre-logo.svg"

@@ -1,8 +1,8 @@
-import { existsSync, readdirSync } from "fs";
+import { existsSync, readdirSync, readFileSync } from "fs";
 import path, { resolve } from "path";
 
 import react from "@vitejs/plugin-react";
-import { defineConfig, normalizePath } from "vite";
+import { defineConfig, normalizePath, transformWithEsbuild } from "vite";
 import glsl from "vite-plugin-glsl";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 import topLevelAwait from "vite-plugin-top-level-await";
@@ -70,6 +70,48 @@ function getExamplePages(
 
 const examplePages = getExamplePages(resolve(__dirname, "example/pages"));
 
+// Social/meta defaults for the generated pages. Curated example pages get
+// their own title/description from their meta.ts; the thumbnail is the shared
+// site OG image for every page — the gallery screenshots carry no baked data
+// credits, so they can't be used as social thumbnails (public/og.jpg is the
+// credited docs/public/og.jpg, copied verbatim).
+const SITE_ORIGIN = "https://navara-preview.reearth.workers.dev";
+const SITE_TITLE = "Navara Examples";
+const SITE_DESCRIPTION =
+  "Interactive examples for Navara, a highly extensible 3D map engine. See what it can do live in your browser, from declarative layers to plugins and custom shaders.";
+const OG_IMAGE = `${SITE_ORIGIN}/og.jpg`;
+
+type LocalizedText = Record<string, string>;
+type LoadedExampleMeta = {
+  title?: LocalizedText;
+  description?: LocalizedText;
+};
+
+/**
+ * Load a curated example's meta.ts at config time (for the static meta tags).
+ * The files are TypeScript with type-only imports, so stripping types (via
+ * vite's esbuild wrapper) and evaluating the CommonJS output is enough — no
+ * bundling needed.
+ */
+async function loadExampleMeta(dir: string): Promise<LoadedExampleMeta | null> {
+  const file = resolve(dir, "meta.ts");
+  if (!existsSync(file)) return null;
+  const { code } = await transformWithEsbuild(
+    readFileSync(file, "utf8"),
+    file,
+    {
+      format: "cjs",
+    },
+  );
+  const mod = { exports: {} as { default?: LoadedExampleMeta } };
+  new Function("module", "exports", "require", code)(
+    mod,
+    mod.exports,
+    () => ({}),
+  );
+  return mod.exports.default ?? null;
+}
+
 // Convert to PageInfo for the PAGES global
 const pageInfos: PageInfo[] = examplePages.map(({ name }) => ({
   name,
@@ -77,8 +119,76 @@ const pageInfos: PageInfo[] = examplePages.map(({ name }) => ({
   displayName: name.includes("/") ? (name.split("/").pop() ?? name) : name,
 }));
 
-export default defineConfig((env) => {
+export default defineConfig(async (env) => {
   const common = commonConfig("NavaraExample", env);
+
+  const mpaPages = (
+    await Promise.all(
+      examplePages.map(async ({ name, path: dir }) => {
+        const mainFile = existsSync(resolve(dir, "main.tsx"))
+          ? "main.tsx"
+          : "main.ts";
+
+        // Curated examples get two entries with clean, slash-separated URLs:
+        //   detail (presentation)  -> /<section>/<slug>       (shared React template)
+        //   demo   (iframe target) -> /demo/<section>/<slug>  (the raw full-screen demo)
+        if (name.startsWith("examples/")) {
+          const rel = name.replace(/^examples\//, "");
+          // Static meta tags carry the root-locale (en) strings; the page
+          // itself localizes at runtime.
+          const meta = await loadExampleMeta(dir);
+          const title = meta?.title?.en
+            ? `${meta.title.en} | ${SITE_TITLE}`
+            : SITE_TITLE;
+          const description = meta?.description?.en ?? SITE_DESCRIPTION;
+          return [
+            {
+              name: rel,
+              filename: `${rel}.html`,
+              entry: normalizePath(`/example/pages/detail/main.tsx`),
+              data: {
+                title,
+                description,
+                image: OG_IMAGE,
+                url: `${SITE_ORIGIN}/${rel}`,
+              },
+            },
+            {
+              name: `demo/${rel}`,
+              filename: `demo/${rel}.html`,
+              entry: normalizePath(`/example/pages/${name}/${mainFile}`),
+              data: {
+                title,
+                description,
+                image: OG_IMAGE,
+                url: `${SITE_ORIGIN}/demo/${rel}`,
+              },
+            },
+          ];
+        }
+
+        // Everything else (gallery index, dev launcher, debug/*, legacy demos):
+        // dash URLs, with a trailing "/index" collapsed to its parent ("dev/index" -> /dev).
+        const urlName = name.replace(/\/index$/, "").replace(/\//g, "-");
+        return [
+          {
+            name: urlName,
+            filename: `${urlName}.html`,
+            entry: normalizePath(`/example/pages/${name}/${mainFile}`),
+            data: {
+              title: SITE_TITLE,
+              description: SITE_DESCRIPTION,
+              image: OG_IMAGE,
+              url:
+                urlName === "index"
+                  ? `${SITE_ORIGIN}/`
+                  : `${SITE_ORIGIN}/${urlName}`,
+            },
+          },
+        ];
+      }),
+    )
+  ).flat();
   return {
     ...common,
     envPrefix: "NAVARA",
@@ -104,44 +214,7 @@ export default defineConfig((env) => {
       }),
       createMpaPlugin({
         templatePath: resolve(__dirname, "example/template.html"),
-        pages: examplePages.flatMap(({ name, path: dir }) => {
-          const mainFile = existsSync(resolve(dir, "main.tsx"))
-            ? "main.tsx"
-            : "main.ts";
-
-          // Curated examples get two entries with clean, slash-separated URLs:
-          //   detail (presentation)  -> /<section>/<slug>       (shared React template)
-          //   demo   (iframe target) -> /demo/<section>/<slug>  (the raw full-screen demo)
-          if (name.startsWith("examples/")) {
-            const rel = name.replace(/^examples\//, "");
-            return [
-              {
-                name: rel,
-                filename: `${rel}.html`,
-                entry: normalizePath(`/example/pages/detail/main.tsx`),
-                data: { title: "Navara" },
-              },
-              {
-                name: `demo/${rel}`,
-                filename: `demo/${rel}.html`,
-                entry: normalizePath(`/example/pages/${name}/${mainFile}`),
-                data: { title: "Navara" },
-              },
-            ];
-          }
-
-          // Everything else (gallery index, dev launcher, debug/*, legacy demos):
-          // dash URLs, with a trailing "/index" collapsed to its parent ("dev/index" -> /dev).
-          const urlName = name.replace(/\/index$/, "").replace(/\//g, "-");
-          return [
-            {
-              name: urlName,
-              filename: `${urlName}.html`,
-              entry: normalizePath(`/example/pages/${name}/${mainFile}`),
-              data: { title: "Navara" },
-            },
-          ];
-        }),
+        pages: mpaPages,
       }),
       ...(env.mode !== "production" ? [wasm(), topLevelAwait()] : []),
     ],

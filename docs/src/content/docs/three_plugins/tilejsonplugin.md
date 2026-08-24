@@ -69,25 +69,25 @@ Register the plugin with `view.addPlugin()` **before** `view.init()`. The constr
 addSource(desc: TileJsonSourceDescription): Promise<Source>
 ```
 
-Fetches the TileJSON document at `desc.url`, then creates one source of the requested `desc.type` from it. Must be called **after** `view.init()`; otherwise the call throws.
+Fetches the TileJSON document at `desc.url`, then creates one source of the requested `desc.type` from it. Must be called **after** `view.init()`. Otherwise the call throws.
 
 The mapping from the document to the created source is:
 
 | TileJSON field  | `raster-tile` source         | `raster-dem` source          | `vector-tile` source         |
 | --------------- | ---------------------------- | ---------------------------- | ---------------------------- |
 | `tiles[0]`      | `url`                        | `url`                        | `url`                        |
-| `minzoom`       | `minZoom`                    | `minZoom`                    | — (engine has no field)      |
+| `minzoom`       | `minZoom`                    | `minZoom`                    | (engine has no field)      |
 | `maxzoom`       | `maxZoom`                    | `maxZoom`                    | `maxZoom`                    |
-| `scheme: "tms"` | `tms: true`                  | `tms: true`                  | — (engine has no field)      |
+| `scheme: "tms"` | `tms: true`                  | `tms: true`                  | (engine has no field)      |
 | `tileSize`      | —                            | `tileSize` (default `512`)   | —                            |
 | `encoding`      | —                            | `elevationDecoder` (default `"mapbox"`) | —                 |
 | `attribution`   | shown via `view.attribution` | shown via `view.attribution` | shown via `view.attribution` |
 
-Every field in the table except `tiles[0]` and `attribution` can also be set on `desc` under the same name; a field set there takes precedence over the fetched document. For `raster-dem`, `encoding` selects the elevation decoder — `"mapbox"` or `"terrarium"` — and an unknown encoding rejects the call rather than creating a source with a wrong decoder.
+Every field in the table except `tiles[0]` and `attribution` can also be set on `desc` under the same name. A field set there takes precedence over the fetched document. For `raster-dem`, `encoding` selects the elevation decoder (`"mapbox"` or `"terrarium"`), and an unknown encoding rejects the call rather than creating a source with a wrong decoder.
 
-A TileJSON `tiles` array may list several mirror endpoints for the same tileset. Navara sources take a single URL, so only the first endpoint is used; any extra endpoints are ignored with a `console.warn`.
+A TileJSON `tiles` array may list several mirror endpoints for the same tileset. Navara sources take a single URL, so only the first endpoint is used. Any extra endpoints are ignored with a `console.warn`.
 
-`attribution` credit is added to the view's built-in attribution UI (`view.attribution`). Credits from multiple `addSource()` calls are de-duplicated, so a shared or repeated credit renders once. When the built-in UI is disabled (`defaultAttribution: false`), this step is skipped — read the attribution from the [`loaded`](#events) event instead.
+`attribution` credit is added to the view's built-in attribution UI (`view.attribution`). Credits from multiple `addSource()` calls are de-duplicated, so a shared or repeated credit renders once. When the built-in UI is disabled (`defaultAttribution: false`), this step is skipped. Read the attribution from the [`loaded`](#events) event instead.
 
 After the source is registered, a [`loaded`](#events) event fires with the created source, the parsed document, and its attribution.
 
@@ -109,7 +109,7 @@ Subscribe to, subscribe once to, or unsubscribe from a plugin [event](#events). 
 dispose(): void
 ```
 
-Removes the credits this plugin contributed to `view.attribution` (matched structurally by their HTML) and drops all event listeners. The built-in UI is owned by the view, not the plugin, so only this plugin's own credits are removed — not the whole UI. When the view is disposed first, `view.attribution` is already gone and this is a no-op.
+Removes the credits this plugin contributed to `view.attribution` (matched structurally by their HTML) and drops all event listeners. The built-in UI is owned by the view, not the plugin, so only this plugin's own credits are removed, not the whole UI. When the view is disposed first, `view.attribution` is already gone and this is a no-op.
 
 ## Events
 
@@ -155,7 +155,7 @@ type TileJsonSourceDescription =
   | TileJsonRasterDemSourceDescription;
 ```
 
-A discriminated union over `type`. Every variant shares the fields below; a field marked "overrides the document" is optional and, when set, takes precedence over the fetched document's value of the same name.
+A discriminated union over `type`. Every variant shares the fields below. A field marked "overrides the document" is optional and, when set, takes precedence over the fetched document's value of the same name.
 
 | Property   | Type                  | Description                                                                                                                                                         |
 | ---------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -197,22 +197,22 @@ The subset of a TileJSON 3.0.0 document this plugin consumes. Other spec fields 
 | `minzoom`     | `number \| undefined` | `0`     | Minimum zoom level. Applied to raster sources only.                             |
 | `maxzoom`     | `number \| undefined` | `30`    | Maximum zoom level.                                                             |
 | `scheme`      | `"xyz" \| "tms"`      | `"xyz"` | Tiling scheme. `"tms"` flips the Y axis (raster sources only).                  |
-| `tileSize`    | `number \| undefined` | `512`   | Tile size in pixels. Not part of the TileJSON spec, but emitted by MapLibre-oriented tile servers; applied to `raster-dem` sources only. |
-| `encoding`    | `TileJsonDemEncoding \| undefined` | `"mapbox"` | Elevation encoding of DEM tiles. Not part of the TileJSON spec, but emitted by MapLibre-oriented tile servers; applied to `raster-dem` sources only. |
+| `tileSize`    | `number \| undefined` | `512`   | Tile size in pixels. Not part of the TileJSON spec, but emitted by MapLibre-oriented tile servers. Applied to `raster-dem` sources only. |
+| `encoding`    | `TileJsonDemEncoding \| undefined` | `"mapbox"` | Elevation encoding of DEM tiles. Not part of the TileJSON spec, but emitted by MapLibre-oriented tile servers. Applied to `raster-dem` sources only. |
 
 The document is validated when fetched: `addSource()` rejects if `tilejson` is missing or is not a `major.minor.patch` version, or if `tiles` is missing or empty.
 
 ## Notes
 
-- **The document URL, not a tile template.** `desc.url` is the address of the TileJSON JSON document. The tile URL template comes from the document's `tiles` field — don't pass a `{z}/{x}/{y}` template here.
+- **The document URL, not a tile template.** `desc.url` is the address of the TileJSON JSON document. The tile URL template comes from the document's `tiles` field. Don't pass a `{z}/{x}/{y}` template here.
 - **The source `type` is your choice.** TileJSON does not mark a tileset as raster imagery, vector, or elevation data, so pick `"raster-tile"`, `"vector-tile"`, or `"raster-dem"` to match the tiles the document serves.
 - **Vector sources ignore `minzoom` and `scheme`.** The engine's vector-tile source has no `minZoom` or `tms` field, so only `maxzoom` carries over for `"vector-tile"`.
 - **`tileSize` and `encoding` are MapLibre extensions.** They are not part of the TileJSON spec, but MapLibre-oriented DEM tile servers commonly include them, and the defaults (`512` / `"mapbox"`) match MapLibre's. An `encoding` other than `"mapbox"` or `"terrarium"` rejects `addSource()`.
 
 ## Related Resources
 
-- [AttributionPlugin](../../three/plugins/attributionplugin/) — the built-in attribution (credit) UI reached via `view.attribution`, which this plugin feeds by default
-- [About three_plugins](../about/) — Package overview
-- [Raster Layer](../../three/layer/raster-layer/) — Raster layer reference
-- [Terrain Layer](../../three/layer/terrain-layer/) — Terrain layer reference, which renders a `raster-dem` source
+- [AttributionPlugin](../../three/plugins/attributionplugin/): the built-in attribution (credit) UI reached via `view.attribution`, which this plugin feeds by default
+- [About three_plugins](../about/): Package overview
+- [Raster Layer](../../three/layer/raster-layer/): Raster layer reference
+- [Terrain Layer](../../three/layer/terrain-layer/): Terrain layer reference, which renders a `raster-dem` source
 

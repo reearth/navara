@@ -18,8 +18,8 @@ sidebar:
 | `scale`       | `{ x: number, y: number, z: number }` | -          | スケール、`matrix`/`matrixWorld` 設定時はローカルオフセット                                 |
 | `matrix`      | `Matrix4`                             | -          | ローカル変換行列。設定時は `position`/`rotation`/`scale` がこのフレーム内のオフセットになる |
 | `matrixWorld` | `Matrix4`                             | -          | ワールド変換行列。設定時は `position`/`rotation`/`scale` がこのフレーム内のオフセットになる |
-| `geodetic`    | `GeodeticPlacement`                   | -          | 度単位の地理的配置 — [地理的配置](#地理的配置geodetic) を参照。`matrix`/`matrixWorld` とは併用不可 |
-| `lit`         | `boolean`                             | -          | メッシュのすべてのマテリアルに適用するライティングの上書き。未設定なら `view.lit` に従う — [Lighting](#lighting-lit) を参照 |
+| `geodetic`    | `GeodeticPlacement`                   | -          | 度単位の地理的配置（[地理的配置](#地理的配置geodetic) を参照）。`matrix`/`matrixWorld` とは併用不可 |
+| `lit`         | `boolean`                             | -          | メッシュのすべてのマテリアルに適用するライティングの上書き。未設定なら `view.lit` に従う（[Lighting](#lighting-lit) を参照） |
 | `pickable`    | `boolean`                             | `false`    | GPU ベースのクリックピッキングを有効にする。ピッキング対応のメッシュ Descriptor が Descriptor ごとに定義するもので、基底の設定には存在しない |
 
 ## トランスフォーム合成
@@ -157,11 +157,11 @@ view.addMesh<GLTFModelDesc>({
 
 - 地形が精細化されるにつれて、オブジェクトは**目に見えて位置が落ち着きます**。高さは、すでに読み込まれているタイルから初期値が与えられ、より詳細なタイルが到着するたびに更新されます。
 - クランプは、名前を指定したソースではなく**アクティブな地形**に従います。
-- **地形レイヤーが追加されていない**場合、配置は `"ellipsoid"` と同じように振る舞います — 地形レイヤーはオブジェクトを追加した後から追加できます。
+- **地形レイヤーが追加されていない**場合、配置は `"ellipsoid"` と同じように振る舞います。地形レイヤーはオブジェクトを追加した後から追加できます。
 
 ## 軸の向きの規約（glTF の Y-up とタイルの Z-up）
 
-glTF は Y-up です。`GLTFLoader` はアセット自身の軸をそのまま保持し、glTF 2.0 仕様ではアセットの前方を `+Z`、上方を `+Y`、右方を `-X` としています。一方、3D Tiles の規約 — そして最も自然に手に取りたくなるフレームである `eastNorthUpToFixedFrame` — は Z-up です。この2つを手作業でつなぐには `Rx(+90°)` の補正を挿入し、さらにその上で残り90°分の heading を正しく調整する必要があります。
+glTF は Y-up です。`GLTFLoader` はアセット自身の軸をそのまま保持し、glTF 2.0 仕様ではアセットの前方を `+Z`、上方を `+Y`、右方を `-X` としています。一方、3D Tiles の規約（そして最も自然に手に取りたくなるフレームである `eastNorthUpToFixedFrame`）は Z-up です。この2つを手作業でつなぐには `Rx(+90°)` の補正を挿入し、さらにその上で残り90°分の heading を正しく調整する必要があります。
 
 **`geodetic` を使えば、補正すべきことは何もありません。** `geodetic` は **West-Up-North（WUN）** 接線フレームを構築します: `+x` が西、`+y` が上、`+z` が北です。WUN は `+Z` 軸が北を指す唯一の右手系 Y-up 接線フレームであり、前方・上方・右方の3軸すべてで glTF と一致します。`Rx(+90°)` は、オブジェクトごとに適用するのではなく、NUE からの `Ry(+90°)` 基底変換として、フレーム定義そのものに一度だけ吸収されています。
 
@@ -174,15 +174,15 @@ glTF は Y-up です。`GLTFLoader` はアセット自身の軸をそのまま�
 | `geodetic`（WUN） | 西、上、北 | Y | **不要** |
 | `westUpNorthToFixedFrame` | 西、上、北 | Y | **不要** |
 | `northUpEastToFixedFrame` | 北、上、東 | Y | Y-up なので問題ないが、回転ゼロの状態でアセットは**東**を向く |
-| `eastNorthUpToFixedFrame` | 東、北、上 | Z | 必要 — `Rx(+90°)` |
-| `northWestUpToFixedFrame` | 北、西、上 | Z | 必要 — `Rx(+90°)` |
+| `eastNorthUpToFixedFrame` | 東、北、上 | Z | 必要: `Rx(+90°)` |
+| `northWestUpToFixedFrame` | 北、西、上 | Z | 必要: `Rx(+90°)` |
 | `northEastDownToFixedFrame` | 北、東、下 | −Z | 必要 |
 
 ### 他のエンジンからの移行
 
 3D 地球エンジンごとに回転の規約は異なり、よくある相違点は glTF アセットのどの軸を前方として扱うかです。移植したモデルが 90° の倍数だけ回転してしまう場合は、まずここを確認してください。
 
-Navara の規則には例外がありません。`heading` はアセットの前方が向くコンパス方位で、前方とは glTF 自身の `+Z` です。方位321°の道路上のモデルには `heading: 321` を指定します — 緯度やメッシュ Descriptor の種類にかかわらず同じです。
+Navara の規則には例外がありません。`heading` はアセットの前方が向くコンパス方位で、前方とは glTF 自身の `+Z` です。方位321°の道路上のモデルには `heading: 321` を指定します。緯度やメッシュ Descriptor の種類にかかわらず同じです。
 
 ```typescript
 geodetic: { lng, lat, height, heading: 321 }
@@ -193,9 +193,9 @@ geodetic: { lng, lat, height, heading: 321 }
 `lit` はメッシュ配下の**すべて**のマテリアル（読み込んだモデルの子要素を含む）に適用される、3 状態のライティング上書きです。
 
 | 値 | 結果 |
-| -- | ---- |
+| --- | --- |
 | `true` | [`view.lit`](../../../three/api/threeview-properties/#lit) が `false` でも lit |
-| `false` | アルベドのみ — カラー出力でライティング計算がスキップされる |
+| `false` | アルベドのみ。カラー出力でライティング計算がスキップされる |
 | 未設定（`undefined`） | `view.lit` に従う（既定は `true`） |
 
 `lit: false` にしても lit パイプラインが止まるわけではありません。法線とシャドウ G-buffer は書き込まれ続けるため、後段のポストプロセスパスでアルベドを再ライティングできます。
@@ -294,7 +294,7 @@ type PickedFeature = {
 };
 ```
 
-カスタム Descriptor でのピッキング実装については、[Custom Descriptor — ピッキングの実装](../../../three/core/custom-desc/#カスタム-descriptor-でのピッキング実装) を参照してください。
+カスタム Descriptor でのピッキング実装については、[Custom Descriptor: ピッキングの実装](../../../three/core/custom-desc/#カスタム-descriptor-でのピッキング実装) を参照してください。
 
 ## 座標変換
 

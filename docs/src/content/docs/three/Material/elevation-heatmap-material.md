@@ -7,7 +7,7 @@ sidebar:
 
 `ElevationHeatmapMaterial` holds the render options for visualizing elevation as a color-coded heatmap on a [`raster`](../../../three/layer/raster-layer/) layer. It decodes DEM tiles and applies a colormap based on elevation values. Set it via the `elevationHeatmap` key.
 
-Because it decodes DEM tiles, it requires a [`raster-dem`](../../../three/source/raster-dem-source/) source; the elevation decoder is taken from the source, not from this material.
+Because it decodes DEM tiles, it requires a [`raster-dem`](../../../three/source/raster-dem-source/) source. The elevation decoder is taken from the source, not from this material.
 
 ## Use Cases
 
@@ -19,7 +19,9 @@ Because it decodes DEM tiles, it requires a [`raster-dem`](../../../three/source
 
 ### maxHeight
 
-**Type:** `number | undefined` — **Default:** `1000`
+**Type:** `number | undefined`
+
+**Default:** `1000`
 
 **Description:** Maximum elevation (meters) for the colormap. Elevations above this show in the colormap's maximum color.
 
@@ -29,7 +31,9 @@ Because it decodes DEM tiles, it requires a [`raster-dem`](../../../three/source
 
 ### minHeight
 
-**Type:** `number | undefined` — **Default:** `0`
+**Type:** `number | undefined`
+
+**Default:** `0`
 
 **Description:** Minimum elevation (meters) for the colormap. Elevations at or below this show in the colormap's minimum color.
 
@@ -39,7 +43,9 @@ Because it decodes DEM tiles, it requires a [`raster-dem`](../../../three/source
 
 ### logarithmic
 
-**Type:** `boolean | undefined` — **Default:** `false`
+**Type:** `boolean | undefined`
+
+**Default:** `false`
 
 **Description:** Whether to use a logarithmic scale, making subtle elevation differences in lowland areas more visible when the low–high range is large.
 
@@ -49,7 +55,9 @@ Because it decodes DEM tiles, it requires a [`raster-dem`](../../../three/source
 
 ### logBoundary
 
-**Type:** `number | undefined` — **Default:** `0`
+**Type:** `number | undefined`
+
+**Default:** `0`
 
 **Description:** Boundary value used as the base for logarithmic calculations when `logarithmic` is enabled.
 
@@ -121,7 +129,7 @@ view.globe.elevationColormap = rdYlBuColorMap;
 
 ## Related Resources
 
-- [Raster Layer](../../../three/layer/raster-layer/) — how to use this material
-- [Raster DEM Source](../../../three/source/raster-dem-source/) — DEM source and its elevation decoder
-- [ColorMap class](../../../three/api/colormap/) / [Globe class](../../../three/api/globe/) — `elevationColormap`
-- [HillshadeMaterial](../../../three/material/hillshade-material/) — shaded relief from DEM tiles
+- [Raster Layer](../../../three/layer/raster-layer/): how to use this material
+- [Raster DEM Source](../../../three/source/raster-dem-source/): DEM source and its elevation decoder
+- [ColorMap class](../../../three/api/colormap/) / [Globe class](../../../three/api/globe/): `elevationColormap`
+- [HillshadeMaterial](../../../three/material/hillshade-material/): shaded relief from DEM tiles

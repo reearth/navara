@@ -7,7 +7,7 @@ sidebar:
 
 ## Overview
 
-`OverlayPlugin` tracks a set of geographic positions (lat/lng/alt) and projects them to screen coordinates on every render frame. This enables HTML overlays — markers, labels, tooltips — that stay anchored to world positions as the camera moves.
+`OverlayPlugin` tracks a set of geographic positions (lat/lng/alt) and projects them to screen coordinates on every render frame. This enables HTML overlays (markers, labels, tooltips) that stay anchored to world positions as the camera moves.
 
 The plugin handles only the projection math. Rendering the actual HTML elements is left to your application, giving full control over styling and interaction.
 
@@ -119,7 +119,7 @@ Removes the `preRender` hook, clears all listeners, and resets internal state.
 moveOverlayElement(el: HTMLElement, x: number, y: number): void
 ```
 
-Positions an absolutely-positioned HTML element at the given screen coordinates using a GPU-accelerated CSS `translate()` transform. This is a convenience function — you can implement your own positioning logic if needed.
+Positions an absolutely-positioned HTML element at the given screen coordinates using a GPU-accelerated CSS `translate()` transform. This is a convenience function. You can implement your own positioning logic if needed.
 
 ## Extracting Distance for UI
 
@@ -142,5 +142,5 @@ overlayPlugin.onUpdate(({ projected }) => {
 
 ## Related Resources
 
-- [PersonViewPlugin](../personviewplugin/) — Combine with OverlayPlugin for interactive person-view navigation with markers
-- [About three_plugins](../about/) — Package overview
+- [PersonViewPlugin](../personviewplugin/): Combine with OverlayPlugin for interactive person-view navigation with markers
+- [About three_plugins](../about/): Package overview

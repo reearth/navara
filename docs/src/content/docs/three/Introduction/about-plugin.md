@@ -17,9 +17,9 @@ Therefore, navara_three introduces a plugin system to **efficiently process GIS 
 
 The plugin system is designed to be usable for as many general-purpose scenarios as possible. For example, the following use cases are conceivable:
 
-- **Automating setup** -- A plugin that bulk-registers custom descriptors implemented by developers
-- **Interactive map operations** -- A plugin that draws lines and areas on the map
-- **Supporting new data formats** -- A plugin that loads proprietary GIS formats as GeoJSON layers
+- **Automating setup**: A plugin that bulk-registers custom Descriptors implemented by developers
+- **Interactive map operations**: A plugin that draws lines and areas on the map
+- **Supporting new data formats**: A plugin that loads proprietary GIS formats as GeoJSON layers
 
 ## Architecture
 
@@ -46,10 +46,10 @@ navara_three aims to be a module with the highest possible versatility, but the 
 
 Plugins operate in the following order:
 
-1. **Create the plugin** -- Instantiate the plugin
-2. **Register** -- Register the plugin with `view.addPlugin()` (must be done **before** `view.init()`)
-3. **Initialize** -- When `view.init()` is called, the `init()` of all registered plugins is automatically executed
-4. **Use** -- After initialization, the methods and descriptors provided by the plugin are available
+1. **Create the plugin**: Instantiate the plugin
+2. **Register**: Register the plugin with `view.addPlugin()` (must be done **before** `view.init()`)
+3. **Initialize**: When `view.init()` is called, the `init()` of all registered plugins is automatically executed
+4. **Use**: After initialization, the methods and Descriptors provided by the plugin are available
 
 ```typescript
 import ThreeView from "@navaramap/three";
@@ -98,8 +98,8 @@ For details, see the [three_default_plugin documentation](../../../three_default
 
 The [three_plugins](../../../three_plugins/about/) package provides a collection of use-case specific plugins built on top of the plugin system. These plugins solve common use cases out of the box:
 
-- **PersonViewPlugin** — Keyboard-driven first/third-person view controller with an optional GLTF character
-- **OverlayPlugin** — Projects world coordinates to screen coordinates for HTML overlays
+- **PersonViewPlugin**: Keyboard-driven first/third-person view controller with an optional GLTF character
+- **OverlayPlugin**: Projects world coordinates to screen coordinates for HTML overlays
 
 ```typescript
 import { PersonViewPlugin, OverlayPlugin } from "@navaramap/three-plugins";

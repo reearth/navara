@@ -7,8 +7,8 @@ sidebar:
 
 `raster-dem` Source は、RGB エンコードされた標高タイルを記述します。次の両方を駆動します。
 
-- **地形メッシュ化** — [`terrain`](../../../three/layer/terrain-layer/) レイヤーを介して、
-- **陰影起伏 / 標高ヒートマップ** — [`raster`](../../../three/layer/raster-layer/) レイヤーを介して（レイヤーが `hillshade` / `elevationHeatmap` の描画オプションを供給します）。
+- **地形メッシュ化**: [`terrain`](../../../three/layer/terrain-layer/) レイヤーを介して、
+- **陰影起伏 / 標高ヒートマップ**: [`raster`](../../../three/layer/raster-layer/) レイヤーを介して（レイヤーが `hillshade` / `elevationHeatmap` の描画オプションを供給します）。
 
 RGB→高さのデコードは `elevationDecoder` で設定します。
 
@@ -107,5 +107,5 @@ view.addSource({
 
 - [About Source](../../../three/source/about/)
 - [Terrain Layer](../../../three/layer/terrain-layer/) / [Raster Layer](../../../three/layer/raster-layer/)
-- [TerrainMaterial](../../../three/material/terrain-material/) — 地形の描画オプション
+- [TerrainMaterial](../../../three/material/terrain-material/): 地形の描画オプション
 - [HillshadeMaterial](../../../three/material/hillshade-material/) / [ElevationHeatmapMaterial](../../../three/material/elevation-heatmap-material/)

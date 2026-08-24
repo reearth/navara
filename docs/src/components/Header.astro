@@ -1,18 +1,15 @@
 ---
-import Default from '@astrojs/starlight/components/Header.astro';
+// Starlight header override: the docs site shares the LP's header (see
+// LpHeader.astro) instead of Starlight's default, keeping Starlight's search
+// in the middle slot. Starlight's fixed header shell still owns position,
+// height and background (styles/theme.css paints it navy).
+import Search from "@astrojs/starlight/components/Search.astro";
+import LpHeader from "./LpHeader.astro";
+
+// Starlight leaves `locale` undefined for the root locale (English).
+const locale = Astro.locals.starlightRoute.locale ?? "en";
 ---
 
-<Default {...Astro.props}><slot /></Default>
-
-<style>
-  :global(.site-title) {
-    span {
-      color: #000000;
-    }
-  }
-  :global([data-theme="dark"] .site-title) {
-    span {
-      color: #ffffff;
-    }
-  }
-</style>
+<LpHeader locale={locale} variant="docs">
+  <Search slot="search" />
+</LpHeader>

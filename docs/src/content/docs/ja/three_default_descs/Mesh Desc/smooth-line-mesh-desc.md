@@ -7,7 +7,7 @@ sidebar:
 
 `SmoothLineMeshDesc`クラスは、カトマル・ロム曲線による滑らかなラインを描画するためのメッシュです。地点の配列から滑らかな曲線を生成し、破線やポイントマーカーの表示もサポートします。
 
-以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`geodetic`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-desc-base) を参照してください。
+以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`geodetic`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](../mesh-desc-base) を参照してください。
 
 ## Properties
 

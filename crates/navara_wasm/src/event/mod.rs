@@ -11,7 +11,9 @@ use serde::Serialize;
 use wasm_bindgen::prelude::*;
 use worker::WorkerTaskDelegatedEvent;
 
-use navara_wasm_types::{CameraFrustum, Globe, LLE, RasterTileInternalMaterial, Transform};
+use navara_wasm_types::{
+    CameraFlightEndedEvent, CameraFrustum, Globe, LLE, RasterTileInternalMaterial, Transform,
+};
 
 // Fields are private on purpose: exposing them via `getter_with_clone` would
 // deep-clone every Vec (and each element) on each JS read. JS consumes each
@@ -21,6 +23,7 @@ use navara_wasm_types::{CameraFrustum, Globe, LLE, RasterTileInternalMaterial, T
 pub struct Events {
     camera_transform_updated: Option<Transform>,
     camera_frustum_updated: Option<CameraFrustum>,
+    camera_flight_ended: Vec<CameraFlightEndedEvent>,
     object_transform_updated: Vec<ObjectTransformEvent>,
     mesh_removed: Vec<EntityEvent>,
     mesh_added: Vec<MeshAdded>,
@@ -50,6 +53,9 @@ impl Events {
     }
     pub fn take_camera_frustum_updated(&mut self) -> Option<CameraFrustum> {
         self.camera_frustum_updated.take()
+    }
+    pub fn take_camera_flight_ended(&mut self) -> Vec<CameraFlightEndedEvent> {
+        std::mem::take(&mut self.camera_flight_ended)
     }
     pub fn take_object_transform_updated(&mut self) -> Vec<ObjectTransformEvent> {
         std::mem::take(&mut self.object_transform_updated)
@@ -268,6 +274,11 @@ impl From<navara_event::Events<'_>> for Events {
         Self {
             camera_transform_updated: ev.camera_transform_updated.map(|ev| ev.into()),
             camera_frustum_updated: ev.camera_frustum_updated.map(|ev| ev.into()),
+            camera_flight_ended: ev
+                .camera_flight_ended
+                .into_iter()
+                .map(|ev| ev.into())
+                .collect(),
             object_transform_updated: ev
                 .object_transform_updated
                 .into_iter()

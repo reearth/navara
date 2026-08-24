@@ -19,7 +19,9 @@ DEM タイルをデコードするため、[`raster-dem`](../../../three/source/
 
 ### exaggeration
 
-**型:** `number | undefined` — **デフォルト:** `1.0`
+**型:** `number | undefined`
+
+**デフォルト:** `1.0`
 
 **説明:** 陰影起伏を計算する際に標高差に適用する強調係数。値が大きいほど陰影が強くなり、小さいほど陰影が控えめになります。
 
@@ -56,7 +58,7 @@ view.addLayer({ type: "raster", source: dem, hillshade: { exaggeration: 0.5 } })
 
 ## 関連リソース
 
-- [Raster Layer](../../../three/layer/raster-layer/) — このマテリアルの使い方
-- [Raster DEM Source](../../../three/source/raster-dem-source/) — DEM の Source とその標高デコーダ
-- [Terrain Layer](../../../three/layer/terrain-layer/) — 3D 地形の描画
-- [ElevationHeatmapMaterial](../../../three/material/elevation-heatmap-material/) — 標高データをヒートマップとして可視化する
+- [Raster Layer](../../../three/layer/raster-layer/): このマテリアルの使い方
+- [Raster DEM Source](../../../three/source/raster-dem-source/): DEM の Source とその標高デコーダ
+- [Terrain Layer](../../../three/layer/terrain-layer/): 3D 地形の描画
+- [ElevationHeatmapMaterial](../../../three/material/elevation-heatmap-material/): 標高データをヒートマップとして可視化する

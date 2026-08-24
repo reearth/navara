@@ -450,8 +450,8 @@ Cascaded Shadow Maps is a technique for achieving high-quality shadows across wi
 
 ### Performance Optimization Tips
 
-1. **Adjust cascade count**: 3-4 is usually sufficient; more improves quality but increases cost
-2. **Shadow map size**: 2048 is standard; 4096 is high quality but heavy
+1. **Adjust cascade count**: 3-4 is usually sufficient. More improves quality but increases cost.
+2. **Shadow map size**: 2048 is standard. 4096 is high quality but heavy.
 3. **Limit shadowFar**: Only render shadows within the required range
 4. **Choose shadowMode**: "practical" is usually optimal
 

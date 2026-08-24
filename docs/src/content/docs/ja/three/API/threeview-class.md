@@ -345,7 +345,7 @@ view.on("idle", () => {
 ```
 
 :::tip[関連ドキュメント]
-このイベントが発火するタイミングの詳細は [`idle` イベント](./threeview-events#idle) を参照してください。
+このイベントが発火するタイミングの詳細は [`idle` イベント](../threeview-events#idle) を参照してください。
 :::
 
 ### mobileOptimization
@@ -370,7 +370,7 @@ const view = new ThreeView({
 
 **Description:** タイルキャッシュ（WASM バッファ + 推定 GPU コスト）のメモリバジェット（バイト単位）。ビューから外れたタイルはバジェットを超えるまで保持され、超過すると最も長く訪問されていないものから順に破棄されます。パンで戻った際は再フェッチなしで再表示され、合計使用量は上限内に保たれます。
 
-**Default:** デバイス依存 — デスクトップ: 報告されたデバイスメモリの 1/4（上限 2 GB）、モバイル: 512 MB（デバイスが 4 GB 未満と報告する場合は 256 MB）。`getDefaultCacheBytes()` を参照してください。
+**Default:** デバイス依存。デスクトップ: 報告されたデバイスメモリの 1/4（上限 2 GB）、モバイル: 512 MB（デバイスが 4 GB 未満と報告する場合は 256 MB）。`getDefaultCacheBytes()` を参照してください。
 
 **Example:**
 
@@ -381,7 +381,7 @@ const view = new ThreeView({
 ```
 
 :::tip[関連ドキュメント]
-実行時にも [`cacheBytes` プロパティ](./threeview-properties#cachebytes)で変更できます。
+実行時にも [`cacheBytes` プロパティ](../threeview-properties#cachebytes)で変更できます。
 :::
 
 ### lodFog
@@ -400,7 +400,7 @@ type LodFogSettings = {
 };
 ```
 
-**Default:** デバイスメモリ依存 — デスクトップ: `{ density: 2.0e-4, sseFactor: 2.0 }`。低メモリデバイスではタイルのワーキングセットを小さく保つため、より強いカーブが適用されます。`getDefaultLodFog()` を参照してください。
+**Default:** デバイスメモリ依存。デスクトップ: `{ density: 2.0e-4, sseFactor: 2.0 }`。低メモリデバイスではタイルのワーキングセットを小さく保つため、より強いカーブが適用されます。`getDefaultLodFog()` を参照してください。
 
 **Example:**
 
@@ -445,7 +445,7 @@ const view = new ThreeView({
 
 **Type:** `object | undefined`
 
-**Description:** ワーカー側メモリバジェットとメモリ圧 LOD デグレードの上書き設定。デフォルトはデバイスメモリと `cacheBytes` から導出されます — `getDefaultMemoryBudgets()` を参照してください。
+**Description:** ワーカー側メモリバジェットとメモリ圧 LOD デグレードの上書き設定。デフォルトはデバイスメモリと `cacheBytes` から導出されます。`getDefaultMemoryBudgets()` を参照してください。
 
 ```typescript
 type MemoryBudgetOptions = {
@@ -475,7 +475,7 @@ const view = new ThreeView({
 ```
 
 :::tip[関連ドキュメント]
-SSE 乗数の範囲は実行時にも [`setSseMultiplierRange()`](./threeview-functions#setssemultiplierrange) で変更できます。
+SSE 乗数の範囲は実行時にも [`setSseMultiplierRange()`](../threeview-functions#setssemultiplierrange) で変更できます。
 :::
 
 ### waterTexture
@@ -543,7 +543,7 @@ type GlobeOptions = {
 import ThreeView, { Color } from "@navaramap/three";
 
 const view = new ThreeView({
-  maxSse: 2,
+  maxSse: 1,
   segments: 10,
   color: new Color().setHex(0x1a1a2e),
   hideUnderground: true,

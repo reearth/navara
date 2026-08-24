@@ -9,7 +9,7 @@ sidebar:
 
 `CesiumIonPlugin` resolves a [Cesium Ion](https://cesium.com/platform/cesium-ion/) asset endpoint at `init()` time and exposes `addTerrain()` to register the asset as a quantized-mesh terrain layer on the view.
 
-The plugin handles the Cesium Ion authentication flow — fetching the asset endpoint URL and access token from `https://api.cesium.com/v1/assets/<assetId>/endpoint` — so your application only needs to supply the asset id and your Cesium Ion access token.
+The plugin handles the Cesium Ion authentication flow (fetching the asset endpoint URL and access token from `https://api.cesium.com/v1/assets/<assetId>/endpoint`) so your application only needs to supply the asset id and your Cesium Ion access token.
 
 ## Usage
 
@@ -61,7 +61,7 @@ new CesiumIonPlugin(config: CesiumIonConfig)
 addTerrain(options?: CesiumIonTerrainOptions): Layer
 ```
 
-Registers the resolved Cesium Ion asset as a quantized-mesh terrain layer — internally it creates a `quantized-mesh` source (`view.addSource(...)`) and renders it with `view.addLayer({ type: "terrain", source })`. Must be called after `view.init()` has completed; otherwise the endpoint has not yet been resolved and the call throws.
+Registers the resolved Cesium Ion asset as a quantized-mesh terrain layer: internally it creates a `quantized-mesh` source (`view.addSource(...)`) and renders it with `view.addLayer({ type: "terrain", source })`. Must be called after `view.init()` has completed. Otherwise the endpoint has not yet been resolved and the call throws.
 
 Returns the `Layer` handle returned by `view.addLayer()`.
 
@@ -69,7 +69,7 @@ Returns the `Layer` handle returned by `view.addLayer()`.
 
 ### CesiumIonTerrainOptions
 
-`CesiumIonTerrainOptions` is a flat object combining the `quantized-mesh` source's fetch/decode options (with `type`, `url`, and `token` removed — the plugin supplies those from the resolved Cesium Ion endpoint) with the terrain layer's mesh render options. The plugin routes each field to `view.addSource()` or `view.addLayer()` internally.
+`CesiumIonTerrainOptions` is a flat object combining the `quantized-mesh` source's fetch/decode options (with `type`, `url`, and `token` removed. The plugin supplies those from the resolved Cesium Ion endpoint) with the terrain layer's mesh render options. The plugin routes each field to `view.addSource()` or `view.addLayer()` internally.
 
 Commonly used options:
 
@@ -93,5 +93,5 @@ See the `quantized-mesh` source and the terrain layer's `terrain` render options
 
 ## Related Resources
 
-- [About three_plugins](../about/) — Package overview
-- [Terrain Layer](../../three/layer/terrain-layer/) — Terrain layer reference
+- [About three_plugins](../about/): Package overview
+- [Terrain Layer](../../three/layer/terrain-layer/): Terrain layer reference

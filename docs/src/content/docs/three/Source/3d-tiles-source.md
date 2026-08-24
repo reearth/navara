@@ -30,4 +30,4 @@ view.addLayer({ type: "3d-tiles", source: tileset, model: { opacity: 1.0 } });
 ## Related Resources
 
 - [About Source](../../../three/source/about/)
-- [ModelMaterial](../../../three/material/model-material/) — 3D model rendering options
+- [ModelMaterial](../../../three/material/model-material/): 3D model rendering options

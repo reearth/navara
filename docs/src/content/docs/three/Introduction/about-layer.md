@@ -7,7 +7,7 @@ sidebar:
 
 ## What is a Layer?
 
-In navara_three, elements displayed in the 3D scene are managed as "layers" and "Descriptors." Map data rendering uses **layers** — a layer references a [Source](../../../three/source/about/) (where the data comes from) and describes how it is rendered — while 3D object placement, post-processing effects, and lighting are added and controlled as Descriptors.
+In navara_three, elements displayed in the 3D scene are managed as "layers" and "Descriptors." Map data rendering uses **layers**: a layer references a [Source](../../../three/source/about/) that says where the data comes from, and describes how that data is rendered. 3D object placement, post-processing effects, and lighting are added and controlled as Descriptors.
 
 ## Descriptor Types
 
@@ -31,10 +31,10 @@ graph LR
   Feature --> Batch
 ```
 
-- **Layer** — The top-level container added via `addLayer()`. Each layer has a unique `LayerId`.
-- **FeatureSet** — A rendering unit within a layer. Feature events (`featureCreated`, `featureUpdated`, etc.) are emitted per feature set, and each carries a `FeatureSetId`. A single feature set may span multiple LOD levels.
-- **Feature** — A conceptual unit that has properties. If the data source is GIS data, a feature corresponds to an individual geographic entity (e.g. a building, a road segment). To identify a specific feature across LOD levels, use a property value (such as an `id` field) from the feature's properties.
-- **Batch** — The lowest-level unit, consisting of actual geometries. Each batch has a `batchId`.
+- **Layer**: The top-level container added via `addLayer()`. Each layer has a unique `LayerId`.
+- **FeatureSet**: A rendering unit within a layer. Feature events (`featureCreated`, `featureUpdated`, etc.) are emitted per feature set, and each carries a `FeatureSetId`. A single feature set may span multiple LOD levels.
+- **Feature**: A conceptual unit that has properties. If the data source is GIS data, a feature corresponds to an individual geographic entity (e.g. a building, a road segment). To identify a specific feature across LOD levels, use a property value (such as an `id` field) from the feature's properties.
+- **Batch**: The lowest-level unit, consisting of actual geometries. Each batch has a `batchId`.
 
 :::tip
 When working with [`FeatureEvaluator`](../../api/feature-evaluator/), the callback receives a `FeatureInfo` object containing `batchId`, `properties`, and `layerId`. Use `properties` to identify individual features within a feature set.
@@ -44,7 +44,7 @@ For details on feature events (`featureCreated`, `featureUpdated`, etc.), see [L
 
 ## Sources and Layers
 
-A layer does not fetch data itself — it references a **Source**. The source describes *where* the data is and how it is fetched/decoded (URL, zoom range, tiling scheme, elevation decoder); the layer describes *how* it renders (materials). One source can be shared by several layers.
+A layer does not fetch data itself. It references a **Source**. The source describes *where* the data is and how it is fetched/decoded (URL, zoom range, tiling scheme, elevation decoder). The layer describes *how* it renders (materials). One source can be shared by several layers.
 
 ```typescript
 // 1. Register a source (the data)

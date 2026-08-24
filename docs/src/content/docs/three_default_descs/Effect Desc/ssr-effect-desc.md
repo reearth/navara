@@ -21,15 +21,15 @@ The `SSREffectDesc` class is a Descriptor that generates screen-space reflection
 
 **Type:** `Texture | null | undefined`
 
-**Description:** A custom geometry buffer used for reflection calculations. When unset or `null`, the engine's MRT normal buffer is used, so SSR applies wherever materials write reflectivity (e.g. `water: true` polygons). Supplying your own screen-aligned texture gives the application full control over where SSR applies — for example, dynamically drawn puddles.
+**Description:** A custom geometry buffer used for reflection calculations. When unset or `null`, the engine's MRT normal buffer is used, so SSR applies wherever materials write reflectivity (e.g. `water: true` polygons). Supplying your own screen-aligned texture gives the application full control over where SSR applies (for example, dynamically drawn puddles).
 
 Each texel must follow the engine's G-buffer encoding:
 
-- `.xy` — octahedral-packed **view-space** normal (`packNormalToVec2` from `@takram/three-geospatial/shaders` `packing`)
-- `.z` — reflectivity/metalness mask; SSR is skipped where the value is below `0.01`. The ray-tracing shader also uses `.z` as its roughness base value
-- `.w` — roughness; with cone tracing enabled (the default) it drives the blur cone angle, and with cone tracing disabled it multiplies `.z` to form the GGX ray-jitter roughness (`.z * .w`)
+- `.xy`: octahedral-packed **view-space** normal (`packNormalToVec2` from `@takram/three-geospatial/shaders` `packing`)
+- `.z`: reflectivity/metalness mask. SSR is skipped where the value is below `0.01`. The ray-tracing shader also uses `.z` as its roughness base value
+- `.w`: roughness. With cone tracing enabled (the default) it drives the blur cone angle, and with cone tracing disabled it multiplies `.z` to form the GGX ray-jitter roughness (`.z * .w`)
 
-The texture is sampled by normalized screen UV, so it should match the drawing-buffer size (use `HalfFloatType`; packed normal values are signed). Keeping it sized correctly on resize is the application's responsibility. Updating the *contents* of the texture (render-to-texture every frame) takes effect automatically; only swapping the texture *object* requires an `update()` call. Setting the option back to `null` resets SSR to the MRT normal buffer:
+The texture is sampled by normalized screen UV, so it should match the drawing-buffer size (use `HalfFloatType`. Packed normal values are signed). Keeping it sized correctly on resize is the application's responsibility. Updating the *contents* of the texture (render-to-texture every frame) takes effect automatically. Only swapping the texture *object* requires an `update()` call. Setting the option back to `null` resets SSR to the MRT normal buffer:
 
 ```typescript
 ssrDesc.update({ ssr: { geometryBuffer: null } });
@@ -246,7 +246,7 @@ A full working example that draws animated puddles into a custom geometry buffer
 
 **Default:** `1`
 
-Only meaningful with cone tracing enabled, which is where the resolve lives. With `useConeTracing: false` nothing averages the rays, and any non-zero value dithers reflection silhouettes into visible speckle — set it to `0` there.
+Only meaningful with cone tracing enabled, which is where the resolve lives. With `useConeTracing: false` nothing averages the rays, and any non-zero value dithers reflection silhouettes into visible speckle. Set it to `0` there.
 
 **Example:**
 
@@ -398,7 +398,7 @@ This property can only be set when creating the Descriptor. It cannot be changed
 
 **Default:** `3`
 
-SSR traces one ray per pixel, which makes reflecting a binary, per-pixel decision — reflection silhouettes come out hard-edged, and once the rays are jittered, dithered into blocks. The resolve averages each pixel's neighbourhood into a continuous coverage instead, which antialiases those silhouettes and turns every jittered ray into an extra sample of the same lobe for the pixels around it. Neighbours are weighted by how closely their surface depth matches, so reflections do not bleed across silhouettes.
+SSR traces one ray per pixel, which makes reflecting a binary, per-pixel decision: reflection silhouettes come out hard-edged, and once the rays are jittered, dithered into blocks. The resolve averages each pixel's neighbourhood into a continuous coverage instead, which antialiases those silhouettes and turns every jittered ray into an extra sample of the same lobe for the pixels around it. Neighbours are weighted by how closely their surface depth matches, so reflections do not bleed across silhouettes.
 
 Larger values are smoother but softer, and cost one more texture tap per texel in each direction. Only applies with `useConeTracing` enabled.
 

@@ -52,10 +52,10 @@ import { Color } from "@navaramap/three";
 ```
 
 :::note
-Globe-level settings such as `maxSse` and `segments` are configured via the [Globe](/three/api/globe/) API, not on this material.
+Globe-level settings such as `maxSse` and `segments` are configured via the [Globe](../../api/globe/) API, not on this material.
 :::
 
 ## Related Resources
 
-- [Raster Layer](../../../three/layer/raster-layer/) — how to use this material
-- [Raster Tile Source](../../../three/source/raster-tile-source/) — the imagery source (URL, zoom, TMS)
+- [Raster Layer](../../../three/layer/raster-layer/): how to use this material
+- [Raster Tile Source](../../../three/source/raster-tile-source/): the imagery source (URL, zoom, TMS)

@@ -8,7 +8,7 @@ sidebar:
 **Materials** are the render (styling) options for a [layer](../../../three/layer/about/). Each material is set via its key on the layer configuration (for example `polygon` on a `vector` layer, or `terrain` on a `terrain` layer). Which materials a layer accepts depends on its type.
 
 :::note
-Data (URL, zoom, decoder, …) is described by a [Source](../../../three/source/about/); how it renders is described by a [layer](../../../three/layer/about/) and its materials.
+Data (URL, zoom, decoder, …) is described by a [Source](../../../three/source/about/). How it renders is described by a [layer](../../../three/layer/about/) and its materials.
 :::
 
 ## Materials by layer type
@@ -50,5 +50,5 @@ view.addLayer({
 
 ## Related Resources
 
-- [Layer Types](../../../three/layer/about/) — layer types and how to add them
-- [About Source](../../../three/source/about/) — the data side
+- [Layer Types](../../../three/layer/about/): layer types and how to add them
+- [About Source](../../../three/source/about/): the data side

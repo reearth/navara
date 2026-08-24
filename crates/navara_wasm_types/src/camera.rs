@@ -143,6 +143,7 @@ impl<'a> From<&'a Transform> for navara_math::Transform {
 pub struct CameraFrustum {
     pub near: FloatType,
     pub far: FloatType,
+    /// Vertical field of view in radians.
     pub fov: FloatType,
     pub aspect_ratio: FloatType,
 }
@@ -167,6 +168,24 @@ impl<'a> From<&'a navara_camera::CameraFrustum> for CameraFrustum {
             far: t.far,
             fov: t.fov,
             aspect_ratio: t.aspect_ratio,
+        }
+    }
+}
+
+/// Terminal record of a `flyTo` flight, delivered once through the event
+/// stream. `completed` is `false` when the flight was superseded or canceled.
+#[wasm_bindgen]
+#[derive(Debug, Clone, Copy, Serialize)]
+pub struct CameraFlightEndedEvent {
+    pub id: u32,
+    pub completed: bool,
+}
+
+impl From<navara_event_store::CameraFlightEnded> for CameraFlightEndedEvent {
+    fn from(e: navara_event_store::CameraFlightEnded) -> Self {
+        Self {
+            id: e.id,
+            completed: e.completed,
         }
     }
 }

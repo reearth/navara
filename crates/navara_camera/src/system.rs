@@ -24,7 +24,7 @@ use navara_window::Window;
 
 use crate::{
     CamDirType, CameraController, CameraDirection, CameraEvent, CameraFlight, CameraInertia,
-    CameraOrientation, CameraStatus, CameraStatusType,
+    CameraOrientation, CameraStatus, CameraStatusType, StartFlyResult,
     follow::handle_follow,
     helpers::{
         get_heading, get_pick_ray_from_camera, get_pitch, get_roll, ray_ellipsoid_intersect,
@@ -47,10 +47,9 @@ pub fn startup(mut commands: Commands) {
             &transform,
             100.,
             1e8,
-            // This is for frustum culling, so need to organize
+            // Default vertical fov.
             Angle::new(50.).rad().val(),
             1.,
-            1.1,
         ),
         CameraController::default(),
         CameraInertia::default(),
@@ -108,6 +107,25 @@ pub fn update(
             cam_st.status.clear();
         }
 
+        // Handle camera events in order, processing all events this frame, not just the last.
+        // If setCamera and moveCamera fire in the same frame, both must be applied sequentially.
+        // Events run before the flight advances so a FlyTo issued mid-flight
+        // interrupts the current flight instead of being swallowed.
+        for ce in ce.read() {
+            process_camera_event(
+                &window,
+                ce,
+                &mut transform,
+                &mut orbit,
+                &mut inertia,
+                frustum,
+                &mut flight,
+                &mut cam_st,
+                &mut controller,
+                is_cam_moving,
+            );
+        }
+
         // flying
         if let Some((position, orientation)) = flight.update(duration as FloatType) {
             apply_camera_change(
@@ -129,28 +147,8 @@ pub fn update(
                 orbit.fixed_rotation_pivot = None;
             };
 
-            // Drain queued events so they don't accumulate while flying.
-            for _ in ce.read() {}
-
-            // Avoid other camera operations during flight.
+            // Avoid manual camera operations during flight.
             continue;
-        }
-
-        // Handle camera events in order — process all events this frame, not just the last.
-        // If setCamera and moveCamera fire in the same frame, both must be applied sequentially.
-        for ce in ce.read() {
-            process_camera_event(
-                &window,
-                ce,
-                &mut transform,
-                &mut orbit,
-                &mut inertia,
-                frustum,
-                &mut flight,
-                &mut cam_st,
-                &mut controller,
-                is_cam_moving,
-            );
         }
 
         if controller.enable_follow {
@@ -240,6 +238,19 @@ pub fn update(
     }
 }
 
+/// Drains flight terminal records into the `EventStore` so they reach JS
+/// through `readEvents()` even on frames where the transform did not change.
+pub fn sync_flight_events(
+    mut events: ResMut<EventStore>,
+    mut query: Query<&mut CameraFlight, With<CameraMarker>>,
+) {
+    for mut flight in query.iter_mut() {
+        if !flight.ended.is_empty() {
+            events.camera_flight_ended.append(&mut flight.ended);
+        }
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn process_camera_event(
     window: &Window,
@@ -259,6 +270,8 @@ fn process_camera_event(
             orientation,
             distance,
         } => {
+            // Setting the camera cancels an in-progress flight.
+            flight.cancel();
             apply_camera_change(
                 window,
                 frustum,
@@ -280,6 +293,10 @@ fn process_camera_event(
             orbit.fixed_rotation_pivot = None;
         }
         CameraEvent::Translate { amount, direction } => {
+            // Ignored while a flight owns the camera.
+            if flight.is_active() {
+                return;
+            }
             if handle_camera_translate(transform, orbit, inertia, amount, direction)
                 && !is_cam_moving
             {
@@ -292,8 +309,19 @@ fn process_camera_event(
             duration,
             max_height,
             distance,
+            easing,
+            id,
         } => {
-            if let Some(pos) = position {
+            let Some(pos) = position else {
+                // Nothing to fly to, but the caller holds a pending promise
+                // for this id. Settle it as not completed.
+                flight.ended.push(navara_event_store::CameraFlightEnded {
+                    id: *id,
+                    completed: false,
+                });
+                return;
+            };
+            {
                 let orient = orientation.unwrap_or(CameraOrientation::default());
 
                 // When distance is specified, convert the target geographic point + orientation + distance
@@ -305,7 +333,11 @@ fn process_camera_event(
 
                     let ground_point = Vec3::new(pos.x, pos.y, 0.0);
                     let ellipsoid_surface = CRS::Geographic.to_vec3(WGS84_64, ground_point, 0.0);
-                    let target_dir = ellipsoid_surface.normalize_or_zero();
+                    // Geodetic surface normal, matching `apply_camera_change`.
+                    let target_dir = xyz_to_vec3(
+                        WGS84_64.geodetic_surface_normal_from_vec3(vec3_to_xyz(ellipsoid_surface)),
+                    )
+                    .normalize_or_zero();
                     let world_quat = calculate_world_quat(target_dir, heading);
                     let (world_forward, _) =
                         apply_orientation_changes(world_quat, Vec3::Y, Vec3::Z, pitch, roll);
@@ -319,25 +351,50 @@ fn process_camera_event(
                     *pos
                 };
 
-                if flight.fly_to(
+                match flight.fly_to(
+                    *id,
                     transform,
                     frustum,
+                    controller,
                     &effective_pos,
                     &orient,
                     duration,
                     max_height,
+                    *easing,
                 ) {
-                    // Start the flight animation and stop current inertia
-                    inertia.stop_all(controller);
-                    if is_cam_moving {
-                        cam_st.status.push(CameraStatusType::Moving);
-                    } else {
-                        cam_st.status.push(CameraStatusType::MoveStart);
+                    StartFlyResult::Started => {
+                        // Start the flight animation and stop current inertia
+                        inertia.stop_all(controller);
+                        if is_cam_moving {
+                            cam_st.status.push(CameraStatusType::Moving);
+                        } else {
+                            cam_st.status.push(CameraStatusType::MoveStart);
+                        }
                     }
+                    StartFlyResult::Instant => {
+                        // duration <= 0: jump straight to the end pose.
+                        apply_camera_change(
+                            window,
+                            frustum,
+                            transform,
+                            orbit,
+                            &Some(effective_pos),
+                            &Some(orient),
+                            None,
+                        );
+                        inertia.stop_all(controller);
+                        cam_st.status.push(CameraStatusType::MoveEnd);
+
+                        orbit.fixed_rotation_axis = None;
+                        orbit.fixed_rotation_pivot = None;
+                    }
+                    StartFlyResult::NoOp => {}
                 }
             }
         }
         CameraEvent::LookAt { target, offset } => {
+            // Looking at a target cancels an in-progress flight.
+            flight.cancel();
             apply_look_at(transform, orbit, target, offset);
 
             // stop camera movement when looking at a target
@@ -351,6 +408,10 @@ fn process_camera_event(
             orbit.fixed_rotation_pivot = None;
         }
         CameraEvent::RotateAroundAxis { axis, angle } => {
+            // Ignored while a flight owns the camera.
+            if flight.is_active() {
+                return;
+            }
             // don't rotate if the camera is moving
             if !is_cam_moving {
                 rotate_around_axis(window, transform, orbit, frustum, axis, angle);
@@ -362,6 +423,10 @@ fn process_camera_event(
             target,
             offset,
         } => {
+            // Ignored while a flight owns the camera.
+            if flight.is_active() {
+                return;
+            }
             controller.enable_follow = *enabled;
             controller.free_look = false;
 
@@ -376,6 +441,10 @@ fn process_camera_event(
             controller.follow_offset = *offset;
         }
         CameraEvent::FollowFreeLook { enabled, target } => {
+            // Ignored while a flight owns the camera.
+            if flight.is_active() {
+                return;
+            }
             let was_free_look = controller.free_look;
             controller.enable_follow = *enabled;
             controller.free_look = *enabled;
@@ -939,12 +1008,20 @@ fn apply_camera_change(
 
     // Calculate new world position and target direction
     // This differs based on whether we have a new position or are using existing one
+    // The frame axis must be the *geodetic* surface normal: the extraction
+    // side (`CRS::Geocentric::to_lle`, `get_heading`/`get_pitch` via the ENU
+    // frame) is geodetic, so building the frame from the geocentric direction
+    // makes apply(extract(transform)) land up to ~0.2 deg / 0.33% of the
+    // altitude away from the original pose (visible as a jump when a flight
+    // starts from the current camera pose).
     let (world_position, target_dir) = if let Some(pos) = position {
         // Create ground point (ignoring altitude for now)
         let ground_point = Vec3::new(pos.x, pos.y, 0.0);
         // Convert geographic coordinates to world-space position
         let pivot = CRS::Geographic.to_vec3(WGS84_64, ground_point, 0.0);
-        let target_dir = pivot.normalize_or_zero();
+        let target_dir =
+            xyz_to_vec3(WGS84_64.geodetic_surface_normal_from_vec3(vec3_to_xyz(pivot)))
+                .normalize_or_zero();
 
         let world_quat = calculate_world_quat(target_dir, heading);
 
@@ -962,10 +1039,12 @@ fn apply_camera_change(
             );
             target - world_forward * dist.max(1.0)
         } else {
-            // Altitude-based: place camera `altitude` meters above the target point along the surface normal.
+            // Altitude-based: place camera `altitude` meters above the ground
+            // point along the geodetic surface normal (the exact inverse of
+            // the geocentric→geodetic conversion used when reading the pose
+            // back).
             let altitude = pos.z.max(1.0);
-            let cam_offset = -Vec3::Y * altitude;
-            pivot + (world_quat * cam_offset)
+            CRS::Geographic.to_vec3(WGS84_64, Vec3::new(pos.x, pos.y, altitude), 0.0)
         };
 
         (world_position, target_dir)
@@ -975,7 +1054,10 @@ fn apply_camera_change(
         if position == Vec3::ZERO {
             position = orbit.local_position; // Fallback to orbit's default position
         }
-        (position, position.normalize_or_zero())
+        let target_dir =
+            xyz_to_vec3(WGS84_64.geodetic_surface_normal_from_vec3(vec3_to_xyz(position)))
+                .normalize_or_zero();
+        (position, target_dir)
     };
 
     // Calculate orientation quaternion based on target direction
@@ -1166,5 +1248,96 @@ pub fn update_frustum(
 
         frustum.update_sse_denominator();
         frustum.update_planes(transform);
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::CameraFrustum;
+
+    /// A flight's first sample is the reconstruction of the extracted current
+    /// pose (transform -> lle + heading/pitch/roll -> apply_camera_change).
+    /// The reconstruction must be the inverse of the extraction, or the
+    /// camera visibly jumps when a flight starts.
+    #[test]
+    fn camera_pose_reconstruction_inverts_extraction() {
+        let window = Window {
+            width: 1600.,
+            height: 900.,
+            pixel_ratio: 1.,
+        };
+        let frustum_transform = Transform::default();
+        let frustum = CameraFrustum::new(
+            &frustum_transform,
+            1.,
+            1e6,
+            Angle::new(50.).rad().val(),
+            16. / 9.,
+        );
+
+        for (lng, lat, height, heading, pitch) in [
+            (139.7671_f64, 35.6812_f64, 1000.0_f64, 0.0_f64, -60.0_f64),
+            (139.7671, 35.6812, 1000.0, 45.0, -30.0),
+            (-122.4, 37.7, 3200.0, 0.0, -60.0),
+            (139.7, 35.6, 300_000.0, 20.0, -85.0),
+            (0.0, 0.0, 5000.0, 0.0, -90.0),
+        ] {
+            // Build the "current" camera pose the same way setCamera does.
+            let mut transform = Transform::default();
+            let mut orbit = Orbit::default();
+            apply_camera_change(
+                &window,
+                &frustum,
+                &mut transform,
+                &mut orbit,
+                &Some(Vec3::new(lng, lat, height)),
+                &Some(CameraOrientation {
+                    pitch: Some(pitch),
+                    heading: Some(heading),
+                    roll: Some(0.0),
+                }),
+                None,
+            );
+
+            // Extract start options exactly like CameraFlight::fly_to.
+            let lle = navara_core::CRS::Geocentric
+                .to_lle(WGS84_64, transform.translation, 0.0)
+                .deg();
+            let ext_heading = get_heading(&transform);
+            let ext_pitch = get_pitch(&transform);
+            let ext_roll = get_roll(&transform);
+
+            // Reconstruct like the per-frame flight apply.
+            let mut re_transform = Transform::default();
+            let mut re_orbit = Orbit::default();
+            apply_camera_change(
+                &window,
+                &frustum,
+                &mut re_transform,
+                &mut re_orbit,
+                &Some(Vec3::new(lle.lng.val(), lle.lat.val(), lle.height.val())),
+                &Some(CameraOrientation {
+                    pitch: Some(ext_pitch),
+                    heading: Some(ext_heading),
+                    roll: Some(ext_roll),
+                }),
+                None,
+            );
+
+            let pos_err = (re_transform.translation - transform.translation).length();
+            let fwd_err = re_transform
+                .forward()
+                .angle_between(transform.forward())
+                .to_degrees();
+            assert!(
+                pos_err < 0.01,
+                "pose ({lng}, {lat}, {height}) reconstructed {pos_err} m away"
+            );
+            assert!(
+                fwd_err < 0.05,
+                "pose ({lng}, {lat}, {height}) reconstructed {fwd_err} deg off"
+            );
+        }
     }
 }

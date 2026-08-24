@@ -43,12 +43,18 @@ const { href, imgSrc, imgAlt, items, label, cellClass, rd, logo, logoAlt } =
   <a class="lp-tile" href={href}>
     {imgSrc && <img src={imgSrc} alt={imgAlt} />}
   </a>
-  <ImageAttribution
-    items={items}
-    label={label}
-    corner="tr"
-    class="lp-tile-attrib"
-    logo={logo}
-    logoAlt={logoAlt}
-  />
+  {
+    /* No credits collected yet (e.g. a showcase screenshot) — showing the
+       info icon over an empty tooltip would be worse than nothing. */
+    (items.length > 0 || logo) && (
+      <ImageAttribution
+        items={items}
+        label={label}
+        corner="tr"
+        class="lp-tile-attrib"
+        logo={logo}
+        logoAlt={logoAlt}
+      />
+    )
+  }
 </div>

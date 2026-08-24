@@ -9,7 +9,7 @@ The `SplatMeshDesc` class is a mesh descriptor that renders 3D Gaussian Splat as
 
 It is registered as the `"splat"` mesh key by `DefaultPlugin`, so any `view.addMesh({ splat: { ... } })` call routes to this descriptor.
 
-In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `geodetic`, `visible`) are available. See [MeshDesc](./mesh-desc-base) for details.
+In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `geodetic`, `visible`) are available. See [MeshDesc](../mesh-desc-base) for details.
 
 ## Properties
 
@@ -19,7 +19,7 @@ In addition to the properties below, all common properties from the base class (
 
 **Description:** URL of the splat file to load. Required. Provide either the URL of an externally hosted splat with a verified license, or a path to a self-hosted asset placed under your project's `public/splat/` directory (referenced as `/splat/your-asset.ply`).
 
-On fetch failure, a `console.warn` is logged and the `error` event is emitted; no exception is thrown. Implement retry / fallback in the application if needed.
+On fetch failure, a `console.warn` is logged and the `error` event is emitted. No exception is thrown. Implement retry / fallback in the application if needed.
 
 **Example:**
 
@@ -37,7 +37,7 @@ On fetch failure, a `console.warn` is logged and the `error` event is emitted; n
 
 **Default:** `false`
 
-**Description:** Enable Level-of-Detail rendering to draw only the splats needed at the current camera distance. Works with any 3DGS asset at runtime; pre-building the LoD tree at asset preparation time speeds up the initial load and avoids runtime tree construction.
+**Description:** Enable Level-of-Detail rendering to draw only the splats needed at the current camera distance. Works with any 3DGS asset at runtime. Pre-building the LoD tree at asset preparation time speeds up the initial load and avoids runtime tree construction.
 
 **Example:**
 
@@ -56,7 +56,7 @@ On fetch failure, a `console.warn` is logged and the `error` event is emitted; n
 
 **Default:** `2000`
 
-**Description:** Cell edge, in meters, of the floating origin that keeps splats numerically stable at globe (ECEF) scale. Navara renders splats relative to an origin that follows the camera, snapped to a grid of this size, so the large ECEF coordinates never reach the renderer's single-precision math — this is what prevents sub-meter jitter as the camera moves. This is automatic; the property only tunes the grid. Smaller values tighten precision near the camera but re-sort splats more often as the camera crosses cells; larger values re-sort less often. The value is shared per transparent scene: the first splat added fixes it for every splat on that renderer. Most applications never need to change the default.
+**Description:** Cell edge, in meters, of the floating origin that keeps splats numerically stable at globe (ECEF) scale. Navara renders splats relative to an origin that follows the camera, snapped to a grid of this size, so the large ECEF coordinates never reach the renderer's single-precision math. This is what prevents sub-meter jitter as the camera moves. This is automatic. The property only tunes the grid. Smaller values tighten precision near the camera but re-sort splats more often as the camera crosses cells. Larger values re-sort less often. The value is shared per transparent scene: the first splat added fixes it for every splat on that renderer. Most applications never need to change the default.
 
 **Example:**
 
@@ -69,7 +69,7 @@ On fetch failure, a `console.warn` is logged and the `error` event is emitted; n
 }
 ```
 
-> `url`, `lod`, and `originCellSize` are fixed at construction time. Calling `handle.update()` with a different value logs a warning; recreate the descriptor instead.
+> `url`, `lod`, and `originCellSize` are fixed at construction time. Calling `handle.update()` with a different value logs a warning. Recreate the descriptor instead.
 
 ## Events
 
@@ -160,6 +160,6 @@ Navara supports the following Gaussian Splatting formats.
 
 ## Limitations
 
-- **No scene lighting**: Lighting is baked into the splat data; `SunLight` / `AmbientLight` do not affect rendering.
+- **No scene lighting**: Lighting is baked into the splat data. `SunLight` / `AmbientLight` do not affect rendering.
 - **No shadow / selective effect / picking**: Splats render in the transparent pass and are not integrated with shadows, `SelectiveBloomEffect` / `SelectiveOutlineEffect`, or Navara's picking pipeline.
-- **Very large scale can look unstable**: A very large `scale` makes each splat span a large world region, so the depth sort order can change abruptly with small camera moves (visible as "boiling"). This is inherent to Gaussian Splatting and is unrelated to placement precision — author assets close to their intended world size rather than scaling them up heavily.
+- **Very large scale can look unstable**: A very large `scale` makes each splat span a large world region, so the depth sort order can change abruptly with small camera moves (visible as "boiling"). This is inherent to Gaussian Splatting and is unrelated to placement precision. Author assets close to their intended world size rather than scaling them up heavily.

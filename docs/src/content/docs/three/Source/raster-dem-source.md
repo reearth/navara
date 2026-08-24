@@ -7,8 +7,8 @@ sidebar:
 
 A `raster-dem` source describes RGB-encoded elevation tiles. It powers both:
 
-- **terrain meshing** — via a [`terrain`](../../../three/layer/terrain-layer/) layer, and
-- **hillshade / elevation-heatmap** — via a [`raster`](../../../three/layer/raster-layer/) layer (the layer supplies the `hillshade` / `elevationHeatmap` render options).
+- **terrain meshing**: via a [`terrain`](../../../three/layer/terrain-layer/) layer, and
+- **hillshade / elevation-heatmap**: via a [`raster`](../../../three/layer/raster-layer/) layer (the layer supplies the `hillshade` / `elevationHeatmap` render options).
 
 The RGB→height decoding is configured by `elevationDecoder`.
 
@@ -70,7 +70,7 @@ view.addSource({
 ```
 
 :::note
-These constants are functions and must be called with `()`; the call defers to WASM module initialization.
+These constants are functions and must be called with `()`. The call defers to WASM module initialization.
 :::
 
 ### Custom decoder
@@ -107,5 +107,5 @@ You can also pass an explicit decoder object:
 
 - [About Source](../../../three/source/about/)
 - [Terrain Layer](../../../three/layer/terrain-layer/) / [Raster Layer](../../../three/layer/raster-layer/)
-- [TerrainMaterial](../../../three/material/terrain-material/) — terrain rendering options
+- [TerrainMaterial](../../../three/material/terrain-material/): terrain rendering options
 - [HillshadeMaterial](../../../three/material/hillshade-material/) / [ElevationHeatmapMaterial](../../../three/material/elevation-heatmap-material/)

@@ -328,7 +328,7 @@ const view = new ThreeView({
 
 **Type:** `number | undefined`
 
-**Description:** Milliseconds without data or tile processing activity that must elapse before the `idle` event fires. Continuous animations and effects do not count as activity. Lowering this value makes the engine report idle sooner; raising it delays the notification until a longer quiet period has passed.
+**Description:** Milliseconds without data or tile processing activity that must elapse before the `idle` event fires. Continuous animations and effects do not count as activity. Lowering this value makes the engine report idle sooner. Raising it delays the notification until a longer quiet period has passed.
 
 **Default:** `100`
 
@@ -345,7 +345,7 @@ view.on("idle", () => {
 ```
 
 :::tip[Related Documentation]
-See the [`idle` event](./threeview-events#idle) for details on when this event fires.
+See the [`idle` event](../threeview-events#idle) for details on when this event fires.
 :::
 
 ### mobileOptimization
@@ -368,9 +368,9 @@ const view = new ThreeView({
 
 **Type:** `number | undefined`
 
-**Description:** Memory budget in bytes for tile caches (WASM buffers + estimated GPU cost). Tiles leaving the view are retained until the budget is exceeded, then evicted least-recently-visited first — panning back is refetch-free while total usage stays capped.
+**Description:** Memory budget in bytes for tile caches (WASM buffers + estimated GPU cost). Tiles leaving the view are retained until the budget is exceeded, then evicted least-recently-visited first, so panning back is refetch-free while total usage stays capped.
 
-**Default:** Device-dependent — desktop: a quarter of the reported device memory capped at 2 GB; mobile: 512 MB (256 MB when the device reports less than 4 GB). See `getDefaultCacheBytes()`.
+**Default:** Device-dependent. Desktop: a quarter of the reported device memory capped at 2 GB. Mobile: 512 MB (256 MB when the device reports less than 4 GB). See `getDefaultCacheBytes()`.
 
 **Example:**
 
@@ -381,14 +381,14 @@ const view = new ThreeView({
 ```
 
 :::tip[Related Documentation]
-Can also be changed at runtime via the [`cacheBytes` property](./threeview-properties#cachebytes).
+Can also be changed at runtime via the [`cacheBytes` property](../threeview-properties#cachebytes).
 :::
 
 ### lodFog
 
 **Type:** `Partial<LodFogSettings> | undefined`
 
-**Description:** LOD fog: a distance-based screen-space-error relaxation used by tile LOD selection — far tiles tolerate a larger error and stay coarser while near tiles keep full resolution. Purely an LOD control; it never affects visual fog rendering. Partial values are merged over the device default.
+**Description:** LOD fog: a distance-based screen-space-error relaxation used by tile LOD selection: far tiles tolerate a larger error and stay coarser while near tiles keep full resolution. Purely an LOD control. It never affects visual fog rendering. Partial values are merged over the device default.
 
 ```typescript
 type LodFogSettings = {
@@ -400,7 +400,7 @@ type LodFogSettings = {
 };
 ```
 
-**Default:** Device-memory-dependent — desktop: `{ density: 2.0e-4, sseFactor: 2.0 }`; low-memory devices ship a stronger curve so the tile working set stays small. See `getDefaultLodFog()`.
+**Default:** Device-memory-dependent. Desktop: `{ density: 2.0e-4, sseFactor: 2.0 }`. Low-memory devices ship a stronger curve so the tile working set stays small. See `getDefaultLodFog()`.
 
 **Example:**
 
@@ -414,7 +414,7 @@ const view = new ThreeView({
 
 **Type:** `Partial<DynamicSseSettings> | undefined`
 
-**Description:** Dynamic screen-space error (CesiumJS `dynamicScreenSpaceError` equivalent): tilted, street-level horizon views tolerate a larger error for far tiles, cutting the tile working set in exactly the views that over-refine. Zero effect looking straight down; fades out as the camera climbs past `maxHeight` meters. Partial values are merged over the default.
+**Description:** Dynamic screen-space error (CesiumJS `dynamicScreenSpaceError` equivalent): tilted, street-level horizon views tolerate a larger error for far tiles, cutting the tile working set in exactly the views that over-refine. Zero effect looking straight down. Fades out as the camera climbs past `maxHeight` meters. Partial values are merged over the default.
 
 ```typescript
 type DynamicSseSettings = {
@@ -445,7 +445,7 @@ const view = new ThreeView({
 
 **Type:** `object | undefined`
 
-**Description:** Overrides for the worker-side memory budgets and the memory-pressure LOD degrade. Defaults derive from the device memory together with `cacheBytes` — see `getDefaultMemoryBudgets()`.
+**Description:** Overrides for the worker-side memory budgets and the memory-pressure LOD degrade. Defaults derive from the device memory together with `cacheBytes`. See `getDefaultMemoryBudgets()`.
 
 ```typescript
 type MemoryBudgetOptions = {
@@ -475,7 +475,7 @@ const view = new ThreeView({
 ```
 
 :::tip[Related Documentation]
-The SSE multiplier range can also be changed at runtime via [`setSseMultiplierRange()`](./threeview-functions#setssemultiplierrange).
+The SSE multiplier range can also be changed at runtime via [`setSseMultiplierRange()`](../threeview-functions#setssemultiplierrange).
 :::
 
 ### waterTexture
@@ -543,7 +543,7 @@ For details and usage examples of each property, see [Globe Class](../../../thre
 import ThreeView, { Color } from "@navaramap/three";
 
 const view = new ThreeView({
-  maxSse: 2,
+  maxSse: 1,
   segments: 10,
   color: new Color().setHex(0x1a1a2e),
   hideUnderground: true,

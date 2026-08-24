@@ -5,7 +5,7 @@ sidebar:
   order: 99
 ---
 
-`MeshDesc` is the base class for all mesh Descriptors. It provides common configuration properties, transform composition, and picking support. Every mesh Descriptor — both built-in and custom — inherits from this class, so the features described here are available on all mesh Descriptors.
+`MeshDesc` is the base class for all mesh Descriptors. It provides common configuration properties, transform composition, and picking support. Every mesh Descriptor, both built-in and custom, inherits from this class, so the features described here are available on all mesh Descriptors.
 
 ## Common Properties
 
@@ -18,8 +18,8 @@ sidebar:
 | `scale`       | `{ x: number, y: number, z: number }`  | -              | Scale, or local offset when `matrix`/`matrixWorld` is set                                      |
 | `matrix`      | `Matrix4`                              | -              | Local transform matrix. When set, `position`/`rotation`/`scale` become offsets within this frame |
 | `matrixWorld` | `Matrix4`                              | -              | World transform matrix. When set, `position`/`rotation`/`scale` become offsets within this frame |
-| `geodetic`    | `GeodeticPlacement`                    | -              | Geographic placement in degrees — see [Geographic Placement](#geographic-placement-geodetic). Mutually exclusive with `matrix`/`matrixWorld` |
-| `lit`         | `boolean`                              | -              | Lighting override applied to every material of the mesh. Unset follows `view.lit` — see [Lighting](#lighting-lit) |
+| `geodetic`    | `GeodeticPlacement`                    | -              | Geographic placement in degrees. See [Geographic Placement](#geographic-placement-geodetic). Mutually exclusive with `matrix`/`matrixWorld` |
+| `lit`         | `boolean`                              | -              | Lighting override applied to every material of the mesh. Unset follows `view.lit`. See [Lighting](#lighting-lit) |
 | `pickable`    | `boolean`                              | `false`        | Enable GPU-based click picking. Defined per Descriptor by picking-capable mesh Descriptors, not on the base config |
 
 ## Transform Composition
@@ -28,7 +28,7 @@ sidebar:
 
 ### Standard Transforms
 
-When neither `matrix` nor `matrixWorld` is set, `position`, `rotation`, and `scale` are applied directly to the Three.js object in the ECEF coordinate system — the same way standard Three.js transforms work.
+When neither `matrix` nor `matrixWorld` is set, `position`, `rotation`, and `scale` are applied directly to the Three.js object in the ECEF coordinate system, the same way standard Three.js transforms work.
 
 ### Local Frame with `matrix`
 
@@ -123,7 +123,7 @@ car.update({ geodetic: { heading: 330 } });
 | `scale` | ratio | - | `1` |
 | `heightReference` | `"ellipsoid"` \| `"terrain"` | - | `"ellipsoid"` |
 
-`heading` is the compass bearing the object's front faces — the same convention
+`heading` is the compass bearing the object's front faces, the same convention
 as `setCamera`'s heading.
 
 ### Composition
@@ -167,21 +167,21 @@ Three behaviours are worth knowing:
   tiles already resident and updated as more detailed tiles arrive.
 - Clamping follows the **active terrain**, not a source you name.
 - With **no terrain layer** added, the placement behaves as
-  `"ellipsoid"` — terrain layers can be added after the object.
+  `"ellipsoid"`. Terrain layers can be added after the object.
 
 ## Up-Axis Conventions (glTF Y-up and tile Z-up)
 
 glTF is Y-up: `GLTFLoader` preserves the asset's own axes, and the glTF 2.0
 specification puts an asset's front at `+Z`, its up at `+Y`, and its right at
-`-X`. The 3D Tiles convention — and `eastNorthUpToFixedFrame`, the frame that
-feels most natural to reach for — is Z-up. Bridging the two by hand means
+`-X`. The 3D Tiles convention (and `eastNorthUpToFixedFrame`, the frame that
+feels most natural to reach for) is Z-up. Bridging the two by hand means
 inserting an `Rx(+90°)` correction, and getting the remaining 90° of heading
 right on top of it.
 
 **With `geodetic` there is nothing to correct.** `geodetic` builds a
 **West-Up-North (WUN)** tangent frame: `+x` west, `+y` up, `+z` north. WUN is
 the only right-handed, Y-up tangent frame whose `+Z` axis is north, so it
-agrees with glTF on all three axes — front, up, and right. The `Rx(+90°)` has
+agrees with glTF on all three axes: front, up, and right. The `Rx(+90°)` has
 been absorbed once into the frame definition itself, as the `Ry(+90°)` basis
 change from NUE, rather than applied per object.
 
@@ -196,8 +196,8 @@ You still need to think about axes when you supply a frame yourself:
 | `geodetic` (WUN) | west, up, north | Y | **No** |
 | `westUpNorthToFixedFrame` | west, up, north | Y | **No** |
 | `northUpEastToFixedFrame` | north, up, east | Y | Y-up is fine, but the asset faces **east** at zero rotation |
-| `eastNorthUpToFixedFrame` | east, north, up | Z | Yes — `Rx(+90°)` |
-| `northWestUpToFixedFrame` | north, west, up | Z | Yes — `Rx(+90°)` |
+| `eastNorthUpToFixedFrame` | east, north, up | Z | Yes: `Rx(+90°)` |
+| `northWestUpToFixedFrame` | north, west, up | Z | Yes: `Rx(+90°)` |
 | `northEastDownToFixedFrame` | north, east, down | −Z | Yes |
 
 ### Migrating from another engine
@@ -222,7 +222,7 @@ geodetic: { lng, lat, height, heading: 321 }
 | Value | Result |
 | ----- | ------ |
 | `true` | Lit, even when [`view.lit`](../../../three/api/threeview-properties/#lit) is `false` |
-| `false` | Plain albedo — the lighting equation is skipped on the color output |
+| `false` | Plain albedo: the lighting equation is skipped on the color output |
 | unset (`undefined`) | Follows `view.lit` (default `true`) |
 
 Setting `lit: false` does not disable the lit pipeline: normals and the shadow G-buffer keep being written, which is what lets a post-processing pass re-light the albedo afterwards.
@@ -321,7 +321,7 @@ type PickedFeature = {
 };
 ```
 
-For implementing picking in custom Descriptors, see [Custom Descriptor — Implementing Picking](../../../three/core/custom-desc/#implementing-picking-in-custom-descriptors).
+For implementing picking in custom Descriptors, see [Custom Descriptor: Implementing Picking](../../../three/core/custom-desc/#implementing-picking-in-custom-descriptors).
 
 ## Coordinate Transformation
 
@@ -368,7 +368,7 @@ const sphereDesc = view.addMesh<SphereMeshDesc>({
 
 ### Using a Local Tangent Frame (ENU and others)
 
-The `position` property is Cartesian ECEF by default, so a bare `position` will not stand a mesh upright at a given longitude/latitude. For geographic placement, compute a local tangent frame at the origin and pass it as `matrixWorld`; `position`/`rotation`/`scale` are then interpreted as offsets within that frame.
+The `position` property is Cartesian ECEF by default, so a bare `position` will not stand a mesh upright at a given longitude/latitude. For geographic placement, compute a local tangent frame at the origin and pass it as `matrixWorld`. `position`/`rotation`/`scale` are then interpreted as offsets within that frame.
 
 Choose the frame function that matches the axis orientation your mesh expects. All take an ECEF origin (`Vector3`) and return a `Matrix4`, and all are exported from `@navaramap/three`:
 

@@ -211,8 +211,8 @@ type TileJsonDemEncoding = "mapbox" | "terrarium";
 
 ## 関連リソース
 
-- [AttributionPlugin](../../three/plugins/attributionplugin/) — `view.attribution` で参照できる組み込みのアトリビューション（クレジット）UI。このプラグインが既定で供給します
-- [About three_plugins](../about/) — パッケージ概要
-- [Raster Layer](../../three/layer/raster-layer/) — Raster レイヤーのリファレンス
-- [Terrain Layer](../../three/layer/terrain-layer/) — `raster-dem` ソースを描画する Terrain レイヤーのリファレンス
+- [AttributionPlugin](../../three/plugins/attributionplugin/): `view.attribution` で参照できる組み込みのアトリビューション（クレジット）UI。このプラグインが既定で供給します
+- [About three_plugins](../about/): パッケージ概要
+- [Raster Layer](../../three/layer/raster-layer/): Raster レイヤーのリファレンス
+- [Terrain Layer](../../three/layer/terrain-layer/): `raster-dem` ソースを描画する Terrain レイヤーのリファレンス
 

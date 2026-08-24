@@ -71,7 +71,7 @@ const tilesSource = view.addSource({
 const tiles = view.addLayer({
   type: "3d-tiles",
   source: tilesSource,
-  model: { maxSse: 40, normals: true },
+  model: { maxSse: 20, normals: true },
 });
 
 view.atmosphere.date = new Date("2025-01-01T07:00:00Z");

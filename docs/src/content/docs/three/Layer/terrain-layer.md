@@ -5,7 +5,7 @@ sidebar:
   order: 430
 ---
 
-A `terrain` layer renders a [`raster-dem`](../../../three/source/raster-dem-source/) source (RGB-encoded elevation tiles decoded on the GPU) or a [`quantized-mesh`](../../../three/source/quantized-mesh-source/) source (pre-meshed tiles, e.g. Cesium Ion) as the 3D globe surface. Rendering options are the same regardless of the source's data format; all fetch/geometry config lives on the source.
+A `terrain` layer renders a [`raster-dem`](../../../three/source/raster-dem-source/) source (RGB-encoded elevation tiles decoded on the GPU) or a [`quantized-mesh`](../../../three/source/quantized-mesh-source/) source (pre-meshed tiles, e.g. Cesium Ion) as the 3D globe surface. Rendering options are the same regardless of the source's data format. All fetch/geometry config lives on the source.
 
 ## Properties
 
@@ -69,7 +69,7 @@ For Cesium Ion quantized-mesh assets (endpoint + token resolved at runtime), use
 
 ### Draping imagery onto terrain
 
-A terrain layer provides only the 3D surface. Add a [`raster`](../../../three/layer/raster-layer/) layer over it — its tiles are draped onto the mesh. Later layers render on top, so a higher-resolution overlay can refine a wider base layer.
+A terrain layer provides only the 3D surface. Add a [`raster`](../../../three/layer/raster-layer/) layer over it. Its tiles are draped onto the mesh. Later layers render on top, so a higher-resolution overlay can refine a wider base layer.
 
 ```typescript
 const terrain = view.addSource({ type: "quantized-mesh", url: "https://example.com/{z}/{x}/{y}.terrain", maxZoom: 18 });
@@ -81,7 +81,7 @@ view.addLayer({ type: "raster", source: satellite });
 
 ### Draping vector features onto terrain
 
-A [`vector`](../../../three/layer/vector-layer/) layer whose polygon/polyline materials set `clampToGround: true` also drapes onto the terrain surface, hugging the mesh instead of floating at a fixed height. This works over any terrain source — both `raster-dem` (WebMercator) and `quantized-mesh` (geographic / EPSG:4326) terrain — so clamp-to-ground vectors stay glued to the ground regardless of the terrain's tiling scheme.
+A [`vector`](../../../three/layer/vector-layer/) layer whose polygon/polyline materials set `clampToGround: true` also drapes onto the terrain surface, hugging the mesh instead of floating at a fixed height. This works over any terrain source, both `raster-dem` (WebMercator) and `quantized-mesh` (geographic / EPSG:4326) terrain, so clamp-to-ground vectors stay glued to the ground regardless of the terrain's tiling scheme.
 
 ```typescript
 const terrain = view.addSource({ type: "quantized-mesh", url: "https://example.com/{z}/{x}/{y}.terrain", maxZoom: 18 });
@@ -99,7 +99,7 @@ view.addLayer({
 ## Related Resources
 
 - [Raster DEM Source](../../../three/source/raster-dem-source/) / [Quantized Mesh Source](../../../three/source/quantized-mesh-source/)
-- [TerrainMaterial](../../../three/material/terrain-material/) — detailed terrain settings
-- [Raster Layer](../../../three/layer/raster-layer/) — drape imagery / add hillshade over terrain
-- [Vector Layer](../../../three/layer/vector-layer/) — drape clamp-to-ground vector features over terrain
-- [CesiumIonPlugin](../../../three_plugins/cesiumionplugin/) — Cesium Ion quantized-mesh assets
+- [TerrainMaterial](../../../three/material/terrain-material/): detailed terrain settings
+- [Raster Layer](../../../three/layer/raster-layer/): drape imagery / add hillshade over terrain
+- [Vector Layer](../../../three/layer/vector-layer/): drape clamp-to-ground vector features over terrain
+- [CesiumIonPlugin](../../../three_plugins/cesiumionplugin/): Cesium Ion quantized-mesh assets

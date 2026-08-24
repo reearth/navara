@@ -7,7 +7,7 @@ sidebar:
 
 ## Headless Architecture
 
-Navara is a headless 3D map engine. Its GIS core is written in Rust and compiled to WebAssembly, deliberately separated from any specific rendering technology. Currently, Navara provides a Three.js-based rendering backend (`@navaramap/three`), but the engine is designed so that other rendering engines — and even native platforms — can be supported in the future.
+Navara is a headless 3D map engine. Its GIS core is written in Rust and compiled to WebAssembly, deliberately separated from any specific rendering technology. Currently, Navara provides a Three.js-based rendering backend (`@navaramap/three`), but the engine is designed so that other rendering engines, and even native platforms, can be supported in the future.
 
 ```mermaid
 graph TD
@@ -25,13 +25,13 @@ The Rust/WASM GIS engine handles all geospatial computation independently of the
 
 ## Plugin-Based Architecture
 
-Navara uses a plugin system to register descriptor types. Before calling `init()`, you add plugins to a `ThreeView` instance. Each plugin registers the mesh, light, and effect descriptor types it provides. After initialization, you can add descriptors of those registered types.
+Navara uses a plugin system to register Descriptor types. Before calling `init()`, you add plugins to a `ThreeView` instance. Each plugin registers the mesh, light, and effect Descriptor types it provides. After initialization, you can add Descriptors of those registered types.
 
-[`DefaultPlugin`](../../../three_default_plugin/about/) (from `@navaramap/three-default-plugin`) registers built-in mesh, light, and effect descriptors. For most applications, adding `DefaultPlugin` is all you need to get started.
+[`DefaultPlugin`](../../../three_default_plugin/about/) (from `@navaramap/three-default-plugin`) registers built-in mesh, light, and effect Descriptors. For most applications, adding `DefaultPlugin` is all you need to get started.
 
-You can also create your own mesh descriptors, effect descriptors, and light descriptors with full access to the rendering engine's scene graph. This is the same mechanism that powers Navara's built-in descriptors. For details, see the [Custom Descriptor](../../../three/core/custom-desc/) documentation.
+You can also create your own mesh Descriptors, effect Descriptors, and light Descriptors with full access to the rendering engine's scene graph. This is the same mechanism that powers Navara's built-in Descriptors. For details, see the [Custom Descriptor](../../../three/core/custom-desc/) documentation.
 
-In addition to these, Navara provides [**layers**](../../../three/layer/about/) for loading and displaying geographic data such as GeoJSON, MVT, and 3D Tiles. Layers handle the complexity of features and their attributes — parsing, spatial indexing, and attribute-based styling through [`FeatureEvaluator`](../../../three/api/feature-evaluator/). Mesh descriptors, on the other hand, deal only with geometry and rendering, which allows them to be optimized purely for draw performance and is suited for rendering large numbers of objects efficiently. This separation lets you choose the right tool for each use case. For more on descriptor types, see [Layer Types](../../../three/layer/about/).
+In addition to these, Navara provides [**layers**](../../../three/layer/about/) for loading and displaying geographic data such as GeoJSON, MVT, and 3D Tiles. Layers handle the complexity of features and their attributes: parsing, spatial indexing, and attribute-based styling through [`FeatureEvaluator`](../../../three/api/feature-evaluator/). Mesh Descriptors, on the other hand, deal only with geometry and rendering, which allows them to be optimized purely for draw performance and is suited for rendering large numbers of objects efficiently. This separation lets you choose the right tool for each use case. For more on Descriptor types, see [Layer Types](../../../three/layer/about/).
 
 ```mermaid
 sequenceDiagram
@@ -79,34 +79,34 @@ graph TB
   style Tier2 fill:#f8d7da,stroke:#dc3545
 ```
 
-**Tier 0: ThreeView** is the primary entry point for all users. It provides high-level methods for camera positioning, layer management, plugin registration, and lifecycle control. This surface is intentionally kept small and stable — breaking changes require a major version bump. See the [ThreeView API reference](../../../three/api/threeview-class/) for details.
+**Tier 0: ThreeView** is the primary entry point for all users. It provides high-level methods for camera positioning, layer management, plugin registration, and lifecycle control. This surface is intentionally kept small and stable, and breaking changes require a major version bump. See the [ThreeView API reference](../../../three/api/threeview-class/) for details.
 
 **Tier 1: Plugin + ViewContext** is available to plugin and Descriptor developers. When a plugin is initialized, it receives a `ViewContext` that provides controlled access to rendering internals such as scenes, pass management, and the renderer reference. This level offers more power at the cost of occasional breaking changes between minor versions. See the [Plugin](../../../three/core/plugin/) and [Custom Descriptor](../../../three/core/custom-desc/) documentation for details.
 
 **Tier 2: Advanced** is planned for future use cases that require deeper integration, such as injecting an external renderer or replacing the render loop. These APIs will be explicitly marked as unstable.
 
-For most applications, you will only interact with Tier 0 — the `ThreeView` class.
+For most applications, you will only interact with Tier 0, the `ThreeView` class.
 
 ## Library Overview
 
-Navara is split into several npm packages. This can seem complex at first, but the separation follows directly from the headless design: the GIS engine is independent of any renderer, the rendering backend is a separate layer, and descriptor implementations are separate from the core so you can choose which ones to include.
+Navara is split into several npm packages. This can seem complex at first, but the separation follows directly from the headless design: the GIS engine is independent of any renderer, the rendering backend is a separate layer, and Descriptor implementations are separate from the core so you can choose which ones to include.
 
-In practice, most applications only need two packages: `@navaramap/three` for the core engine and `@navaramap/three-default-plugin` for the built-in descriptors.
+In practice, most applications only need two packages: `@navaramap/three` for the core engine and `@navaramap/three-default-plugin` for the built-in Descriptors.
 
 | Package | Role | When you need it |
 |---------|------|-----------------|
-| `@navaramap/three` | Main package — `ThreeView` class, source & layer API, camera control | Always |
-| `@navaramap/three-default-plugin` | `DefaultPlugin` — built-in mesh, light, and effect descriptors | Almost always |
-| `@navaramap/three-default-descs` | Individual descriptor class implementations | When registering descriptors manually without `DefaultPlugin` |
+| `@navaramap/three` | Main package: `ThreeView` class, source & layer API, camera control | Always |
+| `@navaramap/three-default-plugin` | `DefaultPlugin`, which registers the built-in mesh, light, and effect Descriptors | Almost always |
+| `@navaramap/three-default-descs` | Individual Descriptor class implementations | When registering Descriptors manually without `DefaultPlugin` |
 | `@navaramap/three-api` | Standalone GIS utilities (coordinate transforms, geodesic calculations) | When you need GIS math without the full map engine |
 
 ## Navigating the Documentation
 
 This documentation is organized into several sections that correspond to different parts of the system.
 
-The [**three** section](../../../three/introduction/what-is-navara-three/) covers everything related to `@navaramap/three` — the `ThreeView` API, camera controls, layer concepts, and step-by-step tutorials. If you are building an application with Navara, this is where you will spend most of your time.
+The [**three** section](../../../three/introduction/what-is-navara-three/) covers everything related to `@navaramap/three`: the `ThreeView` API, camera controls, layer concepts, and step-by-step tutorials. If you are building an application with Navara, this is where you will spend most of your time.
 
-The [**three_default_descs** section](../../../three_default_descs/about/) is a reference for all the mesh, effect, and light descriptor types provided by `@navaramap/three-default-descs`. Each descriptor type has its own page documenting its configuration options and usage examples.
+The [**three_default_descs** section](../../../three_default_descs/about/) is a reference for all the mesh, effect, and light Descriptor types provided by `@navaramap/three-default-descs`. Each Descriptor type has its own page documenting its configuration options and usage examples.
 
 The [**three_default_plugin** section](../../../three_default_plugin/about/) documents the `DefaultPlugin` API, including the convenience methods it provides for common setups.
 

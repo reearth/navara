@@ -5,7 +5,7 @@ sidebar:
   order: 420
 ---
 
-A `raster` layer renders a [`raster-tile`](../../../three/source/raster-tile-source/) source as imagery, or a [`raster-dem`](../../../three/source/raster-dem-source/) source as hillshade or an elevation heatmap. When a [`terrain`](../../../three/layer/terrain-layer/) layer is present, the imagery is draped onto the 3D surface; otherwise it renders on the flat globe.
+A `raster` layer renders a [`raster-tile`](../../../three/source/raster-tile-source/) source as imagery, or a [`raster-dem`](../../../three/source/raster-dem-source/) source as hillshade or an elevation heatmap. When a [`terrain`](../../../three/layer/terrain-layer/) layer is present, the imagery is draped onto the 3D surface. Otherwise it renders on the flat globe.
 
 ## Properties
 
@@ -47,7 +47,7 @@ view.addLayer({ type: "raster", source: imagery, raster: { opacity: 1 } });
 
 ### Hillshade
 
-Reference a `raster-dem` source; the decoder lives on the source.
+Reference a `raster-dem` source. The decoder lives on the source.
 
 ```typescript
 import ThreeView, { TERRARIUM_ELEVATION_DECODER } from "@navaramap/three";
@@ -86,4 +86,4 @@ view.addLayer({
 
 - [Raster Tile Source](../../../three/source/raster-tile-source/) / [Raster DEM Source](../../../three/source/raster-dem-source/)
 - [RasterMaterial](../../../three/material/raster-material/) / [HillshadeMaterial](../../../three/material/hillshade-material/) / [ElevationHeatmapMaterial](../../../three/material/elevation-heatmap-material/)
-- [Terrain Layer](../../../three/layer/terrain-layer/) — drape imagery onto 3D terrain
+- [Terrain Layer](../../../three/layer/terrain-layer/): drape imagery onto 3D terrain

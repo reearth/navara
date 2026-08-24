@@ -17,20 +17,20 @@ navara_threeでは、以下のEffectDescタイプが利用可能です:
 
 | Descriptorタイプ | 説明 |
 |------------|------|
-| [AerialPerspectiveEffectDesc](./aerial-perspective-effect-desc) | 大気による光の散乱と透過を表現するエフェクト |
-| [CloudsEffectDesc](./clouds-effect-desc) | リアルタイムボリュメトリック雲をレンダリングするエフェクト |
-| [ColorGradingLUTEffectDesc](./color-grading-lut-effect-desc) | LUTを使用したカラーグレーディングを適用するエフェクト |
-| [DepthOfFieldEffectDesc](./depth-of-field-effect-desc) | カメラの焦点面に基づいてボケ効果を適用するエフェクト |
-| [FogLightEffectDesc](./fog-light-effect-desc) | ポイントライトからのボリュメトリックフォグを生成するエフェクト |
-| [FXAAEffectDesc](./fxaa-effect-desc) | FXAA(Fast Approximate Anti-Aliasing)を適用するエフェクト |
-| [LensFlareEffectDesc](./lens-flare-effect-desc) | 太陽や月からのレンズフレアを生成するエフェクト |
-| [RainDropEffectDesc](./rain-drop-effect-desc) | 画面に雨粒の屈折効果を適用するエフェクト |
-| [SelectiveBloomEffectDesc](./selective-bloom-effect-desc) | セレクティブブルームを適用するエフェクト |
-| [SelectiveOutlineEffectDesc](./selective-outline-effect-desc) | セレクティブアウトラインを適用するエフェクト |
-| [SMAAEffectDesc](./smaa-effect-desc) | SMAA(Subpixel Morphological Anti-Aliasing)を適用するエフェクト |
-| [SSAOEffectDesc](./ssao-effect-desc) | スクリーンスペースアンビエントオクルージョンを適用するエフェクト |
-| [SSREffectDesc](./ssr-effect-desc) | リアルタイムスクリーンスペース反射を生成するエフェクト |
-| [ToneMappingEffectDesc](./tone-mapping-effect-desc) | HDRからLDRへの色調整を行うエフェクト |
+| [AerialPerspectiveEffectDesc](../aerial-perspective-effect-desc) | 大気による光の散乱と透過を表現するエフェクト |
+| [CloudsEffectDesc](../clouds-effect-desc) | リアルタイムボリュメトリック雲をレンダリングするエフェクト |
+| [ColorGradingLUTEffectDesc](../color-grading-lut-effect-desc) | LUTを使用したカラーグレーディングを適用するエフェクト |
+| [DepthOfFieldEffectDesc](../depth-of-field-effect-desc) | カメラの焦点面に基づいてボケ効果を適用するエフェクト |
+| [FogLightEffectDesc](../fog-light-effect-desc) | ポイントライトからのボリュメトリックフォグを生成するエフェクト |
+| [FXAAEffectDesc](../fxaa-effect-desc) | FXAA(Fast Approximate Anti-Aliasing)を適用するエフェクト |
+| [LensFlareEffectDesc](../lens-flare-effect-desc) | 太陽や月からのレンズフレアを生成するエフェクト |
+| [RainDropEffectDesc](../rain-drop-effect-desc) | 画面に雨粒の屈折効果を適用するエフェクト |
+| [SelectiveBloomEffectDesc](../selective-bloom-effect-desc) | セレクティブブルームを適用するエフェクト |
+| [SelectiveOutlineEffectDesc](../selective-outline-effect-desc) | セレクティブアウトラインを適用するエフェクト |
+| [SMAAEffectDesc](../smaa-effect-desc) | SMAA(Subpixel Morphological Anti-Aliasing)を適用するエフェクト |
+| [SSAOEffectDesc](../ssao-effect-desc) | スクリーンスペースアンビエントオクルージョンを適用するエフェクト |
+| [SSREffectDesc](../ssr-effect-desc) | リアルタイムスクリーンスペース反射を生成するエフェクト |
+| [ToneMappingEffectDesc](../tone-mapping-effect-desc) | HDRからLDRへの色調整を行うエフェクト |
 
 ## 基本的な使い方
 

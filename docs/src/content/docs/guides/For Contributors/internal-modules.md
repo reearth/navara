@@ -31,13 +31,13 @@ Format-specific crates handle parsing: `navara_mvt` for Mapbox Vector Tiles, `na
 
 `navara_feature` handles high-level feature rendering strategies including billboards, 3D models, points, polygons, polylines, and text. It defines how geospatial features are translated into renderable geometry. `navara_feature_component` provides the ECS component definitions for each feature type.
 
-`navara_material` manages the material system — material definitions, shader parameters, and texture management. `navara_geometry` handles geometric processing such as mesh generation and spatial calculations, while `martini` provides high-performance terrain mesh generation using the RTIN algorithm.
+`navara_material` manages the material system: material definitions, shader parameters, and texture management. `navara_geometry` handles geometric processing such as mesh generation and spatial calculations, while `martini` provides high-performance terrain mesh generation using the RTIN algorithm.
 
 ## WASM Modules and Build Pipeline
 
 The Rust crates are compiled into three separate WASM modules, each targeting a different use case.
 
-**`navara_wasm`** compiles to `web/wasm/navara_engine/` and includes the full 3D engine with all 40+ crates. It provides the complete engine API — camera, layers, features, tiles, and the ECS system integration. This is the module that `@navaramap/three` communicates with.
+**`navara_wasm`** compiles to `web/wasm/navara_engine/` and includes the full 3D engine with all 40+ crates. It provides the complete engine API: camera, layers, features, tiles, and the ECS system integration. This is the module that `@navaramap/three` communicates with.
 
 **`navara_wasm_worker`** compiles to `web/wasm/navara_engine_worker/` and includes processing-focused crates. It runs in Web Workers for CPU-intensive background tasks such as terrain mesh construction and polygon/polyline batch processing.
 
@@ -47,7 +47,7 @@ The build pipeline, orchestrated by cargo-make, follows a strict sequence: first
 
 ## WASM API Design Policy
 
-Navara enforces a strict policy that WASM-generated classes are never exposed directly in public TypeScript APIs. Classes produced by `wasm-bindgen` have manual memory management requirements — if Rust frees memory, any JavaScript references become invalid, leading to use-after-free errors or memory leaks.
+Navara enforces a strict policy that WASM-generated classes are never exposed directly in public TypeScript APIs. Classes produced by `wasm-bindgen` have manual memory management requirements: if Rust frees memory, any JavaScript references become invalid, leading to use-after-free errors or memory leaks.
 
 Instead, public functions in `@navaramap/three` and `@navaramap/three-api` accept plain JavaScript objects or Three.js types as input, create WASM objects internally, perform the operation, convert results back to plain JavaScript/Three.js types, and free the WASM objects. This wrapper pattern ensures that consumers never need to manage WASM memory manually.
 

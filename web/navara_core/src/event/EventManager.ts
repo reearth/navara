@@ -78,6 +78,7 @@ export class EventManager {
   stacks: EventsStacks = {
     camera_transform_updated: [],
     camera_frustum_updated: [],
+    camera_flight_ended: [],
     data_requested: [],
     data_requester_removed: [],
     mesh_added: [],

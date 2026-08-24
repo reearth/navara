@@ -5,7 +5,7 @@ sidebar:
   order: 440
 ---
 
-A `3d-tiles` layer renders a [`3d-tiles`](../../../three/source/3d-tiles-source/) source — a large-scale 3D dataset in the 3D Tiles format (building models, point clouds, photorealistic tiles, and more) — with a model appearance.
+A `3d-tiles` layer renders a [`3d-tiles`](../../../three/source/3d-tiles-source/) source, a large-scale 3D dataset in the 3D Tiles format (building models, point clouds, photorealistic tiles, and more), with a model appearance.
 
 ## Properties
 
@@ -50,14 +50,14 @@ const tileset = view.addSource({
   url: `https://tile.googleapis.com/v1/3dtiles/root.json?key=${YOUR_GOOGLE_MAPS_API_KEY}`,
 });
 
-const layer = view.addLayer({ type: "3d-tiles", source: tileset, model: { maxSse: 60 } });
+const layer = view.addLayer({ type: "3d-tiles", source: tileset, model: { maxSse: 30 } });
 ```
 
 :::note
-The `Layer` handle emits `featureCreated` / `featureRemoved` / `featureVisibilityChanged` events, which carry `credit` information — use them to display attribution for sources such as Google Photorealistic 3D Tiles, as required by their [terms of service](https://cloud.google.com/maps-platform/terms). See the [3D Tiles Source](../../../three/source/3d-tiles-source/) page for supported specifications (b3dm, pnts, glTF extensions).
+The `Layer` handle emits `featureCreated` / `featureRemoved` / `featureVisibilityChanged` events, which carry `credit` information. Use them to display attribution for sources such as Google Photorealistic 3D Tiles, as required by their [terms of service](https://cloud.google.com/maps-platform/terms). See the [3D Tiles Source](../../../three/source/3d-tiles-source/) page for supported specifications (b3dm, pnts, glTF extensions).
 :::
 
 ## Related Resources
 
-- [3D Tiles Source](../../../three/source/3d-tiles-source/) — supported formats and extensions
-- [ModelMaterial](../../../three/material/model-material/) — detailed model settings
+- [3D Tiles Source](../../../three/source/3d-tiles-source/): supported formats and extensions
+- [ModelMaterial](../../../three/material/model-material/): detailed model settings

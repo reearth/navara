@@ -9,8 +9,8 @@ sidebar:
 
 `url` には 2 種類の形式を指定できます。
 
-- **タイルテンプレート** — `{z}/{x}/{y}` プレースホルダーを含む URL。各タイルを個別に取得します。
-- **PMTiles アーカイブ** — `.pmtiles` で終わる単一の URL。すべてのタイルが 1 つのファイルにまとめられ、HTTP レンジリクエストで取得されます。詳しくは下記の [PMTiles アーカイブ](#pmtiles-アーカイブ)を参照してください。
+- **タイルテンプレート**: `{z}/{x}/{y}` プレースホルダーを含む URL。各タイルを個別に取得します。
+- **PMTiles アーカイブ**: `.pmtiles` で終わる単一の URL。すべてのタイルが 1 つのファイルにまとめられ、HTTP レンジリクエストで取得されます。詳しくは下記の [PMTiles アーカイブ](#pmtiles-アーカイブ)を参照してください。
 
 どちらの形式でも同じ Source が生成され、エンジンが URL に応じて適切な実装を自動的に選択します。
 
@@ -119,4 +119,4 @@ view.addLayer({
 ## 関連リソース
 
 - [About Source](../../../three/source/about/)
-- [Vector Layer](../../../three/layer/vector-layer/) — `point`, `polyline`, `polygon`, `text`, `billboard`
+- [Vector Layer](../../../three/layer/vector-layer/): `point`, `polyline`, `polygon`, `text`, `billboard`

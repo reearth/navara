@@ -45,12 +45,12 @@ export const run = async (view: ThreeView) => {
     {
       type: "3d-tiles",
       source: yamanashiSource.id,
-      model: { show: true, pointSize: 0.3, height: 0, maxSse: 16 },
+      model: { show: true, pointSize: 0.3, height: 0, maxSse: 8 },
     },
     {
       type: "3d-tiles",
       source: kakegawaSource.id,
-      model: { show: true, pointSize: 0.3, height: 0, maxSse: 16 },
+      model: { show: true, pointSize: 0.3, height: 0, maxSse: 8 },
     },
   ];
 

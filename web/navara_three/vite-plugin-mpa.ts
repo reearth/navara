@@ -4,11 +4,21 @@ import { resolve } from "path";
 import invariant from "tiny-invariant";
 import { normalizePath, type Plugin } from "vite";
 
+/** Values interpolated into the template's `<%= key %>` placeholders. */
+export type PageData = {
+  title: string;
+  description: string;
+  /** Absolute URL of the page (og:url). */
+  url: string;
+  /** Absolute URL of the social thumbnail (og:image / twitter:image). */
+  image: string;
+};
+
 export type PageConfig = {
   name: string;
   filename: string;
   entry: string;
-  data: { title: string };
+  data: PageData;
 };
 
 type Options = {
@@ -16,12 +26,19 @@ type Options = {
   pages: PageConfig[];
 };
 
-function renderHtml(
-  template: string,
-  entry: string,
-  data: { title: string },
-): string {
-  const html = template.replace(/<%= title %>/g, data.title);
+/** Escape a value for use inside an HTML attribute / text node. */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function renderHtml(template: string, entry: string, data: PageData): string {
+  const html = template.replace(/<%= (\w+) %>/g, (match, key: string) =>
+    key in data ? escapeHtml(data[key as keyof PageData]) : match,
+  );
   return html.replace(
     "</body>",
     `    <script type="module" src="${entry}"></script>\n  </body>`,

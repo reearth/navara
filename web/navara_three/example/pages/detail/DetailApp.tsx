@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, Copy, ExternalLink, Moon, Sun } from "lucide-react";
+import { Check, Copy, ExternalLink } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createHighlighter } from "shiki";
 import type { Highlighter } from "shiki";
@@ -7,24 +7,22 @@ import { SCENE_LOADED_MESSAGE } from "../../helpers/initialize";
 import { docsUrl, localize, SECTION_LABELS } from "../examples/sections";
 import type { ExampleMeta, Lang, Localized } from "../examples/sections";
 
-import { useDarkMode } from "@/components/hooks/useDarkMode";
 import { useLang } from "@/components/hooks/useLang";
-import { LangSelect } from "@/components/LangSelect";
+import { SiteHeader } from "@/components/SiteHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import "../index/main.css";
+import "../index/theme.css";
 
 /** UI chrome strings for the detail page. */
 const UI = {
-  back: { en: "Gallery", ja: "ギャラリー" },
   source: { en: "Source", ja: "ソースコード" },
   copy: { en: "Copy", ja: "コピー" },
   copied: { en: "Copied", ja: "コピーしました" },
   openDemo: { en: "Open demo", ja: "デモを開く" },
   docs: { en: "Docs", ja: "ドキュメント" },
   notFound: { en: "Example not found", ja: "example が見つかりません" },
-  toggleTheme: { en: "Toggle theme", ja: "テーマを切り替え" },
   toggleLang: { en: "Switch language", ja: "言語を切り替え" },
 } satisfies Record<string, Record<Lang, string>>;
 
@@ -94,7 +92,6 @@ function currentPath(): string {
 
 export const DetailApp = () => {
   const { lang, setLang } = useLang();
-  const { isDark: dark, toggle: toggleTheme } = useDarkMode();
   const [copied, setCopied] = useState(false);
 
   const path = useMemo(() => currentPath(), []);
@@ -250,50 +247,19 @@ export const DetailApp = () => {
         engaged ? "overflow-hidden" : "overflow-auto"
       }`}
     >
+      <SiteHeader lang={lang} setLang={setLang} langLabel={t(UI.toggleLang)} />
       <div className="mx-auto max-w-5xl px-5 py-8 sm:px-8 sm:py-12">
-        <header className="mb-8 flex items-start justify-between gap-4">
-          <div className="flex min-w-0 flex-col gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              asChild
-              className="-ml-2 h-auto self-start px-2 py-1 text-muted-foreground"
-            >
-              <a href="/" className="flex items-center gap-1.5">
-                <ArrowLeft className="h-4 w-4" />
-                {t(UI.back)}
-              </a>
-            </Button>
-            {meta && (
-              <div className="min-w-0">
-                <h1 className="text-lg font-semibold tracking-tight sm:text-xl">
-                  {t(meta.title)}
-                </h1>
-                <p className="text-xs text-muted-foreground">
-                  {SECTION_LABELS[meta.section][lang]}
-                </p>
-              </div>
-            )}
-          </div>
-          <div className="flex shrink-0 items-center gap-1">
-            <LangSelect
-              lang={lang}
-              setLang={setLang}
-              label={t(UI.toggleLang)}
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={t(UI.toggleTheme)}
-              onClick={toggleTheme}
-            >
-              {dark ? (
-                <Sun className="h-4 w-4" />
-              ) : (
-                <Moon className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
+        <header className="mb-8 flex min-w-0 flex-col gap-2">
+          {meta && (
+            <div className="min-w-0">
+              <h1 className="text-lg font-semibold tracking-tight sm:text-xl">
+                {t(meta.title)}
+              </h1>
+              <p className="text-xs text-muted-foreground">
+                {SECTION_LABELS[meta.section][lang]}
+              </p>
+            </div>
+          )}
         </header>
 
         {!meta ? (

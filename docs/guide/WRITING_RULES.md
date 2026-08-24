@@ -2,6 +2,23 @@
 
 Please follow these rules when you modify this repository.
 
+## Prose style: no dash decorations, no semicolons
+
+Do not decorate prose with em dashes, en dashes, or double hyphens (`—`, `–`, `--`), and do not join clauses with semicolons (`;`). Write full sentences instead, using commas, colons, parentheses, "because" / "for example", or by splitting into two sentences. This applies to both locales.
+
+- Definition bullets and table description cells use a colon: `**Label**: description` (not `**Label** — description`).
+- Two independent clauses become two sentences: "All fields are optional. An unset field keeps the default color." (not "All fields are optional; an unset field …").
+- Property metadata lines are separate paragraphs, never joined on one line:
+
+  ```markdown
+  **Type:** `boolean | undefined`
+
+  **Default:** `true`
+  ```
+
+- A table cell containing only `—` is a placeholder meaning "no default / not applicable". Keep those as-is.
+- Ordinary hyphens in words (built-in, level-of-detail), markdown table separator rows, and code (semicolons included) are unaffected.
+
 ## Terminology
 
 ### "Layer" vs "Object" vs "Descriptor"
@@ -33,3 +50,13 @@ Spaces in directory names become hyphens (e.g., `Resource Layer/` → `resource-
 - Link to a page: `[Page name](../../../link/to/page)`, not `/link/to/page`.
 - Link to a asset: `![Alt](@assets/image.png)`
 - Import a component: `import { Button } from "@components/Button"`
+
+### Never use `./` for a sibling page
+
+Every page is served at a directory URL with a trailing slash (`three_default_descs/Mesh Desc/about.md` → `/three_default_descs/mesh-desc/about/`), and Astro emits markdown link hrefs verbatim. The browser therefore resolves `./sibling` *inside* the current page's own URL and 404s:
+
+- `[ArclineMeshDesc](../arcline-mesh-desc)` — resolves to `/three_default_descs/mesh-desc/arcline-mesh-desc`
+- `[ArclineMeshDesc](./arcline-mesh-desc)` — resolves to `/three_default_descs/mesh-desc/about/arcline-mesh-desc` (404)
+
+Use `../` to reach a sibling page, `../../` to reach a sibling directory, and so on. This applies to every page, not just `about.md` index pages.
+

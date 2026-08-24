@@ -36,8 +36,8 @@ The `Plugin` class is intentionally designed as a minimal interface, providing o
 
 Plugins operate at the following stages:
 
-1. `view.addPlugin(plugin)` -- Register the plugin (must be called **before** `view.init()`)
-2. `view.init()` -- The `init()` of all registered plugins is executed **in parallel**
+1. `view.addPlugin(plugin)`: Register the plugin (must be called **before** `view.init()`)
+2. `view.init()`: The `init()` of all registered plugins is executed **in parallel**
 
 ```
 view.addPlugin(pluginA)

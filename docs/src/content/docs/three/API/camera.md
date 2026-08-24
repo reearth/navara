@@ -28,7 +28,7 @@ const camera = view.camera;
 
 The underlying Three.js `PerspectiveCamera`. Use this for **read-only** integration with Three.js APIs, such as reading the camera matrix or world position.
 
-Do not write to `raw.fov` (or other frustum fields) directly — the engine synchronizes `raw.fov` from its internal frustum state, so direct writes will be overwritten and can leave the Rust-side culling state out of sync. Use the `fov` setter instead.
+Do not write to `raw.fov` (or other frustum fields) directly: the engine synchronizes `raw.fov` from its internal frustum state, so direct writes will be overwritten and can leave the Rust-side culling state out of sync. Use the `fov` setter instead.
 
 **Example:**
 
@@ -101,30 +101,13 @@ console.log(`Heading: ${heading}°, Pitch: ${pitch}°, Roll: ${roll}°`);
 
 ---
 
-### fovy
-
-**Type:** `number | undefined`
-
-**Read-only**
-
-The current vertical field of view in degrees. Returns `undefined` if the engine is not yet initialized.
-
-**Example:**
-
-```typescript
-const fov = view.camera.fovy;
-if (fov !== undefined) {
-  console.log(`Vertical FOV: ${fov}°`);
-}
-```
-
----
-
 ### fov
 
-**Type:** `number` (setter)
+**Type:** `number | undefined` (getter) / `number` (setter)
 
-Sets the vertical field of view in degrees. Valid range: `1`–`180`. Values outside this range are ignored.
+The vertical field of view in degrees. The horizontal extent follows from the viewport aspect ratio.
+
+Setting accepts the range `1`–`180`. Values outside this range are ignored. Reading returns `undefined` if the engine is not yet initialized.
 
 **Example:**
 
@@ -134,6 +117,8 @@ view.camera.fov = 30;
 
 // Wide FOV for a panoramic effect
 view.camera.fov = 90;
+
+console.log(`FOV: ${view.camera.fov}°`);
 ```
 
 ---
@@ -178,7 +163,7 @@ view.camera.far = 1e9;
 
 **Type:** `CameraOptions` (setter)
 
-Configures the camera's interactive control behavior. All fields are optional; only the specified fields are updated.
+Configures the camera's interactive control behavior. All fields are optional. Only the specified fields are updated.
 
 ```typescript
 type CameraOptions = {
@@ -298,7 +283,7 @@ Fired when the camera's frustum parameters change (FOV, near, or far plane).
 
 ```typescript
 view.camera.on("frustumChanged", () => {
-  console.log(`FOV: ${view.camera.fovy}°`);
+  console.log(`FOV: ${view.camera.fov}°`);
 });
 ```
 
@@ -361,5 +346,5 @@ view.camera.once("moveend", () => {
 
 ## See Also
 
-- [ThreeView Properties](../../../three/api/threeview-properties/) — `view.camera` and other view properties
-- [ThreeView Functions](../../../three/api/threeview-functions/) — `setCamera()`, `flyTo()`, `lookAt()`, and other camera movement methods
+- [ThreeView Properties](../../../three/api/threeview-properties/): `view.camera` and other view properties
+- [ThreeView Functions](../../../three/api/threeview-functions/): `setCamera()`, `flyTo()`, `lookAt()`, and other camera movement methods

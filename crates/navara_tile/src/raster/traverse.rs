@@ -240,7 +240,7 @@ mod tests {
     ) {
         let camera_ecef = Vec3::new(WGS84_A_64 * 2.0, 0.0, 0.0);
         let camera = Transform::from_translation(camera_ecef).looking_at(Vec3::ZERO, Vec3::Y);
-        let frustum = CameraFrustum::new(&camera, 0.1, 1e9, Angle::new(60.0).rad().val(), 1.0, 1.0);
+        let frustum = CameraFrustum::new(&camera, 0.1, 1e9, Angle::new(60.0).rad().val(), 1.0);
         let occluder = EllipsoidalOccluder::new(&camera_ecef, WGS84_64);
         let fog = Fog {
             enabled: false,

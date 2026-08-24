@@ -12,7 +12,7 @@ This class allows you to:
 - Dynamically style features based on their properties
 
 :::note
-For detailed parameter types of events, see [Descriptor Types](./desc-types#events).
+For detailed parameter types of events, see [Descriptor Types](../desc-types#events).
 :::
 
 ## Properties
@@ -146,8 +146,8 @@ The callback function can return an object containing the following properties:
 | `width` | `number` | Line width (pixels, for polyline features) |
 | `size` | `number` | Point/text size (meters or pixels, for point/text features) |
 | `opacity` | `number` | Feature opacity, range 0.0-1.0 (for polygons/points/billboards/models/text) |
-| `declutterPriority` | `number` | Placement priority for decluttering; higher wins an overlap (for points/billboards/text with [`declutter`](../../../three/material/text-material/#declutter) enabled). Overrides the layer's `declutterPriority` |
-| `image` | `string \| null` | Image URL (for billboard features); each distinct URL is loaded once and packed into the layer's texture atlas. Return `null` to clear a previous per-feature image and revert to the billboard material's default `url` |
+| `declutterPriority` | `number` | Placement priority for decluttering. Higher wins an overlap (for points/billboards/text with [`declutter`](../../../three/material/text-material/#declutter) enabled). Overrides the layer's `declutterPriority` |
+| `image` | `string \| null` | Image URL (for billboard features). Each distinct URL is loaded once and packed into the layer's texture atlas. Return `null` to clear a previous per-feature image and revert to the billboard material's default `url` |
 
 :::note
 Evaluated styles override the layer's default styles.

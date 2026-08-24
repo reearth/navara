@@ -93,5 +93,5 @@ addTerrain(options?: CesiumIonTerrainOptions): Layer
 
 ## 関連リソース
 
-- [About three_plugins](../about/) — パッケージ概要
-- [Terrain Layer](../../three/layer/terrain-layer/) — Terrain レイヤーのリファレンス
+- [About three_plugins](../about/): パッケージ概要
+- [Terrain Layer](../../three/layer/terrain-layer/): Terrain レイヤーのリファレンス

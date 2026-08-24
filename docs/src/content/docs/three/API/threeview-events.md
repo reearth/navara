@@ -393,7 +393,7 @@ view.on("mouseup", (event) => {
 
 **Description:**
 
-Fires when data and tile processing becomes idle — that is, when no updates such as tile loading or data processing have occurred for at least `idleThreshold` milliseconds. Continuous animations and effects do not count as activity, so this event fires even while they are running. It fires at most once per idle period and resets when processing activity resumes.
+Fires when data and tile processing becomes idle, that is, when no updates such as tile loading or data processing have occurred for at least `idleThreshold` milliseconds. Continuous animations and effects do not count as activity, so this event fires even while they are running. It fires at most once per idle period and resets when processing activity resumes.
 
 **Handler Type:**
 

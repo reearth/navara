@@ -109,7 +109,7 @@ import { Color } from "@navaramap/three";
 
 **Type:** `number | undefined`
 
-**Description:** Specifies the crease angle (in radians) used when [`normals`](#normals) is enabled. Edges whose shared face angle exceeds this threshold are kept as creased (hard) edges; smaller angles are smoothed.
+**Description:** Specifies the crease angle (in radians) used when [`normals`](#normals) is enabled. Edges whose shared face angle exceeds this threshold are kept as creased (hard) edges. Smaller angles are smoothed.
 
 **Default:** `Math.PI / 6` (30°, applied when `normals` is enabled and this property is omitted)
 
@@ -238,7 +238,7 @@ import { Color } from "@navaramap/three";
 
 **Type:** `boolean | undefined`
 
-**Description:** Applies the lighting equation to the color output. When `false`, the model renders as plain albedo — the rest of the lit pipeline still runs, so normals and the shadow G-buffer keep being written. Leaving it unset follows the scene default, [`view.lit`](../../../three/api/threeview-properties/#lit); setting it explicitly overrides that default in either direction.
+**Description:** Applies the lighting equation to the color output. When `false`, the model renders as plain albedo. The rest of the lit pipeline still runs, so normals and the shadow G-buffer keep being written. Leaving it unset follows the scene default, [`view.lit`](../../../three/api/threeview-properties/#lit). Setting it explicitly overrides that default in either direction.
 
 **Default:** `undefined` (follows `view.lit`)
 
@@ -265,7 +265,7 @@ import { Color } from "@navaramap/three";
 ```typescript
 {
   model: {
-    maxSse: 16
+    maxSse: 8
   }
 }
 ```

@@ -1,4 +1,4 @@
-# Navara Three — Examples
+# Navara Three Examples
 
 This folder contains the WebGL examples for `@navaramap/three`. Each subfolder in `pages/` is an example that is built as its own page by Vite's multi‑page setup. The index page lists all examples grouped by category and shows a thumbnail for each one.
 
@@ -256,8 +256,8 @@ The example app ships with a small, local set of [shadcn/ui]-style React compone
 
 Two ways to manage components:
 
-- Option A — CLI: Run `npx shadcn@latest add …` inside `web/navara_three`.
-- Option B — MCP: Configure `.mcp.json` (see below) to register the `shadcn` MCP server, then trigger the same `add` actions through your MCP client.
+- Option A (CLI): Run `npx shadcn@latest add …` inside `web/navara_three`.
+- Option B (MCP): Configure `.mcp.json` (see below) to register the `shadcn` MCP server, then trigger the same `add` actions through your MCP client.
 
 - Included: `button.tsx`, `card.tsx` (with `CardHeader`, `CardContent`, `CardFooter`, `CardTitle`, `CardDescription`), `input.tsx`, `label.tsx`, `separator.tsx`.
 - Aliases: Import via `@/components/ui/*` and utilities via `@/lib/utils` (see `tsconfig.json`).
@@ -307,7 +307,7 @@ The repository contains a shadcn CLI configuration at `web/navara_three/componen
 Notes:
 
 - The CLI reads paths/aliases from `components.json` and `tsconfig.json` (already set up for this example).
-- New components may require extra Radix packages; install prompts will be handled by the CLI.
+- New components may require extra Radix packages. Install prompts are handled by the CLI.
 
 ### Add or update components (MCP)
 
@@ -316,7 +316,7 @@ If you prefer MCP, add the shadcn MCP server config manually following [shadcn d
 ### Theming and tokens
 
 - Color tokens and radii live in each page's `globals.css` (e.g. `example/pages/index/globals.css`) as CSS variables and power Tailwind theme values defined in `tailwind.config.ts`.
-- Dark mode is toggled by the `dark` class on `<html>`; see `pages/index/App.tsx` for a usage example.
+- Dark mode is toggled by the `dark` class on `<html>` (see `components/hooks/useDarkMode.ts`). The gallery top page and the example detail pages instead ship a fixed navy theme via `example/pages/index/theme.css`, with the theme toggle removed.
 
 ### What these components are (and aren’t)
 

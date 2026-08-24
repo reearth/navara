@@ -19,7 +19,9 @@ DEM タイルをデコードするため、[`raster-dem`](../../../three/source/
 
 ### maxHeight
 
-**型:** `number | undefined` — **デフォルト:** `1000`
+**型:** `number | undefined`
+
+**デフォルト:** `1000`
 
 **説明:** カラーマップの最大標高（メートル）。これを超える標高はカラーマップの最大色で表示されます。
 
@@ -29,7 +31,9 @@ DEM タイルをデコードするため、[`raster-dem`](../../../three/source/
 
 ### minHeight
 
-**型:** `number | undefined` — **デフォルト:** `0`
+**型:** `number | undefined`
+
+**デフォルト:** `0`
 
 **説明:** カラーマップの最小標高（メートル）。これ以下の標高はカラーマップの最小色で表示されます。
 
@@ -39,7 +43,9 @@ DEM タイルをデコードするため、[`raster-dem`](../../../three/source/
 
 ### logarithmic
 
-**型:** `boolean | undefined` — **デフォルト:** `false`
+**型:** `boolean | undefined`
+
+**デフォルト:** `false`
 
 **説明:** 対数スケールを使用するかどうか。低地と高地の範囲が大きい場合に、低地の微妙な標高差をより見やすくします。
 
@@ -49,7 +55,9 @@ DEM タイルをデコードするため、[`raster-dem`](../../../three/source/
 
 ### logBoundary
 
-**型:** `number | undefined` — **デフォルト:** `0`
+**型:** `number | undefined`
+
+**デフォルト:** `0`
 
 **説明:** `logarithmic` が有効なときに、対数計算の基準として使用される境界値。
 
@@ -121,7 +129,7 @@ view.globe.elevationColormap = rdYlBuColorMap;
 
 ## 関連リソース
 
-- [Raster Layer](../../../three/layer/raster-layer/) — このマテリアルの使い方
-- [Raster DEM Source](../../../three/source/raster-dem-source/) — DEM の Source とその標高デコーダ
-- [ColorMap class](../../../three/api/colormap/) / [Globe class](../../../three/api/globe/) — `elevationColormap`
-- [HillshadeMaterial](../../../three/material/hillshade-material/) — DEM タイルから生成する陰影起伏
+- [Raster Layer](../../../three/layer/raster-layer/): このマテリアルの使い方
+- [Raster DEM Source](../../../three/source/raster-dem-source/): DEM の Source とその標高デコーダ
+- [ColorMap class](../../../three/api/colormap/) / [Globe class](../../../three/api/globe/): `elevationColormap`
+- [HillshadeMaterial](../../../three/material/hillshade-material/): DEM タイルから生成する陰影起伏

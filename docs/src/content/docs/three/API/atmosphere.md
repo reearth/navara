@@ -224,7 +224,7 @@ view.atmosphere.setSolarTime({ lng: 139.69 }, 6.3); // sunrise over Tokyo
 
 Adjusts `atmosphere.date` so that the local solar time at `to` matches the local solar time at `from`.
 
-The calculation is based on the sun's **hour angle** — the angular distance from the local meridian to the sun. Because hour angle increases monotonically over a solar day, there is exactly one solution per day and no morning/afternoon ambiguity. The equation of time (up to ±16 min difference from simple longitude/15 estimates) is accounted for automatically.
+The calculation is based on the sun's **hour angle**, the angular distance from the local meridian to the sun. Because hour angle increases monotonically over a solar day, there is exactly one solution per day and no morning/afternoon ambiguity. The equation of time (up to ±16 min difference from simple longitude/15 estimates) is accounted for automatically.
 
 **Syntax:**
 
@@ -332,8 +332,8 @@ view.atmosphere.setElevationFromCameraAt({ lng: -74.01, lat: 40.71 });
 | | `setDateAt` / `setDateFromCameraAt` | `setElevationAt` / `setElevationFromCameraAt` |
 |---|---|---|
 | What is matched | Hour angle (east–west sun position) | Elevation angle (height above horizon) |
-| Latitude effect | None — only longitude matters | Significant — max elevation varies by latitude |
-| Solutions per day | Exactly 1 | 2 (morning and afternoon) — context preserved automatically |
+| Latitude effect | None (only longitude matters) | Significant (max elevation varies by latitude) |
+| Solutions per day | Exactly 1 | 2 (morning and afternoon). Context preserved automatically |
 | Polar night handling | N/A | Clamped to solar noon |
 | Typical use | "Show the same time of day" | "Match shadow length and overall brightness" |
 

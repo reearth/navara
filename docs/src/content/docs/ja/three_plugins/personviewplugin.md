@@ -81,8 +81,8 @@ personView.dispose();
 
 カメラは次の 2 モードのいずれかで動作します。
 
-- **TPV（三人称視点）** — キャラクターの背後やや上に位置する追従カメラ。カメラの方位はキャラクターの方位に向けて滑らかに補間されます。
-- **FPV（一人称視点）** — キャラクターの目線位置にカメラを置き、進行方向を向きます。FPV ではキャラクターのモデルはデフォルトで非表示になります（`character.hideModelInFpv` で変更可）。
+- **TPV（三人称視点）**: キャラクターの背後やや上に位置する追従カメラ。カメラの方位はキャラクターの方位に向けて滑らかに補間されます。
+- **FPV（一人称視点）**: キャラクターの目線位置にカメラを置き、進行方向を向きます。FPV ではキャラクターのモデルはデフォルトで非表示になります（`character.hideModelInFpv` で変更可）。
 
 **V** キー（または `toggleViewMode()`）で切り替えます。**Alt** 押下中はカメラを手動操作できます。TPV ではキャラクター中心にオービット、FPV では目線位置を固定したまま視点だけ自由に回せます（フリールック）。`allowCameraControl: true` を設定すると、Alt を押さなくても常時フリーカメラになります。
 
@@ -108,9 +108,9 @@ personView.setCollision({ mode: "off" });
 
 モードは 3 種類あります。
 
-- **`"off"`**（デフォルト） — 地形を無視し、キャラクターは自由に飛行します。
-- **`"clamp"`** — 飛行はそのままに、地形を床として扱います。表面より下に沈み込む位置になると押し上げられます。地面をすり抜けさせたくない飛行キャラクターに向いています。
-- **`"ground"`** — キャラクターを地表に貼り付け、斜面を上り下りしながら徒歩で山を登れるようにします。このモードでは上昇・下降キーは効かず、高度は地形が決めるため `minAlt` / `maxAlt` も適用されません。
+- **`"off"`**（デフォルト）: 地形を無視し、キャラクターは自由に飛行します。
+- **`"clamp"`**: 飛行はそのままに、地形を床として扱います。表面より下に沈み込む位置になると押し上げられます。地面をすり抜けさせたくない飛行キャラクターに向いています。
+- **`"ground"`**: キャラクターを地表に貼り付け、斜面を上り下りしながら徒歩で山を登れるようにします。このモードでは上昇・下降キーは効かず、高度は地形が決めるため `minAlt` / `maxAlt` も適用されません。
 
 `groundOffset` はサンプリングした地表からキャラクターを浮かせる量で、モデルの原点が足元にない場合に使います。`alignToSlope`（デフォルトで有効）は立っている斜面に合わせてキャラクターを傾け、`"clamp"` で地形から離れて飛ぶと直立へ戻ります。
 
@@ -158,7 +158,7 @@ new PersonViewPlugin(config?: PersonViewConfig)
 | `startLng`            | `number`          | `139.7671`      | 開始経度（度）。                                                                                                         |
 | `startHeight`         | `number`          | `500`           | 開始高度（メートル）。                                                                                                   |
 | `startHeading`        | `number`          | `Math.PI * 1.3` | 開始方位（ラジアン、0 = 北）。                                                                                           |
-| `keys`                | `KeyBindings`     | _デフォルト_    | キー割り当て — [KeyBindings](#keybindings) を参照。                                                                      |
+| `keys`                | `KeyBindings`     | _デフォルト_    | キー割り当て。[KeyBindings](#keybindings) を参照。                                                                      |
 
 ### CharacterConfig
 
@@ -408,6 +408,6 @@ dispose(): void
 
 ## 関連リソース
 
-- [Interior Explore チュートリアル](../../three/tutorial/interior-explore/) — 3D Tiles 建物内で `PersonViewPlugin` を使う手順
-- [OverlayPlugin](../overlayplugin/) — `PersonViewPlugin` と組み合わせてワールド空間の HTML オーバーレイを実現
-- [About three_plugins](../about/) — パッケージ概要
+- [Interior Explore チュートリアル](../../three/tutorial/interior-explore/): 3D Tiles 建物内で `PersonViewPlugin` を使う手順
+- [OverlayPlugin](../overlayplugin/): `PersonViewPlugin` と組み合わせてワールド空間の HTML オーバーレイを実現
+- [About three_plugins](../about/): パッケージ概要

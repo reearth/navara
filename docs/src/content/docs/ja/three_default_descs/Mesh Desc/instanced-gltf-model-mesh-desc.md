@@ -7,7 +7,7 @@ sidebar:
 
 `InstancedGltfModelMeshDesc` クラスは、単一の GLTF/GLB モデルを読み込み、その複数の変換済みコピー（インスタンス）をレンダリングするメッシュです。GLTF を一度だけ読み込み、各 `Mesh` ノードを兄弟の `InstancedMesh` に展開して、モデルインスタンスごとに 1 つのインスタンス行列スロットを共有します。
 
-以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`geodetic`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-desc-base) を参照してください。
+以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`geodetic`、`visible`）が利用できます。詳細は [MeshDesc](../mesh-desc-base) を参照してください。
 
 GLTF の内容に基づき、2 つの内部レンダリングパスのいずれかが自動的に選択されます:
 

@@ -7,12 +7,12 @@
 
 # Navara
 
-Web map engines have long forced a choice: engines with polished declarative APIs are easy to adopt but hard to extend beyond their built-in features, while engines that expose deep low-level control are powerful but demand steep expertise. Fully 3D globe applications usually leave no option but the latter. Navara is a highly extensible 3D map engine built to remove that trade-off. It streams real-world GIS data such as satellite imagery, terrain, 3D city models, and vector data onto an interactive globe, and lets you present it the way your application needs: as a clean basemap for data visualization, styled per feature by attributes, or as a photorealistic scene with atmosphere, sunlight, and shadows.
+Web map engines have long forced a choice: engines with polished declarative APIs are easy to adopt but hard to extend beyond their built-in features, while engines that expose deep low-level control are powerful but demand steep expertise. Fully 3D globe applications usually leave no option but the latter. Navara is a highly extensible 3D map engine built to remove that trade-off. It streams real-world GIS data, from satellite imagery and terrain to 3D city models and vector data, onto an interactive globe, and lets you present it the way your application needs: as a clean basemap for data visualization, styled per feature by attributes, or as a photorealistic scene with atmosphere, sunlight, and shadows.
 
 Navara's answer to the trade-off is a tiered API. Capabilities are organized into four tiers, so you start with the simplicity of a declarative engine and drop down, as far as the render pipeline itself, only when you need more control:
 
-- **Declarative**: declare sources and layers as plain config objects (basemaps, terrain, vector data, 3D Tiles); meshes, effects, and lights work the same declarative way.
-- **Plugin**: add purpose-built features as ready-made bundles, such as the photorealistic scene, first-person walking, DOM overlays, and the attribution UI; anyone can package and share their own plugin.
+- **Declarative**: declare sources and layers as plain config objects (basemaps, terrain, vector data, 3D Tiles). Meshes, effects, and lights work the same declarative way.
+- **Plugin**: add purpose-built features as ready-made bundles, such as the photorealistic scene, first-person walking, DOM overlays, and the attribution UI. Anyone can package and share their own plugin.
 - **API**: per-feature styling by attributes (`FeatureEvaluator`), feature picking, terrain sampling, camera control, and standalone geodetic/ECEF math utilities usable without the map engine.
 - **Shader**: full access to the rendering engine for your own shaders and effects, writing custom mesh/effect/light descriptors against its scene graph and render pipeline.
 
@@ -49,12 +49,12 @@ Under the hood, Navara is a headless GIS core, independent of the rendering engi
   <sub><i>Imagery: <a href="https://mapterhorn.com/attribution">© Mapterhorn</a> · <a href="https://maps.gsi.go.jp/development/ichiran.html">Geospatial Information Authority of Japan Tiles - Latest Nationwide Photo (Seamless)</a> · <a href="https://terrain.reearth.land/">© Re:Earth Terrain</a> · <a href="https://www.geospatial.jp/ckan/dataset/plateau-13102-chuo-ku-2023">3D City Model (Project PLATEAU) Chuo Ward (FY2023) - MLIT PLATEAU</a></i></sub>
 </p>
 
-- 📖 **Documentation**: https://navara-docs.reearth.workers.dev//
+- 📖 **Documentation**: https://navara-docs.reearth.workers.dev/
 - 🌏 **Live examples**: https://navara-preview.reearth.workers.dev/
 
 ## Usage
 
-See [What is Navara?](https://navara-docs.reearth.workers.dev//guides/introduction/what-is-navara/) for an overview and [Getting Started](https://navara-docs.reearth.workers.dev//guides/introduction/getting-started/) to build your first 3D map.
+See [What is Navara?](https://navara-docs.reearth.workers.dev/guides/introduction/what-is-navara/) for an overview and [Getting Started](https://navara-docs.reearth.workers.dev/guides/introduction/getting-started/) to build your first 3D map.
 
 ## Architecture
 
@@ -64,7 +64,7 @@ See [What is Navara?](https://navara-docs.reearth.workers.dev//guides/introducti
 
 ### Install toolchains
 
-You have to install the following environment.
+Install the following toolchains.
 
 - Rust (stable)
 - Node.js (LTS)

@@ -104,7 +104,7 @@ view.toneMappingExposure = 6;
 
 ## Adding Cloud Effects
 
-`qualityPreset: "high"` sharpens the cloud detail and `lightShafts: true` adds god rays through the layer; adjust shadows and density from there.
+`qualityPreset: "high"` sharpens the cloud detail and `lightShafts: true` adds god rays through the layer. Adjust shadows and density from there.
 
 ```typescript
 const clouds = view.addEffect<CloudsEffectDesc>({

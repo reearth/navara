@@ -143,6 +143,6 @@ Source より先に、それを参照しているレイヤーを削除してく�
 
 ## 関連リソース
 
-- [ThreeView functions](../../../three/api/threeview-functions/) — `addSource`（返されたハンドルの `update()` / `delete()` については [Source の更新と削除](#source-の更新と削除) を参照）
-- [レイヤーの種類](../../../three/layer/about/) — レイヤーのタイプ
-- [Materials](../../../three/material/about/) — マテリアル（スタイリング）のリファレンス
+- [ThreeView functions](../../../three/api/threeview-functions/): `addSource`（返されたハンドルの `update()` / `delete()` については [Source の更新と削除](#source-の更新と削除) を参照）
+- [レイヤーの種類](../../../three/layer/about/): レイヤーのタイプ
+- [Materials](../../../three/material/about/): マテリアル（スタイリング）のリファレンス

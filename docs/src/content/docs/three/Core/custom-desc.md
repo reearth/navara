@@ -45,8 +45,8 @@ All base classes inherit from `BaseDesc` and share a common lifecycle.
 
 Custom descriptors access internal APIs through two properties: `this.view` and `this.ctx`.
 
-- **`this.view`** (`ThreeView`) — High-level view state: camera, atmosphere, globe
-- **`this.ctx`** (`ViewContext`) — Rendering internals: scenes, post-processing passes, buffers, textures
+- **`this.view`** (`ThreeView`): High-level view state: camera, atmosphere, globe
+- **`this.ctx`** (`ViewContext`): Rendering internals: scenes, post-processing passes, buffers, textures
 
 #### view Properties
 
@@ -88,7 +88,7 @@ See [ThreeView Properties](../../../three/api/threeview-properties/).
 | `ctx.findLight(key)`    | First active light Descriptor registered under `key` (e.g. `"sun"`)          |
 | `ctx.findMesh(key)`     | First active mesh Descriptor registered under `key` (e.g. `"gltfModel"`)     |
 
-Use these to inherit the scene's existing configuration instead of duplicating it — a custom lighting effect can read the sun's intensity and colour from `ctx.findLight("sun")` rather than taking its own options. Each returns `undefined` when no such Descriptor is active.
+Use these to inherit the scene's existing configuration instead of duplicating it: a custom lighting effect can read the sun's intensity and colour from `ctx.findLight("sun")` rather than taking its own options. Each returns `undefined` when no such Descriptor is active.
 
 #### Buffer / Texture Access
 
@@ -96,7 +96,7 @@ Use these to inherit the scene's existing configuration instead of duplicating i
 | ----------------------------- | ------------------------------------------------ |
 | `ctx.getRenderTarget()`       | Get the main render target (includes G-buffer)   |
 | `ctx.getGlobeDepthTexture()`  | Get the globe depth texture for post-processing  |
-| `ctx.getGlobeNormalTexture()` | Get the terrain-only normal, sampled in screen space. Declare `globeNormal` in `requiredBuffers` — it is kept at 1x1 otherwise |
+| `ctx.getGlobeNormalTexture()` | Get the terrain-only normal, sampled in screen space. Declare `globeNormal` in `requiredBuffers`. It is kept at 1x1 otherwise |
 | `ctx.getNormalTexture()`      | Get the scene normal texture from the G-buffer   |
 | `ctx.getEffectIdsTexture()`   | Get the effect IDs texture from the G-buffer     |
 | `ctx.getEmissiveTexture()`    | Get the emissive texture from the G-buffer       |
@@ -113,7 +113,7 @@ Use these to inherit the scene's existing configuration instead of duplicating i
 
 Navara renders into a multiple-render-target (MRT) G-buffer. Depth/normal-based effects (SSAO, SSR, outlines, aerial perspective, clouds) and selective effects (Bloom / Outline) read these attachments, so a mesh participates in those effects only if its material writes the G-buffer.
 
-Only color and normal are always present. The rest are allocated on demand and **packed after them with no gaps**, so their locations shift with the configuration — the shader receives each one's `layout(location = …)` as a stamped define.
+Only color and normal are always present. The rest are allocated on demand and **packed after them with no gaps**, so their locations shift with the configuration. The shader receives each one's `layout(location = …)` as a stamped define.
 
 | Attachment | Location | Contents                                                     | Allocated                |
 | ---------- | -------- | ------------------------------------------------------------ | ------------------------ |
@@ -123,11 +123,11 @@ Only color and normal are always present. The rest are allocated on demand and *
 | Emissive   | packed   | Selective-effect additive emissive                            | `buffers.emissive`        |
 | Shadow     | packed   | R = shadow amount (0 = lit .. 1 = shadowed), G = albedo flag  | `buffers.shadow`          |
 
-Never hardcode an optional attachment index — read it from the `ViewContext` accessors below.
+Never hardcode an optional attachment index. Read it from the `ViewContext` accessors below.
 
 ### Built-in Materials Are Automatic
 
-Importing `@navaramap/three` patches every built-in Three.js material — `MeshStandardMaterial`, `MeshBasicMaterial`, `MeshLambertMaterial`, `MeshPhongMaterial`, `SpriteMaterial`, `PointsMaterial` — so they write the G-buffer. When your custom Descriptor uses one of these, there is nothing to do.
+Importing `@navaramap/three` patches every built-in Three.js material (`MeshStandardMaterial`, `MeshBasicMaterial`, `MeshLambertMaterial`, `MeshPhongMaterial`, `SpriteMaterial`, `PointsMaterial`) so they write the G-buffer. When your custom Descriptor uses one of these, there is nothing to do.
 
 ### Custom Materials Must Opt In
 
@@ -157,9 +157,9 @@ Requirements and behavior:
 - The fragment shader must expose a view-space normal named by `options.normal`.
 - The last `}` in the vertex and fragment shaders is assumed to close `main()`.
 - Requires WebGL2 / GLSL 3 (Navara's default).
-- Idempotent — calling it again on the same material is a no-op.
+- Idempotent: calling it again on the same material is a no-op.
 
-The automatic built-in patching is performed by an internal `overrideMaterialsForMRT()` on import; application code never calls it.
+The automatic built-in patching is performed by an internal `overrideMaterialsForMRT()` on import. Application code never calls it.
 
 #### Complete Example
 
@@ -249,9 +249,9 @@ The effectIds, emissive, shadow and globeNormal buffers are optional: they exist
 
 Buffer encodings to be aware of when sampling:
 
-- The normal buffer's RG channels hold the **view-space normal in octahedral encoding** — decode with `unpackVec2ToNormal()` from the `NORMAL_PACKING_SHADER` GLSL string exported by `@navaramap/three` (a plain `xy * 2 - 1` reconstruction produces wrong shading).
-- The shadow buffer holds `R = shadow amount` (0 = lit .. 1 = fully shadowed) and `G = albedo-output flag` (1 when the fragment's color is plain albedo via the [`lit`](../../../three/api/threeview-properties/#lit) option — a deferred lighting pass uses it as its "shade this pixel" mask).
-- Depth textures follow Three.js packing conventions — check `depthBufferPacking` / `globeDepthBufferPacking` on the MRT pass and unpack with the helpers in the `DEPTH_PACKING_SHADER` GLSL string exported by `@navaramap/three` (Three.js's `packing` chunk).
+- The normal buffer's RG channels hold the **view-space normal in octahedral encoding**. Decode with `unpackVec2ToNormal()` from the `NORMAL_PACKING_SHADER` GLSL string exported by `@navaramap/three` (a plain `xy * 2 - 1` reconstruction produces wrong shading).
+- The shadow buffer holds `R = shadow amount` (0 = lit .. 1 = fully shadowed) and `G = albedo-output flag` (1 when the fragment's color is plain albedo via the [`lit`](../../../three/api/threeview-properties/#lit) option. A deferred lighting pass uses it as its "shade this pixel" mask).
+- Depth textures follow Three.js packing conventions: check `depthBufferPacking` / `globeDepthBufferPacking` on the MRT pass and unpack with the helpers in the `DEPTH_PACKING_SHADER` GLSL string exported by `@navaramap/three` (Three.js's `packing` chunk).
 
 ## Custom Mesh Desc
 
@@ -751,7 +751,7 @@ The `BaseHandle<T>` returned from `view.addMesh()`, `view.addLight()`, or `view.
 
 ## Implementing Picking in Custom Descriptors
 
-For an overview of picking from the user's perspective, see [MeshDesc — Picking](../../../three_default_descs/mesh-desc/mesh-desc-base/#picking). This section covers how to implement picking support when authoring a custom Descriptor.
+For an overview of picking from the user's perspective, see [MeshDesc: Picking](../../../three_default_descs/mesh-desc/mesh-desc-base/#picking). This section covers how to implement picking support when authoring a custom Descriptor.
 
 ### Turnkey Picking with PickableMeshWrapper
 

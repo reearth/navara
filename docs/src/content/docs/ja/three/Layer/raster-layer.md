@@ -86,4 +86,4 @@ view.addLayer({
 
 - [Raster Tile Source](../../../three/source/raster-tile-source/) / [Raster DEM Source](../../../three/source/raster-dem-source/)
 - [RasterMaterial](../../../three/material/raster-material/) / [HillshadeMaterial](../../../three/material/hillshade-material/) / [ElevationHeatmapMaterial](../../../three/material/elevation-heatmap-material/)
-- [Terrain Layer](../../../three/layer/terrain-layer/) — 3D 地形に画像をドレープする
+- [Terrain Layer](../../../three/layer/terrain-layer/): 3D 地形に画像をドレープする

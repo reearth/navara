@@ -36,11 +36,13 @@ view.setCamera({
 });
 
 for (const { label, lng, lat } of AIRPORTS) {
-  addButton(label, () => {
-    view.flyTo(
+  addButton(label, async () => {
+    const completed = await view.flyTo(
       { lng, lat, distance: CAMERA_DISTANCE, heading: 0, pitch: -60, roll: 0 },
-      2000,
+      { duration: 2000, easing: "quinticInOut" },
     );
+    // `false` means another button interrupted this flight mid-way.
+    console.log(`flyTo ${label}: ${completed ? "completed" : "interrupted"}`);
   });
 }
 

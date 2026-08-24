@@ -30,7 +30,7 @@ view.addFontFamily(
 
 ## Face Priority
 
-For each codepoint, the first face whose unicode ranges contain it wins, so face order matters. The parsed faces follow CSS semantics: later `@font-face` rules take precedence when their unicode ranges overlap, so faces come out in reverse stylesheet order. Stylesheets rely on this — for example, Google Fonts' `latin-ext` block declares broad ranges that include codepoints only present in the `latin` file declared after it.
+For each codepoint, the first face whose unicode ranges contain it wins, so face order matters. The parsed faces follow CSS semantics: later `@font-face` rules take precedence when their unicode ranges overlap, so faces come out in reverse stylesheet order. Stylesheets rely on this. For example, Google Fonts' `latin-ext` block declares broad ranges that include codepoints only present in the `latin` file declared after it.
 
 To control priority across families, pass the family names as an array in the `fontFamily` option. Faces are then ordered by their family's position in the array. This matters for stylesheets like the Google Fonts CSS API that sort `@font-face` blocks alphabetically regardless of request order:
 
@@ -63,7 +63,7 @@ fetchFontFamilyFromCss(
 
 **Parameters:**
 
-- `family`: Family name to register the faces under; referenced from `material.font`.
+- `family`: Family name to register the faces under. Referenced from `material.font`.
 - `cssUrl`: Stylesheet URL(s) to fetch. With multiple URLs, face priority follows URL order, then block order within each stylesheet.
 - `options`: Optional [block filters](#cssfontfacefilter-type) and `requestInit` (extra `fetch` options, e.g. credentials for a private font host).
 
@@ -155,7 +155,7 @@ await parseCssUnicodeRange("U+0102-0103, U+20AB");
 
 Filters selecting which `@font-face` blocks of a stylesheet become faces. Available on both functions.
 
-- `fontFamily`: Only include blocks whose `font-family` matches (quotes stripped, case-insensitive). When given as an array, it also sets face priority — see [Face Priority](#face-priority).
+- `fontFamily`: Only include blocks whose `font-family` matches (quotes stripped, case-insensitive). When given as an array, it also sets face priority. See [Face Priority](#face-priority).
 - `fontWeight`: Only include blocks whose `font-weight` matches, e.g. `800` or `"100 900"`.
 - `fontStyle`: Only include blocks whose `font-style` matches, e.g. `"normal"` or `"italic"`.
 

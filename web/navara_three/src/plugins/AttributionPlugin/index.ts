@@ -189,7 +189,7 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
 
   async init(view: View, _ctx: ViewContext): Promise<void> {
     this.view = view;
-    // Recompute the zoom level on render. `fovy` is undefined until the first
+    // Recompute the zoom level on render. `fov` is undefined until the first
     // frame, so a camera `moveend` alone would miss the initial value on a
     // static map; `preRender` reliably fires while the scene renders. The
     // level-change gate in `handlePreRender` keeps this from churning the DOM.

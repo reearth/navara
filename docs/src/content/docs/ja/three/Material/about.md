@@ -50,5 +50,5 @@ view.addLayer({
 
 ## 関連リソース
 
-- [レイヤーの種類](../../../three/layer/about/) — レイヤーのタイプと追加方法
-- [About Source](../../../three/source/about/) — データ側
+- [レイヤーの種類](../../../three/layer/about/): レイヤーのタイプと追加方法
+- [About Source](../../../three/source/about/): データ側

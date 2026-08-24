@@ -9,8 +9,8 @@ use bevy_ecs::{
 use navara_buffer_store::{BufferStore, Handle};
 use navara_camera::{
     CamDirType, CameraControlUpdateEvent, CameraController, CameraDirection, CameraEvent,
-    CameraFrustum, CameraMarker, CameraOrientation, CameraStatus, FrustumEvent, get_heading,
-    get_pitch, get_roll,
+    CameraFrustum, CameraMarker, CameraOrientation, CameraStatus, FlightIdAllocator, FlyToEasing,
+    FrustumEvent, get_heading, get_pitch, get_roll,
 };
 use navara_component::{Deleted, Rendered};
 use navara_core::{
@@ -949,6 +949,9 @@ impl App {
         });
     }
 
+    /// Starts a camera flight and returns its id. The flight's terminal
+    /// record is delivered later as a `CameraFlightEnded` event carrying the
+    /// same id.
     #[allow(clippy::too_many_arguments)]
     pub fn fly_to(
         &mut self,
@@ -959,7 +962,14 @@ impl App {
         duration: Option<FloatType>,
         max_height: Option<FloatType>,
         distance: Option<FloatType>,
-    ) {
+        easing: Option<u8>,
+    ) -> u32 {
+        let id = self
+            .app
+            .world_mut()
+            .get_resource_or_insert_with(FlightIdAllocator::default)
+            .allocate();
+
         let pos = position.and_then(|v| (v.len() == 3).then(|| Vec3::new(v[0], v[1], v[2])));
         self.app.world_mut().write_message(CameraEvent::FlyTo {
             position: pos,
@@ -971,7 +981,11 @@ impl App {
             duration,
             max_height,
             distance,
+            easing: easing.and_then(|v| FlyToEasing::try_from(v).ok()),
+            id,
         });
+
+        id
     }
 
     pub fn look_at(&mut self, target: Vec<FloatType>, offset: Vec<FloatType>) {
@@ -1062,12 +1076,13 @@ impl App {
         None
     }
 
-    pub fn get_camera_fov_y(&mut self) -> Option<FloatType> {
+    /// Vertical field of view in radians as set via `set_frustum`.
+    pub fn get_camera_fov(&mut self) -> Option<FloatType> {
         let world = self.app.world_mut();
         let mut query = world.query_filtered::<&CameraFrustum, With<CameraMarker>>();
 
         if let Some(frustum) = query.iter(world).next() {
-            return Some(frustum.fov_y);
+            return Some(frustum.fov);
         }
 
         None
@@ -1088,7 +1103,7 @@ impl App {
         let fov_y = {
             let world = self.app.world_mut();
             let mut query = world.query_filtered::<&CameraFrustum, With<CameraMarker>>();
-            query.iter(world).next()?.fov_y
+            query.iter(world).next()?.fov
         };
         // Viewport height in CSS px (matches the 256px tile model).
         let viewport_height = self.app.world_mut().get_resource::<Window>()?.raw_height();

@@ -6,6 +6,14 @@ pub struct EntityEvent {
     pub r#gen: u32,
 }
 
+/// Terminal record of a camera flight started by `flyTo`.
+/// `completed` is `false` when the flight was superseded or canceled.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CameraFlightEnded {
+    pub id: u32,
+    pub completed: bool,
+}
+
 #[derive(Debug)]
 pub struct ComponentEvent<T = ()> {
     pub ind: u32,

@@ -21,7 +21,7 @@ The `SkyEnvMapEffectDesc` class is a pass that renders the sky environment map. 
 
 **Type:** `number | undefined`
 
-**Description:** Specifies the environment map resolution. This value is set only at creation time; changing it later requires recreating the pass.
+**Description:** Specifies the environment map resolution. This value is set only at creation time. Changing it later requires recreating the pass.
 
 **Default:** `256`
 

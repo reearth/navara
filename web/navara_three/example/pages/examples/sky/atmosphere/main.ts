@@ -40,7 +40,7 @@ const tilesSource = view.addSource({
 const tiles = view.addLayer({
   type: "3d-tiles",
   source: tilesSource,
-  model: { maxSse: 40, normals: true },
+  model: { maxSse: 20, normals: true },
 });
 
 const TIMES = [

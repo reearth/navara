@@ -45,7 +45,7 @@ globe.opacity = 0.8;
 ```typescript
 // コンストラクタで設定
 const view = new ThreeView({
-  maxSse: 1.5,
+  maxSse: 1,
 });
 
 // 現在の値を取得
@@ -334,7 +334,7 @@ import ThreeView, { Color } from "@navaramap/three";
 
 const view = new ThreeView({
   // 初期化時のみ設定可能なプロパティ
-  maxSse: 2,
+  maxSse: 1,
   segments: 64,
   useNormal: true,
   // 実行時に変更可能なプロパティ

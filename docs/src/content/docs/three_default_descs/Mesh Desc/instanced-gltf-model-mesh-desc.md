@@ -7,11 +7,11 @@ sidebar:
 
 The `InstancedGltfModelMeshDesc` class is a mesh descriptor that loads a single GLTF/GLB model and renders multiple transformed copies (instances) of it. It loads the GLTF once, then fans out every `Mesh` node into a sibling `InstancedMesh` sharing one per-instance matrix slot per model instance.
 
-In addition to the properties below, the common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `geodetic`, `visible`) are available. See [MeshDesc](./mesh-desc-base) for details.
+In addition to the properties below, the common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `geodetic`, `visible`) are available. See [MeshDesc](../mesh-desc-base) for details.
 
 The descriptor selects one of two internal rendering paths automatically based on the GLTF contents:
 
-- **Non-skinned path (instanced):** every `Mesh` node becomes an `InstancedMesh`. All instances share one `AnimationMixer` running on the source scene; per-frame, each source mesh's `matrixWorld` is re-sampled and every instance's matrix is rewritten as `T_i * sourceLocal_s`. Node-TRS and morph-target animations both play back correctly.
+- **Non-skinned path (instanced):** every `Mesh` node becomes an `InstancedMesh`. All instances share one `AnimationMixer` running on the source scene. Per-frame, each source mesh's `matrixWorld` is re-sampled and every instance's matrix is rewritten as `T_i * sourceLocal_s`. Node-TRS and morph-target animations both play back correctly.
 - **Skinned path (per-instance clone fallback):** because three.js's `InstancedMesh` cannot apply skinning, skinned GLTFs fall back to one `SkeletonUtils.clone` per instance, each with its own `AnimationMixer`. This gives up instanced rendering for the skinned parts, but keeps the same desc API and plays shared clips in lockstep across clones.
 
 The mesh uses Relative-To-Eye (RTE) precision, so it can be anchored anywhere on the globe without floating-point precision artifacts.
@@ -181,7 +181,7 @@ const index = handle.ref.add({
 
 ### handle.ref.removeAt(index)
 
-Removes an instance by index. Uses swap-with-last for O(1) removal; instance order is not preserved.
+Removes an instance by index. Uses swap-with-last for O(1) removal. Instance order is not preserved.
 
 ```typescript
 handle.ref.removeAt(1);
@@ -221,7 +221,7 @@ handle.ref.on("load", () => {
 
 ### handle.ref.playAnimation(name)
 
-Plays the named animation clip on all instances. On the non-skinned path, all instances play in lockstep from a single mixer; on the skinned path, each clone plays its own copy of the same clip.
+Plays the named animation clip on all instances. On the non-skinned path, all instances play in lockstep from a single mixer. On the skinned path, each clone plays its own copy of the same clip.
 
 ```typescript
 handle.ref.playAnimation("Fly");

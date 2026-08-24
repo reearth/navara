@@ -52,10 +52,10 @@ import { Color } from "@navaramap/three";
 ```
 
 :::note
-`maxSse` や `segments` のようなグローブ全体の設定は、このマテリアルではなく [Globe](/three/api/globe/) API で設定します。
+`maxSse` や `segments` のようなグローブ全体の設定は、このマテリアルではなく [Globe](../../api/globe/) API で設定します。
 :::
 
 ## 関連リソース
 
-- [Raster Layer](../../../three/layer/raster-layer/) — このマテリアルの使い方
-- [Raster Tile Source](../../../three/source/raster-tile-source/) — 画像の Source（URL、ズーム、TMS）
+- [Raster Layer](../../../three/layer/raster-layer/): このマテリアルの使い方
+- [Raster Tile Source](../../../three/source/raster-tile-source/): 画像の Source（URL、ズーム、TMS）

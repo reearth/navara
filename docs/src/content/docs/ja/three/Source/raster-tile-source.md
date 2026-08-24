@@ -38,4 +38,4 @@ view.addLayer({ type: "raster", source: imagery, raster: { opacity: 0.8 } });
 ## 関連リソース
 
 - [About Source](../../../three/source/about/)
-- [RasterMaterial](../../../three/material/raster-material/) — ラスターレイヤーの描画オプション
+- [RasterMaterial](../../../three/material/raster-material/): ラスターレイヤーの描画オプション

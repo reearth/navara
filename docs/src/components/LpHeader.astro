@@ -1,0 +1,376 @@
+---
+// The Navara site header, shared between the landing page and the docs site.
+// Theme colors and external links come from src/data/lp.json; the nav labels
+// and locale names come from src/data/lp-locales/<locale>.json.
+//
+// Two variants:
+// - "lp":   fixed, transparent over the LP hero; frosts on scroll via the
+//           lp-header-solid class toggled by LandingPage.astro's script. Also
+//           carries the `?color` theme-preview switcher (its behavior lives in
+//           LandingPage.astro too — the switcher rewrites LP-only CSS vars).
+// - "docs": rendered inside Starlight's fixed header shell (see the Header
+//           component override), which owns position, height, padding and
+//           background — the LP look reduces to the brand/nav row, always
+//           solid, with an optional `search` slot for Starlight's search.
+import { ChevronDown, Globe } from "@lucide/astro";
+import lp from "../data/lp.json";
+import githubIcon from "../assets/lp/github-invertocat.svg?raw";
+import logoHorizontal from "../../public/logo/black/black_Navara_Horizontal_logo_260819.svg?raw";
+
+interface Props {
+  locale: string;
+  variant: "lp" | "docs";
+}
+
+const ROOT_LOCALE = "en";
+
+const localeModules = import.meta.glob<{ default: any }>("../data/lp-locales/*.json", {
+  eager: true,
+});
+const locales: Record<string, any> = {};
+for (const [path, mod] of Object.entries(localeModules)) {
+  const code = path.match(/([\w-]+)\.json$/)?.[1];
+  if (code) locales[code] = mod.default;
+}
+
+const { locale, variant } = Astro.props;
+const t = locales[locale];
+if (!t) throw new Error(`LP locale strings not found: ${locale}`);
+
+const { colors, links } = lp;
+
+// Inline the brand logo (the black variant carries no fill attributes) so
+// `fill: currentColor` lets CSS hand it the ink of whatever surface it sits on.
+const logoSvg = (raw: string, className: string): string =>
+  raw.replace("<svg ", `<svg class="${className}" role="img" aria-label="Navara" `);
+
+// Prefix internal links with the locale path segment (root locale has none).
+function localizeHref(href: string): string {
+  if (!href.startsWith("/") || locale === ROOT_LOCALE) return href;
+  return `/${locale}${href}`;
+}
+
+// Where the language switcher sends each locale. On the LP that is the
+// locale's landing page (pre-release parked under /lp — see astro.config.mjs);
+// on docs it is the current page in the target locale (every docs page exists
+// in all locales, ja/ mirrors the root tree).
+const pathForLocale = (code: string): string => {
+  if (variant === "lp") return code === ROOT_LOCALE ? "/lp/" : `/${code}/lp/`;
+  let path = Astro.url.pathname;
+  if (locale !== ROOT_LOCALE) {
+    if (path === `/${locale}` || path === `/${locale}/`) path = "/";
+    else if (path.startsWith(`/${locale}/`)) path = path.slice(locale.length + 1);
+  }
+  return code === ROOT_LOCALE ? path : `/${code}${path}`;
+};
+
+// Theme candidates (primary/sub/accent sets) for the LP's `?color` preview
+// switcher. Values live in lp.json (themeVariants) like the rest of the theme.
+// Each candidate is also offered with primary/sub exchanged ("<name>-swap") to
+// preview the other color carrying the bands — except "current", whose
+// near-black primary as a page background has no readable counterpart.
+type ThemeVariant = { primary: string; sub: string; accent: string };
+const themeVariants: [string, ThemeVariant][] =
+  variant === "lp"
+    ? Object.entries(lp.themeVariants ?? {}).flatMap(
+        ([name, v]: [string, ThemeVariant]): [string, ThemeVariant][] =>
+          name === "current"
+            ? [[name, v]]
+            : [
+                [name, v],
+                [`${name}-swap`, { primary: v.sub, sub: v.primary, accent: v.accent }],
+              ],
+      )
+    : [];
+---
+
+<header class:list={["lp-header", `lp-header--${variant}`]}>
+  {
+    variant === "docs" ? (
+      <a class="lp-brand-home" href={locale === ROOT_LOCALE ? "/" : `/${locale}/`}>
+        <Fragment set:html={logoSvg(logoHorizontal, "lp-brand")} />
+      </a>
+    ) : (
+      <Fragment set:html={logoSvg(logoHorizontal, "lp-brand")} />
+    )
+  }
+  {
+    variant === "docs" && (
+      <div class="lp-header-search">
+        <slot name="search" />
+      </div>
+    )
+  }
+  <nav class="lp-nav">
+    <a href={localizeHref(links.docs)}>{t.nav.docs}</a>
+    <a href={links.examples}>{t.nav.examples}</a>
+    <a class="lp-nav-github" href={links.github} aria-label={t.nav.github} set:html={githubIcon} />
+    <label class="lp-lang">
+      <Globe size={16} stroke-width={1.8} aria-hidden="true" />
+      <span class="lp-lang-label" aria-hidden="true">{t.short}</span>
+      <ChevronDown class="lp-lang-chevron" size={14} stroke-width={2} aria-hidden="true" />
+      <!-- Invisible select stretched over the whole switcher, so a
+           click anywhere on it opens the native dropdown. -->
+      <select aria-label="Language" data-lp-lang>
+        {
+          Object.entries(locales).map(([code, strings]: [string, any]) => (
+            <option value={pathForLocale(code)} selected={code === locale} lang={strings.htmlLang}>
+              {strings.short}
+            </option>
+          ))
+        }
+      </select>
+    </label>
+    {
+      /* Theme preview switcher: hidden unless the URL carries `?color` (see
+         the script in LandingPage.astro). Each option carries its full
+         primary/sub/accent set; the striped dot paints the live vars, so it
+         doubles as the "current theme" indicator. */
+      variant === "lp" && (
+        <label class="lp-lang lp-color" data-lp-color hidden>
+          <span class="lp-color-dot" aria-hidden="true" />
+          <ChevronDown class="lp-lang-chevron" size={14} stroke-width={2} aria-hidden="true" />
+          <select aria-label="Theme colors">
+            {themeVariants.map(([name, v]) => (
+              <option
+                value={name}
+                data-pri={v.primary}
+                data-sub={v.sub}
+                data-acc={v.accent}
+                selected={v.accent === colors.accent && v.primary === colors.primary}
+              >
+                {name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )
+    }
+  </nav>
+</header>
+
+<script>
+  // A native select drops its list on mousedown; suppress that and open
+  // on the completed click instead (where showPicker is available —
+  // otherwise the native behavior stays).
+  const openPickerOnClick = (el: HTMLSelectElement) => {
+    if (typeof el.showPicker !== "function") return;
+    el.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      el.focus();
+    });
+    el.addEventListener("click", () => el.showPicker());
+  };
+
+  // Navigate to the selected locale's page.
+  document.querySelectorAll<HTMLSelectElement>("select[data-lp-lang]").forEach((el) => {
+    el.addEventListener("change", () => {
+      location.href = el.value;
+    });
+    openPickerOnClick(el);
+  });
+</script>
+
+<style is:global>
+  /* LP variant: always fixed; gains a dark backdrop once the hero is gone
+     so the light sections keep it readable. */
+  .lp-header--lp {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    padding: 20px max(48px, var(--lp-safe-r, 0px)) 20px max(48px, var(--lp-safe-l, 0px));
+    transition: background 0.3s ease;
+  }
+  .lp-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  /* Scrolled past the hero, the header frosts with the same primary
+     glass as the intro panel, so both read as one surface; the chrome
+     uses the matching on-band ink. */
+  .lp-header.lp-header-solid {
+    background: color-mix(in srgb, var(--pri) 60%, transparent);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  .lp-header-solid .lp-brand,
+  .lp .lp-header-solid .lp-nav a,
+  .lp-header-solid .lp-lang {
+    color: var(--on-band);
+  }
+  .lp .lp-header-solid .lp-nav a:hover,
+  .lp-header-solid .lp-lang:hover {
+    color: var(--acc);
+  }
+  /* Brand logo. On the LP it starts invisible — the hero's centered logo
+     carries the branding — and fades in together with the frosted backdrop
+     once scrolled past the hero. visibility keeps the hidden copy out of the
+     accessibility tree while the hero logo is the one on screen. */
+  .lp-brand {
+    display: block;
+    height: 24px;
+    width: auto;
+    color: var(--on-dark);
+    transition:
+      opacity 0.3s ease,
+      visibility 0.3s ease;
+  }
+  .lp-header--lp .lp-brand {
+    opacity: 0;
+    visibility: hidden;
+  }
+  .lp-brand path {
+    fill: currentColor;
+  }
+  .lp-header-solid .lp-brand {
+    opacity: 1;
+    visibility: visible;
+  }
+  .lp-nav {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .lp-header .lp-nav a {
+    color: var(--on-dark);
+    text-decoration: none;
+  }
+  .lp-header .lp-nav a:hover {
+    color: var(--acc);
+  }
+  .lp-nav-github svg {
+    display: block;
+    width: 20px;
+    height: 20px;
+  }
+  .lp-nav-github svg path {
+    fill: currentColor;
+  }
+  .lp-lang {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--on-dark);
+    cursor: pointer;
+  }
+  .lp-lang:hover {
+    color: var(--acc);
+  }
+  .lp-lang svg {
+    display: block;
+    flex: none;
+  }
+  .lp-lang-label {
+    /* Tall enough that Latin descenders are not clipped. */
+    font: 500 13px/18px "Arsenal", "Zen Kaku Gothic New", sans-serif;
+    padding-right: 16px;
+  }
+  /* The select is an invisible hit area over the whole switcher — the
+     visible text is the span; only the native dropdown list shows. */
+  .lp-lang select {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    appearance: none;
+    border: none;
+    opacity: 0;
+    cursor: pointer;
+  }
+  /* Draw the focus ring around the whole switcher (icon + label + arrow). */
+  .lp-lang select:focus-visible {
+    outline: none;
+  }
+  .lp-lang:has(select:focus-visible) {
+    outline: 1px solid var(--acc);
+    outline-offset: 5px;
+    border-radius: 2px;
+  }
+  /* Native dropdown list opens on a light background. */
+  .lp-lang select option {
+    color: var(--pri-ink);
+  }
+  .lp-lang .lp-lang-chevron {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+  /* Theme preview switcher (`?color`): a swatch dot instead of a label,
+     striped with the live primary/sub/accent set. .lp-lang's
+     display: flex would defeat [hidden], so restate it. */
+  .lp-color {
+    padding-right: 16px;
+  }
+  .lp-color[hidden] {
+    display: none;
+  }
+  .lp-color-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: linear-gradient(
+      135deg,
+      var(--pri) 33.3%,
+      var(--sub) 33.3% 66.6%,
+      var(--acc) 66.6%
+    );
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.35);
+  }
+
+  /* Docs variant: Starlight's header shell owns position, height, padding
+     and background (--sl-color-bg-nav, see styles/theme.css); the LP vars the
+     shared rules read are pinned here from the docs theme. */
+  .lp-header--docs {
+    height: 100%;
+    gap: 24px;
+    font-family: "Arsenal", "Zen Kaku Gothic New", sans-serif;
+    --pri: var(--nv-navy, #143c6e);
+    --pri-ink: var(--nv-navy, #143c6e);
+    --acc: var(--nv-cream, #faf5dc);
+    --on-dark: #ffffff;
+    --on-band: #ffffff;
+  }
+  .lp-brand-home {
+    display: block;
+    flex: none;
+  }
+  /* Starlight's search opens from here; keep it flexible between the brand
+     and the nav so the button can breathe like the default header's. */
+  .lp-header-search {
+    display: flex;
+    flex: 1;
+    justify-content: center;
+    min-width: 0;
+  }
+
+  @media (max-width: 960px) {
+    .lp-header--lp {
+      padding: 18px max(28px, var(--lp-safe-r, 0px)) 18px max(28px, var(--lp-safe-l, 0px));
+    }
+  }
+
+  @media (max-width: 640px) {
+    .lp-header--lp {
+      padding: 14px max(20px, var(--lp-safe-r, 0px)) 14px max(20px, var(--lp-safe-l, 0px));
+    }
+    .lp-nav {
+      gap: 18px;
+    }
+    /* Docs/Examples text links don't fit; both stay reachable from the LP
+       footer / the docs sidebar and cards. */
+    .lp-nav > a:not([class]) {
+      display: none;
+    }
+    .lp-brand {
+      height: 21px;
+    }
+  }
+</style>

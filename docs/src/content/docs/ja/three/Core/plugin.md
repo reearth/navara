@@ -36,8 +36,8 @@ abstract class Plugin<TView = unknown, TCtx = unknown> {
 
 プラグインは以下のタイミングで動作します：
 
-1. `view.addPlugin(plugin)` — プラグインを登録（`view.init()` の**前**に呼び出す必要あり）
-2. `view.init()` — 登録済みのすべてのプラグインの `init()` が**並列**に実行される
+1. `view.addPlugin(plugin)`: プラグインを登録（`view.init()` の**前**に呼び出す必要あり）
+2. `view.init()`: 登録済みのすべてのプラグインの `init()` が**並列**に実行される
 
 ```
 view.addPlugin(pluginA)

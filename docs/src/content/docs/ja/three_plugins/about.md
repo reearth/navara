@@ -90,6 +90,6 @@ personView.start();
 
 ## 関連リソース
 
-- [About Plugin](../../three/introduction/about-plugin/) — プラグインシステムの概念
-- [Plugin API](../../three/core/plugin/) — プラグインの実装方法
-- [three_default_plugin](../../three_default_plugin/about/) — DefaultPlugin の詳細
+- [About Plugin](../../three/introduction/about-plugin/): プラグインシステムの概念
+- [Plugin API](../../three/core/plugin/): プラグインの実装方法
+- [three_default_plugin](../../three_default_plugin/about/): DefaultPlugin の詳細

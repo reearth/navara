@@ -11,6 +11,7 @@ import {
   CameraStatusType,
   CameraControlUpdateEvent,
 } from "@navaramap/engine";
+import { radianToDegree } from "@navaramap/three-api";
 import { PerspectiveCamera } from "three";
 import invariant from "tiny-invariant";
 
@@ -97,10 +98,6 @@ export class ThreeViewCamera extends EventHandler<CameraEvent> {
     };
   }
 
-  get fovy(): number | undefined {
-    return this._core?.getCameraFOVY();
-  }
-
   /**
    * Effective Web Mercator zoom level the camera is viewing the surface at
    * (fractional). Computed engine-side from the camera's ellipsoid height (not
@@ -108,6 +105,16 @@ export class ThreeViewCamera extends EventHandler<CameraEvent> {
    */
   get zoom(): number | undefined {
     return this._core?.getZoomLevel();
+  }
+
+  /**
+   * The vertical field of view in degrees; the horizontal extent follows
+   * from the viewport aspect ratio.
+   * Reading returns `undefined` until the engine camera exists.
+   */
+  get fov(): number | undefined {
+    const fov = this._core?.getCameraFOV();
+    return fov === undefined ? undefined : radianToDegree(fov);
   }
 
   set fov(val: number) {
