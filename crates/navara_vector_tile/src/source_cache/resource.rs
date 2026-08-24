@@ -35,7 +35,7 @@ impl Default for TraversalConfig {
             has_clamp_to_ground: false,
             min_zoom: 0,
             max_zoom: 20,
-            max_sse_bits: 1.0_f32.to_bits(),
+            max_sse_bits: 2.0_f32.to_bits(),
             dynamic_sse_scale_bits: GEOMETRY_DYNAMIC_SSE_SCALE.to_bits(),
             overscaled_max_zoom: 24,
         }

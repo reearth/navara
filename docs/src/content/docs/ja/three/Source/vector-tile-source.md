@@ -22,7 +22,7 @@ sidebar:
 | `url`               | `string`        | （必須） | タイル URL（`{z}/{x}/{y}` テンプレート、または `.pmtiles` アーカイブ URL）。 |
 | `maxZoom`           | `number`        | `20`       | 新しいタイルを要求する最大ズームレベル。               |
 | `overscaledMaxZoom` | `number`        | `24`       | オーバースケール（親を引き伸ばした）タイルを使用する最大ズーム。 |
-| `maxSse`            | `number`        | `1.0`      | タイルの走査を駆動する最大スクリーンスペースエラー。   |
+| `maxSse`            | `number`        | `2.0`      | タイルの走査を駆動する最大スクリーンスペースエラー。   |
 | `crs`               | `string`        | —          | タイルの座標参照系。                                   |
 
 ## Source の共有
