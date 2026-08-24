@@ -40,7 +40,7 @@ const castle = view.addSource({
 view.addLayer({
   type: "3d-tiles",
   source: castle,
-  model: { pointSize: 0.3, maxSse: 16 },
+  model: { pointSize: 0.3, maxSse: 8 },
 });
 
 view.attribution?.add([

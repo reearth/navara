@@ -50,7 +50,7 @@ const tileset = view.addSource({
   url: `https://tile.googleapis.com/v1/3dtiles/root.json?key=${YOUR_GOOGLE_MAPS_API_KEY}`,
 });
 
-const layer = view.addLayer({ type: "3d-tiles", source: tileset, model: { maxSse: 60 } });
+const layer = view.addLayer({ type: "3d-tiles", source: tileset, model: { maxSse: 30 } });
 ```
 
 :::note

@@ -543,7 +543,7 @@ type GlobeOptions = {
 import ThreeView, { Color } from "@navaramap/three";
 
 const view = new ThreeView({
-  maxSse: 2,
+  maxSse: 1,
   segments: 10,
   color: new Color().setHex(0x1a1a2e),
   hideUnderground: true,

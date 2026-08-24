@@ -308,7 +308,7 @@ export const run = async () => {
     const tiles = v.addLayer({
       type: "3d-tiles",
       source,
-      model: { maxSse: 60, normals: true },
+      model: { maxSse: 30, normals: true },
     });
     baseLayers.push(tiles);
 

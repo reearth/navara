@@ -32,7 +32,7 @@ const DEFAULT_MIN_ZOOM: usize = 0;
 const DEFAULT_MAX_ZOOM: usize = 20;
 const DEFAULT_OVERSCALED_MAX_ZOOM: usize = 24;
 const DEFAULT_TILE_SIZE: u32 = 256;
-const DEFAULT_MAX_SSE: f32 = 2.0;
+const DEFAULT_MAX_SSE: f32 = 1.0;
 
 /// Downcast the previous [`Source`] to a specific variant for partial-update
 /// merges, yielding `Some(&inner)` only when it matches. Every `SourceDescription::to`

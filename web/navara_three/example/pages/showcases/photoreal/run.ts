@@ -282,7 +282,7 @@ const buildGoogle = (
     type: "3d-tiles",
     source: googleTilesSource,
     model: {
-      maxSse: 40,
+      maxSse: 20,
       normals: true,
     },
   });

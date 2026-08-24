@@ -22,7 +22,7 @@ Both forms produce the same source; the engine picks the right implementation au
 | `url`               | `string`        | (required) | Tile URL — either a `{z}/{x}/{y}` template or a `.pmtiles` archive URL. |
 | `maxZoom`           | `number`        | `20`       | Maximum zoom level new tiles are requested for.         |
 | `overscaledMaxZoom` | `number`        | `24`       | Maximum zoom overscaled (stretched-parent) tiles are used up to. |
-| `maxSse`            | `number`        | `2.0`      | Maximum screen-space error driving tile traversal.      |
+| `maxSse`            | `number`        | `1.0`      | Maximum screen-space error driving tile traversal.      |
 | `crs`               | `string`        | —          | Coordinate reference system of the tiles.               |
 
 ## Source sharing

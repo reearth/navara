@@ -76,7 +76,7 @@ export const run = async () => {
     const google = v.addLayer({
       type: "3d-tiles",
       source: googleSource,
-      model: { maxSse: 60, normals: true },
+      model: { maxSse: 30, normals: true },
     });
     attribution?.add([
       {

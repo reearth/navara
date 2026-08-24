@@ -208,7 +208,7 @@ function createPnts(view: ThreeView) {
   gPntsLayer = view.addLayer({
     type: "3d-tiles",
     source: gPntsSource,
-    model: { show: true, pointSize: 0.3, height: 0, maxSse: 16 },
+    model: { show: true, pointSize: 0.3, height: 0, maxSse: 8 },
   });
 }
 
@@ -636,7 +636,7 @@ function addB3dmLayerFolder(view: ThreeView, pane: Pane) {
     color: 0xffffff,
     metalness: 0.1,
     roughness: 0.1,
-    maxSse: 16,
+    maxSse: 8,
     castShadow: false,
     receiveShadow: false,
   };
@@ -768,7 +768,7 @@ function addPntsLayerFolder(view: ThreeView, pane: Pane) {
     show: true,
     pointSize: 0.3,
     height: 0,
-    maxSse: 16,
+    maxSse: 8,
   };
 
   const pntsFolder = pane.addFolder({

@@ -37,7 +37,7 @@ const addTileLayer = (view: ThreeView, token: string): Layer => {
     type: "3d-tiles",
     source,
     model: {
-      maxSse: 60,
+      maxSse: 30,
     },
   });
 };

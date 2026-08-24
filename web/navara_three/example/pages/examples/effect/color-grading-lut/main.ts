@@ -73,7 +73,7 @@ const tilesSource = view.addSource({
 const tiles = view.addLayer({
   type: "3d-tiles",
   source: tilesSource,
-  model: { maxSse: 16, normals: true },
+  model: { maxSse: 8, normals: true },
 });
 
 const grading = view.addEffect<ColorGradingLUTEffectDesc>({

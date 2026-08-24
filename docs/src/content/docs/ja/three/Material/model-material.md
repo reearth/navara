@@ -265,7 +265,7 @@ import { Color } from "@navaramap/three";
 ```typescript
 {
   model: {
-    maxSse: 16
+    maxSse: 8
   }
 }
 ```

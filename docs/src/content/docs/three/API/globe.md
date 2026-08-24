@@ -45,7 +45,7 @@ This property is only effective at initialization time. Set it in the ThreeView 
 ```typescript
 // Set in the constructor
 const view = new ThreeView({
-  maxSse: 1.5,
+  maxSse: 1,
 });
 
 // Get the current value
@@ -334,7 +334,7 @@ import ThreeView, { Color } from "@navaramap/three";
 
 const view = new ThreeView({
   // Properties that can only be set at initialization
-  maxSse: 2,
+  maxSse: 1,
   segments: 64,
   useNormal: true,
   // Properties that can be changed at runtime
