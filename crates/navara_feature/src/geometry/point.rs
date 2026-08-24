@@ -667,14 +667,8 @@ mod tests {
 
         let transform = Transform::from_translation(camera_ecef).looking_at(Vec3::ZERO, Vec3::Y);
         let fov_deg = 60.0;
-        let frustum = CameraFrustum::new(
-            &transform,
-            0.1,
-            1e9,
-            Angle::new(fov_deg).rad().val(),
-            1.0,
-            1.0,
-        );
+        let frustum =
+            CameraFrustum::new(&transform, 0.1, 1e9, Angle::new(fov_deg).rad().val(), 1.0);
         let occluder = EllipsoidalOccluder::new(&camera_ecef, WGS84_64);
         (frustum, occluder, camera_ecef)
     }

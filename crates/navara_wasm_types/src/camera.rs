@@ -143,6 +143,7 @@ impl<'a> From<&'a Transform> for navara_math::Transform {
 pub struct CameraFrustum {
     pub near: FloatType,
     pub far: FloatType,
+    /// Vertical field of view in radians.
     pub fov: FloatType,
     pub aspect_ratio: FloatType,
 }

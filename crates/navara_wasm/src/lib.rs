@@ -938,9 +938,10 @@ impl Core {
         None
     }
 
-    #[wasm_bindgen(js_name = getCameraFOVY)]
-    pub fn get_camera_fov_y(&mut self) -> Option<FloatType> {
-        self.app.get_camera_fov_y()
+    /// Vertical field of view in radians as set via `setFrustum`.
+    #[wasm_bindgen(js_name = getCameraFOV)]
+    pub fn get_camera_fov(&mut self) -> Option<FloatType> {
+        self.app.get_camera_fov()
     }
 
     #[wasm_bindgen(js_name = getZoomLevel)]

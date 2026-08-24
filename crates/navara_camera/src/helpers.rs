@@ -53,6 +53,8 @@ fn get_pick_ray_perspective(
     let right = camera_transform.right();
     let up = camera_transform.up();
 
+    // `fov` is the vertical field of view; `tan_phi` is the vertical
+    // near-plane half-extent and the horizontal one follows via the aspect.
     let tan_phi = (frustum.fov * 0.5).tan();
     let tan_theta = frustum.aspect_ratio * tan_phi;
     let near = frustum.near;
@@ -153,7 +155,6 @@ mod test {
             1000.,
             Angle::new(50.).rad().val(),
             window.width / window.height,
-            1.,
         );
 
         let position_2d = Vec2::new(window.raw_width() / 2., window.raw_height() / 2.);
@@ -167,5 +168,24 @@ mod test {
             AbsDiffEqVec3(Vec3::new(0., -0.42, -0.9)),
             epsilon = Vec3::new(0.01, 0.01, 0.01)
         );
+    }
+
+    #[test]
+    fn pick_ray_uses_vertical_fov_on_landscape() {
+        let window = Window {
+            width: 200.,
+            height: 100.,
+            pixel_ratio: 1.,
+        };
+        let camera = Transform::from_translation(Vec3::Z);
+        let fov = Angle::new(50.).rad().val();
+        let frustum = CameraFrustum::new(&camera, 0.1, 1000., fov, 2.);
+
+        // Bottom-center of the screen: the ray's vertical slope equals
+        // tan(fov / 2) regardless of the aspect ratio (`fov` is vertical).
+        let position_2d = Vec2::new(window.raw_width() / 2., window.raw_height());
+        let ray = get_pick_ray_from_camera(&window, &camera, &frustum, position_2d);
+        let slope = -ray.direction.y / -ray.direction.z;
+        assert_abs_diff_eq!(slope, (frustum.fov * 0.5).tan(), epsilon = 1e-9);
     }
 }

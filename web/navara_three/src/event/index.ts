@@ -318,6 +318,8 @@ function processCameraFrustumUpdated(
 
   ctx.camera.raw.near = frustum.near;
   ctx.camera.raw.far = frustum.far;
+  // The engine's `fov` is the vertical fov, matching what
+  // `PerspectiveCamera.fov` expects.
   ctx.camera.raw.fov = radianToDegree(frustum.fov);
   ctx.camera.raw.updateProjectionMatrix();
   ctx.camera.emit("frustumChanged");

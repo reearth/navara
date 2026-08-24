@@ -97,6 +97,7 @@ view.flyTo({ lng, lat, height }, duration, maxHeight);          // animated arc;
 view.lookAt(target, offsetENU);
 view.camera.on("moveend", () => console.log(view.camera.positionGeographic));
 view.camera.fov = 50;                                           // use setters, never camera.raw.fov
+view.camera.fov;                                                // degrees; vertical fov
 ```
 
 Full reference: https://navara-docs.reearth.workers.dev//three/source/about/ · /three/layer/about/ · /three/material/about/

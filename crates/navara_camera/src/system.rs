@@ -47,10 +47,9 @@ pub fn startup(mut commands: Commands) {
             &transform,
             100.,
             1e8,
-            // This is for frustum culling, so need to organize
+            // Default vertical fov.
             Angle::new(50.).rad().val(),
             1.,
-            1.1,
         ),
         CameraController::default(),
         CameraInertia::default(),

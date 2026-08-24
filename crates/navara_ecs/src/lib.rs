@@ -1062,12 +1062,13 @@ impl App {
         None
     }
 
-    pub fn get_camera_fov_y(&mut self) -> Option<FloatType> {
+    /// Vertical field of view in radians as set via `set_frustum`.
+    pub fn get_camera_fov(&mut self) -> Option<FloatType> {
         let world = self.app.world_mut();
         let mut query = world.query_filtered::<&CameraFrustum, With<CameraMarker>>();
 
         if let Some(frustum) = query.iter(world).next() {
-            return Some(frustum.fov_y);
+            return Some(frustum.fov);
         }
 
         None
@@ -1088,7 +1089,7 @@ impl App {
         let fov_y = {
             let world = self.app.world_mut();
             let mut query = world.query_filtered::<&CameraFrustum, With<CameraMarker>>();
-            query.iter(world).next()?.fov_y
+            query.iter(world).next()?.fov
         };
         // Viewport height in CSS px (matches the 256px tile model).
         let viewport_height = self.app.world_mut().get_resource::<Window>()?.raw_height();

@@ -101,30 +101,13 @@ console.log(`Heading: ${heading}°, Pitch: ${pitch}°, Roll: ${roll}°`);
 
 ---
 
-### fovy
-
-**Type:** `number | undefined`
-
-**Read-only**
-
-The current vertical field of view in degrees. Returns `undefined` if the engine is not yet initialized.
-
-**Example:**
-
-```typescript
-const fov = view.camera.fovy;
-if (fov !== undefined) {
-  console.log(`Vertical FOV: ${fov}°`);
-}
-```
-
----
-
 ### fov
 
-**Type:** `number` (setter)
+**Type:** `number | undefined` (getter) / `number` (setter)
 
-Sets the vertical field of view in degrees. Valid range: `1`–`180`. Values outside this range are ignored.
+The vertical field of view in degrees; the horizontal extent follows from the viewport aspect ratio.
+
+Setting accepts the range `1`–`180`; values outside this range are ignored. Reading returns `undefined` if the engine is not yet initialized.
 
 **Example:**
 
@@ -134,6 +117,8 @@ view.camera.fov = 30;
 
 // Wide FOV for a panoramic effect
 view.camera.fov = 90;
+
+console.log(`FOV: ${view.camera.fov}°`);
 ```
 
 ---
@@ -298,7 +283,7 @@ Fired when the camera's frustum parameters change (FOV, near, or far plane).
 
 ```typescript
 view.camera.on("frustumChanged", () => {
-  console.log(`FOV: ${view.camera.fovy}°`);
+  console.log(`FOV: ${view.camera.fov}°`);
 });
 ```
 

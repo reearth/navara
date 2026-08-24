@@ -20,12 +20,11 @@ pub struct CameraMarker;
 pub struct CameraFrustum {
     pub near: FloatType,
     pub far: FloatType,
+    /// Vertical field of view in radians (the horizontal extent is derived
+    /// from it via `aspect_ratio`).
     pub fov: FloatType,
-    pub fov_y: FloatType,
     pub aspect_ratio: FloatType,
     pub sse_denominator: FloatType,
-    // This is used to expand the frustum for culling.
-    pub fov_scale: FloatType,
     pub planes: [Plane; 6],
 }
 
@@ -36,17 +35,14 @@ impl CameraFrustum {
         far: FloatType,
         fov: FloatType,
         aspect_ratio: FloatType,
-        fov_scale: FloatType,
     ) -> Self {
         let mut this = Self {
             near,
             far,
             fov,
-            fov_y: 0.,
             sse_denominator: 0.,
             aspect_ratio,
             planes: [Default::default(); 6],
-            fov_scale,
         };
 
         this.update_sse_denominator();
@@ -56,18 +52,11 @@ impl CameraFrustum {
     }
 
     pub fn update_sse_denominator(&mut self) {
-        let fov = self.fov * (self.fov_scale * 0.9).max(1.);
-        let fov_y = if self.aspect_ratio <= 1. {
-            fov
-        } else {
-            ((fov * 0.5).tan() / self.aspect_ratio).atan() * 2.
-        };
-        self.fov_y = fov_y;
-        self.sse_denominator = 2. * (fov_y * 0.5).tan();
+        self.sse_denominator = 2. * (self.fov * 0.5).tan();
     }
 
     pub fn update_planes(&mut self, transform: &Transform) {
-        let fov = self.fov * self.fov_scale;
+        let fov = self.fov;
         let half_v_side = self.far * (fov * 0.5).tan();
         let half_h_side = half_v_side * self.aspect_ratio;
         let front_far = self.far * transform.forward();
@@ -689,7 +678,7 @@ mod test {
         let camera = Transform::from_xyz(0., 0., -10.);
         let camera = camera.looking_at(Vec3::new(0., 0., 0.), Vec3::Y);
 
-        let frustum = CameraFrustum::new(&camera, 0.1, 1000., Angle::new(50.).rad().val(), 1., 1.);
+        let frustum = CameraFrustum::new(&camera, 0.1, 1000., Angle::new(50.).rad().val(), 1.);
         debug_assert_eq!(
             frustum.planes[0],
             Plane::from_point_normal(Vec3::new(0., 0., -9.9), Vec3::new(0., 0., 1.))
@@ -741,7 +730,7 @@ mod test {
         let camera = Transform::from_xyz(0., 0., -10.);
         let camera = camera.looking_at(Vec3::new(0., 0., 0.), Vec3::Y);
 
-        let frustum = CameraFrustum::new(&camera, 0.1, 1000., Angle::new(50.).rad().val(), 1., 1.);
+        let frustum = CameraFrustum::new(&camera, 0.1, 1000., Angle::new(50.).rad().val(), 1.);
 
         let aabb = Aabb::from_vec3(&[Vec3::new(-10., -1., 10.), Vec3::new(10., 1., 30.)]);
         debug_assert!(frustum.intersection_with_aabb(&aabb));
@@ -768,7 +757,7 @@ mod test {
     fn contains_point_inside_frustum() {
         let camera = Transform::from_xyz(0., 0., -10.);
         let camera = camera.looking_at(Vec3::new(0., 0., 0.), Vec3::Y);
-        let frustum = CameraFrustum::new(&camera, 0.1, 1000., Angle::new(50.).rad().val(), 1., 1.);
+        let frustum = CameraFrustum::new(&camera, 0.1, 1000., Angle::new(50.).rad().val(), 1.);
 
         // Point in front of camera, within frustum
         assert!(frustum.contains_point(Vec3::new(0., 0., 10.)));
@@ -785,7 +774,7 @@ mod test {
     #[test]
     fn intersection_with_bounding_volume_handles_both_variants() {
         let camera = Transform::from_xyz(0., 0., -10.).looking_at(Vec3::ZERO, Vec3::Y);
-        let frustum = CameraFrustum::new(&camera, 0.1, 1000., Angle::new(50.).rad().val(), 1., 1.);
+        let frustum = CameraFrustum::new(&camera, 0.1, 1000., Angle::new(50.).rad().val(), 1.);
 
         // Aabb path mirrors `intersection_with_aabb`.
         let aabb = Aabb::from_vec3(&[Vec3::new(-10., -1., 10.), Vec3::new(10., 1., 30.)]);
@@ -839,7 +828,7 @@ mod test {
     fn contains_sphere_partially_overlapping() {
         let camera = Transform::from_xyz(0., 0., -10.);
         let camera = camera.looking_at(Vec3::new(0., 0., 0.), Vec3::Y);
-        let frustum = CameraFrustum::new(&camera, 0.1, 1000., Angle::new(50.).rad().val(), 1., 1.);
+        let frustum = CameraFrustum::new(&camera, 0.1, 1000., Angle::new(50.).rad().val(), 1.);
 
         // Point behind camera but large sphere reaches into frustum
         // Near plane is at z = -9.9, point is at z = -15 (5.1 behind near plane)

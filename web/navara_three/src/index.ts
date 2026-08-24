@@ -1055,7 +1055,9 @@ export default class ThreeView<
       tGlobeNormal: { value: null },
       tSkyEnvMap: { value: null },
       inverseProjectionMatrix: { value: null },
-      // TODO: Need to sync `fov` with WASM side
+      // Vertical fov in radians; synced with the engine on each frustum event.
+      // Plain arithmetic: the WASM-backed degreeToRadian is not available
+      // until init().
       fov: { value: (this._camera.raw.fov * Math.PI) / 180 },
       screenHeightPx: { value: height },
       time: { value: 0 },
@@ -1768,7 +1770,10 @@ export default class ThreeView<
     const pixelRatio = this._renderer.getPixelRatio();
 
     // Ref: https://github.com/CesiumGS/cesium/blob/2cf09cb06e4f7ea767da39befabcfc3444b02c49/packages/engine/Source/Core/PerspectiveFrustum.js#L208-L218
-    const fovY = this._camera.fovy ?? 1;
+    // raw.fov mirrors the engine's vertical fov (degrees) via the frustum
+    // event pump. Plain arithmetic: this must not depend on the WASM-backed
+    // degreeToRadian helper.
+    const fovY = (this._camera.raw.fov * Math.PI) / 180;
     const top = this._camera.raw.near * Math.tan(0.5 * fovY);
     const bottom = -top;
     const right = this._camera.raw.aspect * top;
@@ -1793,8 +1798,8 @@ export default class ThreeView<
     this._uniforms.inverseProjectionMatrix.value =
       this._camera.raw.projectionMatrixInverse;
 
-    // TODO: Need to sync `fov` with WASM side
-    this._uniforms.fov.value = (this._camera.raw.fov * Math.PI) / 180;
+    // Vertical fov in radians (raw.fov is kept in sync with the engine).
+    this._uniforms.fov.value = fovY;
     this._uniforms.screenHeightPx.value = viewport?.height ?? 0;
   }
 
