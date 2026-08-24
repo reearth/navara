@@ -49,6 +49,6 @@ navara プロジェクトへの貢献に興味を持っていただき、あり�
 
 ### 手順
 
-1. [ドキュメントリポジトリ](https://github.com/eukarya-inc/navara)に Issue または PR を作成
+1. [ドキュメントリポジトリ](https://github.com/reearth/navara)に Issue または PR を作成
 2. 変更内容を明確に説明
 3. 可能であれば、変更前後のスクリーンショットを添付
