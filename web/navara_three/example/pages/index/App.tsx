@@ -1,4 +1,4 @@
-import { Moon, Sun, Search, Star } from "lucide-react";
+import { Search, Star } from "lucide-react";
 import { useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import invariant from "tiny-invariant";
@@ -13,20 +13,18 @@ import {
 
 import { ExampleGrid } from "./ExampleGrid";
 
-import { useDarkMode } from "@/components/hooks/useDarkMode";
 import { useLang } from "@/components/hooks/useLang";
-import { LangSelect } from "@/components/LangSelect";
-import { Button } from "@/components/ui/button";
+import { SiteHeader } from "@/components/SiteHeader";
 import { Input } from "@/components/ui/input";
 
 import "./main.css";
+import "./theme.css";
 
 /** UI chrome strings (the gallery's own labels, not example content). */
 const UI = {
   title: { en: "Navara Three — Examples", ja: "Navara Three — Examples" },
   featured: { en: "Featured", ja: "注目の機能" },
   searchPlaceholder: { en: "Search examples…", ja: "Example を検索…" },
-  toggleTheme: { en: "Toggle theme", ja: "テーマを切り替え" },
   toggleLang: { en: "Switch language", ja: "言語を切り替え" },
   noMatch: {
     en: "No examples match",
@@ -58,7 +56,6 @@ const ENTRIES: ExampleEntry[] = Object.entries(metaModules).map(
 
 export const App = () => {
   const [query, setQuery] = useState("");
-  const { isDark: dark, toggle } = useDarkMode();
   const { lang, setLang } = useLang();
 
   // Ascending by `order`, then alphabetically by the localized title.
@@ -107,32 +104,16 @@ export const App = () => {
 
   return (
     <div className="h-screen w-screen overflow-auto bg-background text-foreground">
+      <SiteHeader
+        lang={lang}
+        setLang={setLang}
+        langLabel={localize(UI.toggleLang, lang)}
+      />
       <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-12">
         <header className="mb-12 flex flex-col gap-6">
-          <div className="flex items-center justify-between gap-4">
-            <h1 className="text-lg font-semibold tracking-tight sm:text-xl">
-              {localize(UI.title, lang)}
-            </h1>
-            <div className="flex items-center gap-1">
-              <LangSelect
-                lang={lang}
-                setLang={setLang}
-                label={localize(UI.toggleLang, lang)}
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label={localize(UI.toggleTheme, lang)}
-                onClick={toggle}
-              >
-                {dark ? (
-                  <Sun className="h-4 w-4" />
-                ) : (
-                  <Moon className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-          </div>
+          <h1 className="text-lg font-semibold tracking-tight sm:text-xl">
+            {localize(UI.title, lang)}
+          </h1>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -147,7 +128,7 @@ export const App = () => {
         {featured.length > 0 && (
           <section className="mb-12">
             <h2 className="mb-5 flex items-center gap-2 text-lg font-semibold tracking-tight">
-              <Star className="h-4 w-4 fill-current" />
+              <Star className="h-4 w-4 fill-current text-primary" />
               {localize(UI.featured, lang)}
             </h2>
             <ExampleGrid entries={featured} lang={lang} />

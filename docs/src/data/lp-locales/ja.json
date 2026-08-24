@@ -82,7 +82,7 @@
   },
   "arch": {
     "eyebrow": "ARCHITECTURE",
-    "h2Html": "レンダリングエンジンから独立した、<br />ヘッドレスな GIS コア。",
+    "h2Html": "レンダリングエンジンから独立した、<br /><mark>ヘッドレスな GIS コア</mark>。",
     "sourceTitle": "Rust / WASM",
     "sourceSub": "データのパース、ジオメトリ生成、その他",
     "renderTitle": "Three.js、さらに対応予定",

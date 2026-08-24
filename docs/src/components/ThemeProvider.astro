@@ -1,0 +1,11 @@
+---
+// Starlight ThemeProvider override: light mode is disabled for now — the site
+// ships the navy dark theme only (see styles/theme.css). Inlined to set the
+// theme before first paint, like the default provider. The stub keeps any
+// leftover callers of Starlight's theme API harmless.
+---
+
+<script is:inline>
+  document.documentElement.dataset.theme = "dark";
+  window.StarlightThemeProvider = { updatePickers() {} };
+</script>

@@ -1,0 +1,76 @@
+/*
+ * Docs site theme: navy single-theme, matching the landing page's primary
+ * band. Light mode is disabled for now — the ThemeProvider override pins
+ * data-theme="dark", so only the dark token set below is ever active.
+ *
+ * The two brand values mirror the LP theme (docs/src/data/lp.json:
+ * colors.primary) and the shared header (LpHeader.astro) reads them as
+ * --nv-navy / --nv-cream; everything else derives via color-mix so a base
+ * change propagates.
+ */
+:root {
+  /* Base: background navy, text white, accent cream. */
+  --nv-navy: #143c6e;
+  --nv-cream: #faf5dc;
+
+  --sl-color-white: #ffffff;
+  --sl-color-gray-1: color-mix(in oklab, var(--nv-navy), white 88%);
+  --sl-color-gray-2: color-mix(in oklab, var(--nv-navy), white 80%);
+  --sl-color-gray-3: color-mix(in oklab, var(--nv-navy), white 58%);
+  --sl-color-gray-4: color-mix(in oklab, var(--nv-navy), white 36%);
+  --sl-color-gray-5: color-mix(in oklab, var(--nv-navy), white 16%);
+  /* gray-6 is the code-block background (expressive-code's --ec-frm-edBg) —
+     darker than the page so code stands off the navy; gray-7 darker still. */
+  --sl-color-gray-6: color-mix(in oklab, var(--nv-navy), black 30%);
+  --sl-color-gray-7: color-mix(in oklab, var(--nv-navy), black 45%);
+  --sl-color-black: var(--nv-navy);
+
+  /* accent-high carries text accents (links, the current sidebar item);
+     accent-low is also the ink on accent surfaces (text-invert). */
+  --sl-color-accent-low: color-mix(in oklab, var(--nv-navy), black 35%);
+  --sl-color-accent: color-mix(in oklab, var(--nv-navy), white 35%);
+  --sl-color-accent-high: var(--nv-cream);
+
+  --sl-color-text: #ffffff;
+  --sl-color-bg: var(--nv-navy);
+  --sl-color-bg-nav: var(--nv-navy);
+  --sl-color-bg-sidebar: var(--nv-navy);
+  /* Inline code matches the block background above (the gray-5 default
+     reads as a light chip on the navy page). */
+  --sl-color-bg-inline-code: var(--sl-color-gray-6);
+
+  /* The header's bottom border — the default (black) vanishes on navy. */
+  --sl-color-hairline-shade: color-mix(in oklab, var(--nv-navy), white 18%);
+  /* Pinned to gray-6's old value: as a hairline it must stay lighter than
+     the page even though gray-6 itself went darker for the code blocks. */
+  --sl-color-hairline: color-mix(in oklab, var(--nv-navy), white 8%);
+
+  --sl-color-backdrop-overlay: color-mix(in srgb, #06182e 66%, transparent);
+
+  /* Hover rule of thumb for this theme: interactive elements get slightly
+     LIGHTER on hover, never darker. Surfaces lighten toward this. */
+  --nv-bg-hover: color-mix(in oklab, var(--nv-navy), white 10%);
+}
+
+/* Splash link cards: flat — no drop shadow on the navy page. The stock
+   hover background is gray-7, which is darker than the page in this theme —
+   lighten instead (the border already lightens). */
+.sl-link-card {
+  box-shadow: none;
+}
+.sl-link-card:hover {
+  background: var(--nv-bg-hover);
+}
+
+/* Hero actions: the stock primary hover only restates its text color, so
+   "Get Started" showed no hover at all; the minimal variant defines none.
+   The primary lightens like everything else; the minimal one is white text
+   (nothing lighter exists), so it takes the LP/header convention of tinting
+   to the cream accent. */
+a.sl-link-button.primary:hover {
+  background: color-mix(in oklab, var(--nv-cream), white 55%);
+  border-color: color-mix(in oklab, var(--nv-cream), white 55%);
+}
+a.sl-link-button.minimal:hover {
+  color: var(--nv-cream);
+}

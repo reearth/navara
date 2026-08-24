@@ -64,13 +64,34 @@ export default defineConfig({
           label: "日本語",
         },
       },
-      customCss: ["./src/styles/mermaid.css"],
+      customCss: ["./src/styles/theme.css", "./src/styles/mermaid.css"],
       components: {
         Sidebar: "./src/components/Sidebar.astro",
         Pagination: "./src/components/Pagination.astro",
+        // The docs share the LP's header (LpHeader.astro via Header.astro);
+        // light mode is disabled for now, so the theme provider pins dark and
+        // the theme picker renders nothing (see each override).
         Header: "./src/components/Header.astro",
+        ThemeProvider: "./src/components/ThemeProvider.astro",
+        ThemeSelect: "./src/components/ThemeSelect.astro",
       },
       head: [
+        // Fonts for the shared LP header (matches LandingPage.astro's set).
+        {
+          tag: "link",
+          attrs: { rel: "preconnect", href: "https://fonts.googleapis.com" },
+        },
+        {
+          tag: "link",
+          attrs: { rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: true },
+        },
+        {
+          tag: "link",
+          attrs: {
+            rel: "stylesheet",
+            href: "https://fonts.googleapis.com/css2?family=Arsenal:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap",
+          },
+        },
         // TODO: Remove when Navara is released.
         {
           tag: "meta",

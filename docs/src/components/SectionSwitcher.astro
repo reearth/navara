@@ -113,7 +113,10 @@ const groups = families
     }
     .section-switch__trigger:hover {
         border-color: var(--sl-color-gray-4);
-        background: var(--sl-color-gray-6);
+        /* Derived from the page background so the hover surface is always
+           slightly lighter than it, whatever the palette (gray-6 sits darker
+           than the page in the navy theme). */
+        background: color-mix(in oklab, var(--sl-color-bg), white 10%);
     }
     .section-switch__trigger:focus-visible {
         outline: 2px solid var(--sl-color-text-accent);
@@ -181,12 +184,16 @@ const groups = families
         text-decoration: none;
     }
     .section-switch__item:hover {
-        background: var(--sl-color-gray-6);
+        /* Lighter-than-background hover, like the trigger above. */
+        background: color-mix(in oklab, var(--sl-color-bg), white 10%);
         color: var(--sl-color-white);
     }
     .section-switch__item.active {
-        background: var(--sl-color-accent-low);
-        color: var(--sl-color-white);
+        /* Same treatment as the sidebar's current-page pill, so "selected"
+           reads the same everywhere (accent-low sat darker than the page in
+           the navy theme). */
+        background: var(--sl-color-text-accent);
+        color: var(--sl-color-text-invert);
         font-weight: 600;
     }
     .section-switch__item-label {
@@ -195,7 +202,9 @@ const groups = families
     }
     .section-switch__check {
         flex: none;
-        color: var(--sl-color-text-accent);
+        /* Follows the item's text color, so it stays visible on the active
+           pill's accent background. */
+        color: currentColor;
         opacity: 0;
     }
     .section-switch__item.active .section-switch__check {

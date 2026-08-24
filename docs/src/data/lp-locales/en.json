@@ -82,7 +82,7 @@
   },
   "arch": {
     "eyebrow": "ARCHITECTURE",
-    "h2Html": "A headless GIS core,<br />independent of the rendering engine.",
+    "h2Html": "A <mark>headless GIS core</mark>,<br />independent of the rendering engine.",
     "sourceTitle": "Rust / WASM",
     "sourceSub": "Data parsing, geometry construction, and more",
     "renderTitle": "Three.js and more",
