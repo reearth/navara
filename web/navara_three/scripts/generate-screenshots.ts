@@ -98,6 +98,10 @@ const PAGE_CONFIGS: Record<string, PageConfig> = {
   atmosphere: {
     waitTime: 10000,
   },
+  "geodetic-placement": {
+    // Terrain sampling plus two glTF assets, each added twice.
+    waitTime: 20000,
+  },
   "cloud-fog": {
     waitTime: 10000,
   },
