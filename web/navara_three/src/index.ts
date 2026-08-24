@@ -131,6 +131,7 @@ import {
   type SampledTerrainPosition,
   type TerrainSampleSource,
 } from "./terrain/sampleTerrainMostDetailed";
+import { hasObservedTerrainHeight } from "./terrain/terrainHeightEvent";
 import type { TextureOptions } from "./textures";
 import { TileTextureCompositor } from "./tileTexture";
 import {
@@ -2684,7 +2685,7 @@ export default class ThreeView<
     const entityBits = this._core.registerSampleTerrainHeightEvent(lle);
 
     const callFunc = (ev: TerrainHeightUpdatedEvent) => {
-      if (ev.bits === entityBits && ev.height) {
+      if (hasObservedTerrainHeight(ev, entityBits)) {
         cb(ev.height);
       }
     };
