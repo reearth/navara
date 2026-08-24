@@ -172,6 +172,24 @@ impl<'a> From<&'a navara_camera::CameraFrustum> for CameraFrustum {
     }
 }
 
+/// Terminal record of a `flyTo` flight, delivered once through the event
+/// stream. `completed` is `false` when the flight was superseded or canceled.
+#[wasm_bindgen]
+#[derive(Debug, Clone, Copy, Serialize)]
+pub struct CameraFlightEndedEvent {
+    pub id: u32,
+    pub completed: bool,
+}
+
+impl From<navara_event_store::CameraFlightEnded> for CameraFlightEndedEvent {
+    fn from(e: navara_event_store::CameraFlightEnded) -> Self {
+        Self {
+            id: e.id,
+            completed: e.completed,
+        }
+    }
+}
+
 /// An event for updating camera controller settings at runtime.
 ///
 /// This event allows partial updates to the [`CameraController`](navara_camera::CameraController)

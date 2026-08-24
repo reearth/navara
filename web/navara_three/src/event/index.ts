@@ -49,6 +49,7 @@ export type {
   FeatureHandler,
   MeshHandler,
   LayerHandler,
+  FlightHandler,
 } from "./context";
 export { EventContext } from "./context";
 export { HillshadeContext } from "./HillshadeContext";
@@ -71,6 +72,10 @@ export function processEvent(ctx: EventContext, event: Events | undefined) {
 
   eventManager.forEachStack("camera_frustum_updated", (ev) =>
     processCameraFrustumUpdated(ctx, ev),
+  );
+
+  eventManager.forEachStack("camera_flight_ended", (ev) =>
+    ctx.flightHandler(ev.id, ev.completed),
   );
 
   eventManager.forEachStack("object_transform_updated", (ev) =>

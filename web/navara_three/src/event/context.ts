@@ -189,6 +189,9 @@ export type MeshHandler = {
   setTileMeshPrepared: (handle: bigint) => void;
 };
 
+/** Settles the pending `flyTo` promise registered under `id`. */
+export type FlightHandler = (id: number, completed: boolean) => void;
+
 export type LayerHandler = {
   getLayerIndex: (layerId: string) => number | undefined;
 };
@@ -216,6 +219,7 @@ type EventContextArgs = {
   viewEvents: EventHandler<ViewEvents>;
   layersManager: LayersManager;
   viewContext: ViewContext;
+  flightHandler: FlightHandler;
   layerHandler?: LayerHandler;
   fontManager?: FontManager;
   textureFragmentIndex?: Map<string, Set<TextureSlot>>;
@@ -251,6 +255,7 @@ export class EventContext {
   readonly viewEvents: EventHandler<ViewEvents>;
   readonly layersManager: LayersManager;
   readonly viewContext: ViewContext;
+  readonly flightHandler: FlightHandler;
   readonly layerHandler?: LayerHandler;
   readonly fontManager?: FontManager;
   readonly textureFragmentIndex?: Map<string, Set<TextureSlot>>;
@@ -286,6 +291,7 @@ export class EventContext {
     this.viewEvents = args.viewEvents;
     this.layersManager = args.layersManager;
     this.viewContext = args.viewContext;
+    this.flightHandler = args.flightHandler;
     this.layerHandler = args.layerHandler;
     this.fontManager = args.fontManager;
     this.textureFragmentIndex = args.textureFragmentIndex;

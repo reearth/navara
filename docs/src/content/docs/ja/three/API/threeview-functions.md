@@ -472,36 +472,56 @@ view.moveCameraWithDirection([1, 0, 0], 100);
 
 ### flyTo()
 
-カメラをターゲット位置にアニメーションで移動します。飛行アーク（弧）を描いて滑らかに移動します。
+カメラをターゲット位置にアニメーションで移動します。飛行アーク（弧）を描いて滑らかに移動します。経度は対蹠線（antimeridian）をまたぐ場合も短い方の経路を通り、高度は `maxHeight` を頂点とするアークを描きます。
+
+返される Promise は、飛行が完了すると `true`、中断されると `false` で解決されます。中断は、新しい `flyTo()` での上書きや [`setCamera()`](#setcamera) の呼び出しなど、飛行以外のカメラ操作によって発生します。飛行中に新しい `flyTo()` を発行すると、進行中の飛行は中断され、現在のカメラ姿勢から新しい飛行が開始されます。
 
 **Syntax:**
 
 ```tsx
 flyTo(
-  camPos: CameraPosition & Required<Pick<CameraPosition, "lng" | "lat" | "height">>,
-  duration?: number,
-  maxHeight?: number
-): void
+  camPos: CameraPosition &
+    Required<Pick<CameraPosition, "lng" | "lat">> &
+    ({ height: number } | { distance: number }),
+  options?: FlyToOptions
+): Promise<boolean>
+
+type FlyToOptions = {
+  duration?: number;
+  maxHeight?: number;
+  easing?: FlyToEasing;
+};
+
+type FlyToEasing =
+  | "linear"
+  | "quadInOut"
+  | "cubicInOut"
+  | "cubicOut"
+  | "quinticInOut";
 ```
 
 **Parameters:**
 
-- `camPos`: ターゲット位置。`lng`、`lat`、`height` は必須。
+- `camPos`: ターゲット位置。`lng` と `lat` が必須で、加えて `height` または `distance` のいずれかを指定します。
   - `lng`: 経度（度）— **必須**
   - `lat`: 緯度（度）— **必須**
-  - `height`: 楕円体からの高さ（メートル）— **必須**。`distance` も指定した場合は、カメラ自身の高度ではなく**ターゲット点の標高**として使用されます。
+  - `height`: 楕円体からの高さ（メートル）。`distance` も指定した場合は、カメラ自身の高度ではなく**ターゲット点の標高**として使用されます。
   - `pitch`: ピッチ角（度）
   - `heading`: ヘディング角（度）
   - `roll`: ロール角（度）
   - `distance`: カメラの前方方向に沿ったターゲット地点からの距離（メートル）。指定した場合、カメラの前方レイが `lng`/`lat`/`height` のターゲット点をこの距離で通過するように配置されます。省略した場合は `height` がカメラ自身の高度として使用されます。
-- `duration`: アニメーション時間（ミリ秒）
-- `maxHeight`: 飛行アーク中の最大高度（メートル）
+- `options`: 飛行オプション。
+  - `duration`: アニメーション時間（ミリ秒）。省略時は飛行距離から自動算出されます（2〜3 秒）。`0` を渡すと即座にジャンプします。
+  - `maxHeight`: 飛行アーク中の最大高度（メートル）
+  - `easing`: 飛行時間に適用するイージングのプリセット。省略時は `"quinticInOut"`、高度 11,500m 超からの下降時は `"cubicOut"` が使用されます。
+
+**Returns:** `Promise<boolean>` — 飛行が完了すると `true`、中断されると `false`。
 
 **Example:**
 
 ```tsx
 // 高度指定：東京へ 3 秒かけて飛行（最大高度 5000m）
-view.flyTo(
+const completed = await view.flyTo(
   {
     lng: 139.7671,
     lat: 35.6812,
@@ -509,11 +529,13 @@ view.flyTo(
     pitch: -45,
     heading: 0,
   },
-  3000,
-  5000
+  { duration: 3000, maxHeight: 5000 }
 );
+if (!completed) {
+  // 別の flyTo や setCamera などによって中断された
+}
 
-// 距離指定：東京タワー（地上）へ 2000m の距離からアプローチ
+// 距離指定：東京タワー（地上）へ 2000m の距離からアプローチ（イージング指定）
 view.flyTo(
   {
     lng: 139.7454,
@@ -523,7 +545,7 @@ view.flyTo(
     pitch: -30,
     heading: 45,
   },
-  4000
+  { duration: 4000, easing: "cubicInOut" }
 );
 ```
 

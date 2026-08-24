@@ -92,8 +92,12 @@ With `DefaultPlugin` all built-ins are pre-registered; call `addMesh`/`addEffect
 ## Camera
 
 ```typescript
-view.setCamera({ lng, lat, height, heading, pitch, roll });    // instant; `distance` option = frame a target
-view.flyTo({ lng, lat, height }, duration, maxHeight);          // animated arc; duration/maxHeight are positional args
+view.setCamera({ lng, lat, height, heading, pitch, roll });    // instant; `distance` option = frame a target; cancels a flight
+const ok = await view.flyTo({ lng, lat, height }, { duration, maxHeight, easing: "quinticInOut" });
+// animated arc; resolves true on completion, false when interrupted by
+// another camera operation (a newer flyTo, setCamera, etc.). duration
+// defaults to 2–3 s derived from flight distance; easing defaults to
+// quinticInOut (cubicOut when descending from high altitude).
 view.lookAt(target, offsetENU);
 view.camera.on("moveend", () => console.log(view.camera.positionGeographic));
 view.camera.fov = 50;                                           // use setters, never camera.raw.fov

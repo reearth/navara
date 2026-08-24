@@ -548,36 +548,56 @@ view.moveCameraWithDirection([1, 0, 0], 100);
 
 ### flyTo()
 
-Animates the camera to a target position. Moves smoothly along a flight arc.
+Animates the camera to a target position. Moves smoothly along a flight arc: the longitude takes the short way across the antimeridian, and the height follows an arc that peaks at `maxHeight`.
+
+The returned promise resolves to `true` when the flight completes, or `false` when it is interrupted by another camera operation, such as a newer `flyTo()` or a [`setCamera()`](#setcamera) call. Issuing a new `flyTo()` while a flight is in progress interrupts the current flight and starts the new one from the current camera pose.
 
 **Syntax:**
 
 ```tsx
 flyTo(
-  camPos: CameraPosition & Required<Pick<CameraPosition, "lng" | "lat" | "height">>,
-  duration?: number,
-  maxHeight?: number
-): void
+  camPos: CameraPosition &
+    Required<Pick<CameraPosition, "lng" | "lat">> &
+    ({ height: number } | { distance: number }),
+  options?: FlyToOptions
+): Promise<boolean>
+
+type FlyToOptions = {
+  duration?: number;
+  maxHeight?: number;
+  easing?: FlyToEasing;
+};
+
+type FlyToEasing =
+  | "linear"
+  | "quadInOut"
+  | "cubicInOut"
+  | "cubicOut"
+  | "quinticInOut";
 ```
 
 **Parameters:**
 
-- `camPos`: Target position. `lng`, `lat`, and `height` are required.
+- `camPos`: Target position. `lng` and `lat` are required, plus either `height` or `distance`.
   - `lng`: Longitude (degrees) — **required**
   - `lat`: Latitude (degrees) — **required**
-  - `height`: Height above the ellipsoid (meters) — **required**. When `distance` is also set, this is used as the **target point elevation** rather than the camera's own altitude.
+  - `height`: Height above the ellipsoid (meters). When `distance` is also set, this is used as the **target point elevation** rather than the camera's own altitude.
   - `pitch`: Pitch angle (degrees)
   - `heading`: Heading angle (degrees)
   - `roll`: Roll angle (degrees)
   - `distance`: Distance from the target point along the camera forward direction (meters). When specified, the camera is placed so that its forward ray reaches the `lng`/`lat`/`height` target from this distance. If omitted, `height` is used as the camera's own altitude above the surface normal.
-- `duration`: Animation duration (milliseconds)
-- `maxHeight`: Maximum height during the flight arc (meters)
+- `options`: Flight options.
+  - `duration`: Animation duration (milliseconds). When omitted, the duration is derived from the flight distance (2–3 seconds). Pass `0` to jump instantly.
+  - `maxHeight`: Maximum height during the flight arc (meters)
+  - `easing`: Easing preset applied to the flight time. When omitted, `"quinticInOut"` is used, or `"cubicOut"` when descending from above 11,500 m.
+
+**Returns:** `Promise<boolean>` — `true` when the flight completed, `false` when it was interrupted.
 
 **Example:**
 
 ```tsx
 // Altitude-based: fly to Tokyo over 3 seconds (maximum height 5000 m)
-view.flyTo(
+const completed = await view.flyTo(
   {
     lng: 139.7671,
     lat: 35.6812,
@@ -585,11 +605,14 @@ view.flyTo(
     pitch: -45,
     heading: 0,
   },
-  3000,
-  5000
+  { duration: 3000, maxHeight: 5000 }
 );
+if (!completed) {
+  // Interrupted by another camera operation (a newer flyTo, setCamera, etc.).
+}
 
-// Distance-based: approach Tokyo Tower (at ground level) from 2000 m away
+// Distance-based: approach Tokyo Tower (at ground level) from 2000 m away,
+// with an explicit easing
 view.flyTo(
   {
     lng: 139.7454,
@@ -599,7 +622,7 @@ view.flyTo(
     pitch: -30,
     heading: 45,
   },
-  4000
+  { duration: 4000, easing: "cubicInOut" }
 );
 ```
 

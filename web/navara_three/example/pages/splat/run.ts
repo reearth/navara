@@ -240,7 +240,7 @@ const addDebugPane = (
       // Keep `height` (the model sits ~30 m up) and use `distance` to frame it:
       // the camera stops `distance` m from the target along its forward ray,
       // oriented by heading/pitch so the model is framed rather than edge-on.
-      view.flyTo(sampleCamPos(sample), 1000);
+      view.flyTo(sampleCamPos(sample), { duration: 1000 });
     });
   }
 

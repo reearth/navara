@@ -156,6 +156,30 @@ import WorkerURL from "./worker?url&worker";
 
 export type { CameraOptions, CameraEvent } from "./camera";
 
+/** Easing presets applied to a `flyTo` flight's normalized time. */
+export type FlyToEasing =
+  "linear" | "quadInOut" | "cubicInOut" | "cubicOut" | "quinticInOut";
+
+export type FlyToOptions = {
+  /** Animation duration in milliseconds. Defaults to a duration derived from
+   * the flight distance (2–3 s). Pass `0` to jump instantly. */
+  duration?: number;
+  /** Maximum height during the flight arc in meters. */
+  maxHeight?: number;
+  /** Easing preset. Defaults to `"quinticInOut"`, or `"cubicOut"` when
+   * descending from above 11,500 m. */
+  easing?: FlyToEasing;
+};
+
+// Must mirror `FlyToEasing`'s `TryFrom<u8>` mapping on the Rust side.
+const FLY_TO_EASING_CODE: Record<FlyToEasing, number> = {
+  linear: 0,
+  quadInOut: 1,
+  cubicInOut: 2,
+  cubicOut: 3,
+  quinticInOut: 4,
+};
+
 export { ColorMap, EventHandler, Plugin } from "@navaramap/core";
 export type {
   Nullable,
@@ -474,6 +498,9 @@ export default class ThreeView<
   private _declutterRetryDelay = 0;
   private _isIdle = false;
   private _uniforms: CommonUniforms;
+  /** Pending `flyTo` promises keyed by flight id, settled by
+   *  `camera_flight_ended` events from the engine. */
+  private _pendingFlights = new Map<number, (completed: boolean) => void>();
 
   private _meshes: MeshCache = new Map();
   private _abortControllers: AbortControllers = new Map();
@@ -1495,6 +1522,13 @@ export default class ThreeView<
       viewEvents: this,
       layersManager: this.layersManager,
       viewContext: this.viewContext,
+      flightHandler: (id, completed) => {
+        const resolve = this._pendingFlights.get(id);
+        if (resolve) {
+          this._pendingFlights.delete(id);
+          resolve(completed);
+        }
+      },
       layerHandler: this._layerHandler,
       fontManager: this._fontManager,
       textureFragmentIndex: this._textureFragmentIndex,
@@ -1605,6 +1639,11 @@ export default class ThreeView<
   dispose() {
     this._disposed = true;
     this._initialized = false;
+    // Settle pending flyTo promises so callers never hang on a disposed view.
+    for (const resolve of this._pendingFlights.values()) {
+      resolve(false);
+    }
+    this._pendingFlights.clear();
     if (this._declutterRetry !== undefined) {
       clearTimeout(this._declutterRetry);
       this._declutterRetry = undefined;
@@ -2491,30 +2530,48 @@ export default class ThreeView<
 
   /**
    * Animates the camera to fly to a target position.
+   *
+   * The flight follows an arced path: the default duration is derived from
+   * the flight distance (2–3 s), the default easing is `quinticInOut`
+   * (`cubicOut` when descending from high altitude), and longitudes take the
+   * short way across the antimeridian.
+   *
    * @param camPos - Target position with required lng/lat (degrees). Provide either `height` (meters above the ellipsoid)
    *   or `distance` (meters from the target point along the camera forward direction). Optional pitch, heading, roll (degrees).
-   * @param duration - Animation duration in milliseconds
-   * @param maxHeight - Maximum height during the flight arc in meters
+   * @param options - Flight options (`duration`, `maxHeight`, `easing`)
+   * @returns A promise resolving to `true` when the flight completes, or
+   *   `false` when it is interrupted by another camera operation, such as a
+   *   newer `flyTo` or a `setCamera` call.
    */
   flyTo(
     camPos: CameraPosition &
       Required<Pick<CameraPosition, "lng" | "lat">> &
       ({ height: number } | { distance: number }),
-    duration?: number,
-    maxHeight?: number,
-  ) {
+    options: FlyToOptions = {},
+  ): Promise<boolean> {
     const pos = camPos as CameraPosition & { lng: number; lat: number };
     const position = new Float64Array([pos.lng, pos.lat, pos.height ?? 0]);
 
-    this._core?.flyTo(
+    const id = this._core?.flyTo(
       position,
       pos.pitch,
       pos.heading,
       pos.roll,
-      duration,
-      maxHeight,
+      options.duration,
+      options.maxHeight,
       pos.distance,
+      options.easing === undefined
+        ? undefined
+        : FLY_TO_EASING_CODE[options.easing],
     );
+
+    if (id === undefined) {
+      return Promise.resolve(false);
+    }
+
+    return new Promise<boolean>((resolve) => {
+      this._pendingFlights.set(id, resolve);
+    });
   }
 
   /**

@@ -865,6 +865,10 @@ impl Core {
         self.app.move_camera_with_direction(direction, amount);
     }
 
+    /// Starts a camera flight and returns its id. A `CameraFlightEndedEvent`
+    /// carrying the same id is delivered through the event stream when the
+    /// flight completes (`completed: true`) or is superseded/canceled
+    /// (`completed: false`).
     #[allow(clippy::too_many_arguments)]
     #[wasm_bindgen(js_name = flyTo)]
     pub fn fly_to(
@@ -876,10 +880,11 @@ impl Core {
         duration: Option<FloatType>,
         max_height: Option<FloatType>,
         distance: Option<FloatType>,
-    ) {
+        easing: Option<u8>,
+    ) -> u32 {
         self.app.fly_to(
-            position, pitch, heading, roll, duration, max_height, distance,
-        );
+            position, pitch, heading, roll, duration, max_height, distance, easing,
+        )
     }
 
     #[wasm_bindgen(js_name = lookAt)]

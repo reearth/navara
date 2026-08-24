@@ -2798,6 +2798,7 @@ dependencies = [
  "navara_buffer_store",
  "navara_camera",
  "navara_core",
+ "navara_event_store",
  "navara_feature_component",
  "navara_geometry",
  "navara_globe",

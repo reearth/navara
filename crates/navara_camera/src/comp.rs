@@ -1,10 +1,10 @@
-use bevy_ecs::component::Component;
+use bevy_ecs::{component::Component, resource::Resource};
 use navara_core::{
-    Aabb, BoundingVolume, CRS, Plane, WGS84_64, WGS84_B_64, adjust_angle_for_lerp, lerp,
+    Aabb, BoundingVolume, CRS, Plane, WGS84_64, WGS84_B_64, adjust_angle_for_lerp,
+    ease_in_out_cubic, ease_in_out_quad, ease_in_out_quint, ease_linear, ease_out_cubic, lerp,
 };
-use navara_math::{
-    EPSILON10, EqualEpsilon, FloatType, Mat3, Quat, Transform, Vec3, negative_pi_to_pi,
-};
+use navara_event_store::CameraFlightEnded;
+use navara_math::{EPSILON10, EqualEpsilon, FloatType, Mat3, Quat, Transform, Vec3};
 
 use crate::{
     CameraOrientation,
@@ -414,6 +414,78 @@ pub struct FlightOptions {
     pub roll: FloatType,
 }
 
+/// Easing applied to the flight's normalized time.
+/// The `u8` mapping is part of the WASM API contract and must stay in sync
+/// with `FLY_TO_EASING_CODE` on the TypeScript side.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum FlyToEasing {
+    Linear,
+    QuadInOut,
+    CubicInOut,
+    CubicOut,
+    #[default]
+    QuinticInOut,
+}
+
+impl FlyToEasing {
+    pub fn apply(&self, t: FloatType) -> FloatType {
+        match self {
+            FlyToEasing::Linear => ease_linear(t),
+            FlyToEasing::QuadInOut => ease_in_out_quad(t),
+            FlyToEasing::CubicInOut => ease_in_out_cubic(t),
+            FlyToEasing::CubicOut => ease_out_cubic(t),
+            FlyToEasing::QuinticInOut => ease_in_out_quint(t),
+        }
+    }
+}
+
+impl TryFrom<u8> for FlyToEasing {
+    type Error = ();
+
+    fn try_from(v: u8) -> Result<Self, Self::Error> {
+        Ok(match v {
+            0 => FlyToEasing::Linear,
+            1 => FlyToEasing::QuadInOut,
+            2 => FlyToEasing::CubicInOut,
+            3 => FlyToEasing::CubicOut,
+            4 => FlyToEasing::QuinticInOut,
+            _ => return Err(()),
+        })
+    }
+}
+
+/// Allocates ids for `flyTo` flights. The id is returned to the caller
+/// synchronously and echoed back through `CameraFlightEnded`, letting the
+/// caller match a flight's terminal record to its pending promise.
+#[derive(Resource, Debug)]
+pub struct FlightIdAllocator {
+    next: u32,
+}
+
+impl Default for FlightIdAllocator {
+    fn default() -> Self {
+        Self { next: 1 }
+    }
+}
+
+impl FlightIdAllocator {
+    pub fn allocate(&mut self) -> u32 {
+        let id = self.next;
+        self.next = self.next.wrapping_add(1);
+        id
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StartFlyResult {
+    /// The flight animation started.
+    Started,
+    /// The camera is already at the target pose; nothing to animate.
+    NoOp,
+    /// `duration <= 0`: the caller must apply the end pose immediately.
+    Instant,
+}
+
 #[derive(Component, Default)]
 pub struct CameraFlight {
     pub start_options: FlightOptions,
@@ -422,19 +494,29 @@ pub struct CameraFlight {
     pub time: FloatType,
     pub duration: FloatType,
     pub max_height: FloatType,
+    pub easing: FlyToEasing,
     height_function: Option<Box<dyn Fn(FloatType) -> FloatType + Send + Sync + 'static>>,
+
+    /// Id of the in-progress flight, `None` when idle.
+    current_id: Option<u32>,
+    /// Terminal records drained into the `EventStore` once per frame.
+    pub ended: Vec<CameraFlightEnded>,
 }
 
 impl CameraFlight {
+    #[allow(clippy::too_many_arguments)]
     pub fn fly_to(
         &mut self,
+        id: u32,
         transform: &Transform,
         frustum: &CameraFrustum,
+        controller: &CameraController,
         pos: &Vec3,
         orient: &CameraOrientation,
         duration: &Option<FloatType>,
         max_height: &Option<FloatType>,
-    ) -> bool {
+        easing: Option<FlyToEasing>,
+    ) -> StartFlyResult {
         let lle = CRS::Geocentric.to_lle(WGS84_64, transform.translation, 0.0);
         let start = lle.deg();
 
@@ -456,7 +538,9 @@ impl CameraFlight {
             orient.get_roll(),
         );
 
-        self.start_fly(duration, max_height, frustum, transform)
+        self.start_fly(
+            id, duration, max_height, easing, frustum, transform, controller,
+        )
     }
 
     fn set_start_options(
@@ -493,31 +577,28 @@ impl CameraFlight {
         self.end_options.roll = roll;
     }
 
-    fn options_changed(&mut self) -> bool {
-        let start_heading = negative_pi_to_pi(self.start_options.heading);
-        let end_heading = negative_pi_to_pi(self.end_options.heading);
-        let start_pitch = negative_pi_to_pi(self.start_options.pitch);
-        let end_pitch = negative_pi_to_pi(self.end_options.pitch);
-        let start_roll = negative_pi_to_pi(self.start_options.roll);
-        let end_roll = negative_pi_to_pi(self.end_options.roll);
+    /// Smallest absolute angular difference between two angles in degrees.
+    fn angle_diff_deg(a: FloatType, b: FloatType) -> FloatType {
+        let d = (a - b).rem_euclid(360.0);
+        d.min(360.0 - d)
+    }
 
-        if !start_heading.equal_diff_epsilon(end_heading, EPSILON10) {
+    fn options_changed(&self) -> bool {
+        // Angles are degrees; compare their wrapped difference (a heading pair
+        // differing by a multiple of 360 is the same pose).
+        if Self::angle_diff_deg(self.start_options.heading, self.end_options.heading) > EPSILON10 {
             return true;
         }
 
-        if !start_pitch.equal_diff_epsilon(end_pitch, EPSILON10) {
+        if Self::angle_diff_deg(self.start_options.pitch, self.end_options.pitch) > EPSILON10 {
             return true;
         }
 
-        if !start_roll.equal_diff_epsilon(end_roll, EPSILON10) {
+        if Self::angle_diff_deg(self.start_options.roll, self.end_options.roll) > EPSILON10 {
             return true;
         }
 
-        if !self
-            .start_options
-            .lon
-            .equal_diff_epsilon(self.end_options.lon, EPSILON10)
-        {
+        if Self::angle_diff_deg(self.start_options.lon, self.end_options.lon) > EPSILON10 {
             return true;
         }
 
@@ -540,28 +621,99 @@ impl CameraFlight {
         false
     }
 
+    // Default duration derived from the flight distance:
+    // `min(ceil(distance / 1_000_000) + 2, 3)` seconds, converted to ms.
+    // ref: https://github.com/CesiumGS/cesium/blob/main/packages/engine/Source/Scene/Camera.js
+    fn default_duration_ms(&self, transform: &Transform) -> FloatType {
+        let end_ecef = CRS::Geographic.to_vec3(
+            WGS84_64,
+            Vec3::new(
+                self.end_options.lon,
+                self.end_options.lat,
+                self.end_options.height,
+            ),
+            0.0,
+        );
+        let distance = (end_ecef - transform.translation).length();
+        ((distance / 1_000_000.0).ceil() + 2.0).min(3.0) * 1000.0
+    }
+
+    #[allow(clippy::too_many_arguments)]
     fn start_fly(
         &mut self,
+        id: u32,
         duration: &Option<FloatType>,
         max_height: &Option<FloatType>,
+        easing: Option<FlyToEasing>,
         frustum: &CameraFrustum,
         transform: &Transform,
-    ) -> bool {
-        if !self.options_changed() {
-            return false;
+        controller: &CameraController,
+    ) -> StartFlyResult {
+        // A new flyTo always supersedes the in-progress flight, even when the
+        // new target turns out to be a no-op.
+        if let Some(old_id) = self.current_id.take() {
+            self.ended.push(CameraFlightEnded {
+                id: old_id,
+                completed: false,
+            });
+            self.height_function = None;
+            self.time = 0.;
+            self.duration = 0.;
         }
 
+        if !self.options_changed() {
+            // Already at the target pose: report immediate completion.
+            self.ended.push(CameraFlightEnded {
+                id,
+                completed: true,
+            });
+            return StartFlyResult::NoOp;
+        }
+
+        let duration = duration.unwrap_or_else(|| self.default_duration_ms(transform));
+        if duration <= 0.0 {
+            // A zero-duration flight applies the end pose immediately.
+            self.time = 0.;
+            self.duration = 0.;
+            self.ended.push(CameraFlightEnded {
+                id,
+                completed: true,
+            });
+            return StartFlyResult::Instant;
+        }
+
+        // Heading and roll take the short way around; pitch is intentionally
+        // lerped as-is.
         self.start_options.heading =
             adjust_angle_for_lerp(self.start_options.heading, self.end_options.heading);
         self.start_options.roll =
             adjust_angle_for_lerp(self.start_options.roll, self.end_options.roll);
 
+        // Fly the short way across the antimeridian.
+        let lon_diff = self.start_options.lon - self.end_options.lon;
+        if lon_diff < -180.0 {
+            self.start_options.lon += 360.0;
+        } else if lon_diff > 180.0 {
+            self.end_options.lon += 360.0;
+        }
+
         self.time = 0.;
-        self.duration = duration.unwrap_or(500.);
+        self.duration = duration;
+        // Default easing: quintic in/out, but cubic-out when descending
+        // from high altitude.
+        self.easing = easing.unwrap_or(
+            if self.start_options.height > self.end_options.height
+                && self.start_options.height > 11500.0
+            {
+                FlyToEasing::CubicOut
+            } else {
+                FlyToEasing::QuinticInOut
+            },
+        );
         if let Some(h) = max_height {
             self.max_height = *h;
         } else {
-            self.max_height = self.get_altitude(transform, frustum);
+            self.max_height = self.get_altitude(transform, frustum, controller);
         }
 
         self.height_function = Some(Self::create_height_function(
@@ -569,12 +721,33 @@ impl CameraFlight {
             self.end_options.height,
             self.max_height,
         ));
+        self.current_id = Some(id);
 
-        true
+        StartFlyResult::Started
     }
 
     pub fn is_flying(&self) -> bool {
         self.time < self.duration
+    }
+
+    /// True while a flight owns the camera (i.e. its terminal record has not
+    /// been emitted yet).
+    pub fn is_active(&self) -> bool {
+        self.current_id.is_some()
+    }
+
+    /// Cancels the in-progress flight, if any. Its pending promise on the JS
+    /// side resolves as not completed.
+    pub fn cancel(&mut self) {
+        if let Some(id) = self.current_id.take() {
+            self.ended.push(CameraFlightEnded {
+                id,
+                completed: false,
+            });
+        }
+        self.time = 0.;
+        self.duration = 0.;
+        self.height_function = None;
     }
 
     pub fn update(&mut self, delta_time: FloatType) -> Option<(Vec3, CameraOrientation)> {
@@ -585,7 +758,7 @@ impl CameraFlight {
             }
 
             if let Some(f) = &self.height_function {
-                let t = self.time / self.duration;
+                let t = self.easing.apply(self.time / self.duration);
                 let height = f(t);
 
                 let lon = lerp(self.start_options.lon, self.end_options.lon, t);
@@ -601,6 +774,17 @@ impl CameraFlight {
                     roll: Some(roll),
                 };
 
+                // The final sample lands exactly on t = 1; emit the terminal
+                // record in the same frame.
+                if !self.is_flying()
+                    && let Some(id) = self.current_id.take()
+                {
+                    self.ended.push(CameraFlightEnded {
+                        id,
+                        completed: true,
+                    });
+                }
+
                 return Some((position, orientation));
             }
         }
@@ -609,7 +793,12 @@ impl CameraFlight {
     }
 
     // ref: https://github.com/CesiumGS/cesium/blob/fb314464d211abf51649b17151137db7a403502a/packages/engine/Source/Scene/CameraFlightPath.js#L22
-    fn get_altitude(&self, transform: &Transform, frustum: &CameraFrustum) -> FloatType {
+    fn get_altitude(
+        &self,
+        transform: &Transform,
+        frustum: &CameraFrustum,
+        controller: &CameraController,
+    ) -> FloatType {
         let cam_start = transform.translation;
         let cam_end = CRS::Geographic.to_vec3(
             WGS84_64,
@@ -628,14 +817,16 @@ impl CameraFlight {
         let dx = (up * diff.dot(up)).length();
         let dy = (right * diff.dot(right)).length();
 
+        // The frustum extents are derived from the vertical fov.
         let tan_theta = (0.5 * frustum.fov).tan();
         let near = frustum.near;
         let top = near * tan_theta;
         let right = frustum.aspect_ratio * top;
 
-        let controller = CameraController::default();
-        (dx * near / right)
-            .max(dy * near / top)
+        // Scale the fit-both-points estimate by 0.2, cap it at 1e9 m, and
+        // clamp to the controller's zoom limit.
+        ((dx * near / right).max(dy * near / top) * 0.2)
+            .min(1_000_000_000.0)
             .min(controller.maximum_zoom_distance)
     }
 
@@ -668,10 +859,10 @@ impl CameraFlight {
 #[cfg(test)]
 mod test {
     use approx::assert_abs_diff_eq;
-    use navara_core::{Aabb, Angle, BoundingVolume, Obb, Plane};
+    use navara_core::{Aabb, Angle, BoundingVolume, CRS, Obb, Plane, WGS84_64};
     use navara_math::{EPSILON5, Transform, Vec3};
 
-    use super::CameraFrustum;
+    use super::{CameraController, CameraFlight, CameraFrustum, FlyToEasing, StartFlyResult};
 
     #[test]
     fn is_frustum_plane_correct() {
@@ -840,5 +1031,297 @@ mod test {
 
         // Point in frustum, any radius works
         assert!(frustum.contains_sphere(Vec3::new(0., 0., 10.), 1.0));
+    }
+
+    type Pose = (f64, f64, f64, f64, f64, f64); // lon, lat, height, heading, pitch, roll
+
+    fn flight_with_pose(start: Pose, end: Pose) -> CameraFlight {
+        let mut flight = CameraFlight::default();
+        flight.set_start_options(start.0, start.1, start.2, start.3, start.4, start.5);
+        flight.set_end_options(end.0, end.1, end.2, end.3, end.4, end.5);
+        flight
+    }
+
+    fn test_frustum() -> CameraFrustum {
+        CameraFrustum::new(
+            &Transform::default(),
+            0.1,
+            1000.,
+            Angle::new(50.).rad().val(),
+            1.,
+        )
+    }
+
+    fn start(
+        flight: &mut CameraFlight,
+        id: u32,
+        duration: Option<f64>,
+        easing: Option<FlyToEasing>,
+    ) -> StartFlyResult {
+        flight.start_fly(
+            id,
+            &duration,
+            &Some(10_000.),
+            easing,
+            &test_frustum(),
+            &Transform::default(),
+            &CameraController::default(),
+        )
+    }
+
+    #[test]
+    fn options_changed_compares_angles_in_degrees() {
+        let pose: Pose = (139.7, 35.6, 1000., 10., -45., 0.);
+
+        // Identical pose: unchanged.
+        assert!(!flight_with_pose(pose, pose).options_changed());
+
+        // Regression: headings differing by 2π degrees (~6.2832°) used to be
+        // normalized with a ±π (radians) helper and compare equal.
+        let mut end = pose;
+        end.3 += std::f64::consts::TAU;
+        assert!(flight_with_pose(pose, end).options_changed());
+
+        // A full 360° turn is the same pose.
+        let mut end = pose;
+        end.3 += 360.;
+        assert!(!flight_with_pose(pose, end).options_changed());
+
+        // lon 180 and -180 are the same meridian.
+        let start = (180., 0., 1000., 0., -90., 0.);
+        let end = (-180., 0., 1000., 0., -90., 0.);
+        assert!(!flight_with_pose(start, end).options_changed());
+    }
+
+    #[test]
+    fn start_fly_takes_short_path_across_antimeridian() {
+        // Tokyo → Bangkok: |diff| < 180, no adjustment.
+        let mut flight = flight_with_pose(
+            (139.7, 35.6, 1000., 0., -90., 0.),
+            (100.5, 13.7, 1000., 0., -90., 0.),
+        );
+        assert_eq!(
+            start(&mut flight, 1, Some(1000.), None),
+            StartFlyResult::Started
+        );
+        assert_abs_diff_eq!(flight.start_options.lon, 139.7);
+        assert_abs_diff_eq!(flight.end_options.lon, 100.5);
+
+        // Tokyo → San Francisco: the short way crosses the Pacific, so the
+        // destination is unwrapped past the antimeridian (-122.4 → 237.6).
+        let mut flight = flight_with_pose(
+            (139.7, 35.6, 1000., 0., -90., 0.),
+            (-122.4, 37.7, 1000., 0., -90., 0.),
+        );
+        assert_eq!(
+            start(&mut flight, 1, Some(1000.), None),
+            StartFlyResult::Started
+        );
+        assert_abs_diff_eq!(flight.end_options.lon, 237.6, epsilon = 1e-9);
+
+        // 170 → -170 must cross the antimeridian: end becomes 190.
+        let mut flight = flight_with_pose(
+            (170., 0., 1000., 0., -90., 0.),
+            (-170., 0., 1000., 0., -90., 0.),
+        );
+        assert_eq!(
+            start(&mut flight, 1, Some(1000.), None),
+            StartFlyResult::Started
+        );
+        assert_abs_diff_eq!(flight.end_options.lon, 190.);
+
+        // Mirrored: -170 → 170 shifts the start instead.
+        let mut flight = flight_with_pose(
+            (-170., 0., 1000., 0., -90., 0.),
+            (170., 0., 1000., 0., -90., 0.),
+        );
+        assert_eq!(
+            start(&mut flight, 1, Some(1000.), None),
+            StartFlyResult::Started
+        );
+        assert_abs_diff_eq!(flight.start_options.lon, 190.);
+    }
+
+    #[test]
+    fn default_duration_derives_from_flight_distance() {
+        let pose: Pose = (139.7, 35.6, 1000., 0., -90., 0.);
+        let mut end = pose;
+        end.3 = 90.; // heading change only → zero flight distance
+
+        // Camera exactly at the destination: min(ceil(0) + 2, 3) = 2 s.
+        let transform = Transform {
+            translation: CRS::Geographic.to_vec3(WGS84_64, Vec3::new(pose.0, pose.1, pose.2), 0.0),
+            ..Default::default()
+        };
+        let mut flight = flight_with_pose(pose, end);
+        let result = flight.start_fly(
+            1,
+            &None,
+            &Some(10_000.),
+            None,
+            &test_frustum(),
+            &transform,
+            &CameraController::default(),
+        );
+        assert_eq!(result, StartFlyResult::Started);
+        assert_abs_diff_eq!(flight.duration, 2000.);
+
+        // Any distance beyond 0 m caps at 3 s.
+        let mut flight = flight_with_pose(pose, end);
+        let result = flight.start_fly(
+            2,
+            &None,
+            &Some(10_000.),
+            None,
+            &test_frustum(),
+            &Transform::default(), // Earth's center: ~6378 km away
+            &CameraController::default(),
+        );
+        assert_eq!(result, StartFlyResult::Started);
+        assert_abs_diff_eq!(flight.duration, 3000.);
+
+        // Explicit duration wins.
+        let mut flight = flight_with_pose(pose, end);
+        start(&mut flight, 3, Some(750.), None);
+        assert_abs_diff_eq!(flight.duration, 750.);
+    }
+
+    #[test]
+    fn zero_duration_is_instant() {
+        let mut flight = flight_with_pose(
+            (139.7, 35.6, 1000., 0., -90., 0.),
+            (135.0, 34.7, 1000., 0., -90., 0.),
+        );
+        assert_eq!(
+            start(&mut flight, 7, Some(0.), None),
+            StartFlyResult::Instant
+        );
+        assert!(!flight.is_flying());
+        assert!(!flight.is_active());
+        assert_eq!(flight.ended.len(), 1);
+        assert_eq!(flight.ended[0].id, 7);
+        assert!(flight.ended[0].completed);
+    }
+
+    #[test]
+    fn default_easing_is_quintic_in_out_or_cubic_out_on_high_descent() {
+        // Descending from above 11,500 m → cubic-out.
+        let mut flight = flight_with_pose(
+            (139.7, 35.6, 20_000., 0., -90., 0.),
+            (139.7, 35.6, 100., 0., -90., 0.),
+        );
+        start(&mut flight, 1, Some(1000.), None);
+        assert_eq!(flight.easing, FlyToEasing::CubicOut);
+
+        // Ascending → quintic in/out.
+        let mut flight = flight_with_pose(
+            (139.7, 35.6, 100., 0., -90., 0.),
+            (139.7, 35.6, 20_000., 0., -90., 0.),
+        );
+        start(&mut flight, 2, Some(1000.), None);
+        assert_eq!(flight.easing, FlyToEasing::QuinticInOut);
+
+        // Explicit easing wins.
+        let mut flight = flight_with_pose(
+            (139.7, 35.6, 20_000., 0., -90., 0.),
+            (139.7, 35.6, 100., 0., -90., 0.),
+        );
+        start(&mut flight, 3, Some(1000.), Some(FlyToEasing::Linear));
+        assert_eq!(flight.easing, FlyToEasing::Linear);
+    }
+
+    #[test]
+    fn flight_lifecycle_emits_terminal_records() {
+        let start_pose: Pose = (139.7, 35.6, 1000., 0., -90., 0.);
+        let end_pose: Pose = (135.0, 34.7, 1000., 0., -90., 0.);
+
+        // Completion.
+        let mut flight = flight_with_pose(start_pose, end_pose);
+        start(&mut flight, 1, Some(1000.), None);
+        assert!(flight.is_active());
+        assert!(flight.update(1000.).is_some());
+        assert!(!flight.is_active());
+        assert_eq!(flight.ended.len(), 1);
+        assert_eq!(flight.ended[0].id, 1);
+        assert!(flight.ended[0].completed);
+
+        // A new flight supersedes the current one.
+        let mut flight = flight_with_pose(start_pose, end_pose);
+        start(&mut flight, 1, Some(1000.), None);
+        flight.update(500.);
+        flight.set_start_options(137., 35., 1000., 0., -90., 0.);
+        flight.set_end_options(130., 33., 1000., 0., -90., 0.);
+        start(&mut flight, 2, Some(1000.), None);
+        assert_eq!(flight.ended.len(), 1);
+        assert_eq!(flight.ended[0].id, 1);
+        assert!(!flight.ended[0].completed);
+        flight.update(1000.);
+        assert_eq!(flight.ended.len(), 2);
+        assert_eq!(flight.ended[1].id, 2);
+        assert!(flight.ended[1].completed);
+
+        // Cancel.
+        let mut flight = flight_with_pose(start_pose, end_pose);
+        start(&mut flight, 3, Some(1000.), None);
+        flight.cancel();
+        assert!(!flight.is_active());
+        assert!(!flight.is_flying());
+        assert_eq!(flight.ended.len(), 1);
+        assert_eq!(flight.ended[0].id, 3);
+        assert!(!flight.ended[0].completed);
+        assert!(flight.update(16.).is_none());
+
+        // No-op start resolves immediately.
+        let mut flight = flight_with_pose(start_pose, start_pose);
+        assert_eq!(
+            start(&mut flight, 4, Some(1000.), None),
+            StartFlyResult::NoOp
+        );
+        assert_eq!(flight.ended.len(), 1);
+        assert_eq!(flight.ended[0].id, 4);
+        assert!(flight.ended[0].completed);
+
+        // Even a no-op flyTo interrupts the in-progress flight first.
+        let mut flight = flight_with_pose(start_pose, end_pose);
+        start(&mut flight, 5, Some(1000.), None);
+        flight.update(500.);
+        flight.set_start_options(137., 35., 1000., 0., -90., 0.);
+        flight.set_end_options(137., 35., 1000., 0., -90., 0.);
+        assert_eq!(
+            start(&mut flight, 6, Some(1000.), None),
+            StartFlyResult::NoOp
+        );
+        assert!(!flight.is_active());
+        assert!(!flight.is_flying());
+        assert_eq!(flight.ended.len(), 2);
+        assert_eq!(flight.ended[0].id, 5);
+        assert!(!flight.ended[0].completed);
+        assert_eq!(flight.ended[1].id, 6);
+        assert!(flight.ended[1].completed);
+    }
+
+    #[test]
+    fn get_altitude_clamps_to_live_controller() {
+        let flight = flight_with_pose(
+            (139.7, 35.6, 1000., 0., -90., 0.),
+            (135.0, 34.7, 1000., 0., -90., 0.),
+        );
+
+        let frustum = CameraFrustum::new(
+            &Transform::default(),
+            0.1,
+            1000.,
+            Angle::new(50.).rad().val(),
+            2.,
+        );
+
+        // The transform sits at Earth's center, so the raw altitude is huge and
+        // must clamp to the *live* controller's maximum zoom distance.
+        let controller = CameraController {
+            maximum_zoom_distance: 1234.,
+            ..Default::default()
+        };
+        let altitude = flight.get_altitude(&Transform::default(), &frustum, &controller);
+        assert_abs_diff_eq!(altitude, 1234.);
     }
 }
