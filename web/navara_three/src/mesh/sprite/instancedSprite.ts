@@ -760,9 +760,20 @@ export class InstancedSpriteMesh
       rectAttr.setXYZW(i, rect.x, rect.y, rect.w, rect.h);
     }
     rectAttr.needsUpdate = true;
-    // The rect drives each instance's aspect (and whether it is drawn at all),
-    // so the declutter bounds computed before the image landed are stale.
+    this._onAtlasRectsChanged();
+  }
+
+  /**
+   * An instance's atlas rect changed. The rect drives the quad's aspect and
+   * whether the instance draws at all, so the declutter bounds computed before
+   * the image landed are stale — and because packs resolve long after the
+   * frame that requested them, the view has usually gone idle by now. Without
+   * the render request the page keeps showing the pre-image state until the
+   * next camera move.
+   */
+  private _onAtlasRectsChanged(): void {
     this.ctx.declutter?.markDirty();
+    this.ctx.renderFlag.forceUpdate = true;
   }
 
   onBeforePicking(): void {
@@ -930,7 +941,7 @@ export class InstancedSpriteMesh
         rect?.h ?? 0,
       );
       rectAttr.needsUpdate = true;
-      this.ctx.declutter?.markDirty();
+      this._onAtlasRectsChanged();
       return;
     }
 
@@ -945,7 +956,7 @@ export class InstancedSpriteMesh
     this._syncAtlasUniforms();
     rectAttr.setXYZW(instanceId, rect.x, rect.y, rect.w, rect.h);
     rectAttr.needsUpdate = true;
-    this.ctx.declutter?.markDirty();
+    this._onAtlasRectsChanged();
   }
 
   dispose(): void {
