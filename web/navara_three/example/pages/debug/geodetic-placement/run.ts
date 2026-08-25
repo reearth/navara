@@ -12,8 +12,8 @@ import {
 import { TileJsonPlugin } from "@navaramap/three-plugins";
 import { Pane } from "tweakpane";
 
-import { TERRAIN_DATASETS } from "../../helpers/constants";
-import { addHidePaneKeyShortcut } from "../../helpers/control";
+import { TERRAIN_DATASETS } from "../../../helpers/constants";
+import { addHidePaneKeyShortcut } from "../../../helpers/control";
 
 import { SUBJECTS, type Subject, type Transform } from "./subjects";
 
