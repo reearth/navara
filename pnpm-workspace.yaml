@@ -2,13 +2,13 @@ packages:
   - web/**
   - debug_tile_server
   - docs
-ignoredBuiltDependencies:
-  - msw
-
-onlyBuiltDependencies:
-  - canvas
-  - esbuild
-  - sharp
+allowBuilds:
+  '@swc/core': false
+  canvas: true
+  esbuild: true
+  msw: false
+  sharp: true
+  unrs-resolver: false
 
 # Overrides to patch transitive dependencies flagged by `pnpm audit`.
 # Each entry targets a specific vulnerable range so non-vulnerable majors
