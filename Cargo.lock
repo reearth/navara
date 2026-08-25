@@ -860,7 +860,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f43e408596ca74d9c9a44f5d4fd110628c54f38c22e03edef7f112e935c15e41"
 dependencies = [
  "image",
- "nalgebra 0.34.2",
+ "nalgebra",
  "num-traits",
 ]
 
@@ -872,7 +872,7 @@ checksum = "803b1b40e898def21bc6f97335da11dffdca865f2c603b41d71ab81d310808df"
 dependencies = [
  "fdsm",
  "image",
- "nalgebra 0.34.2",
+ "nalgebra",
  "ttf-parser 0.25.1",
 ]
 
@@ -1200,12 +1200,6 @@ dependencies = [
  "rand",
  "serde_core",
 ]
-
-[[package]]
-name = "glam"
-version = "0.33.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c426daf70099baff33fac0ba85151c42424861c56828cef9ba02dacb78eb6b26"
 
 [[package]]
 name = "gloo-utils"
@@ -1992,27 +1986,7 @@ dependencies = [
  "num-complex",
  "num-rational",
  "num-traits",
- "simba 0.9.1",
- "typenum",
-]
-
-[[package]]
-name = "nalgebra"
-version = "0.35.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "adc43a60c217b0c6ff46e47f26911015ad8d2e5a8be1af668c67e370d99a4346"
-dependencies = [
- "approx",
- "glam 0.30.10",
- "glam 0.31.1",
- "glam 0.32.1",
- "glam 0.33.5",
- "matrixmultiply",
- "nalgebra-macros",
- "num-complex",
- "num-rational",
- "num-traits",
- "simba 0.10.2",
+ "simba",
  "typenum",
 ]
 
@@ -2785,7 +2759,7 @@ dependencies = [
  "guillotiere",
  "image",
  "js-sys",
- "nalgebra 0.35.0",
+ "nalgebra",
  "navara_wasm_types",
  "navara_wasm_utils",
  "rustc-hash",
@@ -3202,7 +3176,7 @@ dependencies = [
  "flate2",
  "serde",
  "serde_json",
- "wide 0.7.33",
+ "wide",
 ]
 
 [[package]]
@@ -3457,15 +3431,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "safe_arch"
-version = "1.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42c6efa15875e6ecb39ca61fb0b0c1a40b84fac5a5ffe71eef7d1000c8eb3f5f"
-dependencies = [
- "bytemuck",
-]
-
-[[package]]
 name = "same-file"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3586,19 +3551,7 @@ dependencies = [
  "num-complex",
  "num-traits",
  "paste",
- "wide 0.7.33",
-]
-
-[[package]]
-name = "simba"
-version = "0.10.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1a7200d82ff1c7b4235efd12f11e2537a402c91cf83a5cb97ce80eef787fde7"
-dependencies = [
- "approx",
- "num-complex",
- "num-traits",
- "wide 1.6.1",
+ "wide",
 ]
 
 [[package]]
@@ -4203,17 +4156,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ce5da8ecb62bcd8ec8b7ea19f69a51275e91299be594ea5cc6ef7819e16cd03"
 dependencies = [
  "bytemuck",
- "safe_arch 0.7.4",
-]
-
-[[package]]
-name = "wide"
-version = "1.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de2aaf408e58689c2096682331b1f42bb2d9f2ed6b11560407d023cd0a6c634e"
-dependencies = [
- "bytemuck",
- "safe_arch 1.2.0",
+ "safe_arch",
 ]
 
 [[package]]
