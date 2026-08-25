@@ -327,7 +327,9 @@ import { Color } from "@navaramap/three";
 
 **Description:** Specifies the URL of the object. Supports image files. This is the default image for every feature in the layer. Individual features can override it by returning `image` from [`FeatureEvaluator.evaluate()`](../../api/feature-evaluator/#evaluate), and returning `image: null` reverts an overridden feature to this default.
 
-**Default:** Required
+Optional: omit it when every image comes from the evaluator. Features then stay invisible until an `image` is set for them, and `image: null` hides a feature again instead of reverting it to a default.
+
+**Default:** `undefined`
 
 **Example:**
 

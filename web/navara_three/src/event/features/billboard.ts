@@ -8,8 +8,10 @@ export async function renderBillboard(
   ctx: EventContext,
   m: NavaraBillboardMesh,
 ) {
-  if (!m.material.url) return;
-
+  // No `url` check: a billboard layer may carry no material-level image and
+  // get every image per-feature from a FeatureEvaluator (`{ image }`). The
+  // mesh starts with empty atlas rects, which the shader culls, so instances
+  // stay invisible until an image is packed for them.
   const mesh = new InstancedSpriteMesh({
     renderOrder: FEATURE_RENDER_ORDER,
     ctx,

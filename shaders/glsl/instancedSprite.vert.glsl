@@ -70,7 +70,17 @@ void main() {
     vBatchID = instanceBatchID;
     vColor = instanceColor;
 
-    if (instanceShow <= 0.5 || instanceDeclutterHide >= 0.999) {
+    // An empty atlas rect means no image is packed for this instance yet (a
+    // material with no `url`, a per-feature image still loading, or a failed
+    // load). Sampling it would stretch texel (0, 0) — which belongs to
+    // whichever image packed first — over the whole quad, so cull instead.
+#ifdef BILLBOARD
+    bool nvr_hasImage = instanceUvRect.z > 0.0 && instanceUvRect.w > 0.0;
+#else
+    bool nvr_hasImage = true;
+#endif
+
+    if (instanceShow <= 0.5 || instanceDeclutterHide >= 0.999 || !nvr_hasImage) {
         gl_Position = vec4(2.0, 2.0, 2.0, 1.0); // Cull the vertex by moving it outside of the clip space
         return;
     }
