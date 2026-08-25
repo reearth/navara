@@ -43,6 +43,6 @@ jobs:
                 run_install: false
             - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
               with:
-                node-version: '24.14.1'
+                node-version: '24.19.0'
             # --ignore-registry-errors: audit will fail only if the registry actually successfully responds with found vulnerabilities
             - run: pnpm audit --audit-level=high --ignore-registry-errors
