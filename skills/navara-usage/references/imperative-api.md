@@ -88,6 +88,6 @@ Pick the tangent-frame function by the axis orientation your mesh expects — al
 | `northUpEastToFixedFrame` | North, Up, East |
 | `northWestUpToFixedFrame` | North, West, Up |
 
-Mesh transform modes: standard `position`/`rotation`/`scale` (Cartesian ECEF — the default), `matrix` (local frame), `matrixWorld` (world frame — the usual choice for geographic placement, as above).
+Mesh transform modes: standard `position`/`rotation`/`scale` (Cartesian ECEF — the default), `matrix` (local frame), `matrixWorld` (world frame — the usual choice for geographic placement, as above). `matrix`, `matrixWorld` and `geodetic` are mutually exclusive (`ConflictingTransformError`); `position`/`rotation`/`scale` become offsets inside whichever frame is set.
 
 Full math API reference: https://navara-docs.reearth.workers.dev//three/api/navara_three_api — the most complete runnable reference for picking + geometry math is `example/pages/debug/mesh-picking/main.ts` in the Navara repo.

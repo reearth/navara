@@ -16,15 +16,15 @@ sidebar:
 | `position`    | `{ x: number, y: number, z: number }` | -          | 位置（ECEF座標系）、`matrix`/`matrixWorld` 設定時はローカルオフセット                       |
 | `rotation`    | `{ x: number, y: number, z: number }` | -          | 回転（Euler角、ラジアン）、`matrix`/`matrixWorld` 設定時はローカルオフセット                |
 | `scale`       | `{ x: number, y: number, z: number }` | -          | スケール、`matrix`/`matrixWorld` 設定時はローカルオフセット                                 |
-| `matrix`      | `Matrix4`                             | -          | ローカル変換行列。設定時は `position`/`rotation`/`scale` がこのフレーム内のオフセットになる |
-| `matrixWorld` | `Matrix4`                             | -          | ワールド変換行列。設定時は `position`/`rotation`/`scale` がこのフレーム内のオフセットになる |
+| `matrix`      | `Matrix4`                             | -          | ローカル変換行列。設定時は `position`/`rotation`/`scale` がこのフレーム内のオフセットになる。`matrixWorld`/`geodetic` とは併用不可 |
+| `matrixWorld` | `Matrix4`                             | -          | ワールド変換行列。設定時は `position`/`rotation`/`scale` がこのフレーム内のオフセットになる。`matrix`/`geodetic` とは併用不可 |
 | `geodetic`    | `GeodeticPlacement`                   | -          | 度単位の地理的配置（[地理的配置](#地理的配置geodetic) を参照）。`matrix`/`matrixWorld` とは併用不可 |
 | `lit`         | `boolean`                             | -          | メッシュのすべてのマテリアルに適用するライティングの上書き。未設定なら `view.lit` に従う（[Lighting](#lighting-lit) を参照） |
 | `pickable`    | `boolean`                             | `false`    | GPU ベースのクリックピッキングを有効にする。ピッキング対応のメッシュ Descriptor が Descriptor ごとに定義するもので、基底の設定には存在しない |
 
 ## トランスフォーム合成
 
-`MeshDesc` は3つのトランスフォームモードをサポートしています。
+`MeshDesc` は3つのトランスフォームモードをサポートしています。`matrix`、`matrixWorld`、`geodetic` はいずれもオブジェクトの配置を定義するため、設定できるのは最大1つだけです。2つ以上を同時に設定すると `ConflictingTransformError` が発生します。
 
 ### 標準トランスフォーム
 
@@ -132,7 +132,7 @@ car.update({ geodetic: { heading: 330 } });
 effective = geodetic · T(position) · R(rotation) · S(scale)
 ```
 
-そのため `position`、`rotation`、`scale` は、配置されたフレーム*内側*のオフセットのままです。`geodetic` を `matrix` や `matrixWorld` と同時に設定すると、両方が同じ配置を定義しようとするため `ConflictingTransformError` が発生します。
+そのため `position`、`rotation`、`scale` は、配置されたフレーム*内側*のオフセットのままです。`geodetic` を `matrix` や `matrixWorld` と同時に設定すると、両方が同じ配置を定義しようとするため `ConflictingTransformError` が発生します。`matrix` と `matrixWorld` を同時に設定した場合も同様です。
 
 `geodetic.scale` とトップレベルの `scale` はどちらも設定できますが、同じものではありません。`geodetic.scale` はフレーム自体をスケールするため `position` オフセットにも影響しますが、`scale` はオブジェクトのみをスケールします。
 

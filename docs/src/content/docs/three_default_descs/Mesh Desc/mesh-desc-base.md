@@ -16,15 +16,17 @@ sidebar:
 | `position`    | `{ x: number, y: number, z: number }`  | -              | Position (ECEF), or local offset when `matrix`/`matrixWorld` is set                            |
 | `rotation`    | `{ x: number, y: number, z: number }`  | -              | Rotation (Euler angles, radians), or local offset when `matrix`/`matrixWorld` is set           |
 | `scale`       | `{ x: number, y: number, z: number }`  | -              | Scale, or local offset when `matrix`/`matrixWorld` is set                                      |
-| `matrix`      | `Matrix4`                              | -              | Local transform matrix. When set, `position`/`rotation`/`scale` become offsets within this frame |
-| `matrixWorld` | `Matrix4`                              | -              | World transform matrix. When set, `position`/`rotation`/`scale` become offsets within this frame |
+| `matrix`      | `Matrix4`                              | -              | Local transform matrix. When set, `position`/`rotation`/`scale` become offsets within this frame. Mutually exclusive with `matrixWorld`/`geodetic` |
+| `matrixWorld` | `Matrix4`                              | -              | World transform matrix. When set, `position`/`rotation`/`scale` become offsets within this frame. Mutually exclusive with `matrix`/`geodetic` |
 | `geodetic`    | `GeodeticPlacement`                    | -              | Geographic placement in degrees. See [Geographic Placement](#geographic-placement-geodetic). Mutually exclusive with `matrix`/`matrixWorld` |
 | `lit`         | `boolean`                              | -              | Lighting override applied to every material of the mesh. Unset follows `view.lit`. See [Lighting](#lighting-lit) |
 | `pickable`    | `boolean`                              | `false`        | Enable GPU-based click picking. Defined per Descriptor by picking-capable mesh Descriptors, not on the base config |
 
 ## Transform Composition
 
-`MeshDesc` supports three transform modes.
+`MeshDesc` supports three transform modes. `matrix`, `matrixWorld`, and
+`geodetic` all define the object's placement, so at most one of them may be
+set — combining any two throws `ConflictingTransformError`.
 
 ### Standard Transforms
 
@@ -137,7 +139,8 @@ effective = geodetic · T(position) · R(rotation) · S(scale)
 
 `position`, `rotation`, and `scale` therefore remain offsets *inside* the
 placed frame. Setting `geodetic` together with `matrix` or `matrixWorld` throws
-`ConflictingTransformError`, because both would define the same placement.
+`ConflictingTransformError`, because both would define the same placement — as
+does setting `matrix` and `matrixWorld` together.
 
 `geodetic.scale` and the top-level `scale` are both allowed and are not the
 same thing: `geodetic.scale` scales the frame, so it also scales `position`

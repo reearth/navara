@@ -174,6 +174,42 @@ describe("MeshDesc geodetic placement", () => {
     );
   });
 
+  // `matrix` was previously accepted alongside `matrixWorld` and then dropped
+  // by `applyTransform`'s priority chain — and it cannot be honoured there at
+  // all, since the `matrixWorld` branch turns `matrixWorldAutoUpdate` off, so
+  // Three.js never derives `matrixWorld` from `matrix` again.
+  it("throws when matrix is combined with matrixWorld", () => {
+    expect(() =>
+      create({ matrix: new Matrix4(), matrixWorld: new Matrix4() }),
+    ).toThrow(ConflictingTransformError);
+  });
+
+  it("throws when an update introduces matrix onto a matrixWorld mesh", () => {
+    const frame = new Matrix4().makeTranslation(1, 2, 3);
+    const desc = create({ matrixWorld: frame });
+
+    expect(() => desc.onUpdateConfig({ matrix: new Matrix4() })).toThrow(
+      ConflictingTransformError,
+    );
+
+    // The rejected field must not have landed, and the surviving placement
+    // must still be the one that was configured.
+    expect(desc.matrix).toBeUndefined();
+    expect(translationOf(rawOf(desc).matrixWorld)).toEqual([1, 2, 3]);
+    expect(() => desc.onUpdateConfig({ visible: false })).not.toThrow();
+  });
+
+  it("throws when an update introduces matrixWorld onto a matrix mesh", () => {
+    const desc = create({ matrix: new Matrix4().makeTranslation(4, 5, 6) });
+
+    expect(() => desc.onUpdateConfig({ matrixWorld: new Matrix4() })).toThrow(
+      ConflictingTransformError,
+    );
+
+    expect(desc.matrixWorld).toBeUndefined();
+    expect(translationOf(rawOf(desc).matrix)).toEqual([4, 5, 6]);
+  });
+
   it("merges a partial geodetic update instead of replacing it", () => {
     const desc = create({ geodetic: { ...TOKYO, height: 100, heading: 10 } });
 

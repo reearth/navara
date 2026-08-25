@@ -425,9 +425,11 @@ export class GLTFModelDesc extends MeshDesc<
     let position: Vector3;
     let rotationScale: Matrix4;
     if (this.geodetic) {
-      // `geodetic` occupies the same slot as `matrixWorld` (mutually
-      // exclusive by construction, see `ConflictingTransformError`), so it
-      // gets the same RTE split: resolve it to a world frame first.
+      // `geodetic`, `matrixWorld` and `matrix` share one placement slot and
+      // at most one is ever set (`assertNoTransformConflict`, see
+      // `ConflictingTransformError`), so this chain never shadows a
+      // configured field. `geodetic` gets the same RTE split as
+      // `matrixWorld`: resolve it to a world frame first.
       ({ position, rotationScale } = composeWorldMatrixForRTE(
         this.resolveGeodeticFrame(this.geodetic),
         this.composeLocalTransform(),

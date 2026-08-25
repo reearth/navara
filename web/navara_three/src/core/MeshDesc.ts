@@ -40,6 +40,9 @@ export type MeshConfig = {
    * Local frame. When combined with `position` / `rotation` / `scale`, the
    * effective local matrix is `matrix · T(position) · R(rotation) · S(scale)`.
    * Disables Three.js's auto matrix update.
+   *
+   * Mutually exclusive with `matrixWorld` and `geodetic`: all three define the
+   * object's placement.
    */
   matrix?: Matrix4;
   /**
@@ -48,6 +51,9 @@ export type MeshConfig = {
    * matrix is `matrixWorld · T(position) · R(rotation) · S(scale)`, so the
    * offset fields are interpreted in the frame's local coordinates.
    * Disables Three.js's auto matrix-world update.
+   *
+   * Mutually exclusive with `matrix` and `geodetic`: all three define the
+   * object's placement.
    */
   matrixWorld?: Matrix4;
   /**
@@ -100,25 +106,31 @@ export type MeshBaseInstance<Instance extends object = object> =
       : Instance & BaseInstance;
 
 /**
- * `geodetic` and `matrix`/`matrixWorld` both claim the object's placement, so
- * allowing both would silently drop one. Takes the values rather than reading
- * `this`, so a caller can check a prospective state before committing it.
- * Exported so subclasses that override `onUpdateConfig` (e.g. RTE
- * Descriptors like `GLTFModelDesc`) reuse this single check instead of
- * hand-rolling their own — `ConflictingTransformError`'s argument order is
- * easy to invert by hand, and its message assumes `geodetic` is passed first.
+ * `geodetic`, `matrix` and `matrixWorld` all claim the object's placement, so
+ * they share a single slot and at most one may be set. Every consumer resolves
+ * that slot with a priority chain (`applyTransform`, `applyRTETransform`), so
+ * allowing two would silently drop the lower-priority one — notably `matrix`
+ * under `matrixWorld`, which cannot be honoured at all once
+ * `matrixWorldAutoUpdate` is off. Takes the values rather than reading `this`,
+ * so a caller can check a prospective state before committing it. Exported so
+ * subclasses that override `onUpdateConfig` (e.g. RTE Descriptors like
+ * `GLTFModelDesc`) reuse this single check instead of hand-rolling their own.
  */
 export function assertNoTransformConflict(
   geodetic: GeodeticPlacement | undefined,
   matrix: Matrix4 | undefined,
   matrixWorld: Matrix4 | undefined,
 ): void {
-  if (!geodetic) return;
-  if (matrixWorld) {
-    throw new ConflictingTransformError("geodetic", "matrixWorld");
+  if (geodetic) {
+    if (matrixWorld) {
+      throw new ConflictingTransformError("geodetic", "matrixWorld");
+    }
+    if (matrix) {
+      throw new ConflictingTransformError("geodetic", "matrix");
+    }
   }
-  if (matrix) {
-    throw new ConflictingTransformError("geodetic", "matrix");
+  if (matrix && matrixWorld) {
+    throw new ConflictingTransformError("matrixWorld", "matrix");
   }
 }
 
@@ -500,6 +512,11 @@ export abstract class MeshDesc<
    * This lets callers pass a frame (such as an NUE-to-ECEF matrix) as
    * `matrixWorld` and express offsets inside that frame via
    * `position` / `rotation` / `scale`.
+   *
+   * The branches below are a priority chain, which is only safe because
+   * `assertNoTransformConflict` has already rejected any state with more than
+   * one of `geodetic` / `matrixWorld` / `matrix` set — so an earlier branch
+   * can never shadow a configured field.
    */
   private applyTransform(): void {
     invariant(this.raw);
