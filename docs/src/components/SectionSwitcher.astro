@@ -155,7 +155,9 @@ const groups = families
         max-height: 60vh;
         overflow-y: auto;
         padding: 0.35rem;
-        border: 1px solid var(--sl-color-hairline);
+        /* The panel shares the page background, so a hairline border melts
+           into it — gray-4 keeps the floating panel's edge legible. */
+        border: 1px solid var(--sl-color-gray-4);
         border-radius: 0.6rem;
         background: var(--sl-color-bg);
         box-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.4);
