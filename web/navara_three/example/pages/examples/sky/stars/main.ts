@@ -1,11 +1,10 @@
-import ThreeView from "@navaramap/three";
+import ThreeView, { Color } from "@navaramap/three";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navaramap/three-default-plugin";
 
 import { initializeExample } from "../../../../helpers/initialize";
-import { GOOGLE_MAPS_API_KEY } from "../../../../helpers/keys";
 
 const view = new ThreeView<DefaultDescriptions>({ animation: true });
 
@@ -15,44 +14,53 @@ view.addPlugin(defaultPlugin);
 await view.init();
 
 const scene = defaultPlugin.addDefaultPhotorealScene();
-scene.aerialPerspective.update({
-  aerialPerspective: { irradiance: true },
-});
 view.toneMappingExposure = 40;
 
+view.addLight({
+  ambient: { intensity: 0.01, color: new Color().setStyle("#d0c9b7") },
+});
+
 view.setCamera({
-  lng: -73.978,
-  lat: 40.755,
-  height: 90,
-  heading: 257,
-  pitch: -2,
-  distance: 2500,
+  lng: 124.26761,
+  lat: 24.426724,
+  height: 50,
+  heading: 258.9,
+  pitch: 10,
   roll: 0,
 });
-view.camera.fov = 70;
+view.camera.fov = 40;
 
-const tilesSource = view.addSource({
-  type: "3d-tiles",
-  url: `https://tile.googleapis.com/v1/3dtiles/root.json?key=${encodeURIComponent(
-    GOOGLE_MAPS_API_KEY,
-  )}`,
+const terrain = view.addSource({
+  type: "quantized-mesh",
+  url: "https://terrain.reearth.land/cesium-mesh/ellipsoid/{z}/{x}/{y}.terrain",
+  maxZoom: 18,
+  requestVertexNormals: true,
+  requestWaterMask: true,
 });
-const tiles = view.addLayer({
-  type: "3d-tiles",
-  source: tilesSource,
-  model: { maxSse: 20, normals: true },
-});
+view.addLayer({ type: "terrain", source: terrain });
 
-view.atmosphere.date = new Date("2025-01-07T03:00:00Z");
+const satellite = view.addSource({
+  type: "raster-tile",
+  url:
+    "https://tiles.maps.eox.at/wmts?layer=s2cloudless-2020_3857&style=default" +
+    "&tilematrixset=g&Service=WMTS&Request=GetTile" +
+    "&Version=1.0.0&Format=image%2Fjpeg" +
+    "&TileMatrix={z}&TileCol={x}&TileRow={y}",
+  maxZoom: 15,
+});
+view.addLayer({ type: "raster", source: satellite });
+
+view.atmosphere.date = new Date("2025-08-24T01:40:00+09:00");
 scene.stars.update({ stars: { intensity: 100, pointSize: 1.1 } });
-scene.sky.update({ sky: { moon: true, moonIntensity: 3, moonScale: 3 } });
 
 view.attribution?.add([
   {
-    attribution: "Google Maps Photorealistic 3D Tiles",
-    attributionUrl: "https://www.google.com/permissions/geoguidelines/",
-    logo: "/credits/GoogleMaps.png",
-    creditLayerId: tiles.id,
+    attribution: "© Re:Earth Terrain",
+    attributionUrl: "https://terrain.reearth.land/",
+  },
+  {
+    attributionHtml:
+      '<a href="https://s2maps.eu">Sentinel-2 cloudless 2020</a> by <a href="https://eox.at">EOX IT Services GmbH</a> (contains modified Copernicus Sentinel data 2020)',
   },
 ]);
 

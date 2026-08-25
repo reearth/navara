@@ -58,6 +58,13 @@
 .sl-link-card {
   box-shadow: none;
 }
+
+/* Same flatness for the stock prev/next pagination links and the mobile
+   menu button, which ship with --sl-shadow-md. */
+.pagination-links a,
+starlight-menu-button button {
+  box-shadow: none;
+}
 .sl-link-card:hover {
   background: var(--nv-bg-hover);
 }

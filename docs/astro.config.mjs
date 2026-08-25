@@ -51,7 +51,7 @@ export default defineConfig({
   },
   integrations: [
     starlight({
-      title: "Navara",
+      title: "Navara Developer Document",
       favicon: "/favicon.png",
       social: [{ icon: "github", label: "GitHub", href: "https://github.com/reearth/navara" }],
       defaultLocale: "root",

@@ -5,8 +5,7 @@
     "sub": "#ffffff",
     "maplibre": "#285DAA",
     "heroAccent": "#fdf5dc",
-    "whyUnderline": "#faf5dc",
-    "archUnderline": "#d2eaec"
+    "whyUnderline": "#faf5dc"
   },
   "themeVariants": {
     "current": { "primary": "#143c6e", "sub": "#ffffff", "accent": "#4FB3C6" },

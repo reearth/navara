@@ -97,7 +97,7 @@ const alt = (id: string): string => {
 };
 
 const { colors, links } = lp;
-const rootStyle = `--pri:${colors.primary};--pri-ink:${colors.primary};--acc:${colors.accent};--sub:${colors.sub};--ml:${colors.maplibre};--acc-hero:${colors.heroAccent};--mark-why:${colors.whyUnderline};--mark-arch:${colors.archUnderline}`;
+const rootStyle = `--pri:${colors.primary};--pri-ink:${colors.primary};--acc:${colors.accent};--sub:${colors.sub};--ml:${colors.maplibre};--acc-hero:${colors.heroAccent};--mark-why:${colors.whyUnderline}`;
 
 // Attribution credits (text + link to each source's terms). The strings are
 // language-agnostic, so they live here rather than duplicated per locale; only
@@ -2591,9 +2591,10 @@ const heroScenes = [
         color: var(--acc);
       }
       .lp-arch .lp-h2 mark {
+        /* No highlighter here (unlike .lp-why-h2 mark) — just neutralise the
+           browser's default yellow mark so the phrase reads as plain text. */
         color: inherit;
-        /* Same highlighter treatment as .lp-why-h2 mark, in the arch tint. */
-        background: linear-gradient(transparent 62%, var(--mark-arch) 62%);
+        background: none;
       }
       /* Diagram composed from the arch-* line-art SVGs. Two grid rows: a shared
          head row (titles) and a fixed-height body row (source pieces → arrows →
