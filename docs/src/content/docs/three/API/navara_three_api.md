@@ -616,7 +616,7 @@ function northWestUpToFixedFrame(origin: Vector3): Matrix4;
 
 Gets the transformation matrix from the West-Up-North coordinate system to the fixed frame.
 
-WUN is the only right-handed, Y-up tangent frame whose `+Z` axis is north, so it agrees with glTF's own convention (front `+Z`, up `+Y`, right `-X`) on all three axes. An unmodified glTF asset placed in this frame needs **no** `Rx(+90°)` up-axis correction — the correction is absorbed here, once, rather than applied per object. See [Up-Axis Conventions](../../../three_default_descs/mesh-desc/mesh-desc-base/#up-axis-conventions-gltf-y-up-and-tile-z-up).
+WUN is the only right-handed, Y-up tangent frame whose `+Z` axis is north, so it agrees with glTF's own convention (front `+Z`, up `+Y`, right `-X`) on all three axes. An unmodified glTF asset placed in this frame needs **no** `Rx(+90°)` up-axis correction, because the correction is absorbed here, once, rather than applied per object. See [Up-Axis Conventions](../../../three_default_descs/mesh-desc/mesh-desc-base/#up-axis-conventions-gltf-y-up-and-tile-z-up).
 
 **Syntax:**
 
@@ -651,9 +651,9 @@ const matrix = westUpNorthToFixedFrame(origin);
 
 ### headingPitchRollToFixedFrame(placement)
 
-Builds a WUN tangent frame at a geodetic position and composes heading, pitch, roll, and scale onto it — the single call that turns a geographic placement into a world matrix.
+Builds a WUN tangent frame at a geodetic position and composes heading, pitch, roll, and scale onto it. It is the single call that turns a geographic placement into a world matrix.
 
-**This function takes degrees.** Unlike [geodeticToVector3(lle)](#geodetictovector3lle) and the other helpers on this page, which take radians, `lng`/`lat` and all angles here are in degrees — matching `setCamera` and the `geodetic` mesh Descriptor field.
+**This function takes degrees.** Unlike [geodeticToVector3(lle)](#geodetictovector3lle) and the other helpers on this page, which take radians, `lng`/`lat` and all angles here are in degrees, matching `setCamera` and the `geodetic` mesh Descriptor field.
 
 **Syntax:**
 
@@ -693,7 +693,7 @@ const matrix = headingPitchRollToFixedFrame({
 });
 ```
 
-`heading` is the compass bearing the asset's front faces, where the front is glTF's own `+Z` — the same convention as `setCamera`. Other globe engines differ in which axis they treat as an asset's front, so a model ported from one may need a multiple of 90° added to its heading.
+`heading` is the compass bearing the asset's front faces, where the front is glTF's own `+Z` (the same convention as `setCamera`). Other globe engines differ in which axis they treat as an asset's front, so a model ported from one may need a multiple of 90° added to its heading.
 
 ## RTE (Relative to Eye) Rendering
 

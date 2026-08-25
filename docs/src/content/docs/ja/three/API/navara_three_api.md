@@ -616,7 +616,7 @@ function northWestUpToFixedFrame(origin: Vector3): Matrix4;
 
 West-Up-North 座標系から固定フレームへの変換行列を取得します。
 
-WUN は `+Z` 軸が北を指す唯一の右手系 Y-up 接線フレームであり、glTF 自身の規約（前方 `+Z`、上方 `+Y`、右方 `-X`）と3軸すべてで一致します。加工されていない glTF アセットをこのフレームに配置する場合、`Rx(+90°)` の軸補正は**不要**です — その補正は、オブジェクトごとに適用するのではなく、ここで一度だけフレームの定義自体に吸収されています。[軸の向きの規約](../../../three_default_descs/mesh-desc/mesh-desc-base/#軸の向きの規約gltf-の-y-up-とタイルの-z-up) を参照してください。
+WUN は `+Z` 軸が北を指す唯一の右手系 Y-up 接線フレームであり、glTF 自身の規約（前方 `+Z`、上方 `+Y`、右方 `-X`）と3軸すべてで一致します。加工されていない glTF アセットをこのフレームに配置する場合、`Rx(+90°)` の軸補正は**不要**です。その補正は、オブジェクトごとに適用するのではなく、ここで一度だけフレームの定義自体に吸収されています。[軸の向きの規約](../../../three_default_descs/mesh-desc/mesh-desc-base/#軸の向きの規約gltf-の-y-up-とタイルの-z-up) を参照してください。
 
 **Syntax:**
 
@@ -651,9 +651,9 @@ const matrix = westUpNorthToFixedFrame(origin);
 
 ### headingPitchRollToFixedFrame(placement)
 
-地理的な位置に WUN 接線フレームを構築し、そこに heading・pitch・roll・scale を合成します — 地理的な配置をワールド行列に変換する単一の呼び出しです。
+地理的な位置に WUN 接線フレームを構築し、そこに heading・pitch・roll・scale を合成します。地理的な配置をワールド行列に変換する単一の呼び出しです。
 
-**この関数は度単位を取ります。** このページの [geodeticToVector3(lle)](#geodetictovector3lle) や他のヘルパー関数がラジアンを取るのとは異なり、`lng`/`lat` とここでのすべての角度は度単位です — `setCamera` や `geodetic` メッシュ Descriptor フィールドと同じです。
+**この関数は度単位を取ります。** このページの [geodeticToVector3(lle)](#geodetictovector3lle) や他のヘルパー関数がラジアンを取るのとは異なり、`lng`/`lat` とここでのすべての角度は度単位です。これは `setCamera` や `geodetic` メッシュ Descriptor フィールドと同じです。
 
 **Syntax:**
 
@@ -693,7 +693,7 @@ const matrix = headingPitchRollToFixedFrame({
 });
 ```
 
-`heading` はアセットの前方が向くコンパス方位で、前方とは glTF 自身の `+Z` です — `setCamera` と同じ規約です。他の地球エンジンではアセットの前方として扱う軸が異なるため、他エンジンから移植したモデルでは heading に 90° の倍数を加える必要がある場合があります。
+`heading` はアセットの前方が向くコンパス方位で、前方とは glTF 自身の `+Z` です（`setCamera` と同じ規約です）。他の地球エンジンではアセットの前方として扱う軸が異なるため、他エンジンから移植したモデルでは heading に 90° の倍数を加える必要がある場合があります。
 
 ## RTE (Relative to Eye) Rendering
 
