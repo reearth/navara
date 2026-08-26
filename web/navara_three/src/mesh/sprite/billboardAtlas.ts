@@ -1,4 +1,10 @@
-import { DataTexture, LinearFilter, RGBAFormat, UnsignedByteType } from "three";
+import {
+  DataTexture,
+  LinearFilter,
+  RGBAFormat,
+  SRGBColorSpace,
+  UnsignedByteType,
+} from "three";
 
 /**
  * Sub-rectangle of the atlas in pixels. Row 0 is the bottom of the texture
@@ -201,6 +207,7 @@ export class BillboardAtlas {
     const texture = new DataTexture(this._data, this._size, this._size);
     texture.format = RGBAFormat;
     texture.type = UnsignedByteType;
+    texture.colorSpace = SRGBColorSpace;
     texture.minFilter = LinearFilter;
     texture.magFilter = LinearFilter;
     texture.generateMipmaps = false;
