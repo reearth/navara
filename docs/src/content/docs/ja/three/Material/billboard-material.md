@@ -323,11 +323,9 @@ import { Color } from "@navaramap/three";
 
 ### url
 
-**Type:** `string`
+**Type:** `string | undefined`
 
 **Description:** オブジェクトの URL を指定します。画像ファイルをサポートします。これはレイヤー内のすべての地物に適用されるデフォルト画像です。[`FeatureEvaluator.evaluate()`](../../api/feature-evaluator/#evaluate) から `image` を返すことで、地物ごとに上書きできます。`image: null` を返すと、上書きした地物はこのデフォルトに戻ります。
-
-省略可能です。すべての画像を evaluator から指定する場合は省略してください。その場合、地物は `image` が設定されるまで表示されず、`image: null` はデフォルトに戻すのではなく地物を非表示にします。
 
 **Default:** `undefined`
 
@@ -340,3 +338,7 @@ import { Color } from "@navaramap/three";
   }
 }
 ```
+
+:::note
+すべての画像を [`FeatureEvaluator`](../../api/feature-evaluator/) から指定する場合は、`url` を省略してください。その場合、地物は `image` が設定されるまで表示されず、`image: null` はデフォルトに戻すのではなく地物を非表示にします。
+:::
