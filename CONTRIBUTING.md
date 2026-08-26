@@ -1,11 +1,11 @@
 # Contributing to Navara
 
-Thank you for your interest in contributing! Navara is part of the [MapLibre](https://maplibre.org/) ecosystem, and contributions of all kinds are welcome — bug reports, documentation, examples, and code.
+Thank you for your interest in contributing! All kinds of contributions are welcome, including bug reports, documentation, examples, and code.
 
 ## Getting in touch
 
-- Open an [issue](https://github.com/maplibre/navara/issues) for bugs and feature requests.
-- Join the `#maplibre` channel on the [OSM-US Slack](https://slack.openstreetmap.us) for discussions.
+- Open an [issue](https://github.com/reearth/navara/issues) for bugs and feature requests.
+- Join the `#maplibre-navara` channel on the [OSM-US Slack](https://slack.openstreetmap.us) for discussions.
 
 ## Code of Conduct
 

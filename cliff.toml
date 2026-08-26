@@ -29,6 +29,10 @@ protect_breaking_commits = true
 # Only tags created by the release flow count as release boundaries.
 tag_pattern = "^v[0-9]+\\.[0-9]+\\.[0-9]+$"
 sort_commits = "oldest"
+# Turn squash-merge PR references like "(#774)" into links.
+commit_preprocessors = [
+  { pattern = '\(#([0-9]+)\)', replace = "([#${1}](https://github.com/reearth/navara/pull/${1}))" },
+]
 
 # The <!-- N --> prefix fixes the section order; `striptags` removes it from
 # the rendered output.
