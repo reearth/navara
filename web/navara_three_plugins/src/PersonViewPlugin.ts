@@ -58,6 +58,7 @@ import ThreeView, {
   eastNorthUpToFixedFrame,
   degreeToRadian,
   radianToDegree,
+  type SourceRef,
   type ViewContext,
 } from "@navaramap/three";
 import type { GLTFModelDesc } from "@navaramap/three-default-descs";
@@ -94,6 +95,15 @@ export type TeleportOptions = {
    * without moving, and `setCameraPitch` / `setFpvPitch` for camera pitch.)
    */
   heading?: number;
+};
+
+/** Options for {@link PersonViewPlugin.resolveStartHeight}. */
+export type ResolveStartHeightOptions = {
+  /**
+   * Meters kept above the sampled terrain surface.
+   * @defaultValue `0`
+   */
+  offset?: number;
 };
 
 /**
@@ -456,6 +466,13 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
   private animId: number | null = null;
   /** Whether the character has been placed, so `start()` resumes from here. */
   private placed = false;
+  /**
+   * Height resolved by {@link resolveStartHeight}, held against the terrain
+   * collision until the first movement input. The coarse tiles that stream in
+   * right after load would otherwise pull the character off the resolved
+   * height and onto their own, tens of meters away.
+   */
+  private pinnedStartHeight?: number;
   private lastTime = 0;
 
   private state!: PersonViewState;
@@ -549,6 +566,55 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
       animationState: this.currentAnimState,
       mode: this.viewMode,
     };
+  }
+
+  /**
+   * Pin `startHeight` to the terrain surface at the start position, sampled
+   * from the source's **most detailed** data — so `start()` places the
+   * character on the ground without a hand-measured `startHeight`, and
+   * without the initial settle once finer terrain tiles stream in. A one-shot
+   * sample fits here because the start position is fixed; the per-frame
+   * collision keeps following the terrain afterwards.
+   *
+   * The resolved height is **held until the first movement input** (or
+   * {@link teleport}): the render-resident tiles right after load are coarse,
+   * and letting the collision follow them would pull the character off the
+   * resolved height and onto theirs. Movement hands the altitude over to the
+   * normal terrain following.
+   *
+   * Call between `view.init()` (the sampler needs the initialized view) and
+   * {@link start}. Once the character has been placed this no longer moves
+   * it — use {@link teleport} with the returned height instead.
+   *
+   * @param source - A registered `quantized-mesh` or `raster-dem` source
+   *   (handle or id) to sample, always explicit — the same contract as
+   *   `ThreeView.sampleTerrainMostDetailed`.
+   * @returns The resolved start height in meters, or `undefined` when the
+   *   source has no height at the start position (the configured
+   *   `startHeight` is then kept).
+   */
+  async resolveStartHeight(
+    source: SourceRef,
+    options?: ResolveStartHeightOptions,
+  ): Promise<number | undefined> {
+    const view = this.view;
+    if (!view) return undefined;
+
+    const { startLat, startLng } = this.config;
+    const [ground] = await view.sampleTerrainMostDetailed(source, [
+      { lat: degreeToRadian(startLat), lng: degreeToRadian(startLng) },
+    ]);
+    if (ground?.height === undefined) return undefined;
+
+    const height = ground.height + (options?.offset ?? 0);
+    this.config.startHeight = height;
+    if (!this.placed) {
+      // The state was seeded from the config in `init()`, and the camera-only
+      // mode keeps reading its altitude from there.
+      this.state = { ...this.state, alt: height };
+      this.pinnedStartHeight = height;
+    }
+    return height;
   }
 
   /**
@@ -687,6 +753,8 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
   /** Instantly move to a new geographic position. */
   teleport(options: TeleportOptions): void {
     if (!this.view) return;
+    // The pinned start height belongs to the start position being left.
+    this.pinnedStartHeight = undefined;
 
     const { lng, lat } = options;
     const headingRad =
@@ -937,6 +1005,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     }
     this.modelRef = null;
     this.placed = false;
+    this.pinnedStartHeight = undefined;
     this.listeners.clear();
     this.actionListeners.clear();
     this.view = undefined;
@@ -1459,8 +1528,10 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     }
     if (this.isMovementAction(action)) {
       // A new movement keypress releases the latched orbit so the camera
-      // snaps back to chase on the next tick.
+      // snaps back to chase on the next tick, and hands a pinned start
+      // height over to the terrain collision.
       this.orbitLatched = false;
+      this.pinnedStartHeight = undefined;
     }
     this.heldActions.add(action);
   }
@@ -1562,12 +1633,12 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
             minAlt,
             maxAlt,
           );
-    const height = this.resolveGroundHeight(
-      advancedLLE,
-      currentLLE,
-      flownHeight,
-      deltaTime,
-    );
+    // While the resolved start height is pinned, the collision does not get
+    // to re-sample: the coarse tiles streaming in right after load would drag
+    // the character onto their own height.
+    const height =
+      this.pinnedStartHeight ??
+      this.resolveGroundHeight(advancedLLE, currentLLE, flownHeight, deltaTime);
     const nextLat = radianToDegree(advancedLLE.lat);
     const nextLng = radianToDegree(advancedLLE.lng);
     const nextAlt = height;

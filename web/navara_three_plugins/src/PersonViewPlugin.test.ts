@@ -71,7 +71,10 @@ const northSlope =
 /** Terrain height in meters, from a position in radians. */
 type TerrainFn = (lat: number, lng: number) => number | undefined;
 
-const makeFakeView = (terrain: TerrainFn) => {
+const makeFakeView = (
+  terrain: TerrainFn,
+  mostDetailed: TerrainFn = terrain,
+) => {
   const loadListeners: (() => void)[] = [];
   const placements: {
     targetHeight: number;
@@ -102,6 +105,16 @@ const makeFakeView = (terrain: TerrainFn) => {
     }),
     sampleTerrainHeight: vi.fn(({ lat, lng }: { lat: number; lng: number }) =>
       terrain(lat, lng),
+    ),
+    sampleTerrainMostDetailed: vi.fn(
+      (_source: unknown, positions: { lat: number; lng: number }[]) =>
+        Promise.resolve(
+          positions.map(({ lat, lng }) => ({
+            lat,
+            lng,
+            height: mostDetailed(lat, lng),
+          })),
+        ),
     ),
     // The plugin passes a reused scratch Vector3 as the offset, so snapshot
     // each placement instead of holding on to the object.
@@ -214,6 +227,96 @@ describe("PersonViewPlugin terrain collision", () => {
       plugin.teleport({ ...START, alt: 800 });
 
       expect(plugin.getState().alt).toBe(800);
+    });
+  });
+
+  describe("resolveStartHeight", () => {
+    it("pins the start height to the most detailed terrain sample", async () => {
+      const view = makeFakeView(() => 1500);
+      const plugin = new PersonViewPlugin({
+        startLat: START.lat,
+        startLng: START.lng,
+        startHeight: 800,
+      });
+      await initPlugin(plugin, view);
+
+      await expect(plugin.resolveStartHeight("terrain")).resolves.toBe(1500);
+
+      // The sampler takes radians, matching `ThreeView.sampleTerrainMostDetailed`.
+      const [, positions] = view.sampleTerrainMostDetailed.mock.calls[0];
+      expect(positions[0].lat).toBeCloseTo((START.lat * Math.PI) / 180);
+      expect(positions[0].lng).toBeCloseTo((START.lng * Math.PI) / 180);
+      expect(plugin.getState().alt).toBe(1500);
+    });
+
+    it("keeps the sampled surface at the requested offset", async () => {
+      const view = makeFakeView(() => 1500);
+      const plugin = new PersonViewPlugin();
+      await initPlugin(plugin, view);
+
+      await expect(
+        plugin.resolveStartHeight("terrain", { offset: 2 }),
+      ).resolves.toBe(1502);
+      expect(plugin.getState().alt).toBe(1502);
+    });
+
+    it("keeps the configured height when the source has no data there", async () => {
+      const view = makeFakeView(() => undefined);
+      const plugin = new PersonViewPlugin({ startHeight: 800 });
+      await initPlugin(plugin, view);
+
+      await expect(plugin.resolveStartHeight("terrain")).resolves.toBe(
+        undefined,
+      );
+      expect(plugin.getState().alt).toBe(800);
+    });
+
+    it("holds the resolved height against coarser tiles until movement", async () => {
+      // Render-resident tiles report 1000m while the most detailed data
+      // says 1500m — the situation right after load.
+      const view = makeFakeView(
+        () => 1000,
+        () => 1500,
+      );
+      const plugin = new PersonViewPlugin({
+        collision: { mode: "ground" },
+        startLat: START.lat,
+        startLng: START.lng,
+      });
+      await initPlugin(plugin, view);
+      await plugin.resolveStartHeight("terrain");
+
+      plugin.start();
+      let time = performance.now();
+      for (let i = 0; i < 100; i++) advance((time += 100));
+      expect(plugin.getState().alt).toBeCloseTo(1500, 6);
+
+      // The first movement input hands the altitude over to the collision,
+      // which settles onto the render-resident surface.
+      document.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyW" }));
+      for (let i = 0; i < 200; i++) advance((time += 100));
+      expect(plugin.getState().alt).toBeCloseTo(1000, 6);
+    });
+
+    it("releases the pinned height on teleport", async () => {
+      const view = makeFakeView(
+        () => 1000,
+        () => 1500,
+      );
+      const plugin = new PersonViewPlugin({
+        collision: { mode: "ground" },
+        startLat: START.lat,
+        startLng: START.lng,
+      });
+      await initPlugin(plugin, view);
+      await plugin.resolveStartHeight("terrain");
+
+      plugin.start();
+      plugin.teleport({ ...START, alt: 800 });
+      let time = performance.now();
+      for (let i = 0; i < 5; i++) advance((time += 100));
+
+      expect(plugin.getState().alt).toBeCloseTo(1000, 6);
     });
   });
 
