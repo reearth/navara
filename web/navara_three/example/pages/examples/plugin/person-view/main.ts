@@ -12,7 +12,7 @@ import { createControlsHelp } from "./controls";
 const START = {
   lng: 137.64724,
   lat: 36.25439,
-  height: 1555.1,
+  height: 1600,
   heading: Math.PI * 0.36,
   cameraDistance: 20,
   cameraPitch: Math.PI * 0.08,
@@ -55,7 +55,6 @@ const personView = new PersonViewPlugin({
   initialView: "tpv",
   startLng: START.lng,
   startLat: START.lat,
-  startHeight: START.height,
   startHeading: START.heading,
 });
 view.addPlugin(personView);
@@ -119,6 +118,8 @@ view.attribution?.add([
       "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Fox",
   },
 ]);
+
+await personView.resolveStartHeight(terrain);
 
 personView.start();
 
