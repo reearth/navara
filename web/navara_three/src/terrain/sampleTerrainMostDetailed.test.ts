@@ -37,6 +37,7 @@ vi.mock("@navaramap/engine-api", () => {
   };
   return {
     default: vi.fn().mockResolvedValue(undefined),
+    angleToRadian: (deg: number) => (deg * Math.PI) / 180,
     terrainPositionsToTiles: vi.fn(
       (geographic: boolean, level: number, positions: Float64Array) => {
         const result = new Uint32Array(positions.length);
@@ -87,12 +88,11 @@ vi.mock("@navaramap/engine-api", () => {
   };
 });
 
-const KARIYA = { lat: (35.0 * Math.PI) / 180, lng: (137.0 * Math.PI) / 180 };
-const NEARBY = {
-  lat: (35.001 * Math.PI) / 180,
-  lng: (137.001 * Math.PI) / 180,
-};
-const TOKYO = { lat: (35.68 * Math.PI) / 180, lng: (139.76 * Math.PI) / 180 };
+// Public inputs are degrees; the mocked engine functions still receive the
+// radians the implementation converts to.
+const KARIYA = { lat: 35.0, lng: 137.0 };
+const NEARBY = { lat: 35.001, lng: 137.001 };
+const TOKYO = { lat: 35.68, lng: 139.76 };
 
 const SOURCE: QuantizedMeshSource = {
   type: "quantized-mesh",

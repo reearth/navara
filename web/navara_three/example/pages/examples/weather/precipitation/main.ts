@@ -1,4 +1,4 @@
-import ThreeView, { degreeToRadian, geodeticToVector3 } from "@navaramap/three";
+import ThreeView from "@navaramap/three";
 import type {
   CloudsEffectDesc,
   RainMeshDesc,
@@ -78,13 +78,8 @@ view.atmosphere.date = new Date("2025-01-01T07:00:00Z");
 
 view.addEffect<CloudsEffectDesc>({ clouds: STORM_CLOUDS });
 
-const position = geodeticToVector3({
-  lat: degreeToRadian(STAGE.lat),
-  lng: degreeToRadian(STAGE.lng),
-  height: 10,
-});
-const rain = view.addMesh<RainMeshDesc>({ position, rain: {} });
-const snow = view.addMesh<SnowMeshDesc>({ position, snow: {}, visible: false });
+const rain = view.addMesh<RainMeshDesc>({ rain: {} });
+const snow = view.addMesh<SnowMeshDesc>({ snow: {}, visible: false });
 
 let raining = true;
 const weatherButton = addButton("Weather: Rain");

@@ -3,7 +3,7 @@ import {
   headingPitchRollToFixedFrame,
   type GeodeticPlacement,
 } from "@navaramap/three-api";
-import { Euler, MathUtils, Matrix4, Object3D, Vector3, type Mesh } from "three";
+import { Euler, Matrix4, Object3D, Vector3, type Mesh } from "three";
 import invariant from "tiny-invariant";
 
 import type ThreeView from "../index";
@@ -369,10 +369,7 @@ export abstract class MeshDesc<
       return;
     }
 
-    const pos = {
-      lat: MathUtils.degToRad(g.lat),
-      lng: MathUtils.degToRad(g.lng),
-    };
+    const pos = { lat: g.lat, lng: g.lng };
     this.terrainHeight = this.view.sampleTerrainHeight(pos) ?? 0;
     this.terrainUnsubscribe = this.view.observeTerrainHeightAt(
       pos,

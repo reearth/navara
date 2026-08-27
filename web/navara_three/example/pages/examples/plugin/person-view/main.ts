@@ -1,4 +1,4 @@
-import ThreeView, { Color, radianToDegree } from "@navaramap/three";
+import ThreeView, { Color } from "@navaramap/three";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
@@ -13,9 +13,9 @@ const START = {
   lng: 137.64724,
   lat: 36.25439,
   height: 1600,
-  heading: Math.PI * 0.36,
+  heading: 64.8,
   cameraDistance: 20,
-  cameraPitch: Math.PI * 0.08,
+  cameraPitch: 14.4,
 };
 
 const view = new ThreeView<DefaultDescriptions>({
@@ -51,7 +51,7 @@ const personView = new PersonViewPlugin({
   cameraDistance: START.cameraDistance,
   cameraPitch: START.cameraPitch,
   fpvHeightOffset: 1.2,
-  fpvPitch: 0.05,
+  fpvPitch: 2.9,
   initialView: "tpv",
   startLng: START.lng,
   startLat: START.lat,
@@ -67,7 +67,7 @@ view.setCamera({
   lat: START.lat,
   height: START.height,
   distance: START.cameraDistance,
-  heading: radianToDegree(START.heading),
+  heading: START.heading,
   pitch: START.cameraPitch,
   roll: 0,
 });

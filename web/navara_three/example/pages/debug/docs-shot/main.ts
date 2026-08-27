@@ -55,7 +55,7 @@ if (MODE === "interior") {
   const startLat = 35.6341630282;
   const startLng = 139.7420527162;
   const startHeight = 59.05;
-  const startHeading = Math.PI * 1.6;
+  const startHeading = 288;
 
   const personView = new PersonViewPlugin({
     character: {
@@ -76,7 +76,7 @@ if (MODE === "interior") {
     altSpeed: 5,
     rotationSpeed: 2,
     cameraDistance: 8,
-    cameraPitch: 0.06,
+    cameraPitch: 3.44,
     cameraLerpSpeed: 4,
     minAlt: -1000,
     maxAlt: 5000,

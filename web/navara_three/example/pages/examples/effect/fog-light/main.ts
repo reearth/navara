@@ -1,8 +1,4 @@
-import ThreeView, {
-  Color,
-  degreeToRadian,
-  geodeticToVector3,
-} from "@navaramap/three";
+import ThreeView, { Color, geodeticToVector3 } from "@navaramap/three";
 import type {
   FogLightDefinition,
   FogLightEffectDesc,
@@ -60,8 +56,8 @@ view.addLayer({ type: "raster", source: basemap });
 const LAMP_HEIGHT = 1;
 const lampPosition = (lng: number, lat: number, elevation: number) => {
   const { x, y, z } = geodeticToVector3({
-    lat: degreeToRadian(lat),
-    lng: degreeToRadian(lng),
+    lat,
+    lng,
     height: elevation + LAMP_HEIGHT,
   });
   return { x, y, z };
@@ -87,21 +83,18 @@ const fogLight = view.addEffect<FogLightEffectDesc>({
 
 let lampsUpdateQueued = false;
 streetLamps.forEach(([lng, lat], index) => {
-  view.observeTerrainHeightAt(
-    { lat: degreeToRadian(lat), lng: degreeToRadian(lng) },
-    (height) => {
-      lamps[index] = {
-        ...lamps[index],
-        position: lampPosition(lng, lat, height),
-      };
-      if (lampsUpdateQueued) return;
-      lampsUpdateQueued = true;
-      requestAnimationFrame(() => {
-        lampsUpdateQueued = false;
-        fogLight.update({ fogLight: { lights: lamps } });
-      });
-    },
-  );
+  view.observeTerrainHeightAt({ lat, lng }, (height) => {
+    lamps[index] = {
+      ...lamps[index],
+      position: lampPosition(lng, lat, height),
+    };
+    if (lampsUpdateQueued) return;
+    lampsUpdateQueued = true;
+    requestAnimationFrame(() => {
+      lampsUpdateQueued = false;
+      fogLight.update({ fogLight: { lights: lamps } });
+    });
+  });
 });
 
 addSlider(

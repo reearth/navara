@@ -169,7 +169,7 @@ This is the [inter-airport flow volume data from the National Land Numerical Inf
 Using the `ColorMap` class, you can map numerical data to colors. Here we assign colors based on the number of flights.
 
 ```typescript
-import { Color, ColorMap, geodeticToVector3, degreeToRadian } from "@navaramap/three";
+import { Color, ColorMap, geodeticToVector3 } from "@navaramap/three";
 
 // ref: https://matplotlib.org/stable/users/explain/colors/colormaps.html
 const PLASMA_COLORMAP = new ColorMap("sequential", "Plasma", [
@@ -192,13 +192,13 @@ const arcLines = data.features.map((feature) => {
 
   // Calculate distance between two points (used for animation speed adjustment)
   const srcVec = geodeticToVector3({
-    lat: degreeToRadian(source.lat),
-    lng: degreeToRadian(source.lng),
+    lat: source.lat,
+    lng: source.lng,
     height: 0,
   });
   const destVec = geodeticToVector3({
-    lat: degreeToRadian(destination.lat),
-    lng: degreeToRadian(destination.lng),
+    lat: destination.lat,
+    lng: destination.lng,
     height: 0,
   });
   const distance = srcVec.distanceTo(destVec);
@@ -285,7 +285,6 @@ import ThreeView, {
   Color,
   ColorMap,
   geodeticToVector3,
-  degreeToRadian,
 } from "@navaramap/three";
 import {
   ToneMappingMode,
@@ -335,13 +334,13 @@ const constructData = async () => {
     const destination = { lng: coords[1][0], lat: coords[1][1] };
 
     const srcVec = geodeticToVector3({
-      lat: degreeToRadian(source.lat),
-      lng: degreeToRadian(source.lng),
+      lat: source.lat,
+      lng: source.lng,
       height: 0,
     });
     const destVec = geodeticToVector3({
-      lat: degreeToRadian(destination.lat),
-      lng: degreeToRadian(destination.lng),
+      lat: destination.lat,
+      lng: destination.lng,
       height: 0,
     });
     const distance = srcVec.distanceTo(destVec);

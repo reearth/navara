@@ -1,7 +1,6 @@
 import ThreeView, {
   Color,
   geodeticToVector3,
-  degreeToRadian,
   JAPAN_GSI_ELEVATION_DECODER,
 } from "@navaramap/three";
 import {
@@ -86,7 +85,7 @@ async function main() {
 
 /**
  * Add a sphere that rotates around the globe.
- * Tests: SphereMeshDesc, geodeticToVector3, LLE, degreeToRadian APIs
+ * Tests: SphereMeshDesc, geodeticToVector3, LLE APIs
  */
 function addRotatingSphere(view: ThreeView<CustomDescriptions>) {
   // Create a sphere mesh descriptor
@@ -137,8 +136,8 @@ function addRotatingSphere(view: ThreeView<CustomDescriptions>) {
 
     // Convert geodetic coordinates to 3D position
     const position = geodeticToVector3({
-      lat: degreeToRadian(lat),
-      lng: degreeToRadian(lng),
+      lat,
+      lng,
       height: altitude,
     });
 

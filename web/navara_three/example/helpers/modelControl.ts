@@ -3,7 +3,6 @@ import ThreeView, {
   geodeticToVector3,
   vector3ToGeodetic,
   degreeToRadian,
-  radianToDegree,
   geodeticSurfaceNormal,
   eastNorthUpToFixedFrame,
 } from "@navaramap/three";
@@ -38,8 +37,8 @@ export const controlGLTFModel = (
     if (curPos) {
       const curLLE = vector3ToGeodetic(curPos);
       view.cameraFollow(true, {
-        lat: radianToDegree(curLLE.lat),
-        lng: radianToDegree(curLLE.lng),
+        lat: curLLE.lat,
+        lng: curLLE.lng,
         height: curLLE.height + (params.modelScale ?? 1),
       });
     }
@@ -302,8 +301,8 @@ const updateCameraFollow = (
   const curLLE = vector3ToGeodetic(curPos);
 
   view.cameraFollow(params.cameraFollow, {
-    lat: radianToDegree(curLLE.lat),
-    lng: radianToDegree(curLLE.lng),
+    lat: curLLE.lat,
+    lng: curLLE.lng,
     height: curLLE.height + (params.modelScale ?? 1), // Add modelScale to keep camera looking at model center height
   });
 };

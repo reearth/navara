@@ -1,6 +1,5 @@
 import ThreeView, {
   Color,
-  radianToDegree,
   vector3ToGeodetic,
   type PickedFeature,
 } from "@navaramap/three";
@@ -98,7 +97,7 @@ view.on("click", (event) => {
     const { lat, lng } = vector3ToGeodetic(
       new Vector3(event.map.x, event.map.y, event.map.z),
     );
-    const lngLat = { lng: radianToDegree(lng), lat: radianToDegree(lat) };
+    const lngLat = { lng, lat };
     panel.show(lastPick.properties, lngLat);
     overlay.setPositions([{ id: "picked", ...lngLat, alt: 0 }]);
   } else {

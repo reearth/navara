@@ -20,12 +20,12 @@ In addition to the properties below, the common properties from the base class (
 **Example:**
 
 ```typescript
-import { geodeticToVector3, degreeToRadian, LLE } from "@navaramap/three";
+import { geodeticToVector3, LLE } from "@navaramap/three";
 
 const position = geodeticToVector3(
   new LLE(
-    degreeToRadian(35.67564356091717),  // Latitude
-    degreeToRadian(139.74511454748298), // Longitude
+    35.67564356091717,  // Latitude
+    139.74511454748298, // Longitude
     10,                                  // Altitude
   ),
 );
@@ -304,7 +304,7 @@ const snowDesc = view.addMesh<SnowMeshDesc>({
 ### Placing Snow at a Specific Location
 
 ```typescript
-import ThreeView, { Color, geodeticToVector3, degreeToRadian, LLE } from "@navaramap/three";
+import ThreeView, { Color, geodeticToVector3, LLE } from "@navaramap/three";
 import { SnowMeshDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView({ animation: true });
@@ -314,8 +314,8 @@ await view.init();
 // Calculate the position of Tokyo
 const position = geodeticToVector3(
   new LLE(
-    degreeToRadian(35.67564356091717),
-    degreeToRadian(139.74511454748298),
+    35.67564356091717,
+    139.74511454748298,
     10,
   ),
 );

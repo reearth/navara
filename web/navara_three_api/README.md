@@ -9,18 +9,14 @@ Unlike the rest of the Navara stack, this package is usable without the map engi
 Initialize the WASM module once before calling anything else (when using `@navaramap/three`, `view.init()` does this for you):
 
 ```typescript
-import {
-  initNavaraApi,
-  degreeToRadian,
-  geodeticToVector3,
-} from "@navaramap/three-api";
+import { initNavaraApi, geodeticToVector3 } from "@navaramap/three-api";
 
 await initNavaraApi();
 
-// Geodetic coordinates (radians, meters) to ECEF Cartesian.
+// Geodetic coordinates (degrees, meters) to ECEF Cartesian.
 const position = geodeticToVector3({
-  lng: degreeToRadian(139.77),
-  lat: degreeToRadian(35.68),
+  lng: 139.77,
+  lat: 35.68,
   height: 0,
 });
 ```

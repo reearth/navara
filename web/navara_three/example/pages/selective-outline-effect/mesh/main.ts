@@ -1,7 +1,6 @@
 import ThreeView, {
   Color,
   JAPAN_GSI_ELEVATION_DECODER,
-  degreeToRadian,
   geodeticToVector3,
 } from "@navaramap/three";
 import type {
@@ -60,8 +59,8 @@ const run = async () => {
 
   // Mesh descriptors with outline
   const tokyoStationPosition = geodeticToVector3({
-    lat: degreeToRadian(35.681236),
-    lng: degreeToRadian(139.767125),
+    lat: 35.681236,
+    lng: 139.767125,
     height: 200,
   });
 
@@ -107,8 +106,8 @@ const run = async () => {
 
   // Cylinder
   const cylinderPosition = geodeticToVector3({
-    lat: degreeToRadian(35.681236),
-    lng: degreeToRadian(139.773),
+    lat: 35.681236,
+    lng: 139.773,
     height: 400,
   });
 
@@ -133,8 +132,8 @@ const run = async () => {
 
   // Plane
   const planePosition = geodeticToVector3({
-    lat: degreeToRadian(35.678),
-    lng: degreeToRadian(139.767125),
+    lat: 35.678,
+    lng: 139.767125,
     height: 400,
   });
 
@@ -158,8 +157,8 @@ const run = async () => {
 
   // Tube
   const tubeBasePosition = geodeticToVector3({
-    lat: degreeToRadian(35.678),
-    lng: degreeToRadian(139.773),
+    lat: 35.678,
+    lng: 139.773,
     height: 400,
   });
 

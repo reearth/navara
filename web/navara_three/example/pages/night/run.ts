@@ -4,7 +4,6 @@ import ThreeView, {
   type MeshHandle,
   type LightHandle,
   type EffectHandle,
-  degreeToRadian,
   geodeticToVector3,
   Color,
 } from "@navaramap/three";
@@ -461,8 +460,8 @@ const loadGeoJSONLights = async (
       const altitude = feature.properties?.height || 10;
 
       const position = geodeticToVector3({
-        lat: degreeToRadian(lat),
-        lng: degreeToRadian(lon),
+        lat,
+        lng: lon,
         height: altitude,
       });
 

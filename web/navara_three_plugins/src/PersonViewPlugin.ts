@@ -43,7 +43,7 @@
  *   console.log(state.lat, state.lng, state.alt, state.mode);
  * });
  *
- * personView.teleport({ lng, lat, alt, heading: headingRad });
+ * personView.teleport({ lng, lat, alt, heading: 120 });
  * personView.toggleViewMode();
  *
  * unsub();
@@ -73,7 +73,7 @@ export type PersonViewState = {
   lng: number;
   lat: number;
   alt: number;
-  /** Heading in radians — 0 = north, increasing clockwise. */
+  /** Heading in degrees — 0 = north, increasing clockwise. */
   heading: number;
   speed: number;
   /** Current animation clip name, or null when no character is configured. */
@@ -90,7 +90,7 @@ export type TeleportOptions = {
   /** Altitude in meters. */
   alt: number;
   /**
-   * Heading in radians (0 = north, increasing clockwise). If omitted, the
+   * Heading in degrees (0 = north, increasing clockwise). If omitted, the
    * current camera heading is kept. (Use `setHeading` to rotate in place
    * without moving, and `setCameraPitch` / `setFpvPitch` for camera pitch.)
    */
@@ -171,9 +171,9 @@ export type CollisionConfig = {
    */
   slopeSampleDistance?: number;
   /**
-   * Largest tilt (radians) {@link alignToSlope} may apply, so ground far
+   * Largest tilt (degrees) {@link alignToSlope} may apply, so ground far
    * steeper than anything walkable does not lay the character flat against it.
-   * @defaultValue `Math.PI / 4` (45°)
+   * @defaultValue `45`
    */
   maxSlopeTilt?: number;
   /**
@@ -267,7 +267,7 @@ export type PersonViewConfig = {
   maxAlt?: number;
   cameraDistance?: number;
   /**
-   * Downward camera pitch in radians for **TPV**. `0` keeps the camera
+   * Downward camera pitch in degrees for **TPV**. `0` keeps the camera
    * behind the model at eye level; positive values orbit the camera up and
    * over so it looks down at the model while keeping it centered. Has no
    * effect while the free camera is active (Alt-hold or `allowCameraControl`),
@@ -284,7 +284,7 @@ export type PersonViewConfig = {
    */
   fpvHeightOffset?: number;
   /**
-   * Downward camera pitch in radians for **FPV**. `0` looks straight ahead
+   * Downward camera pitch in degrees for **FPV**. `0` looks straight ahead
    * (horizontal); positive values tilt the view down in place without moving
    * the eye. Has no effect while the free camera is active.
    */
@@ -293,7 +293,7 @@ export type PersonViewConfig = {
   startLat?: number;
   startLng?: number;
   startHeight?: number;
-  /** radians */
+  /** Heading in degrees (0 = north, increasing clockwise). */
   startHeading?: number;
 
   keys?: KeyBindings;
@@ -326,8 +326,8 @@ type PersonViewDefaults = Required<
 
 type ResolvedCollision = Required<CollisionConfig>;
 
-/** A geodetic position in radians, as the geodetic helpers return it. */
-type LatLngRadians = { lat: number; lng: number };
+/** A geodetic position in degrees, as the geodetic helpers return it. */
+type LatLngDegrees = { lat: number; lng: number };
 
 // Tuned so that `collision: { mode: "ground" }` alone walks terrain well: the
 // slope footprint is wide enough for the triangle spacing real terrain meshes
@@ -337,7 +337,7 @@ const DEFAULT_COLLISION: ResolvedCollision = {
   groundOffset: 0,
   alignToSlope: true,
   slopeSampleDistance: 4,
-  maxSlopeTilt: Math.PI / 4,
+  maxSlopeTilt: 45,
   cameraSlopeFollow: 1,
 };
 
@@ -406,7 +406,7 @@ const DEFAULTS: PersonViewDefaults = {
   startLat: 35.6812,
   startLng: 139.7671,
   startHeight: 500,
-  startHeading: Math.PI * 1.3,
+  startHeading: 234,
 };
 
 const DEFAULT_MODEL_SCALE = 3;
@@ -480,7 +480,9 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
   // angle instead of snapping back the moment Alt is released.
   private orbitLatched = false;
   private currentAnimState: string | null;
+  /** Character heading in radians — public heading APIs convert at the boundary. */
   private modelHeading: number;
+  /** Camera heading in radians. */
   private cameraHeading: number;
   private viewMode: ViewMode;
 
@@ -536,8 +538,10 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     this.keys = { ...DEFAULT_KEYS, ...keys };
     this.keyToAction = this.buildKeyMap(this.keys);
 
-    this.modelHeading = this.config.startHeading;
-    this.cameraHeading = this.config.startHeading;
+    // MathUtils, not the WASM-backed degreeToRadian: the constructor runs
+    // before `view.init()` initializes the API WASM module.
+    this.modelHeading = MathUtils.degToRad(this.config.startHeading);
+    this.cameraHeading = this.modelHeading;
     this.viewMode = this.config.initialView;
     this.currentAnimState = this.character
       ? this.character.animation.idleClip
@@ -591,7 +595,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
 
     const { startLat, startLng } = this.config;
     const [ground] = await view.sampleTerrainMostDetailed(source, [
-      { lat: degreeToRadian(startLat), lng: degreeToRadian(startLng) },
+      { lat: startLat, lng: startLng },
     ]);
     if (ground?.height === undefined) return undefined;
 
@@ -640,13 +644,13 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
 
     const { startLat, startLng, startHeight, startHeading } = this.config;
     const startPos = geodeticToVector3({
-      lat: degreeToRadian(startLat),
-      lng: degreeToRadian(startLng),
+      lat: startLat,
+      lng: startLng,
       height: startHeight,
     });
 
-    this.modelHeading = startHeading;
-    this.cameraHeading = startHeading;
+    this.modelHeading = degreeToRadian(startHeading);
+    this.cameraHeading = this.modelHeading;
 
     if (this.character) {
       const {
@@ -669,7 +673,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
           animationLoop: true,
           animationCrossfadeDuration: animation.crossfadeDuration,
         },
-        matrixWorld: this.composeCharacterFrame(startPos, startHeading),
+        matrixWorld: this.composeCharacterFrame(startPos, this.modelHeading),
         rotation: {
           x: modelRotationOffset.x,
           y: modelRotationOffset.y,
@@ -752,10 +756,13 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     this.pinnedStartHeight = undefined;
 
     const { lng, lat } = options;
-    const headingRad =
-      options.heading != null ? options.heading : this.cameraHeading;
+    const heading =
+      options.heading != null
+        ? options.heading
+        : radianToDegree(this.cameraHeading);
+    const headingRad = degreeToRadian(heading);
     // A teleport lands on the terrain outright rather than settling onto it.
-    const destination = { lat: degreeToRadian(lat), lng: degreeToRadian(lng) };
+    const destination = { lat, lng };
     const alt = this.resolveGroundHeight(
       destination,
       destination,
@@ -783,7 +790,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
       lng,
       lat,
       alt,
-      heading: headingRad,
+      heading,
       speed: 0,
       animationState: this.currentAnimState,
       mode: this.viewMode,
@@ -852,23 +859,20 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
   }
 
   /**
-   * Rotate the character to the given heading in radians (0 = north,
+   * Rotate the character to the given heading in degrees (0 = north,
    * increasing clockwise) without changing position. Snaps the chase camera to
    * match; in free-camera mode only the model rotates.
    */
-  setHeading(radians: number): void {
+  setHeading(degrees: number): void {
     if (!this.view) return;
 
     const { lat, lng, alt } = this.state;
+    const radians = degreeToRadian(degrees);
     this.modelHeading = radians;
     this.cameraHeading = radians;
 
     if (this.handle && this.character) {
-      const pos = geodeticToVector3({
-        lat: degreeToRadian(lat),
-        lng: degreeToRadian(lng),
-        height: alt,
-      });
+      const pos = geodeticToVector3({ lat, lng, height: alt });
       this.handle.update({
         matrixWorld: this.composeCharacterFrame(pos, radians),
       });
@@ -878,22 +882,22 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
       this.placeChaseCamera(lat, lng, alt, radians);
     }
 
-    this.state = { ...this.state, heading: radians };
+    this.state = { ...this.state, heading: degrees };
     this.notify();
   }
 
-  /** Current character heading in radians. */
+  /** Current character heading in degrees. */
   getHeading(): number {
     return this.state.heading;
   }
 
   /**
-   * Set the downward TPV camera pitch in radians (0 = behind at eye level,
+   * Set the downward TPV camera pitch in degrees (0 = behind at eye level,
    * positive orbits up and over the model). Takes effect immediately for the
    * chase / locked camera.
    */
-  setCameraPitch(radians: number): void {
-    this.config.cameraPitch = radians;
+  setCameraPitch(degrees: number): void {
+    this.config.cameraPitch = degrees;
     if (!this.isFreeCamera()) {
       this.placeChaseCamera(
         this.state.lat,
@@ -904,18 +908,18 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     }
   }
 
-  /** Current downward TPV camera pitch in radians. */
+  /** Current downward TPV camera pitch in degrees. */
   getCameraPitch(): number {
     return this.config.cameraPitch;
   }
 
   /**
-   * Set the downward FPV camera pitch in radians (0 = horizontal, positive
+   * Set the downward FPV camera pitch in degrees (0 = horizontal, positive
    * tilts the view down in place). Takes effect immediately for the chase /
    * locked camera.
    */
-  setFpvPitch(radians: number): void {
-    this.config.fpvPitch = radians;
+  setFpvPitch(degrees: number): void {
+    this.config.fpvPitch = degrees;
     if (!this.isFreeCamera()) {
       this.placeChaseCamera(
         this.state.lat,
@@ -926,7 +930,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     }
   }
 
-  /** Current downward FPV camera pitch in radians. */
+  /** Current downward FPV camera pitch in degrees. */
   getFpvPitch(): number {
     return this.config.fpvPitch;
   }
@@ -1075,7 +1079,12 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
 
   private applyInitialCamera(): void {
     const { startLat, startLng, startHeight, startHeading } = this.config;
-    this.placeChaseCamera(startLat, startLng, startHeight, startHeading);
+    this.placeChaseCamera(
+      startLat,
+      startLng,
+      startHeight,
+      degreeToRadian(startHeading),
+    );
   }
 
   /**
@@ -1110,7 +1119,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
       const backDistance = FPV_LOOK_AHEAD_DISTANCE;
       const lookAheadDistance = fpvForwardOffset + FPV_LOOK_AHEAD_DISTANCE;
       const pitch = this.followSlopeWithPitch(
-        fpvPitch,
+        degreeToRadian(fpvPitch),
         lat,
         lng,
         alt,
@@ -1138,7 +1147,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     // its place in frame. The eye sits at `cameraDistance`, pulled back by
     // `cos(pitch)` horizontally and up by `sin(pitch)`.
     const pitch = this.followSlopeWithPitch(
-      this.config.cameraPitch,
+      degreeToRadian(this.config.cameraPitch),
       lat,
       lng,
       alt,
@@ -1226,7 +1235,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     meters: number,
   ): number | undefined {
     const at = this.advanceLatLng(lat, lng, heading, meters);
-    return this.sampleTerrain(degreeToRadian(at.lat), degreeToRadian(at.lng));
+    return this.sampleTerrain(at.lat, at.lng);
   }
 
   /**
@@ -1258,7 +1267,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     if (gradEast !== 0 || gradNorth !== 0) {
       const sin = Math.sin(heading);
       const cos = Math.cos(heading);
-      const limit = this.collision.maxSlopeTilt;
+      const limit = degreeToRadian(this.collision.maxSlopeTilt);
       // Rise per meter along the character's own axes: forward is
       // (sin, cos) in ENU and right is (cos, -sin).
       const pitch = MathUtils.clamp(
@@ -1286,19 +1295,19 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     return alt + this.config.fpvHeightOffset;
   }
 
-  /** Terrain height at a position in radians, or `undefined` if not loaded. */
+  /** Terrain height at a position in degrees, or `undefined` if not loaded. */
   private sampleTerrain(lat: number, lng: number): number | undefined {
     return this.view?.sampleTerrainHeight({ lat, lng });
   }
 
   /**
    * Apply terrain collision to a candidate altitude (meters). Positions are in
-   * radians. `deltaTime` drives the absorption of terrain data changes — pass
+   * degrees. `deltaTime` drives the absorption of terrain data changes — pass
    * `0` to land on the terrain the sampler reports right now.
    */
   private resolveGroundHeight(
-    at: LatLngRadians,
-    from: LatLngRadians,
+    at: LatLngDegrees,
+    from: LatLngDegrees,
     height: number,
     deltaTime: number,
   ): number {
@@ -1337,8 +1346,8 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
    * changed by is data, and the rest is the character having moved.
    */
   private absorbGroundDataShift(
-    at: LatLngRadians,
-    from: LatLngRadians,
+    at: LatLngDegrees,
+    from: LatLngDegrees,
     terrain: number,
     height: number,
     deltaTime: number,
@@ -1388,7 +1397,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
 
   /**
    * Refresh the terrain gradient the slope tilt is built from, by probing a
-   * ring of points around the character (position in radians, `alt` in meters).
+   * ring of points around the character (position in degrees, `alt` in meters).
    * `deltaTime` drives the smoothing — pass `0` to snap.
    */
   private updateSlopeTilt(
@@ -1422,7 +1431,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
 
   /**
    * Terrain gradient (rise per meter, east and north) under a point given in
-   * radians, fitted to a ring of probes, or `undefined` while any of them is
+   * degrees, fitted to a ring of probes, or `undefined` while any of them is
    * over terrain that has not loaded. The probes sit a few meters apart, so
    * they share one ENU frame rather than each re-deriving its own.
    */
@@ -1463,11 +1472,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     heading: number,
     meters: number,
   ): { lat: number; lng: number } {
-    const pos = geodeticToVector3({
-      lat: degreeToRadian(lat),
-      lng: degreeToRadian(lng),
-      height: 0,
-    });
+    const pos = geodeticToVector3({ lat, lng, height: 0 });
     const enu: Matrix4 = eastNorthUpToFixedFrame(pos);
     this._east.setFromMatrixColumn(enu, 0).normalize();
     this._north.setFromMatrixColumn(enu, 1).normalize();
@@ -1477,7 +1482,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
       .addScaledVector(this._north, Math.cos(heading));
     pos.addScaledVector(this._worldForward, meters);
     const lle = vector3ToGeodetic(pos);
-    return { lat: radianToDegree(lle.lat), lng: radianToDegree(lle.lng) };
+    return { lat: lle.lat, lng: lle.lng };
   }
 
   private notify(): void {
@@ -1592,8 +1597,8 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     } else {
       curPos.copy(
         geodeticToVector3({
-          lat: degreeToRadian(this.state.lat),
-          lng: degreeToRadian(this.state.lng),
+          lat: this.state.lat,
+          lng: this.state.lng,
           height: this.state.alt,
         }),
       );
@@ -1634,8 +1639,8 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     const height =
       this.pinnedStartHeight ??
       this.resolveGroundHeight(advancedLLE, currentLLE, flownHeight, deltaTime);
-    const nextLat = radianToDegree(advancedLLE.lat);
-    const nextLng = radianToDegree(advancedLLE.lng);
+    const nextLat = advancedLLE.lat;
+    const nextLng = advancedLLE.lng;
     const nextAlt = height;
 
     this.updateSlopeTilt(advancedLLE.lat, advancedLLE.lng, height, deltaTime);
@@ -1718,7 +1723,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
       lng: nextLng,
       lat: nextLat,
       alt: nextAlt,
-      heading: this.modelHeading,
+      heading: radianToDegree(this.modelHeading),
       speed: moveSpeed * dashMultiplier,
       animationState: nextAnimState,
       mode: this.viewMode,

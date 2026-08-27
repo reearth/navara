@@ -511,16 +511,8 @@ export class ArcLine extends Object3D {
       const geom2 = config.geometry[i * 2 + 1];
 
       // Calculate ECEF positions and distance (WASM calls)
-      const lle1 = {
-        lat: degreeToRadian(geom1.lat),
-        lng: degreeToRadian(geom1.lng),
-        height: 0,
-      };
-      const lle2 = {
-        lat: degreeToRadian(geom2.lat),
-        lng: degreeToRadian(geom2.lng),
-        height: 0,
-      };
+      const lle1 = { lat: geom1.lat, lng: geom1.lng, height: 0 };
+      const lle2 = { lat: geom2.lat, lng: geom2.lng, height: 0 };
 
       const pos1 = geodeticToVector3(lle1);
       const pos2 = geodeticToVector3(lle2);
@@ -576,16 +568,8 @@ export class ArcLine extends Object3D {
       const geom1 = config.geometry[i * 2];
       const geom2 = config.geometry[i * 2 + 1];
 
-      const lle1 = {
-        lat: degreeToRadian(geom1.lat),
-        lng: degreeToRadian(geom1.lng),
-        height: 0,
-      };
-      const lle2 = {
-        lat: degreeToRadian(geom2.lat),
-        lng: degreeToRadian(geom2.lng),
-        height: 0,
-      };
+      const lle1 = { lat: geom1.lat, lng: geom1.lng, height: 0 };
+      const lle2 = { lat: geom2.lat, lng: geom2.lng, height: 0 };
 
       const pos1 = geodeticToVector3(lle1);
       const pos2 = geodeticToVector3(lle2);
@@ -698,13 +682,13 @@ export class ArcLine extends Object3D {
         const point2 = cfg.geometry[i + 1];
 
         const pos1 = geodeticToVector3({
-          lat: degreeToRadian(point1.lat),
-          lng: degreeToRadian(point1.lng),
+          lat: point1.lat,
+          lng: point1.lng,
           height: cfg.height,
         });
         const pos2 = geodeticToVector3({
-          lat: degreeToRadian(point2.lat),
-          lng: degreeToRadian(point2.lng),
+          lat: point2.lat,
+          lng: point2.lng,
           height: cfg.height,
         });
 
@@ -722,8 +706,8 @@ export class ArcLine extends Object3D {
         const peakHeight = cfg.height + dist * cfg.arcHeightScale;
         box.expandByPoint(
           geodeticToVector3({
-            lat: degreeToRadian(midLat),
-            lng: degreeToRadian(midLng),
+            lat: midLat,
+            lng: midLng,
             height: peakHeight,
           }),
         );

@@ -2,7 +2,6 @@ import ThreeView, {
   Color,
   JAPAN_GSI_ELEVATION_DECODER,
   geodeticToVector3,
-  degreeToRadian,
 } from "@navaramap/three";
 import type {
   BoxMeshDesc,
@@ -76,8 +75,8 @@ export const run = async (view: ThreeView<DefaultDescriptions>) => {
 
   // Cube at Tokyo Station (bloom only)
   const boxPosition = geodeticToVector3({
-    lat: degreeToRadian(35.6812),
-    lng: degreeToRadian(139.7671),
+    lat: 35.6812,
+    lng: 139.7671,
     height: 200,
   });
   const boxLayer = view.addMesh<BoxMeshDesc>({

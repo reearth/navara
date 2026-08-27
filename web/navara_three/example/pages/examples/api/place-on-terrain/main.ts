@@ -1,9 +1,4 @@
-import ThreeView, {
-  Color,
-  degreeToRadian,
-  radianToDegree,
-  vector3ToGeodetic,
-} from "@navaramap/three";
+import ThreeView, { Color, vector3ToGeodetic } from "@navaramap/three";
 import type { SphereMeshDesc } from "@navaramap/three-default-descs";
 import {
   DefaultPlugin,
@@ -60,8 +55,8 @@ const placeMarker = async (lat: number, lng: number, initialHeight = 0) => {
       color: MARKER_COLOR,
     },
     geodetic: {
-      lng: radianToDegree(lng),
-      lat: radianToDegree(lat),
+      lng,
+      lat,
       height: initialHeight,
     },
   });
@@ -91,8 +86,8 @@ window.addEventListener("click", (event) => {
   placeMarker(lat, lng, height);
 });
 
-placeMarker(degreeToRadian(45.9763), degreeToRadian(7.6586));
-placeMarker(degreeToRadian(45.9837), degreeToRadian(7.6706));
+placeMarker(45.9763, 7.6586);
+placeMarker(45.9837, 7.6706);
 
 view.attribution?.add([
   {

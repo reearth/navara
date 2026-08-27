@@ -28,6 +28,8 @@ vi.mock("@navaramap/engine-api", () => {
     default: vi.fn(),
     LLE,
     Vec3,
+    angleToRadian: (deg: number) => (deg * Math.PI) / 180,
+    angleToDegree: (rad: number) => (rad * 180) / Math.PI,
     // Transparent model: the rotation is pinned to the NUE basis at
     // lng 0 / lat 0 (column-major: x = north (0,0,1), y = up (1,0,0),
     // z = east (0,1,0)), but the ORIGIN is threaded through from the

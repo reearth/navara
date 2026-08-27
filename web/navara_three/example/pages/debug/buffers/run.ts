@@ -2,7 +2,6 @@ import ThreeView, {
   Color,
   Effect,
   EffectDesc,
-  degreeToRadian,
   geodeticToVector3,
   NORMAL_PACKING_SHADER,
   type EffectConfig,
@@ -340,8 +339,8 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   ]);
 
   const boxPosition = geodeticToVector3({
-    lat: degreeToRadian(35.681236),
-    lng: degreeToRadian(139.767125),
+    lat: 35.681236,
+    lng: 139.767125,
     height: 200,
   });
 
@@ -364,8 +363,8 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   });
 
   const spherePosition = geodeticToVector3({
-    lat: degreeToRadian(35.68),
-    lng: degreeToRadian(139.7715),
+    lat: 35.68,
+    lng: 139.7715,
     height: 250,
   });
 

@@ -141,8 +141,8 @@ function geodeticToVector3(lle: LatLngHeight): Vector3;
 **Parameters:**
 
 - `lle`: The geodetic coordinates to convert
-  - `lat`: Latitude (radians)
-  - `lng`: Longitude (radians)
+  - `lat`: Latitude (degrees)
+  - `lng`: Longitude (degrees)
   - `height`: Height (meters)
 
 **Returns:**
@@ -152,11 +152,11 @@ Position in the ECEF coordinate system (Three.js Vector3)
 **Example:**
 
 ```typescript
-import { geodeticToVector3, degreeToRadian } from "@navaramap/three-api";
+import { geodeticToVector3 } from "@navaramap/three-api";
 
 const lle = {
-  lat: degreeToRadian(35.6762), // Latitude of Tokyo
-  lng: degreeToRadian(139.6503), // Longitude of Tokyo
+  lat: 35.6762, // Latitude of Tokyo
+  lng: 139.6503, // Longitude of Tokyo
   height: 100,
 };
 const position = geodeticToVector3(lle);
@@ -180,26 +180,26 @@ function vector3ToGeodetic(xyz: Vector3): LatLngHeight;
 **Returns:**
 
 Geodetic coordinates:
-- `lat`: Latitude (radians)
-- `lng`: Longitude (radians)
+- `lat`: Latitude (degrees)
+- `lng`: Longitude (degrees)
 - `height`: Height (meters)
 
 **Example:**
 
 ```typescript
-import { vector3ToGeodetic, radianToDegree } from "@navaramap/three-api";
+import { vector3ToGeodetic } from "@navaramap/three-api";
 import { Vector3 } from "three";
 
 const position = new Vector3(-3946416, 3364068, 3702654);
 const lle = vector3ToGeodetic(position);
-console.log(`Latitude: ${radianToDegree(lle.lat)}°`);
-console.log(`Longitude: ${radianToDegree(lle.lng)}°`);
+console.log(`Latitude: ${lle.lat}°`);
+console.log(`Longitude: ${lle.lng}°`);
 console.log(`Height: ${lle.height} m`);
 ```
 
 ### degreeToRadian(degree)
 
-Converts an angle from degrees to radians.
+Converts an angle from degrees to radians. Latitude and longitude in Navara APIs are already in degrees, so this helper is only needed for radian-based math such as Three.js Euler `rotation` fields.
 
 **Syntax:**
 
@@ -507,11 +507,11 @@ Normalized surface normal vector (Three.js Vector3)
 **Example:**
 
 ```typescript
-import { geodeticSurfaceNormal, degreeToRadian } from "@navaramap/three-api";
+import { geodeticSurfaceNormal } from "@navaramap/three-api";
 
 const lle = {
-  lat: degreeToRadian(35.6762),
-  lng: degreeToRadian(139.6503),
+  lat: 35.6762,
+  lng: 139.6503,
   height: 0,
 };
 const normal = geodeticSurfaceNormal(lle);
@@ -542,12 +542,11 @@ function eastNorthUpToFixedFrame(origin: Vector3): Matrix4;
 import {
   eastNorthUpToFixedFrame,
   geodeticToVector3,
-  degreeToRadian,
 } from "@navaramap/three-api";
 
 const tokyoLle = {
-  lat: degreeToRadian(35.6762),
-  lng: degreeToRadian(139.6503),
+  lat: 35.6762,
+  lng: 139.6503,
   height: 0,
 };
 const origin = geodeticToVector3(tokyoLle);
@@ -638,12 +637,11 @@ function westUpNorthToFixedFrame(origin: Vector3): Matrix4;
 import {
   westUpNorthToFixedFrame,
   geodeticToVector3,
-  degreeToRadian,
 } from "@navaramap/three-api";
 
 const origin = geodeticToVector3({
-  lat: degreeToRadian(35.681236),
-  lng: degreeToRadian(139.767125),
+  lat: 35.681236,
+  lng: 139.767125,
   height: 0,
 });
 const matrix = westUpNorthToFixedFrame(origin);
@@ -653,7 +651,7 @@ const matrix = westUpNorthToFixedFrame(origin);
 
 Builds a WUN tangent frame at a geodetic position and composes heading, pitch, roll, and scale onto it. It is the single call that turns a geographic placement into a world matrix.
 
-**This function takes degrees.** Unlike [geodeticToVector3(lle)](#geodetictovector3lle) and the other helpers on this page, which take radians, `lng`/`lat` and all angles here are in degrees, matching `setCamera` and the `geodetic` mesh Descriptor field.
+`lng`/`lat` and all angles here are in degrees, the same convention as [geodeticToVector3(lle)](#geodetictovector3lle), `setCamera`, and the `geodetic` mesh Descriptor field.
 
 **Syntax:**
 
@@ -895,22 +893,22 @@ constructor(start: LatLngHeight, end: LatLngHeight)
 
 **Parameters:**
 
-- `start`: Geodetic coordinates of the start point (latitude and longitude in radians)
-- `end`: Geodetic coordinates of the end point (latitude and longitude in radians)
+- `start`: Geodetic coordinates of the start point (latitude and longitude in degrees)
+- `end`: Geodetic coordinates of the end point (latitude and longitude in degrees)
 
 **Example:**
 
 ```typescript
-import { EllipsoidGeodesic, degreeToRadian } from "@navaramap/three-api";
+import { EllipsoidGeodesic } from "@navaramap/three-api";
 
 const start = {
-  lat: degreeToRadian(35.6762), // Tokyo
-  lng: degreeToRadian(139.6503),
+  lat: 35.6762, // Tokyo
+  lng: 139.6503,
   height: 0,
 };
 const end = {
-  lat: degreeToRadian(34.6937), // Osaka
-  lng: degreeToRadian(135.5023),
+  lat: 34.6937, // Osaka
+  lng: 135.5023,
   height: 0,
 };
 
@@ -964,7 +962,7 @@ if (!geodesic.converged) {
 
 ### startHeading
 
-Gets the azimuth at the start point (radians).
+Gets the azimuth at the start point (degrees).
 
 **Syntax:**
 
@@ -974,20 +972,18 @@ get startHeading(): number
 
 **Returns:**
 
-Azimuth at the start point (radians)
+Azimuth at the start point (degrees)
 
 **Example:**
 
 ```typescript
-import { radianToDegree } from "@navaramap/three-api";
-
 const geodesic = new EllipsoidGeodesic(start, end);
-console.log(`Start heading: ${radianToDegree(geodesic.startHeading)}°`);
+console.log(`Start heading: ${geodesic.startHeading}°`);
 ```
 
 ### endHeading
 
-Gets the azimuth at the end point (radians).
+Gets the azimuth at the end point (degrees).
 
 **Syntax:**
 
@@ -997,7 +993,7 @@ get endHeading(): number
 
 **Returns:**
 
-Azimuth at the end point (radians)
+Azimuth at the end point (degrees)
 
 ### start
 
@@ -1055,7 +1051,7 @@ const points = geodesic.interpolatePoints(1000);
 console.log(`Number of interpolation points: ${points.length}`);
 
 points.forEach((point, index) => {
-  console.log(`Point ${index}: lat=${radianToDegree(point.lat)}°, lng=${radianToDegree(point.lng)}°`);
+  console.log(`Point ${index}: lat=${point.lat}°, lng=${point.lng}°`);
 });
 ```
 
@@ -1084,7 +1080,7 @@ const geodesic = new EllipsoidGeodesic(start, end);
 
 // Get the midpoint
 const midpoint = geodesic.interpolateDistance(geodesic.distance / 2);
-console.log(`Midpoint: lat=${radianToDegree(midpoint.lat)}°, lng=${radianToDegree(midpoint.lng)}°`);
+console.log(`Midpoint: lat=${midpoint.lat}°, lng=${midpoint.lng}°`);
 ```
 
 ### dispose()
@@ -1116,8 +1112,6 @@ geodesic.dispose();
 import {
   initNavaraApi,
   EllipsoidGeodesic,
-  degreeToRadian,
-  radianToDegree,
   geodeticToVector3,
 } from "@navaramap/three-api";
 
@@ -1125,13 +1119,13 @@ await initNavaraApi();
 
 // Create a geodesic from Tokyo to Osaka
 const tokyo = {
-  lat: degreeToRadian(35.6762),
-  lng: degreeToRadian(139.6503),
+  lat: 35.6762,
+  lng: 139.6503,
   height: 0,
 };
 const osaka = {
-  lat: degreeToRadian(34.6937),
-  lng: degreeToRadian(135.5023),
+  lat: 34.6937,
+  lng: 135.5023,
   height: 0,
 };
 
@@ -1139,8 +1133,8 @@ const geodesic = new EllipsoidGeodesic(tokyo, osaka);
 
 // Display distance and azimuth
 console.log(`Distance: ${(geodesic.distance / 1000).toFixed(2)} km`);
-console.log(`Start heading: ${radianToDegree(geodesic.startHeading).toFixed(2)}°`);
-console.log(`End heading: ${radianToDegree(geodesic.endHeading).toFixed(2)}°`);
+console.log(`Start heading: ${geodesic.startHeading.toFixed(2)}°`);
+console.log(`End heading: ${geodesic.endHeading.toFixed(2)}°`);
 
 // Generate interpolation points at 10km intervals and convert to 3D coordinates
 const points = geodesic.interpolatePoints(10000);
@@ -1164,8 +1158,8 @@ An interface representing geodetic coordinates.
 
 ```typescript
 interface LatLngHeight {
-  lat: number; // Latitude (radians)
-  lng: number; // Longitude (radians)
+  lat: number; // Latitude (degrees)
+  lng: number; // Longitude (degrees)
   height: number; // Height (meters)
 }
 ```
@@ -1176,8 +1170,8 @@ An interface representing latitude and longitude.
 
 ```typescript
 interface LatLng {
-  lat: number;  // Latitude (radians)
-  lng: number;  // Longitude (radians)
+  lat: number;  // Latitude (degrees)
+  lng: number;  // Longitude (degrees)
 }
 ```
 
@@ -1208,7 +1202,6 @@ An example of using the API from `@navaramap/three` to dynamically move a model 
 ```typescript
 import ThreeView, {
   geodeticToVector3,
-  degreeToRadian,
   geodeticSurfaceNormal,
 } from "@navaramap/three";
 import { GLTFModelDesc } from "@navaramap/three-default-descs";
@@ -1234,8 +1227,8 @@ const altitude = 0;
 const modelDesc = view.addMesh<GLTFModelDesc>({
   gltfModel: { url: "/path/to/model.glb" },
   position: geodeticToVector3({
-    lat: degreeToRadian(latitude),
-    lng: degreeToRadian(longitude),
+    lat: latitude,
+    lng: longitude,
     height: altitude,
   }),
 });
@@ -1247,23 +1240,23 @@ const animate = () => {
 
   // Calculate new position
   const pos = geodeticToVector3({
-    lat: degreeToRadian(latitude),
-    lng: degreeToRadian(longitude),
+    lat: latitude,
+    lng: longitude,
     height: altitude,
   });
 
   // Calculate surface normal
   const normal = geodeticSurfaceNormal({
-    lat: degreeToRadian(latitude),
-    lng: degreeToRadian(longitude),
+    lat: latitude,
+    lng: longitude,
     height: altitude,
   });
 
   // Calculate movement direction
   const nextLongitude = longitude + 0.01;
   const nextPos = geodeticToVector3({
-    lat: degreeToRadian(latitude),
-    lng: degreeToRadian(nextLongitude),
+    lat: latitude,
+    lng: nextLongitude,
     height: altitude,
   });
   const direction = new Vector3().subVectors(nextPos, pos).normalize();
@@ -1301,18 +1294,16 @@ When using `@navaramap/three`, refer to the "Using the API from @navaramap/three
 ```typescript
 import {
   initNavaraApi,
-  degreeToRadian,
   geodeticToVector3,
   vector3ToGeodetic,
-  radianToDegree,
 } from "@navaramap/three-api";
 
 // Initialize
 await initNavaraApi();
 
 const tokyoLle = {
-  lat: degreeToRadian(35.6762),
-  lng: degreeToRadian(139.6503),
+  lat: 35.6762,
+  lng: 139.6503,
   height: 100,
 };
 
@@ -1322,8 +1313,8 @@ console.log(`ECEF coordinates: [${ecefPos.x}, ${ecefPos.y}, ${ecefPos.z}]`);
 
 // Convert ECEF coordinates back to geodetic coordinates
 const convertedLle = vector3ToGeodetic(ecefPos);
-console.log(`Latitude: ${radianToDegree(convertedLle.lat)}°`);
-console.log(`Longitude: ${radianToDegree(convertedLle.lng)}°`);
+console.log(`Latitude: ${convertedLle.lat}°`);
+console.log(`Longitude: ${convertedLle.lng}°`);
 console.log(`Height: ${convertedLle.height} m`);
 ```
 
@@ -1377,14 +1368,13 @@ canvas.addEventListener("click", (event) => {
 import {
   geodeticToVector3,
   eastNorthUpToFixedFrame,
-  degreeToRadian,
 } from "@navaramap/three-api";
 import { Mesh, BoxGeometry, MeshBasicMaterial } from "three";
 
 // Tokyo location
 const tokyoLle = {
-  lat: degreeToRadian(35.6762),
-  lng: degreeToRadian(139.6503),
+  lat: 35.6762,
+  lng: 139.6503,
   height: 0,
 };
 
@@ -1413,7 +1403,6 @@ import {
   convertScreenToWorld,
   convertWorldToScreen,
   geodeticToVector3,
-  degreeToRadian,
 } from "@navaramap/three-api";
 import { Vector2 } from "three";
 
@@ -1425,8 +1414,8 @@ const windowObject = {
 
 // Convert world coordinates to screen coordinates
 const worldPos = geodeticToVector3({
-  lat: degreeToRadian(35.6762),
-  lng: degreeToRadian(139.6503),
+  lat: 35.6762,
+  lng: 139.6503,
   height: 100,
 });
 

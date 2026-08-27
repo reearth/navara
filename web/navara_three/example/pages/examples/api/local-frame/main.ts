@@ -1,6 +1,5 @@
 import ThreeView, {
   Color,
-  degreeToRadian,
   eastNorthUpToFixedFrame,
   geodeticToVector3,
   northEastDownToFixedFrame,
@@ -56,12 +55,12 @@ const basemap = await tilejson.addSource({
 view.addLayer({ type: "raster", source: basemap });
 
 const [ground] = await view.sampleTerrainMostDetailed(terrain, [
-  { lat: degreeToRadian(SITE.lat), lng: degreeToRadian(SITE.lng) },
+  { lat: SITE.lat, lng: SITE.lng },
 ]);
 const groundHeight = ground.height ?? 0;
 const origin = geodeticToVector3({
-  lat: degreeToRadian(SITE.lat),
-  lng: degreeToRadian(SITE.lng),
+  lat: SITE.lat,
+  lng: SITE.lng,
   height: groundHeight + CYLINDER_HEIGHT / 2,
 });
 

@@ -7,11 +7,7 @@ The default plugin for `@navaramap/three`. It registers all built-in mesh, light
 Add the plugin before `view.init()`, and parameterize the view with `DefaultDescriptions` so Descriptor keys are typed:
 
 ```typescript
-import ThreeView, {
-  degreeToRadian,
-  geodeticToVector3,
-  northUpEastToFixedFrame,
-} from "@navaramap/three";
+import ThreeView from "@navaramap/three";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
@@ -22,15 +18,10 @@ const defaultPlugin = new DefaultPlugin();
 view.addPlugin(defaultPlugin); // must happen before init()
 await view.init();
 
-// Place the mesh on the globe via a local tangent frame at the target lng/lat.
-const origin = geodeticToVector3({
-  lng: degreeToRadian(139.77),
-  lat: degreeToRadian(35.68),
-  height: 0,
-});
+// Place the mesh on the globe at the target lng/lat (degrees, meters).
 view.addMesh({
   box: { width: 100, height: 100, depth: 100 },
-  matrixWorld: northUpEastToFixedFrame(origin),
+  geodetic: { lng: 139.77, lat: 35.68, height: 0 },
 });
 ```
 

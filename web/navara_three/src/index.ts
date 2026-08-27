@@ -23,7 +23,7 @@ import {
   type FontWorkerMemoryStats,
 } from "@navaramap/font";
 import FontWorkerURL from "@navaramap/font/fontWorker?worker&url";
-import { initNavaraApi } from "@navaramap/three-api";
+import { initNavaraApi, degreeToRadian } from "@navaramap/three-api";
 import {
   initializeWorkerPool,
   probeWorkerPoolHeap,
@@ -2621,11 +2621,11 @@ export default class ThreeView<
 
   /**
    * Samples the terrain height at a given geodetic position synchronously.
-   * @param pos - Geodetic position (lat in radians, lng in radians)
+   * @param pos - Geodetic position (lat in degrees, lng in degrees)
    * @returns Terrain height in meters, or undefined if terrain data not loaded
    */
   sampleTerrainHeight(pos: LatLng): number | undefined {
-    const lle = new LLE(pos.lat, pos.lng, 0);
+    const lle = new LLE(degreeToRadian(pos.lat), degreeToRadian(pos.lng), 0);
     return this._core?.sampleTerrainHeight(lle);
   }
 
@@ -2643,7 +2643,7 @@ export default class ThreeView<
    * sampled.
    *
    * @param source - A registered terrain source (handle or id)
-   * @param positions - Geodetic positions (lat/lng in radians)
+   * @param positions - Geodetic positions (lat/lng in degrees)
    * @param options - Optional abort signal and fixed-level sampling
    * @returns One result per input position, in the same order
    */
@@ -2669,7 +2669,7 @@ export default class ThreeView<
 
   /**
    * Observes terrain height changes at a position. Callback is invoked each time terrain data updates.
-   * @param pos - Geodetic position to observe (lat in radians, lng in radians)
+   * @param pos - Geodetic position to observe (lat in degrees, lng in degrees)
    * @param cb - Callback function receiving the terrain height in meters
    * @returns Cleanup function to stop observing
    */
@@ -2681,7 +2681,7 @@ export default class ThreeView<
       return () => {};
     }
 
-    const lle = new LLE(pos.lat, pos.lng, 0);
+    const lle = new LLE(degreeToRadian(pos.lat), degreeToRadian(pos.lng), 0);
     const entityBits = this._core.registerSampleTerrainHeightEvent(lle);
 
     const callFunc = (ev: TerrainHeightUpdatedEvent) => {

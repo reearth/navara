@@ -37,7 +37,6 @@ import ThreeView, {
   Plugin,
   geodeticToVector3,
   convertWorldToScreen,
-  degreeToRadian,
   type ViewContext,
   type Window,
 } from "@navaramap/three";
@@ -149,11 +148,7 @@ export class OverlayPlugin extends Plugin<View, ViewContext> {
   ): { x: number; y: number } | null {
     if (!this.view) return null;
 
-    const ecef = geodeticToVector3({
-      lng: degreeToRadian(lng),
-      lat: degreeToRadian(lat),
-      height: alt,
-    });
+    const ecef = geodeticToVector3({ lng, lat, height: alt });
 
     const win: Window = {
       width: this.view.screenSize.x,
@@ -172,16 +167,16 @@ export class OverlayPlugin extends Plugin<View, ViewContext> {
 
     const geo = this.view.camera.positionGeographic;
     const cameraEcef = geodeticToVector3({
-      lng: degreeToRadian(geo.lng),
-      lat: degreeToRadian(geo.lat),
+      lng: geo.lng,
+      lat: geo.lat,
       height: geo.height,
     });
 
     const next = new Map<string, ProjectedPosition>();
     for (const pos of this.positions) {
       const markerEcef = geodeticToVector3({
-        lng: degreeToRadian(pos.lng),
-        lat: degreeToRadian(pos.lat),
+        lng: pos.lng,
+        lat: pos.lat,
         height: pos.alt,
       });
       const distance = cameraEcef.distanceTo(markerEcef);

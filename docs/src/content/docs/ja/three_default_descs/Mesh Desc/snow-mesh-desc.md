@@ -20,12 +20,12 @@ sidebar:
 **Example:**
 
 ```typescript
-import { geodeticToVector3, degreeToRadian, LLE } from "@navaramap/three";
+import { geodeticToVector3, LLE } from "@navaramap/three";
 
 const position = geodeticToVector3(
   new LLE(
-    degreeToRadian(35.67564356091717),  // 緯度
-    degreeToRadian(139.74511454748298), // 経度
+    35.67564356091717,  // 緯度
+    139.74511454748298, // 経度
     10,                                  // 高度
   ),
 );
@@ -304,7 +304,7 @@ const snowDesc = view.addMesh<SnowMeshDesc>({
 ### 特定の位置に雪を配置
 
 ```typescript
-import ThreeView, { Color, geodeticToVector3, degreeToRadian, LLE } from "@navaramap/three";
+import ThreeView, { Color, geodeticToVector3, LLE } from "@navaramap/three";
 import { SnowMeshDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView({ animation: true });
@@ -314,8 +314,8 @@ await view.init();
 // 東京の位置を計算
 const position = geodeticToVector3(
   new LLE(
-    degreeToRadian(35.67564356091717),
-    degreeToRadian(139.74511454748298),
+    35.67564356091717,
+    139.74511454748298,
     10,
   ),
 );

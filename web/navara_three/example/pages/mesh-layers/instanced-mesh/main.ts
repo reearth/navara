@@ -1,6 +1,5 @@
 import ThreeView, {
   Color,
-  degreeToRadian,
   northUpEastToFixedFrame,
   geodeticToVector3,
   JAPAN_GSI_ELEVATION_DECODER,
@@ -262,8 +261,8 @@ const run = async () => {
   });
 
   const groupPosition = geodeticToVector3({
-    lat: degreeToRadian(35.6812),
-    lng: degreeToRadian(139.7671),
+    lat: 35.6812,
+    lng: 139.7671,
     height: 0,
   });
   const matrixWorld = northUpEastToFixedFrame(groupPosition);

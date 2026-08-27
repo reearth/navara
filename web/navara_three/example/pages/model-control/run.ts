@@ -1,7 +1,6 @@
 import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   geodeticToVector3,
-  degreeToRadian,
   geodeticSurfaceNormal,
   Color,
 } from "@navaramap/three";
@@ -141,14 +140,14 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   const startLLE = [35.69127684, 139.75865163, 7];
 
   const startPos = geodeticToVector3({
-    lat: degreeToRadian(startLLE[0]),
-    lng: degreeToRadian(startLLE[1]),
+    lat: startLLE[0],
+    lng: startLLE[1],
     height: startLLE[2],
   });
 
   const normal = geodeticSurfaceNormal({
-    lat: degreeToRadian(startLLE[0]),
-    lng: degreeToRadian(startLLE[1]),
+    lat: startLLE[0],
+    lng: startLLE[1],
     height: startLLE[2],
   });
   // Calculate rotation to align model with surface normal

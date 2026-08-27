@@ -1,10 +1,8 @@
 import ThreeView, {
   Color,
   EllipsoidGeodesic,
-  degreeToRadian,
   fetchFontFamilyFromCss,
   geodeticToVector3,
-  radianToDegree,
   vector3ToGeodetic,
   type Layer,
   type MeshHandle,
@@ -32,8 +30,8 @@ const LINE_RADIUS = 40_000;
 
 // WASM-backed API is usable only after init().
 const toGeodetic = (point: { lng: number; lat: number }): GeodeticPoint => ({
-  lat: degreeToRadian(point.lat),
-  lng: degreeToRadian(point.lng),
+  lat: point.lat,
+  lng: point.lng,
   height: 0,
 });
 
@@ -95,8 +93,8 @@ const addMarker = (point: GeodeticPoint) =>
       emissiveIntensity: 0.35,
     },
     geodetic: {
-      lng: radianToDegree(point.lng),
-      lat: radianToDegree(point.lat),
+      lng: point.lng,
+      lat: point.lat,
     },
   });
 
@@ -111,10 +109,7 @@ const addLabel = (midpoint: GeodeticPoint, label: string) => {
           properties: { label },
           geometry: {
             type: "Point",
-            coordinates: [
-              radianToDegree(midpoint.lng),
-              radianToDegree(midpoint.lat),
-            ],
+            coordinates: [midpoint.lng, midpoint.lat],
           },
         },
       ],

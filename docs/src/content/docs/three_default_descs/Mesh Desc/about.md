@@ -85,7 +85,7 @@ To place a mesh at a longitude / latitude you normally do not need any conversio
 The `position` property of MeshDesc uses the ECEF (Earth-Centered, Earth-Fixed) coordinate system. To convert from latitude/longitude/altitude (geodetic coordinates) to the ECEF coordinate system, use the `geodeticToVector3()` function.
 
 :::note
-Latitude and longitude must be specified in **radians**. Use `degreeToRadian()` to convert from degrees to radians.
+Latitude and longitude are specified in **degrees**.
 :::
 
 ### Basic Coordinate Transformation
@@ -94,7 +94,6 @@ Latitude and longitude must be specified in **radians**. Use `degreeToRadian()` 
 import ThreeView, {
   Color,
   geodeticToVector3,
-  degreeToRadian,
 } from "@navaramap/three";
 import { SphereMeshDesc } from "@navaramap/three-default-descs";
 
@@ -104,8 +103,8 @@ await view.init();
 
 // Convert from latitude/longitude/altitude to ECEF coordinates
 const position = geodeticToVector3({
-  lat: degreeToRadian(35.681236),  // Latitude (radians)
-  lng: degreeToRadian(139.767125), // Longitude (radians)
+  lat: 35.681236,  // Latitude (degrees)
+  lng: 139.767125, // Longitude (degrees)
   height: 200,                      // Altitude (meters)
 });
 
@@ -151,13 +150,12 @@ To place meshes using a local coordinate system (ENU: East-North-Up), use `eastN
 import {
   geodeticToVector3,
   eastNorthUpToFixedFrame,
-  degreeToRadian,
 } from "@navaramap/three";
 import { Vector3 } from "three";
 
 const position = geodeticToVector3({
-  lat: degreeToRadian(35.681236),
-  lng: degreeToRadian(139.767125),
+  lat: 35.681236,
+  lng: 139.767125,
   height: 0,
 });
 
@@ -174,23 +172,19 @@ const offsetPosition = position.clone().add(east.multiplyScalar(100));
 
 ### Reverse Conversion from ECEF to Geodetic Coordinates
 
-To convert back from ECEF coordinates to latitude/longitude/altitude, use `vector3ToGeodetic()` and `radianToDegree()`.
+To convert back from ECEF coordinates to latitude/longitude/altitude, use `vector3ToGeodetic()`.
 
 ```typescript
-import {
-  vector3ToGeodetic,
-  radianToDegree,
-} from "@navaramap/three";
+import { vector3ToGeodetic } from "@navaramap/three";
 
 // Get the current position of the mesh
 const worldPosition = meshDesc.ref.getWorldPosition();
 
-// Convert from ECEF to geodetic coordinates
+// Convert from ECEF to geodetic coordinates (degrees)
 const geodetic = vector3ToGeodetic(worldPosition);
 
-// Convert from radians to degrees
-const latitude = radianToDegree(geodetic.lat);
-const longitude = radianToDegree(geodetic.lng);
+const latitude = geodetic.lat;
+const longitude = geodetic.lng;
 const height = geodetic.height;
 
 console.log(`Latitude: ${latitude}°, Longitude: ${longitude}°, Altitude: ${height}m`);

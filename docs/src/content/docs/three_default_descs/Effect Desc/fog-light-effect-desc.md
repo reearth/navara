@@ -28,11 +28,11 @@ The `FogLightEffectDesc` class is a Descriptor that generates volumetric lightin
 **Example:**
 
 ```typescript
-import { degreeToRadian, geodeticToVector3 } from "@navaramap/three";
+import { geodeticToVector3 } from "@navaramap/three";
 
 const position = geodeticToVector3({
-  lat: degreeToRadian(35.68),
-  lng: degreeToRadian(139.76),
+  lat: 35.68,
+  lng: 139.76,
   height: 60,
 });
 
@@ -243,15 +243,15 @@ view.addEffect({
 ### Adding a basic fog light effect
 
 ```typescript
-import ThreeView, { degreeToRadian, geodeticToVector3 } from "@navaramap/three";
+import ThreeView, { geodeticToVector3 } from "@navaramap/three";
 import { FogLightEffectDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();
 
 const position = geodeticToVector3({
-  lat: degreeToRadian(35.68),
-  lng: degreeToRadian(139.76),
+  lat: 35.68,
+  lng: 139.76,
   height: 60,
 });
 
@@ -275,10 +275,7 @@ view.addEffect<FogLightEffectDesc>({
 ### Street light effect in a night scene
 
 ```typescript
-import ThreeView, {
-  degreeToRadian,
-  geodeticToVector3,
-} from "@navaramap/three";
+import ThreeView, { geodeticToVector3 } from "@navaramap/three";
 import {
   FogLightEffectDesc,
   type FogLightDefinition,
@@ -297,8 +294,8 @@ const roadPoints: [number, number, number][] = [
 const streetLights: FogLightDefinition[] = roadPoints.map(
   ([lng, lat, elevation]) => {
     const position = geodeticToVector3({
-      lat: degreeToRadian(lat),
-      lng: degreeToRadian(lng),
+      lat,
+      lng,
       height: elevation + 14,
     });
     return {
@@ -324,7 +321,7 @@ view.addEffect<FogLightEffectDesc>({
 ### Dynamically adding lights to a scene
 
 ```typescript
-import ThreeView, { degreeToRadian, geodeticToVector3 } from "@navaramap/three";
+import ThreeView, { geodeticToVector3 } from "@navaramap/three";
 import {
   FogLightEffectDesc,
   type FogLightDefinition,
@@ -348,8 +345,8 @@ const fogDesc = view.addEffect<FogLightEffectDesc>({
 // Add lights later
 function addLight(lng: number, lat: number, height: number) {
   const position = geodeticToVector3({
-    lat: degreeToRadian(lat),
-    lng: degreeToRadian(lng),
+    lat,
+    lng,
     height,
   });
   fogLights.push({
@@ -370,15 +367,15 @@ function addLight(lng: number, lat: number, height: number) {
 ### Fog lights visible only at night
 
 ```typescript
-import ThreeView, { degreeToRadian, geodeticToVector3 } from "@navaramap/three";
+import ThreeView, { geodeticToVector3 } from "@navaramap/three";
 import { FogLightEffectDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView();
 await view.init();
 
 const position = geodeticToVector3({
-  lat: degreeToRadian(35.68),
-  lng: degreeToRadian(139.76),
+  lat: 35.68,
+  lng: 139.76,
   height: 60,
 });
 

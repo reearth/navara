@@ -22,12 +22,12 @@ Below are representative features provided by navara_three_api. For details on a
 You can convert between latitude/longitude (geodetic coordinates) and Three.js world coordinates (ECEF).
 
 ```typescript
-import { geodeticToVector3, degreeToRadian } from "@navaramap/three";
+import { geodeticToVector3 } from "@navaramap/three";
 
 // Convert Tokyo coordinates to a Three.js Vector3
 const position = geodeticToVector3({
-  lat: degreeToRadian(35.6762),
-  lng: degreeToRadian(139.6503),
+  lat: 35.6762,
+  lng: 139.6503,
   height: 100,
 });
 ```
@@ -65,11 +65,11 @@ mesh.matrix.copy(enuMatrix);
 You can calculate the distance and azimuth along the Earth's surface between two points. This can be used for route display and area calculations.
 
 ```typescript
-import { EllipsoidGeodesic, degreeToRadian } from "@navaramap/three";
+import { EllipsoidGeodesic } from "@navaramap/three";
 
 const geodesic = new EllipsoidGeodesic(tokyo, osaka);
 console.log(`Distance: ${geodesic.distance / 1000} km`);
-console.log(`Azimuth: ${geodesic.startHeading} rad`);
+console.log(`Azimuth: ${geodesic.startHeading}°`);
 ```
 
 ## Relationship with navara_three

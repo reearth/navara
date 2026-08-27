@@ -5,11 +5,7 @@ The built-in mesh, light, and effect Descriptors for `@navaramap/three`. Meshes 
 Most applications don't depend on this package directly: `@navaramap/three-default-plugin` registers everything here under standard keys and re-exports all classes and config types. Depend on this package directly when you want to register only a subset of Descriptors yourself, or when you need the Descriptor classes and config types without the plugin:
 
 ```typescript
-import ThreeView, {
-  degreeToRadian,
-  geodeticToVector3,
-  northUpEastToFixedFrame,
-} from "@navaramap/three";
+import ThreeView from "@navaramap/three";
 import {
   BoxMeshDesc,
   type BoxMeshConfig,
@@ -19,15 +15,10 @@ const view = new ThreeView<{ mesh: BoxMeshConfig }>();
 view.registerMesh("box", BoxMeshDesc); // before init()
 await view.init();
 
-// Place the mesh on the globe via a local tangent frame at the target lng/lat.
-const origin = geodeticToVector3({
-  lng: degreeToRadian(139.77),
-  lat: degreeToRadian(35.68),
-  height: 0,
-});
+// Place the mesh on the globe at the target lng/lat (degrees, meters).
 view.addMesh({
   box: { width: 100, height: 100, depth: 100 },
-  matrixWorld: northUpEastToFixedFrame(origin),
+  geodetic: { lng: 139.77, lat: 35.68, height: 0 },
 });
 ```
 
