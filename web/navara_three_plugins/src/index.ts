@@ -10,7 +10,6 @@ export {
   type KeyBindings,
   type ViewMode,
   type TeleportOptions,
-  type ResolveStartHeightOptions,
   type PersonViewAction,
 } from "./PersonViewPlugin";
 

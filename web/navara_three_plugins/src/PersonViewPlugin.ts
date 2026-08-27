@@ -97,15 +97,6 @@ export type TeleportOptions = {
   heading?: number;
 };
 
-/** Options for {@link PersonViewPlugin.resolveStartHeight}. */
-export type ResolveStartHeightOptions = {
-  /**
-   * Meters kept above the sampled terrain surface.
-   * @defaultValue `0`
-   */
-  offset?: number;
-};
-
 /**
  * Model rotation offset applied to the loaded GLTF model.
  * Different models face different directions by default, so this
@@ -589,14 +580,12 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
    * @param source - A registered `quantized-mesh` or `raster-dem` source
    *   (handle or id) to sample, always explicit — the same contract as
    *   `ThreeView.sampleTerrainMostDetailed`.
-   * @returns The resolved start height in meters, or `undefined` when the
-   *   source has no height at the start position (the configured
-   *   `startHeight` is then kept).
+   * @returns The resolved start height in meters, including the collision's
+   *   `groundOffset` (matching what the collision itself enforces), or
+   *   `undefined` when the source has no height at the start position (the
+   *   configured `startHeight` is then kept).
    */
-  async resolveStartHeight(
-    source: SourceRef,
-    options?: ResolveStartHeightOptions,
-  ): Promise<number | undefined> {
+  async resolveStartHeight(source: SourceRef): Promise<number | undefined> {
     const view = this.view;
     if (!view) return undefined;
 
@@ -606,13 +595,19 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     ]);
     if (ground?.height === undefined) return undefined;
 
-    const height = ground.height + (options?.offset ?? 0);
+    const { mode, groundOffset } = this.collision;
+    // The collision keeps `groundOffset` above the surface, so the resolved
+    // height must include it or the character starts below its own floor.
+    const height = ground.height + (mode === "off" ? 0 : groundOffset);
     this.config.startHeight = height;
     if (!this.placed) {
       // The state was seeded from the config in `init()`, and the camera-only
       // mode keeps reading its altitude from there.
       this.state = { ...this.state, alt: height };
       this.pinnedStartHeight = height;
+      // What `resolveGroundHeight` would have reported, so the grounding
+      // logic (slope tilt, camera slope follow) keeps working while pinned.
+      if (mode !== "off") this.groundSurfaceHeight = height;
     }
     return height;
   }

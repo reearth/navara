@@ -104,7 +104,7 @@ const personView = new PersonViewPlugin({
 personView.setCollision({ mode: "off" });
 ```
 
-`mode` is the only field most scenes need: the remaining defaults are tuned for walking real terrain, and the plugin handles the terrain loading described below on its own. Give `startHeight` a value near the terrain at `startLat` / `startLng`, or skip the hand-measuring and call [`resolveStartHeight()`](#resolvestartheightsource-options) before `start()`.
+`mode` is the only field most scenes need: the remaining defaults are tuned for walking real terrain, and the plugin handles the terrain loading described below on its own. Give `startHeight` a value near the terrain at `startLat` / `startLng`, or skip the hand-measuring and call [`resolveStartHeight()`](#resolvestartheightsource) before `start()`.
 
 There are three modes:
 
@@ -224,13 +224,10 @@ Each entry takes an array of `KeyboardEvent.code` values (e.g. `["KeyW"]`, `["Ar
 
 ## Methods
 
-### resolveStartHeight(source, options?)
+### resolveStartHeight(source)
 
 ```typescript
-resolveStartHeight(
-  source: string | Source,
-  options?: { offset?: number },
-): Promise<number | undefined>
+resolveStartHeight(source: string | Source): Promise<number | undefined>
 ```
 
 Pins `startHeight` to the terrain surface at the start position, sampled from the source's most detailed data via `ThreeView.sampleTerrainMostDetailed`. [`start()`](#start) then places the character on the ground at a dynamically resolved `startHeight`. Call it before `start()`.
@@ -243,12 +240,7 @@ personView.start();
 
 The resolved height is **held until the first movement input** (or a [`teleport()`](#teleportoptions)): the tiles resident right after load are coarse, and following them would pull the character tens of meters off it. The first movement key hands the altitude over to the normal [terrain following](#terrain-that-loads-while-you-walk-on-it).
 
-Returns the height used, or `undefined` when the source has no data at the start position (the configured `startHeight` is then kept).
-
-| Field            | Type                  | Description                                                                     |
-| ---------------- | --------------------- | ------------------------------------------------------------------------------- |
-| `source`         | `string \| Source`    | A registered `quantized-mesh` or `raster-dem` source (handle or id) to sample. |
-| `options.offset` | `number \| undefined` | Meters kept above the sampled surface. Defaults to `0`.                        |
+Returns the height used, including the collision's `groundOffset`, or `undefined` when the source has no data at the start position (the configured `startHeight` is then kept).
 
 ### start()
 

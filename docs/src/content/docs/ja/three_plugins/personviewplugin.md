@@ -104,7 +104,7 @@ const personView = new PersonViewPlugin({
 personView.setCollision({ mode: "off" });
 ```
 
-ほとんどの場面で指定が必要なのは `mode` だけです。残りのデフォルトは実際の地形を歩く用途に合わせてあり、後述のタイル読み込みによる揺れはプラグイン側で吸収します。`startHeight` には `startLat` / `startLng` 地点の地形に近い値を与えてください。確実に固定したい場合は、`start()` の前に [`resolveStartHeight()`](#resolvestartheightsource-options) を呼びます。
+ほとんどの場面で指定が必要なのは `mode` だけです。残りのデフォルトは実際の地形を歩く用途に合わせてあり、後述のタイル読み込みによる揺れはプラグイン側で吸収します。`startHeight` には `startLat` / `startLng` 地点の地形に近い値を与えてください。確実に固定したい場合は、`start()` の前に [`resolveStartHeight()`](#resolvestartheightsource) を呼びます。
 
 モードは 3 種類あります。
 
@@ -224,13 +224,10 @@ new PersonViewPlugin(config?: PersonViewConfig)
 
 ## メソッド
 
-### resolveStartHeight(source, options?)
+### resolveStartHeight(source)
 
 ```typescript
-resolveStartHeight(
-  source: string | Source,
-  options?: { offset?: number },
-): Promise<number | undefined>
+resolveStartHeight(source: string | Source): Promise<number | undefined>
 ```
 
 開始位置の地表高をソースの最詳細データから `ThreeView.sampleTerrainMostDetailed` でサンプリングし、`startHeight` をその高さに固定します。これにより [`start()`](#start) は、動的に解決した `startHeight` でキャラクターを地面に配置できます。`start()` の前に呼び出してください。
@@ -243,12 +240,7 @@ personView.start();
 
 解決した高さは**最初の移動入力まで保持されます**（[`teleport()`](#teleportoptions) でも解除されます）。読み込み直後のタイルは粗く、そのまま追従するとキャラクターが数十メートル引きずられてしまうためです。最初の移動キーで、高度は通常の[地形追従](#歩いている最中に読み込まれる地形)へ引き継がれます。
 
-返り値は使用された高さです。開始位置にソースのデータがない場合は `undefined` になり、設定済みの `startHeight` が維持されます。
-
-| フィールド       | 型                    | 説明                                                                                          |
-| ---------------- | --------------------- | --------------------------------------------------------------------------------------------- |
-| `source`         | `string \| Source`    | サンプリング対象の登録済み `quantized-mesh` または `raster-dem` ソース（ハンドルまたは id）。 |
-| `options.offset` | `number \| undefined` | サンプリングした地表から確保する高さ（メートル）。デフォルトは `0`。                          |
+返り値は使用された高さで、collision optionの `groundOffset` を含みます。開始位置にソースのデータがない場合は `undefined` になり、設定済みの `startHeight` が維持されます。
 
 ### start()
 

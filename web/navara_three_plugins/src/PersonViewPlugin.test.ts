@@ -249,14 +249,14 @@ describe("PersonViewPlugin terrain collision", () => {
       expect(plugin.getState().alt).toBe(1500);
     });
 
-    it("keeps the sampled surface at the requested offset", async () => {
+    it("includes the collision's groundOffset like the collision itself", async () => {
       const view = makeFakeView(() => 1500);
-      const plugin = new PersonViewPlugin();
+      const plugin = new PersonViewPlugin({
+        collision: { mode: "ground", groundOffset: 2 },
+      });
       await initPlugin(plugin, view);
 
-      await expect(
-        plugin.resolveStartHeight("terrain", { offset: 2 }),
-      ).resolves.toBe(1502);
+      await expect(plugin.resolveStartHeight("terrain")).resolves.toBe(1502);
       expect(plugin.getState().alt).toBe(1502);
     });
 
@@ -489,6 +489,27 @@ describe("PersonViewPlugin terrain collision", () => {
       let time = performance.now();
       for (let i = 0; i < 200; i++) advance((time += 16));
     };
+
+    it("keeps the tilt alive while the start height is pinned", async () => {
+      const grade = 0.5;
+      const view = makeFakeView(northSlope(grade));
+      const plugin = new PersonViewPlugin({
+        character,
+        collision: { mode: "ground", alignToSlope: true },
+        startLat: START.lat,
+        startLng: START.lng,
+        startHeading: 0,
+      });
+      await initPlugin(plugin, view);
+      // Pinning must not read as airborne: the slope tilt still applies.
+      await plugin.resolveStartHeight("terrain");
+      plugin.start();
+      view.finishModelLoad();
+
+      settleTilt();
+
+      expect(tilt(view).forward).toBeCloseTo(Math.sin(Math.atan(grade)), 3);
+    });
 
     it("pitches the character nose-up when it faces uphill", async () => {
       const grade = 0.5;
