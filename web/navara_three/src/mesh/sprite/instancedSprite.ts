@@ -51,6 +51,8 @@ type PositionsInfo = {
         low: Float32Array<ArrayBufferLike>;
       };
   batchIDs: Float32Array<ArrayBufferLike> | null;
+  /** Per-instance feature (batch) index; a feature can span many instances. */
+  batchIndices: Uint32Array<ArrayBufferLike> | null;
   positionSize: number;
   batchIDSize: number;
   nPositions: number;
@@ -66,7 +68,13 @@ export class InstancedSpriteMesh
   implements PickableMesh, DeclutterParticipant
 {
   private _geometryType: SpriteGeometryType = GEOMETRY_TYPES.Point;
-  private _batchIdToInstance = new Map<number, number>();
+  /**
+   * Feature (batch) index → this feature's instance ids. A feature owns
+   * multiple instances for MultiPoint geometry and for points derived from
+   * line/polygon vertices via `geometryTypes`, so per-feature styling must
+   * fan out to all of them.
+   */
+  private _batchIndexToInstances = new Map<number, number[]>();
   private _initialColor: Color = new Color(0xffffff);
   private _initialHeight = 0.0;
   private _initialSize = -1.0; // Negative value indicates "use uScale" in shader
@@ -487,10 +495,15 @@ export class InstancedSpriteMesh
       colorBuffer[i * 3 + 1] = this._initialColor.g;
       colorBuffer[i * 3 + 2] = this._initialColor.b;
 
-      // Map batch ID to instance id
-      // assuming batch IDs are 32bit floats
-      const batchId = positionsInfo.batchIDs[i];
-      this._batchIdToInstance.set(batchId, i);
+      // Group instances by their feature's batch index; without the buffer
+      // fall back to one instance per feature (identity mapping).
+      const batchIndex = positionsInfo.batchIndices?.[i] ?? i;
+      let instances = this._batchIndexToInstances.get(batchIndex);
+      if (!instances) {
+        instances = [];
+        this._batchIndexToInstances.set(batchIndex, instances);
+      }
+      instances.push(i);
     }
 
     if (m instanceof NavaraBillboardMesh) {
@@ -642,6 +655,9 @@ export class InstancedSpriteMesh
     const batchIdsData = g.batch_ids;
     const batchIDs = buf.removeF32(batchIdsData.data);
     const batchIDSize = batchIdsData.size;
+    // Copy via the non-removing getter: the handle stays owned by the ECS
+    // geometry, whose destroy path frees it (`remove_from_buf`).
+    const batchIndices = buf.u32(g.batch_index.data)?.slice() ?? null;
 
     const positionData = g.position;
     const position = positionData
@@ -655,6 +671,7 @@ export class InstancedSpriteMesh
       return {
         position,
         batchIDs,
+        batchIndices,
         batchIDSize,
         positionSize,
         nPositions,
@@ -684,6 +701,7 @@ export class InstancedSpriteMesh
       return {
         position: { high: positionHigh, low: positionLow },
         batchIDs,
+        batchIndices,
         batchIDSize,
         positionSize: positionHighSize,
         nPositions,
@@ -800,32 +818,41 @@ export class InstancedSpriteMesh
     return this._enhancedMaterial;
   }
 
-  setFeatureColorByBatchId(batchId: number, color: Color) {
-    const instanceId = this._batchIdToInstance.get(batchId);
-    if (instanceId === undefined) return;
+  /** All instances owned by the feature at `batchIndex`; empty when unknown. */
+  private instancesOfBatchIndex(batchIndex: number): number[] {
+    return this._batchIndexToInstances.get(batchIndex) ?? [];
+  }
+
+  setFeatureColorByBatchIndex(batchIndex: number, color: Color) {
+    const instances = this.instancesOfBatchIndex(batchIndex);
+    if (instances.length === 0) return;
 
     const colorAttr = this.geometry.getAttribute(
       "instanceColor",
     ) as InstancedBufferAttribute;
-    colorAttr.setXYZ(instanceId, color.r, color.g, color.b);
+    for (const instanceId of instances) {
+      colorAttr.setXYZ(instanceId, color.r, color.g, color.b);
+    }
     colorAttr.needsUpdate = true;
   }
 
-  setFeatureShowByBatchId(batchId: number, rawVisible: boolean) {
-    const instanceId = this._batchIdToInstance.get(batchId);
-    if (instanceId === undefined) return;
+  setFeatureShowByBatchIndex(batchIndex: number, rawVisible: boolean) {
+    const instances = this.instancesOfBatchIndex(batchIndex);
+    if (instances.length === 0) return;
 
     const paramsAttr = this.geometry.getAttribute(
       "instanceParams",
     ) as InstancedBufferAttribute;
-    paramsAttr.setZ(instanceId, rawVisible ? 1.0 : 0.0);
+    for (const instanceId of instances) {
+      paramsAttr.setZ(instanceId, rawVisible ? 1.0 : 0.0);
+    }
     paramsAttr.needsUpdate = true;
     this.ctx.declutter?.markDirty();
   }
 
-  setFeatureOpacityByBatchId(batchId: number, opacity: number) {
-    const instanceId = this._batchIdToInstance.get(batchId);
-    if (instanceId === undefined) return;
+  setFeatureOpacityByBatchIndex(batchIndex: number, opacity: number) {
+    const instances = this.instancesOfBatchIndex(batchIndex);
+    if (instances.length === 0) return;
 
     const paramsAttr = this.geometry.getAttribute(
       "instanceParams",
@@ -833,20 +860,24 @@ export class InstancedSpriteMesh
     const clampedOpacity = Number.isFinite(opacity)
       ? Math.max(0.0, Math.min(1.0, opacity))
       : 1.0;
-    paramsAttr.setW(instanceId, clampedOpacity);
+    for (const instanceId of instances) {
+      paramsAttr.setW(instanceId, clampedOpacity);
+    }
     paramsAttr.needsUpdate = true;
   }
 
-  setFeatureHeightByBatchId(batchId: number, height: number) {
-    const instanceId = this._batchIdToInstance.get(batchId);
-    if (instanceId === undefined) return;
+  setFeatureHeightByBatchIndex(batchIndex: number, height: number) {
+    const instances = this.instancesOfBatchIndex(batchIndex);
+    if (instances.length === 0) return;
 
     const paramsAttr = this.geometry.getAttribute(
       "instanceParams",
     ) as InstancedBufferAttribute;
 
     const sanitizedHeight = Number.isFinite(height) ? height : 0.0;
-    paramsAttr.setX(instanceId, sanitizedHeight);
+    for (const instanceId of instances) {
+      paramsAttr.setX(instanceId, sanitizedHeight);
+    }
     paramsAttr.needsUpdate = true;
     this.ctx.declutter?.markDirty();
   }
@@ -873,9 +904,12 @@ export class InstancedSpriteMesh
    * layer-level `declutterPriority` for this instance. Driven by the feature
    * evaluator.
    */
-  setFeatureDeclutterPriorityByBatchId(batchId: number, priority: number) {
-    const instanceId = this._batchIdToInstance.get(batchId);
-    if (instanceId === undefined) return;
+  setFeatureDeclutterPriorityByBatchIndex(
+    batchIndex: number,
+    priority: number,
+  ) {
+    const instances = this.instancesOfBatchIndex(batchIndex);
+    if (instances.length === 0) return;
 
     if (!this._declutterPriorityOverrides) {
       const count = this._anchors ? this._anchors.length / 3 : 0;
@@ -884,15 +918,21 @@ export class InstancedSpriteMesh
         Number.NaN,
       );
     }
-    if (instanceId >= this._declutterPriorityOverrides.length) return;
-    if (this._declutterPriorityOverrides[instanceId] === priority) return;
-    this._declutterPriorityOverrides[instanceId] = priority;
-    this.ctx.declutter?.markDirty();
+    let changed = false;
+    for (const instanceId of instances) {
+      if (instanceId >= this._declutterPriorityOverrides.length) continue;
+      if (this._declutterPriorityOverrides[instanceId] === priority) continue;
+      this._declutterPriorityOverrides[instanceId] = priority;
+      changed = true;
+    }
+    if (changed) {
+      this.ctx.declutter?.markDirty();
+    }
   }
 
-  setFeatureSizeByBatchId(batchId: number, size: number) {
-    const instanceId = this._batchIdToInstance.get(batchId);
-    if (instanceId === undefined) return;
+  setFeatureSizeByBatchIndex(batchIndex: number, size: number) {
+    const instances = this.instancesOfBatchIndex(batchIndex);
+    if (instances.length === 0) return;
 
     const paramsAttr = this.geometry.getAttribute(
       "instanceParams",
@@ -903,7 +943,9 @@ export class InstancedSpriteMesh
         ? -1.0
         : size
       : -1.0;
-    paramsAttr.setY(instanceId, sanitizedSize);
+    for (const instanceId of instances) {
+      paramsAttr.setY(instanceId, sanitizedSize);
+    }
     paramsAttr.needsUpdate = true;
     this.ctx.declutter?.markDirty();
   }
@@ -916,47 +958,60 @@ export class InstancedSpriteMesh
    * reverts the feature to the material's default image. No-op for
    * non-billboard (point) meshes.
    */
-  async setFeatureImageByBatchId(
-    batchId: number,
+  async setFeatureImageByBatchIndex(
+    batchIndex: number,
     url: string | null | undefined,
   ): Promise<void> {
-    const instanceId = this._batchIdToInstance.get(batchId);
-    if (instanceId === undefined) return;
+    const instances = this.instancesOfBatchIndex(batchIndex);
+    if (instances.length === 0) return;
 
     const rectAttr = this.geometry.getAttribute("instanceUvRect") as
       InstancedBufferAttribute | undefined;
     if (!rectAttr) return;
 
     if (url == null) {
-      this._requestedImageUrls.delete(instanceId);
-      if (!this._imageOverrides.delete(instanceId)) return;
-      // Zero rect (invisible) until the default image finishes loading, same
-      // as instances that never had an override.
-      const rect = this._defaultRect;
-      rectAttr.setXYZW(
-        instanceId,
-        rect?.x ?? 0,
-        rect?.y ?? 0,
-        rect?.w ?? 0,
-        rect?.h ?? 0,
-      );
-      rectAttr.needsUpdate = true;
-      this._onAtlasRectsChanged();
+      let cleared = false;
+      for (const instanceId of instances) {
+        this._requestedImageUrls.delete(instanceId);
+        if (!this._imageOverrides.delete(instanceId)) continue;
+        // Zero rect (invisible) until the default image finishes loading,
+        // same as instances that never had an override.
+        const rect = this._defaultRect;
+        rectAttr.setXYZW(
+          instanceId,
+          rect?.x ?? 0,
+          rect?.y ?? 0,
+          rect?.w ?? 0,
+          rect?.h ?? 0,
+        );
+        cleared = true;
+      }
+      if (cleared) {
+        rectAttr.needsUpdate = true;
+        this._onAtlasRectsChanged();
+      }
       return;
     }
 
-    this._requestedImageUrls.set(instanceId, url);
+    for (const instanceId of instances) {
+      this._requestedImageUrls.set(instanceId, url);
+    }
     const rect = await this._ensureAtlas().pack(url);
     this._reportAtlasBytes();
     if (!rect) return;
-    // A newer override or a clear superseded this load while it was in flight.
-    if (this._requestedImageUrls.get(instanceId) !== url) return;
-
-    this._imageOverrides.add(instanceId);
-    this._syncAtlasUniforms();
-    rectAttr.setXYZW(instanceId, rect.x, rect.y, rect.w, rect.h);
-    rectAttr.needsUpdate = true;
-    this._onAtlasRectsChanged();
+    let applied = false;
+    for (const instanceId of instances) {
+      // A newer override or a clear superseded this load while in flight.
+      if (this._requestedImageUrls.get(instanceId) !== url) continue;
+      this._imageOverrides.add(instanceId);
+      rectAttr.setXYZW(instanceId, rect.x, rect.y, rect.w, rect.h);
+      applied = true;
+    }
+    if (applied) {
+      this._syncAtlasUniforms();
+      rectAttr.needsUpdate = true;
+      this._onAtlasRectsChanged();
+    }
   }
 
   dispose(): void {
@@ -979,7 +1034,7 @@ export class InstancedSpriteMesh
     (this.material as ShaderMaterial).dispose();
 
     // Clear internal collections to release references
-    this._batchIdToInstance.clear();
+    this._batchIndexToInstances.clear();
     this._anchors = null;
     this._declutterTargets = null;
     this._declutterPriorityOverrides = null;

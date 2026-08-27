@@ -431,7 +431,7 @@ export class FeatureEvaluator {
   ) {
     const evaluate = (info: FeatureInfo, batchIndex: number) => {
       const evaluated = f(info);
-      this.applyEvaluatedValues(batchIndex, info.batchId, evaluated);
+      this.applyEvaluatedValues(batchIndex, evaluated);
     };
 
     if (options?.filters) {
@@ -443,30 +443,32 @@ export class FeatureEvaluator {
 
   private applyEvaluatedValues(
     batchIndex: number,
-    batchId: number,
     evaluated: Partial<EvaluatedValue>,
   ) {
     const obj = this.obj;
 
+    // Sprites apply by batch index: a feature can own several instances
+    // (MultiPoint, points derived from line/polygon vertices), so a
+    // batch-id keyed lookup would style only one of them.
     if (obj instanceof InstancedSpriteMesh) {
       if (evaluated.color != null) {
-        obj.setFeatureColorByBatchId(batchId, evaluated.color.raw);
+        obj.setFeatureColorByBatchIndex(batchIndex, evaluated.color.raw);
       }
       if (evaluated.show != null) {
-        obj.setFeatureShowByBatchId(batchId, evaluated.show);
+        obj.setFeatureShowByBatchIndex(batchIndex, evaluated.show);
       }
       if (evaluated.height != null) {
-        obj.setFeatureHeightByBatchId(batchId, evaluated.height);
+        obj.setFeatureHeightByBatchIndex(batchIndex, evaluated.height);
       }
       if (evaluated.size != null) {
-        obj.setFeatureSizeByBatchId(batchId, evaluated.size);
+        obj.setFeatureSizeByBatchIndex(batchIndex, evaluated.size);
       }
       if (evaluated.opacity != null) {
-        obj.setFeatureOpacityByBatchId(batchId, evaluated.opacity);
+        obj.setFeatureOpacityByBatchIndex(batchIndex, evaluated.opacity);
       }
       if (evaluated.declutterPriority != null) {
-        obj.setFeatureDeclutterPriorityByBatchId(
-          batchId,
+        obj.setFeatureDeclutterPriorityByBatchIndex(
+          batchIndex,
           evaluated.declutterPriority,
         );
       }
@@ -474,7 +476,7 @@ export class FeatureEvaluator {
         // Async by nature (the image may need fetching); the atlas dedupes
         // loads by URL so evaluating many features costs one fetch per image.
         // A nullish url clears the override back to the material default.
-        void obj.setFeatureImageByBatchId(batchId, evaluated.image);
+        void obj.setFeatureImageByBatchIndex(batchIndex, evaluated.image);
       }
       return;
     }
