@@ -47,6 +47,12 @@ export function isClickGesture(
  * Re-parenting is safe because pass scenes all have identity world
  * transforms, so world matrices of the re-parented objects are
  * unaffected.
+ *
+ * Two gestures trigger a pick: a click (mousedown/mouseup within
+ * {@link CLICK_PIXEL_TOLERANCE}) and hovering, throttled to at most one
+ * pick per animation frame. Both are lazy: a pick runs only while the
+ * matching `shouldClickPick` / `shouldHoverPick` gate returns true
+ * (i.e. someone is listening for the result).
  */
 export class PickHelper {
   private element: HTMLElement;
@@ -64,9 +70,20 @@ export class PickHelper {
   /** Full-size render target used for click picking with scissor restriction. */
   private pickRenderTarget: WebGLRenderTarget;
 
+  private onHoverCallback: (pickArr: number[]) => void;
+  /** Click picks run only while this returns true (e.g. featureClick listeners exist). */
+  private shouldClickPick: () => boolean;
+  /** Hover picks run only while this returns true (e.g. hover listeners exist). */
+  private shouldHoverPick: () => boolean;
+
   private mouseDownPosition?: Vector2;
   private mouseDownHandler: (event: MouseEvent) => void;
   private mouseUpHandler: (event: MouseEvent) => void;
+  private hoverMoveHandler: (event: MouseEvent) => void;
+  private hoverLeaveHandler: () => void;
+  /** Latest mousemove position awaiting a hover pick, in client coords. */
+  private hoverPosition?: Vector2;
+  private hoverRafId?: number;
 
   constructor(
     element: HTMLElement,
@@ -74,6 +91,9 @@ export class PickHelper {
     camera: PerspectiveCamera,
     meshes: MeshCache,
     onPickCallback: (pickArr: number[]) => void,
+    onHoverCallback: (pickArr: number[]) => void,
+    shouldClickPick: () => boolean,
+    shouldHoverPick: () => boolean,
     options?: PickHelperOptions,
   ) {
     this.element = element;
@@ -82,9 +102,14 @@ export class PickHelper {
     this._camera = camera;
     this._meshes = meshes;
     this.onPickCallback = onPickCallback;
+    this.onHoverCallback = onHoverCallback;
+    this.shouldClickPick = shouldClickPick;
+    this.shouldHoverPick = shouldHoverPick;
 
     this.mouseDownHandler = (event: MouseEvent) => this.onMouseDown(event);
     this.mouseUpHandler = (event: MouseEvent) => this.onMouseUp(event);
+    this.hoverMoveHandler = (event: MouseEvent) => this.onHoverMouseMove(event);
+    this.hoverLeaveHandler = () => this.onHoverMouseLeave();
 
     const width = this._renderer.getContext().drawingBufferWidth;
     const height = this._renderer.getContext().drawingBufferHeight;
@@ -114,6 +139,9 @@ export class PickHelper {
     this.mouseDownPosition = undefined;
     if (!downPosition) return;
 
+    // Skip the GPU pick entirely when nobody is listening for the result.
+    if (!this.shouldClickPick()) return;
+
     if (
       isClickGesture(downPosition, new Vector2(event.clientX, event.clientY))
     ) {
@@ -125,10 +153,57 @@ export class PickHelper {
     if (bPick) {
       this.element.addEventListener("mousedown", this.mouseDownHandler);
       this.element.addEventListener("mouseup", this.mouseUpHandler);
+      this.element.addEventListener("mousemove", this.hoverMoveHandler);
+      this.element.addEventListener("mouseleave", this.hoverLeaveHandler);
     } else {
       this.element.removeEventListener("mousedown", this.mouseDownHandler);
       this.element.removeEventListener("mouseup", this.mouseUpHandler);
+      this.element.removeEventListener("mousemove", this.hoverMoveHandler);
+      this.element.removeEventListener("mouseleave", this.hoverLeaveHandler);
+      this.cancelPendingHoverPick();
     }
+  }
+
+  /**
+   * Hover picking: schedules at most one GPU pick per animation frame from
+   * the latest mousemove position. Suppressed while any mouse button is
+   * pressed (camera drags would otherwise trigger a pick per frame) and
+   * while `shouldHoverPick` returns false, so pages without hover
+   * listeners pay nothing.
+   */
+  private onHoverMouseMove(event: MouseEvent) {
+    if (event.buttons !== 0 || !this.shouldHoverPick()) return;
+
+    if (!this.hoverPosition) this.hoverPosition = new Vector2();
+    this.hoverPosition.set(event.clientX, event.clientY);
+
+    if (this.hoverRafId !== undefined) return;
+    this.hoverRafId = requestAnimationFrame(() => {
+      this.hoverRafId = undefined;
+      const position = this.hoverPosition;
+      if (!position) return;
+      this.hoverPosition = undefined;
+
+      const batchId = this.pickBatchIdAt(position.x, position.y);
+      this.onHoverCallback(batchId > 0 ? [batchId] : []);
+    });
+  }
+
+  private onHoverMouseLeave() {
+    this.cancelPendingHoverPick();
+    // Report "nothing hovered" so diff-based enter/leave synthesis can
+    // close out the current hover when the cursor exits the canvas.
+    if (this.shouldHoverPick()) {
+      this.onHoverCallback([]);
+    }
+  }
+
+  private cancelPendingHoverPick() {
+    if (this.hoverRafId !== undefined) {
+      cancelAnimationFrame(this.hoverRafId);
+      this.hoverRafId = undefined;
+    }
+    this.hoverPosition = undefined;
   }
 
   /**
@@ -225,9 +300,19 @@ export class PickHelper {
   }
 
   private onMouseClick(event: MouseEvent) {
+    const batchId = this.pickBatchIdAt(event.clientX, event.clientY);
+    const pickArr = batchId > 0 ? [batchId] : [];
+    this.onPickCallback(pickArr);
+  }
+
+  /**
+   * Runs the single-pixel pick render at the given client coordinates and
+   * returns the decoded batch ID (0 when nothing pickable is hit).
+   */
+  private pickBatchIdAt(clientX: number, clientY: number): number {
     const rect = this.element.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
 
     const pixelRatio = this._renderer.getPixelRatio();
     const fullWidth = this._renderer.getContext().drawingBufferWidth;
@@ -267,13 +352,11 @@ export class PickHelper {
 
     this._renderer.setScissorTest(false);
 
-    const batchId =
+    return (
       (this.pixelBuffer[0] << 16) +
       (this.pixelBuffer[1] << 8) +
-      this.pixelBuffer[2];
-
-    const pickArr = batchId > 0 ? [batchId] : [];
-    this.onPickCallback(pickArr);
+      this.pixelBuffer[2]
+    );
   }
 
   public dispose() {

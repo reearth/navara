@@ -1133,7 +1133,7 @@ const onRegisterChange = () => {
 };
 
 const testShowModelInfo = (view: ThreeView<CustomDescriptions>) => {
-  view.on("pick", (info) => {
+  view.on("featureClick", (info) => {
     if (!info) {
       gPickedPos = null;
       gPickedFeature = null;

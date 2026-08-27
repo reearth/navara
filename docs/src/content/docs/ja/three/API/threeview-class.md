@@ -225,7 +225,7 @@ const view = new ThreeView({
 
 **Type:** `boolean | undefined`
 
-**Description:** 地物ピッキングの設定オプション。有効にすると、地物をクリックした際に `pick` イベントが発火します。
+**Description:** 地物ピッキングの設定オプション。有効にすると、地物をクリックした際に `featureClick` イベントが発火します。
 
 **Default:** `true`
 
@@ -236,8 +236,8 @@ const view = new ThreeView({
   picking: true,
 });
 
-// pick イベントを監視
-view.on("pick", (info) => {
+// featureClick イベントを監視
+view.on("featureClick", (info) => {
   if (info) {
     console.log("選択された地物:", info.properties);
   }

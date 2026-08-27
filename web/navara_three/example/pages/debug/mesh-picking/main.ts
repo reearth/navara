@@ -464,46 +464,83 @@ const run = async () => {
   const pane = new Pane({ title: "Mesh Picking" });
   const infoFolder = pane.addFolder({ title: "Picked Info" });
 
-  const info = { name: "(none)", batchId: 0 };
-  const nameBinding = infoFolder.addBinding(info, "name", {
-    readonly: true,
-    label: "name",
-  });
-  const idBinding = infoFolder.addBinding(info, "batchId", {
-    readonly: true,
-    label: "batchId",
-  });
+  const info = { name: "(none)", batchId: 0, hovered: "(none)", hoveredId: 0 };
+  const bindings = [
+    infoFolder.addBinding(info, "name", { readonly: true, label: "name" }),
+    infoFolder.addBinding(info, "batchId", {
+      readonly: true,
+      label: "batchId",
+    }),
+    infoFolder.addBinding(info, "hovered", {
+      readonly: true,
+      label: "hovered",
+    }),
+    infoFolder.addBinding(info, "hoveredId", {
+      readonly: true,
+      label: "hoveredId",
+    }),
+  ];
+  const refresh = () => bindings.forEach((b) => b.refresh());
+
+  const SELECT_COLOR = 0xceaaf0;
+  const HOVER_COLOR = 0xffe066;
 
   let selectedBatchId: number | null = null;
+  let hoveredBatchId: number | null = null;
 
-  view.on("pick", (pickInfo) => {
-    // Reset previously selected layer color
+  // Selection wins over hover; anything else returns to its original color.
+  const refreshColor = (batchId: number) => {
+    const entry = layers.get(batchId);
+    if (!entry) return;
+    const color =
+      batchId === selectedBatchId
+        ? SELECT_COLOR
+        : batchId === hoveredBatchId
+          ? HOVER_COLOR
+          : entry.origColor;
+    updateLayerColor(batchId, color);
+  };
+
+  view.on("featureClick", (pickInfo) => {
+    const prev = selectedBatchId;
+    selectedBatchId = pickInfo?.batchId ?? null;
+    if (prev != null) refreshColor(prev);
+
     if (selectedBatchId != null) {
-      const prev = layers.get(selectedBatchId);
-      if (prev) {
-        updateLayerColor(selectedBatchId, prev.origColor);
-      }
-    }
-
-    if (pickInfo?.batchId) {
-      selectedBatchId = pickInfo.batchId;
+      refreshColor(selectedBatchId);
       const entry = layers.get(selectedBatchId);
-
       info.name = entry?.name ?? `Unknown (${selectedBatchId})`;
       info.batchId = selectedBatchId;
-
-      // Highlight selected layer in yellow
-      if (entry) {
-        updateLayerColor(selectedBatchId, 0xceaaf0);
-      }
     } else {
-      selectedBatchId = null;
       info.name = "(none)";
       info.batchId = 0;
     }
+    refresh();
+  });
 
-    nameBinding.refresh();
-    idBinding.refresh();
+  // Fires only when the hovered feature changes (null = nothing hovered).
+  view.on("featureHover", (hoverFeature) => {
+    const prev = hoveredBatchId;
+    hoveredBatchId = hoverFeature?.batchId ?? null;
+    if (prev != null) refreshColor(prev);
+
+    if (hoveredBatchId != null) {
+      refreshColor(hoveredBatchId);
+      const entry = layers.get(hoveredBatchId);
+      info.hovered = entry?.name ?? `Unknown (${hoveredBatchId})`;
+      info.hoveredId = hoveredBatchId;
+    } else {
+      info.hovered = "(none)";
+      info.hoveredId = 0;
+    }
+    refresh();
+  });
+
+  view.on("featureEnter", () => {
+    view.canvas.style.cursor = "pointer";
+  });
+  view.on("featureLeave", () => {
+    view.canvas.style.cursor = "";
   });
 
   function updateLayerColor(batchId: number, color: number) {

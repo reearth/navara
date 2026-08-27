@@ -114,7 +114,7 @@ const run = async () => {
       selectedId = info?.properties?.["gml_id"] as string;
       layer.forceUpdate();
     };
-    view.on("pick", pickHandler);
+    view.on("featureClick", pickHandler);
 
     // Feature evaluator: style buildings based on measured height
     layer.on("featureUpdated", ({ evaluator }) => {
@@ -169,7 +169,10 @@ const run = async () => {
       );
     });
 
-    return { layer, removePickHandler: () => view.off("pick", pickHandler) };
+    return {
+      layer,
+      removePickHandler: () => view.off("featureClick", pickHandler),
+    };
   };
 
   let result: ReturnType<typeof add3DTilesLayer> | undefined =

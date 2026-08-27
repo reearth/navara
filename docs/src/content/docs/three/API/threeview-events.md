@@ -60,12 +60,12 @@ const handlers = {
 // Register multiple listeners
 view.on("click", handlers.handleClick);
 view.on("resize", handlers.handleResize);
-view.on("pick", handlers.handlePick);
+view.on("featureClick", handlers.handlePick);
 
 // Later, cleanup all listeners
 view.off("click", handlers.handleClick);
 view.off("resize", handlers.handleResize);
-view.off("pick", handlers.handlePick);
+view.off("featureClick", handlers.handlePick);
 ```
 
 ## Event Types
@@ -95,14 +95,16 @@ view.on("resize", (width, height) => {
 });
 ```
 
-### pick
+### featureClick
 
 **Description:**
 
-Fires when a feature is picked (selected). Receives the picked feature information, or `null` if nothing is selected.
+Fires when a feature is clicked. Receives the clicked feature information, or `null` if empty space was clicked. For raw click coordinates, use the `click` event instead.
+
+The click pick is lazy: the GPU pick runs only while at least one `featureClick` listener is registered.
 
 :::note
-To use this event, you must set `picking: true` in the ThreeView constructor.
+To use this event, you must set `picking: true` in the ThreeView constructor (enabled by default).
 :::
 
 **Handler Type:**
@@ -113,7 +115,7 @@ To use this event, you must set `picking: true` in the ThreeView constructor.
 
 **Parameters:**
 
-- `info`: Picked feature information, or `null`
+- `info`: Clicked feature information, or `null`
 
 ```tsx
 type PickedFeature = {
@@ -126,7 +128,7 @@ type PickedFeature = {
 **Example:**
 
 ```tsx
-view.on("pick", (info) => {
+view.on("featureClick", (info) => {
   if (info) {
     console.log("Selected feature:", info.properties);
     console.log("Layer ID:", info.layerId);
@@ -134,6 +136,84 @@ view.on("pick", (info) => {
   } else {
     console.log("No feature selected");
   }
+});
+```
+
+### featureHover
+
+**Description:**
+
+Fires when the hovered feature changes as the pointer moves. Receives the newly hovered feature, or `null` when the pointer leaves all pickable features. The event fires only on change, not on every mouse move.
+
+Hover picking runs a GPU pick per frame while the pointer moves, so it is activated lazily: picks run only while at least one `featureHover`, `featureEnter`, or `featureLeave` listener is registered, and are suppressed while a mouse button is pressed (for example, during a camera drag).
+
+:::note
+To use this event, you must set `picking: true` in the ThreeView constructor (enabled by default).
+:::
+
+**Handler Type:**
+
+```tsx
+(info: PickedFeature | null) => void
+```
+
+**Parameters:**
+
+- `info`: Hovered feature information, or `null`
+
+**Example:**
+
+```tsx
+view.on("featureHover", (info) => {
+  view.canvas.style.cursor = info ? "pointer" : "";
+});
+```
+
+### featureEnter
+
+**Description:**
+
+Fires when the pointer starts hovering a pickable feature. Together with `featureLeave`, this is synthesized from the same hover picking as `featureHover`, so the same activation rules apply.
+
+**Handler Type:**
+
+```tsx
+(info: PickedFeature) => void
+```
+
+**Parameters:**
+
+- `info`: The feature the pointer started hovering
+
+**Example:**
+
+```tsx
+view.on("featureEnter", (info) => {
+  console.log("Entered feature:", info.properties);
+});
+```
+
+### featureLeave
+
+**Description:**
+
+Fires when the pointer stops hovering the previously hovered feature. Receives the feature that was left. When the pointer moves directly from one feature to another, `featureLeave` fires for the previous feature before `featureEnter` fires for the new one.
+
+**Handler Type:**
+
+```tsx
+(info: PickedFeature) => void
+```
+
+**Parameters:**
+
+- `info`: The feature the pointer stopped hovering
+
+**Example:**
+
+```tsx
+view.on("featureLeave", (info) => {
+  console.log("Left feature:", info.properties);
 });
 ```
 

@@ -33,7 +33,10 @@ layer.on("featureUpdated", ({ evaluator }) => {
 ## Picking & spatial queries
 
 ```typescript
-view.on("pick", (info) => info?.properties?.["gml:name"]);   // requires picking: true (default)
+view.on("featureClick", (info) => info?.properties?.["gml:name"]);   // requires picking: true (default)
+view.on("featureHover", (info) => { ... });   // fires when the hovered feature changes; null = nothing hovered
+view.on("featureEnter", (info) => { ... });   // enter/leave pair synthesized by diffing hover picks
+view.on("featureLeave", (info) => { ... });   // receives the feature that was left
 const ecef = view.pickTerrainPosition(x, y);                  // terrain only
 const ecef2 = view.pickDepthPosition(x, y);                   // anything in the depth buffer
 const h = view.sampleTerrainHeight({ lat, lng });             // degrees in
@@ -42,6 +45,8 @@ const [g] = await view.sampleTerrainMostDetailed(terrainSource, [{ lat, lng }]);
 ```
 
 **Which terrain-height API:** `sampleTerrainHeight` reads only tiles already resident for rendering — from a distant camera it returns a coarse-LOD height (e.g. ~77 m off at z≈6) or `undefined`, and `observeTerrainHeightAt` fires only while tiles are (re)meshing (never on a static camera). For placing objects on the ground, use `await view.sampleTerrainMostDetailed(source, positions)` where `source` is the registered terrain source's handle or id (always explicit — there is no implicit "the view's terrain source"): it fetches the source's most detailed tiles over the network, independent of the camera. `height` is `undefined` on fetch failure; 401/403 rejects (bad token).
+
+**Picking is lazy and throttled:** the GPU pick runs only while someone listens for the result — the click pick needs a `featureClick` listener, the hover pick at least one of `featureHover`/`featureEnter`/`featureLeave` (at most one hover pick per frame, suppressed while a mouse button is down). Each hover pick forces a main re-render to restore draped vector atlases, so it costs more on scenes heavy with clamped-to-ground vectors. `featureHover` fires only on change (feature-level, unlike MapLibre's layer-level enter/leave). For cursor styling use `view.canvas.style.cursor`. Runnable reference: `example/pages/debug/picking-layers`.
 
 Mouse events (`click`, `mousemove`, …) deliver `MapMouseEvent` with `.clientX/Y` and `.map` (ECEF coords). The `idle` event fires after `idleThreshold` ms without tile/data activity. `.map` does not follow the rendered terrain surface — from a tilted camera, clicks on ridgelines/slopes land wrong or not at all; for click-to-place on terrain use `view.pickTerrainPosition(event.clientX, event.clientY)` (returns `null` past the globe) and `vector3ToGeodetic` the result.
 

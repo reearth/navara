@@ -60,12 +60,12 @@ const handlers = {
 // Register multiple listeners
 view.on("click", handlers.handleClick);
 view.on("resize", handlers.handleResize);
-view.on("pick", handlers.handlePick);
+view.on("featureClick", handlers.handlePick);
 
 // Later, cleanup all listeners
 view.off("click", handlers.handleClick);
 view.off("resize", handlers.handleResize);
-view.off("pick", handlers.handlePick);
+view.off("featureClick", handlers.handlePick);
 ```
 
 ## Event Types
@@ -95,14 +95,16 @@ view.on("resize", (width, height) => {
 });
 ```
 
-### pick
+### featureClick
 
 **Description:**
 
-地物がピック（選択）されたときに発火します。ピックされた地物情報、または何も選択されていない場合は `null` を受け取ります。
+地物がクリックされたときに発火します。クリックされた地物情報、または何もない場所をクリックした場合は `null` を受け取ります。クリックの生の座標が必要な場合は `click` イベントを使用してください。
+
+クリックピックは遅延起動されます。`featureClick` のリスナーが 1 つ以上登録されている間だけ GPU ピックが実行されます。
 
 :::note
-このイベントを使用するには、ThreeView のコンストラクタで `picking: true` を設定する必要があります。
+このイベントを使用するには、ThreeView のコンストラクタで `picking: true` を設定する必要があります（デフォルトで有効）。
 :::
 
 **Handler Type:**
@@ -113,7 +115,7 @@ view.on("resize", (width, height) => {
 
 **Parameters:**
 
-- `info`: ピックされた地物情報、または `null`
+- `info`: クリックされた地物情報、または `null`
 
 ```tsx
 type PickedFeature = {
@@ -126,7 +128,7 @@ type PickedFeature = {
 **Example:**
 
 ```tsx
-view.on("pick", (info) => {
+view.on("featureClick", (info) => {
   if (info) {
     console.log("選択された地物:", info.properties);
     console.log("レイヤー ID:", info.layerId);
@@ -134,6 +136,84 @@ view.on("pick", (info) => {
   } else {
     console.log("地物が選択されていません");
   }
+});
+```
+
+### featureHover
+
+**Description:**
+
+ポインタの移動によってホバー中の地物が変わったときに発火します。新たにホバーされた地物、またはどのピッカブルな地物からもポインタが外れた場合は `null` を受け取ります。マウス移動のたびではなく、ホバー対象が変化したときのみ発火します。
+
+ホバーピッキングはポインタ移動中に毎フレーム GPU ピックを実行するため、遅延起動されます。`featureHover`・`featureEnter`・`featureLeave` のいずれかのリスナーが登録されている間だけピックが実行され、マウスボタンが押されている間（カメラドラッグ中など）は抑制されます。
+
+:::note
+このイベントを使用するには、ThreeView のコンストラクタで `picking: true` を設定する必要があります（デフォルトで有効）。
+:::
+
+**Handler Type:**
+
+```tsx
+(info: PickedFeature | null) => void
+```
+
+**Parameters:**
+
+- `info`: ホバー中の地物情報、または `null`
+
+**Example:**
+
+```tsx
+view.on("featureHover", (info) => {
+  view.canvas.style.cursor = info ? "pointer" : "";
+});
+```
+
+### featureEnter
+
+**Description:**
+
+ポインタがピッカブルな地物のホバーを開始したときに発火します。`featureLeave` とともに、`featureHover` と同じホバーピッキングから合成されるため、同じ起動条件が適用されます。
+
+**Handler Type:**
+
+```tsx
+(info: PickedFeature) => void
+```
+
+**Parameters:**
+
+- `info`: ホバーが開始された地物
+
+**Example:**
+
+```tsx
+view.on("featureEnter", (info) => {
+  console.log("地物にホバー開始:", info.properties);
+});
+```
+
+### featureLeave
+
+**Description:**
+
+直前までホバーしていた地物からポインタが外れたときに発火します。離れた地物を受け取ります。ある地物から別の地物へ直接ポインタが移動した場合、前の地物の `featureLeave` が新しい地物の `featureEnter` より先に発火します。
+
+**Handler Type:**
+
+```tsx
+(info: PickedFeature) => void
+```
+
+**Parameters:**
+
+- `info`: ホバーが終了した地物
+
+**Example:**
+
+```tsx
+view.on("featureLeave", (info) => {
+  console.log("地物からホバー終了:", info.properties);
 });
 ```
 

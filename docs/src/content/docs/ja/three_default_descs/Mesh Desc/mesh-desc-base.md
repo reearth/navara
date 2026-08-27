@@ -225,7 +225,7 @@ sphere.update({ lit: undefined });
 
 ## ピッキング
 
-メッシュは、Descriptor設定で `pickable: true` を指定することで GPU ベースのクリックピッキングを有効にできます。ピッキングシステムは、ピッカブルメッシュを専用の 1 ピクセルのレンダーターゲットに各メッシュのバッチ ID を RGB カラーとしてエンコードして描画し、ピクセルを読み取って `"pick"` イベントを発行してクリックされたメッシュを特定します。
+メッシュは、Descriptor設定で `pickable: true` を指定することで GPU ベースのクリックピッキングを有効にできます。ピッキングシステムは、ピッカブルメッシュを専用の 1 ピクセルのレンダーターゲットに各メッシュのバッチ ID を RGB カラーとしてエンコードして描画し、ピクセルを読み取って `"featureClick"` イベントを発行してクリックされたメッシュを特定します。
 
 :::note
 ピッキングを使用するには、ThreeView のコンストラクタで `picking: true` を設定する必要があります。
@@ -252,7 +252,7 @@ const boxDesc = view.addMesh<BoxMeshDesc>({
   pickable: true,
 });
 
-view.on("pick", (info) => {
+view.on("featureClick", (info) => {
   if (info) {
     console.log("選択されたオブジェクト:", info.layerId);
     console.log("バッチ ID:", info.batchId);
@@ -275,7 +275,7 @@ const batchIds = instancedDesc.ref.batchIds;
 ### ピックへの応答
 
 ```typescript
-view.on("pick", (info) => {
+view.on("featureClick", (info) => {
   if (info && info.batchId === boxDesc.ref.batchId) {
     // 選択されたボックスをハイライト
     boxDesc.update({ box: { color: new Color().setHex(0xffff00) } });

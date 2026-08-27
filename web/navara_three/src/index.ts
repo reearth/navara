@@ -309,7 +309,11 @@ export type Options = {
   atmosphere?: AtmosphereOptions;
   /** Background color of the scene. Defaults to dark color (0x0a0a0f). */
   backgroundColor?: CoreColor;
-  /** Feature picking configuration. */
+  /**
+   * Feature picking configuration (default: true). Enables the `featureClick`
+   * event (click) and the `featureHover` / `featureEnter` / `featureLeave`
+   * events (mousemove).
+   */
   picking?: boolean;
   /** When true, renders every frame. When false, renders only on changes or when forceUpdate() is called. */
   animation?: boolean;
@@ -413,8 +417,24 @@ export type MapMouseEvent = {
 export type ViewEvents = {
   /** Emitted when the view is resized. Receives width and height in pixels. */
   resize: (w: number, h: number) => void;
-  /** Emitted when a feature is picked. Receives picked feature info or null. */
-  pick: (info: Nullable<PickedFeature>) => void;
+  /**
+   * Emitted when a feature is clicked (click-gesture GPU pick). Receives the
+   * clicked feature, or null when empty space was clicked. For raw click
+   * coordinates use the `click` event instead.
+   */
+  featureClick: (info: Nullable<PickedFeature>) => void;
+  /**
+   * Emitted when the hovered feature changes (mousemove picking). Receives
+   * the newly hovered feature, or null when the pointer leaves all pickable
+   * features. Hover picking runs a GPU pick per frame while the pointer
+   * moves, and is active only while at least one `featureHover` /
+   * `featureEnter` / `featureLeave` listener is registered.
+   */
+  featureHover: (info: Nullable<PickedFeature>) => void;
+  /** Emitted when the pointer starts hovering a pickable feature. See `featureHover` for activation. */
+  featureEnter: (info: PickedFeature) => void;
+  /** Emitted when the pointer stops hovering the previously hovered feature. See `featureHover` for activation. */
+  featureLeave: (info: PickedFeature) => void;
   /** Emitted when a layer event occurs. Receives event type, layer ID, and event arguments. */
   layer: <K extends keyof LayerEvent>(
     k: K,
@@ -502,6 +522,9 @@ export default class ThreeView<
   /** Pending `flyTo` promises keyed by flight id, settled by
    *  `camera_flight_ended` events from the engine. */
   private _pendingFlights = new Map<number, (completed: boolean) => void>();
+
+  /** Currently hovered feature, used to diff-synthesize hover events. */
+  private _hoveredFeature: Nullable<PickedFeature> = null;
 
   private _meshes: MeshCache = new Map();
   private _abortControllers: AbortControllers = new Map();
@@ -1562,6 +1585,17 @@ export default class ThreeView<
         this._camera.raw,
         this._meshes,
         this.onPick.bind(this),
+        this.onHoverPick.bind(this),
+        // Picks cost a GPU render (plus a re-render to restore draped
+        // atlases), so both gestures stay off until someone actually
+        // listens for the result.
+        () => !!this.size("featureClick"),
+        () =>
+          !!(
+            this.size("featureHover") ||
+            this.size("featureEnter") ||
+            this.size("featureLeave")
+          ),
         // {
         //   debug: true,
         // },
@@ -2779,6 +2813,26 @@ export default class ThreeView<
   };
 
   /**
+   * Resolves a picked batch ID into feature information via the engine's
+   * property store.
+   */
+  private resolvePickedFeature(batchId: number): PickedFeature {
+    const prop = this._core?.readPropertyByGlobalBatchId(batchId);
+    if (prop) {
+      return {
+        properties: prop.properties,
+        batchId,
+        layerId: prop.layerId,
+      };
+    }
+    return {
+      properties: {},
+      batchId,
+      layerId: undefined,
+    };
+  }
+
+  /**
    * Handles pick events and emits the picked feature information.
    * @param pickArr - Array of picked batch IDs
    */
@@ -2786,26 +2840,32 @@ export default class ThreeView<
     this._renderFlag.forceUpdate = true;
 
     if (pickArr.length > 0) {
-      const batchId = pickArr[0];
-      const prop = this._core?.readPropertyByGlobalBatchId(batchId);
-      if (prop) {
-        const pickedFeature: PickedFeature = {
-          properties: prop.properties,
-          batchId,
-          layerId: prop.layerId,
-        };
-        this.emit("pick", pickedFeature);
-      } else {
-        const emptyFeature: PickedFeature = {
-          properties: {},
-          batchId,
-          layerId: undefined,
-        };
-        this.emit("pick", emptyFeature);
-      }
+      this.emit("featureClick", this.resolvePickedFeature(pickArr[0]));
     } else {
-      this.emit("pick", null);
+      this.emit("featureClick", null);
     }
+  }
+
+  /**
+   * Handles hover pick results and synthesizes `featureHover` / `featureEnter` /
+   * `featureLeave` events by diffing against the previously hovered feature.
+   * @param pickArr - Array of picked batch IDs
+   */
+  private onHoverPick(pickArr: number[]) {
+    // The pick render re-bakes draped vector atlases in pick mode; a main
+    // render is needed to restore their normal colors.
+    this._renderFlag.forceUpdate = true;
+
+    const batchId = pickArr.length > 0 ? pickArr[0] : 0;
+    const prev = this._hoveredFeature;
+    if ((prev?.batchId ?? 0) === batchId) return;
+
+    const feature = batchId > 0 ? this.resolvePickedFeature(batchId) : null;
+    this._hoveredFeature = feature;
+
+    if (prev) this.emit("featureLeave", prev);
+    if (feature) this.emit("featureEnter", feature);
+    this.emit("featureHover", feature);
   }
 
   /**
@@ -2819,6 +2879,14 @@ export default class ThreeView<
    */
   set animation(v: boolean) {
     this._renderFlag.animation = v;
+  }
+
+  /**
+   * Gets the canvas element the view renders into. Useful for styling,
+   * e.g. switching the cursor from a `featureHover` event listener.
+   */
+  get canvas(): HTMLCanvasElement {
+    return this._renderer.domElement;
   }
 
   /**

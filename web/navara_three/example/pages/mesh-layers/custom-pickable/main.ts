@@ -313,7 +313,7 @@ const run = async () => {
   const highlight = new Color().setHex(0xffffff);
   let selected: (typeof knots)[number] | null = null;
 
-  view.on("pick", (pickInfo) => {
+  view.on("featureClick", (pickInfo) => {
     if (selected) {
       selected.layer.update({
         torusKnot: { color: new Color().setHex(selected.origHex) },

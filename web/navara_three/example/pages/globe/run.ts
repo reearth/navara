@@ -94,7 +94,7 @@ export async function run() {
   });
 
   let selectedGMLId: string | undefined;
-  view.on("pick", (info) => {
+  view.on("featureClick", (info) => {
     selectedGMLId = info?.properties?.["gml_id"] as string;
     chiyodaSubway.forceUpdate();
   });

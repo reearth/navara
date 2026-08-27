@@ -86,7 +86,7 @@ export const addCtrlPanel = (
 ) => {
   const layerInstMap = new Map<string, Layer>();
 
-  view.on("pick", (info) => {
+  view.on("featureClick", (info) => {
     const id = getIdFromProperties(info?.properties);
     if (id) {
       // if id exists, use it for selection

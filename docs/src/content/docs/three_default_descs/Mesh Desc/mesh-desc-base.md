@@ -255,7 +255,7 @@ Descriptors that attach their materials asynchronously (glTF loads, for example)
 
 ## Picking
 
-Mesh Descriptors can opt into GPU-based click picking by setting `pickable: true` in the Descriptor config. The picking system renders pickable meshes into a dedicated single-pixel render target with each mesh's batch ID encoded as an RGB color, reads back the pixel, and emits a `"pick"` event identifying which mesh was clicked.
+Mesh Descriptors can opt into GPU-based click picking by setting `pickable: true` in the Descriptor config. The picking system renders pickable meshes into a dedicated single-pixel render target with each mesh's batch ID encoded as an RGB color, reads back the pixel, and emits a `"featureClick"` event identifying which mesh was clicked.
 
 :::note
 To use picking, you must set `picking: true` in the ThreeView constructor.
@@ -282,7 +282,7 @@ const boxDesc = view.addMesh<BoxMeshDesc>({
   pickable: true,
 });
 
-view.on("pick", (info) => {
+view.on("featureClick", (info) => {
   if (info) {
     console.log("Picked layer:", info.layerId);
     console.log("Batch ID:", info.batchId);
@@ -305,7 +305,7 @@ const batchIds = instancedDesc.ref.batchIds;
 ### Responding to Picks
 
 ```typescript
-view.on("pick", (info) => {
+view.on("featureClick", (info) => {
   if (info && info.batchId === boxDesc.ref.batchId) {
     // Highlight the selected box
     boxDesc.update({ box: { color: new Color().setHex(0xffff00) } });

@@ -258,7 +258,7 @@ layer.on("featureUpdated", ({ evaluator }) => {
 let selectedId: string | undefined;
 
 // Select feature on click
-view.on("pick", (info) => {
+view.on("featureClick", (info) => {
   selectedId = info?.properties?.["id"] as string;
   layer.forceUpdate(); // Re-evaluate styles
 });

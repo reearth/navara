@@ -225,7 +225,7 @@ A numeric value (hexadecimal color code) can also be passed directly in the cons
 
 **Type:** `boolean | undefined`
 
-**Description:** Configuration option for feature picking. When enabled, the `pick` event fires when a feature is clicked.
+**Description:** Configuration option for feature picking. When enabled, the `featureClick` event fires when a feature is clicked.
 
 **Default:** `true`
 
@@ -237,7 +237,7 @@ const view = new ThreeView({
 });
 
 // Listen for pick events
-view.on("pick", (info) => {
+view.on("featureClick", (info) => {
   if (info) {
     console.log("Selected feature:", info.properties);
   }

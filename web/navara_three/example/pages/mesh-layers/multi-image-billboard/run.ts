@@ -184,7 +184,7 @@ export const run = async (view: ThreeView<DefaultDescriptions>) => {
   // Click a billboard to toggle a per-instance image reset: the first click
   // reverts it to the default image (`image: null`), the next restores its
   // per-feature image.
-  view.on("pick", (info) => {
+  view.on("featureClick", (info) => {
     const idx = Number(info?.properties?.["idx"]);
     if (!Number.isFinite(idx)) return;
     if (clearedIdx.has(idx)) {

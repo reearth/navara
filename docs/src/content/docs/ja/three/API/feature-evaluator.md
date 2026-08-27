@@ -242,11 +242,11 @@ layer.on("featureUpdated", ({ evaluator }) => {
 ```
 
 ```typescript
-// pick イベントで選択した地物をハイライト
+// featureClick イベントで選択した地物をハイライト
 let selectedId: string | undefined;
 
 // クリックで地物を選択
-view.on("pick", (info) => {
+view.on("featureClick", (info) => {
   selectedId = info?.properties?.["id"] as string;
   layer.forceUpdate(); // スタイルを再評価
 });

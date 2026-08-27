@@ -11,6 +11,8 @@ import { initializeExample } from "../../../../helpers/initialize";
 import { createInfoPanel } from "./panel";
 
 const BASE = new Color().setStyle("#0091ff");
+// Slightly brightened BASE, applied while a feature is hovered.
+const HOVER = new Color().setStyle("#4db3ff");
 const HIGHLIGHT = new Color().setStyle("#ff6b2c");
 
 const view = new ThreeView({
@@ -64,20 +66,33 @@ const featureKey = (
 };
 
 let selectedKey: string | null = null;
+let hoveredKey: string | null = null;
 
 placesLayer.on("featureUpdated", ({ evaluator }) => {
   evaluator.evaluate(
-    ({ properties }) => ({
-      color: featureKey(properties) === selectedKey ? HIGHLIGHT : BASE,
-    }),
+    ({ properties }) => {
+      const key = featureKey(properties);
+      return {
+        color:
+          key === selectedKey ? HIGHLIGHT : key === hoveredKey ? HOVER : BASE,
+      };
+    },
     { filters: ["name", "kind", "kind_detail"] },
   );
+});
+
+view.on("featureHover", (info) => {
+  const key = info ? featureKey(info.properties) : null;
+  if (key === hoveredKey) return;
+  hoveredKey = key;
+  view.canvas.style.cursor = key ? "pointer" : "";
+  placesLayer.forceUpdate();
 });
 
 const panel = createInfoPanel();
 
 let lastPick: PickedFeature | null | undefined = null;
-view.on("pick", (info) => {
+view.on("featureClick", (info) => {
   lastPick = info;
 });
 
