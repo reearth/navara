@@ -20,15 +20,13 @@ In addition to the properties below, the common properties from the base class (
 **Example:**
 
 ```typescript
-import { geodeticToVector3, LLE } from "@navaramap/three";
+import { geodeticToVector3 } from "@navaramap/three";
 
-const position = geodeticToVector3(
-  new LLE(
-    35.67564356091717,  // Latitude
-    139.74511454748298, // Longitude
-    10,                                  // Altitude
-  ),
-);
+const position = geodeticToVector3({
+  lat: 35.67564356091717,
+  lng: 139.74511454748298,
+  height: 10,
+});
 
 {
   position: position,
@@ -339,7 +337,7 @@ const rainDesc = view.addMesh<RainMeshDesc>({
 ### Placing Rain at a Specific Location
 
 ```typescript
-import ThreeView, { geodeticToVector3, LLE } from "@navaramap/three";
+import ThreeView, { geodeticToVector3 } from "@navaramap/three";
 import { RainMeshDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView({ animation: true });
@@ -347,13 +345,11 @@ view.registerMesh("rain", RainMeshDesc);
 await view.init();
 
 // Calculate the position of Tokyo
-const position = geodeticToVector3(
-  new LLE(
-    35.67564356091717,
-    139.74511454748298,
-    10,
-  ),
-);
+const position = geodeticToVector3({
+  lat: 35.67564356091717,
+  lng: 139.74511454748298,
+  height: 10,
+});
 
 // Add a RainMeshDesc at a specific position
 const rainDesc = view.addMesh<RainMeshDesc>({

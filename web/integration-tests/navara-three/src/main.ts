@@ -85,7 +85,7 @@ async function main() {
 
 /**
  * Add a sphere that rotates around the globe.
- * Tests: SphereMeshDesc, geodeticToVector3, LLE APIs
+ * Tests: SphereMeshDesc, geodeticToVector3 APIs
  */
 function addRotatingSphere(view: ThreeView<CustomDescriptions>) {
   // Create a sphere mesh descriptor

@@ -328,7 +328,7 @@ Screen coordinates, or undefined if outside the field of view
 ```typescript
 import { convertWorldToScreen, geodeticToVector3 } from "@navaramap/three-api";
 
-const lle = { lat: 0.622, lng: 2.435, height: 100 };
+const lle = { lat: 35.6812, lng: 139.7671, height: 100 };
 const worldPos = geodeticToVector3(lle);
 
 const screenPos = convertWorldToScreen(window, camera, worldPos);

@@ -9,18 +9,11 @@ sidebar:
 
 ## Vec2
 
-2D ベクトルを表すクラスです。
-
-### Constructor
+2D ベクトルを表すプレーンオブジェクト型です。
 
 ```typescript
-new Vec2(x: number, y: number)
+type Vec2 = { x: number; y: number };
 ```
-
-**Parameters:**
-
-- `x`: X 座標値
-- `y`: Y 座標値
 
 ### Properties
 

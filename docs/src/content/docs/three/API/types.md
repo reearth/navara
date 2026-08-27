@@ -9,18 +9,11 @@ This page documents primitive types that are shared across multiple materials an
 
 ## Vec2
 
-A class representing a 2D vector.
-
-### Constructor
+A plain object type representing a 2D vector.
 
 ```typescript
-new Vec2(x: number, y: number)
+type Vec2 = { x: number; y: number };
 ```
-
-**Parameters:**
-
-- `x`: X coordinate value
-- `y`: Y coordinate value
 
 ### Properties
 
