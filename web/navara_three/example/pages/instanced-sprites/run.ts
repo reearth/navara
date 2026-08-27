@@ -11,6 +11,9 @@ import { addCameraControl, addDateControl } from "../../helpers/control";
 import { addCtrlPanel, type MaterialDesc } from "../../helpers/panel";
 
 const createLayers = (view: ThreeView<DefaultDescriptions>): MaterialDesc[] => {
+  // Each feature is a MultiPoint: per-feature evaluation (the `image`
+  // override below) must fan out to every instance of the feature, so all
+  // markers of one feature show the same icon.
   const poiSource = view.addSource({
     type: "geojson",
     data: {
@@ -20,40 +23,57 @@ const createLayers = (view: ThreeView<DefaultDescriptions>): MaterialDesc[] => {
           type: "Feature",
           properties: { icon: "restaurant" },
           geometry: {
-            coordinates: [139.70513431449842, 35.69279782617761],
-            type: "Point",
+            coordinates: [
+              [139.70513431449842, 35.69279782617761],
+              [139.7551, 35.7528],
+              [139.6512, 35.6314],
+            ],
+            type: "MultiPoint",
           },
         },
         {
           type: "Feature",
           properties: { icon: "cafe" },
           geometry: {
-            coordinates: [140.13033810546995, 35.60447056434825],
-            type: "Point",
+            coordinates: [
+              [140.13033810546995, 35.60447056434825],
+              [140.1923, 35.6641],
+            ],
+            type: "MultiPoint",
           },
         },
         {
           type: "Feature",
           properties: { icon: "hotel" },
           geometry: {
-            coordinates: [139.64591330307843, 35.85950281451436],
-            type: "Point",
+            coordinates: [
+              [139.64591330307843, 35.85950281451436],
+              [139.7204, 35.9132],
+            ],
+            type: "MultiPoint",
           },
         },
         {
           type: "Feature",
           properties: { icon: "school" },
           geometry: {
-            coordinates: [139.63564871528018, 35.44128807202607],
-            type: "Point",
+            coordinates: [
+              [139.63564871528018, 35.44128807202607],
+              [139.7028, 35.5009],
+            ],
+            type: "MultiPoint",
           },
         },
         {
           type: "Feature",
           properties: { icon: "hospital" },
           geometry: {
-            coordinates: [139.28453080888477, 35.51560883529815],
-            type: "Point",
+            coordinates: [
+              [139.28453080888477, 35.51560883529815],
+              [139.3517, 35.5723],
+              [139.2109, 35.4607],
+            ],
+            type: "MultiPoint",
           },
         },
       ],

@@ -2821,7 +2821,10 @@ export default class ThreeView<
     if (prop) {
       return {
         properties: prop.properties,
-        batchId,
+        // The GPU pick returns the clicked instance's id; report the
+        // feature's canonical batch id instead so it matches the id the
+        // evaluator exposes (a MultiPoint feature spans many instances).
+        batchId: prop.batchId ?? batchId,
         layerId: prop.layerId,
       };
     }

@@ -896,10 +896,14 @@ impl App {
         Some((taken, batch_ids, material))
     }
 
+    /// Find the entity owning `global_batch_id`, the feature ordinal (the row
+    /// index into the batch properties) of the picked instance, and the
+    /// feature's canonical global batch id (Its first instance's id. The id
+    /// the evaluator reports, so callers can correlate picks with styling).
     pub fn search_feature_entity_by_global_batch_id(
         &self,
         global_batch_id: &u32,
-    ) -> Option<(Entity, usize)> {
+    ) -> Option<(Entity, usize, u32)> {
         let map = self.app.world().get_resource::<FeatureBatchIdMap>()?;
 
         map.map.iter().find_map(|(entity, batch_ids)| {
@@ -907,7 +911,26 @@ impl App {
                 vec_ids
                     .iter()
                     .position(|id| id == global_batch_id)
-                    .map(|i| (*entity, i))
+                    .map(|instance| {
+                        // Multi-instance features (e.g. MultiPoint) share one
+                        // property row across instances; resolve the instance
+                        // position to the owning feature's ordinal and to the
+                        // feature's first instance (canonical) id.
+                        match batch_ids
+                            .instance_feature_indices
+                            .and_then(|handle| self.get_buffer_u32(handle))
+                            .and_then(|indices| {
+                                let feature = indices.get(instance).copied()?;
+                                let first = indices.iter().position(|&f| f == feature)?;
+                                let canonical_id = vec_ids.get(first).copied()?;
+                                Some((feature as usize, canonical_id))
+                            }) {
+                            Some((feature_index, canonical_id)) => {
+                                (*entity, feature_index, canonical_id)
+                            }
+                            None => (*entity, instance, *global_batch_id),
+                        }
+                    })
             })
         })
     }

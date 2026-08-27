@@ -212,6 +212,71 @@ describe("BatchedSdfTextMesh material updates vs per-feature values", () => {
   });
 });
 
+// A feature owns several anchors for MultiPoint geometry and for labels
+// derived from line/polygon vertices via `geometryTypes`. Per-feature setters
+// address features (batch indices), so they must fan out to every anchor the
+// feature owns via the geometry's per-anchor `batch_index` buffer.
+describe("BatchedSdfTextMesh multi-instance fan-out", () => {
+  /** Feature 0 owns anchors 0 and 1 (MultiPoint); feature 1 owns anchor 2. */
+  function multiInstanceMeshEvent(mat: NavaraTextMaterial): NavaraTextMesh {
+    return {
+      material: mat,
+      transform: { tx: 0, ty: 0, tz: 0 },
+      geometry: {
+        batch_ids: { data: new Float32Array([7, 8, 9]), size: 1 },
+        batch_index: { data: new Uint32Array([0, 0, 1]), size: 1 },
+        position: {
+          data: new Float32Array([0, 0, 0, 10, 0, 0, 20, 0, 0]),
+          size: 3,
+        },
+      },
+    } as unknown as NavaraTextMesh;
+  }
+
+  function makeMultiInstanceMesh() {
+    const fontManager = makeFontManager();
+    const ctx = {
+      buf: {
+        removeF32: (d: Float32Array) => d,
+        u32: (d: Uint32Array) => d,
+      },
+      fontManager,
+      renderFlag: { forceUpdate: false },
+    } as unknown as EventContext;
+    const mesh = new BatchedSdfTextMesh(
+      ctx,
+      multiInstanceMeshEvent(material()),
+      "font",
+      { layerId: "layer" },
+    );
+    return { mesh, fontManager };
+  }
+
+  it("applies text and styles to every anchor the feature owns", () => {
+    const { mesh } = makeMultiInstanceMesh();
+    mesh.setTextByBatchIndex(0, "AB");
+    mesh.setFeatureSizeByBatchIndex(0, 32);
+
+    // Feature 0's two anchors got labels (slots 0 and 1), both styled.
+    expect(showOf(mesh, 0)).toBe(1);
+    expect(showOf(mesh, 1)).toBe(1);
+    expect(sizeOf(mesh, 0)).toBe(32);
+    expect(sizeOf(mesh, 1)).toBe(32);
+  });
+
+  it("does not leak styling into other features' anchors", () => {
+    const { mesh } = makeMultiInstanceMesh();
+    mesh.setTextByBatchIndex(0, "AB");
+    mesh.setTextByBatchIndex(1, "CD");
+    mesh.setFeatureShowByBatchIndex(1, false);
+
+    expect(showOf(mesh, 0)).toBe(1);
+    expect(showOf(mesh, 1)).toBe(1);
+    // Feature 1 = anchor 2 = the third label slot.
+    expect(showOf(mesh, 2)).toBe(0);
+  });
+});
+
 // Unprepared text costs a worker round-trip and font-face fetches, and a
 // low-zoom tile spans far more world than the screen shows. With declutter on,
 // `setTextByBatchIndex` therefore parks preparation until a placement pass

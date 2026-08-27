@@ -38,6 +38,7 @@ impl TileContentParser for PntsParser {
             global_batch_ids: GlobalBatchIds {
                 handle: Handle::default(),
                 batch_length: 0,
+                instance_feature_indices: None,
             },
             appearance_modifier: Some(Box::new(move |appearance| {
                 appearance.internal = Some(ModelInternalMaterial {

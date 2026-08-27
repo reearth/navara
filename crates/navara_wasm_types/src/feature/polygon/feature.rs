@@ -331,7 +331,7 @@ impl TransferablePolygonBatchedFeature {
 
         let batch_idx = self.batch_indices[idx] as usize;
 
-        let batch_id = BatchId(self.batch_ids[batch_idx] as f32);
+        let batch_id = BatchId(self.batch_ids[idx] as f32);
 
         (
             transferable_hierarchy,
@@ -357,7 +357,39 @@ impl Iterator for TransferablePolygonBatchedFeature {
 #[cfg(test)]
 mod test {
     use super::TransferablePolygonBatchedFeature;
+    use navara_feature_component::batch::BatchIndex;
     use navara_geometry::Hierarchy;
+
+    /// A MultiPolygon feature owns several items sharing one batch index, but
+    /// each item carries its own per-instance pick id.
+    #[test]
+    fn multi_instance_items_keep_their_own_pick_id() {
+        let square = |offset: f64| Hierarchy {
+            outer_ring: vec![
+                offset,
+                offset,
+                0.,
+                offset + 1.,
+                offset,
+                0.,
+                offset + 1.,
+                offset + 1.,
+                0.,
+            ],
+            holes: None,
+            expected_winding_order: navara_geometry::WindingOrder::Unknown,
+        };
+
+        let mut t = TransferablePolygonBatchedFeature::empty(3);
+        // Feature 0 owns the first two polygons; feature 1 the third.
+        t.add(&mut square(0.), BatchIndex(0));
+        t.add(&mut square(10.), BatchIndex(0));
+        t.add(&mut square(20.), BatchIndex(1));
+        t.add_batch_id(&mut vec![100, 101, 102]);
+
+        let items: Vec<_> = t.map(|(_, idx, id)| (idx.0, id.0)).collect();
+        assert_eq!(items, vec![(0, 100.0), (0, 101.0), (1, 102.0)]);
+    }
 
     #[test]
     fn it_should_get_a_hierarchy_of_batched_feature() {

@@ -768,7 +768,7 @@ impl Core {
 
     #[wasm_bindgen(js_name = readPropertyByGlobalBatchId)]
     pub fn read_property_by_global_batch_id(&mut self, batch_id: u32) -> BatchPropResult {
-        let (properties, layer_id) = self
+        let (properties, layer_id, canonical_batch_id) = self
             .app
             .read_property_by_global_batch_id::<JsPropertyValue>(&batch_id);
 
@@ -777,6 +777,7 @@ impl Core {
         BatchPropResult {
             properties: properties_js,
             layer_id,
+            batch_id: canonical_batch_id,
         }
     }
 

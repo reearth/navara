@@ -323,9 +323,27 @@ impl GeometryGroups {
                 ..Default::default()
             };
 
+            // When a feature produced more than one geometry item (MultiPoint,
+            // MultiPolygon, per-ring polylines, ...), the per-instance global
+            // batch ids no longer line up with the per-feature property rows.
+            // Keep the instance -> feature mapping so property lookups by
+            // global batch id resolve to the owning feature's row.
+            let instance_feature_indices = if batch_length == group.feature_count {
+                None
+            } else {
+                match &group.accumulated {
+                    AccumulatedGeometry::Points(acc) => Some(&acc.batch_indices),
+                    AccumulatedGeometry::Polylines(acc) => Some(&acc.batch_indices),
+                    AccumulatedGeometry::Polygons(acc) => Some(&acc.batch_indices),
+                    AccumulatedGeometry::None => None,
+                }
+                .map(|batch_indices| buf.new_u32(batch_indices.clone()))
+            };
+
             let global_batch_ids = GlobalBatchIds {
                 handle: buf.new_u32(group.global_batch_ids),
                 batch_length,
+                instance_feature_indices,
             };
 
             if let Some(entity) = spawn_batched_entity(
@@ -825,6 +843,105 @@ mod test {
         assert_eq!(geom.coords.len(), 2);
         let buf = app.world().resource::<BufferStore>();
         assert_eq!(geom.batch_indices(buf).unwrap(), &[0, 1]);
+    }
+
+    #[test]
+    fn finalize_keeps_instance_feature_indices_for_multipoint() {
+        use crate::batch::GlobalBatchIds;
+        use navara_material::PointMaterial;
+
+        let mut app = App::new();
+        app.init_resource::<BufferStore>();
+
+        #[derive(Resource, Default)]
+        struct Out(Vec<Entity>);
+        app.init_resource::<Out>();
+
+        app.add_systems(
+            Update,
+            |mut commands: Commands, mut buf: ResMut<BufferStore>, mut out: ResMut<Out>| {
+                let mut groups = GeometryGroups::new();
+                groups.register_kind(GeometryAppearanceKind::Point, 1);
+
+                // Feature 0 is a MultiPoint spanning two instances.
+                groups.begin_feature();
+                for id in [100, 101] {
+                    groups.track_point_rte(
+                        GeometryAppearanceKind::Point,
+                        Vec3::new(1., 2., 0.),
+                        CRS::Geographic,
+                        [0.; 3],
+                        [0.; 3],
+                        id,
+                    );
+                }
+                groups.begin_feature();
+                groups.track_point_rte(
+                    GeometryAppearanceKind::Point,
+                    Vec3::new(3., 4., 0.),
+                    CRS::Geographic,
+                    [0.; 3],
+                    [0.; 3],
+                    102,
+                );
+
+                let appearances = vec![Appearance::Point(PointMaterial::default())];
+                out.0 = groups.finalize(&mut commands, &mut buf, &appearances, "test", false);
+            },
+        );
+        app.update();
+
+        let out_entity = app.world().resource::<Out>().0[0];
+        let ids = app
+            .world()
+            .get::<GlobalBatchIds>(out_entity)
+            .expect("GlobalBatchIds missing")
+            .clone();
+        assert_eq!(ids.batch_length, 3);
+        let buf = app.world().resource::<BufferStore>();
+        let handle = ids
+            .instance_feature_indices
+            .expect("multi-instance group must keep the instance -> feature mapping");
+        assert_eq!(buf.get_u32(&handle).unwrap(), &[0, 0, 1]);
+    }
+
+    #[test]
+    fn finalize_skips_instance_feature_indices_for_one_to_one_features() {
+        use crate::batch::GlobalBatchIds;
+        use navara_material::PointMaterial;
+
+        let mut app = App::new();
+        app.init_resource::<BufferStore>();
+
+        #[derive(Resource, Default)]
+        struct Out(Vec<Entity>);
+        app.init_resource::<Out>();
+
+        app.add_systems(
+            Update,
+            |mut commands: Commands, mut buf: ResMut<BufferStore>, mut out: ResMut<Out>| {
+                let mut groups = GeometryGroups::new();
+                groups.register_kind(GeometryAppearanceKind::Point, 1);
+                for (i, id) in [100, 101].into_iter().enumerate() {
+                    groups.begin_feature();
+                    groups.track_point_rte(
+                        GeometryAppearanceKind::Point,
+                        Vec3::new(i as f64, 0., 0.),
+                        CRS::Geographic,
+                        [0.; 3],
+                        [0.; 3],
+                        id,
+                    );
+                }
+                let appearances = vec![Appearance::Point(PointMaterial::default())];
+                out.0 = groups.finalize(&mut commands, &mut buf, &appearances, "test", false);
+            },
+        );
+        app.update();
+
+        let out_entity = app.world().resource::<Out>().0[0];
+        let ids = app.world().get::<GlobalBatchIds>(out_entity).unwrap();
+        assert!(ids.instance_feature_indices.is_none());
     }
 
     #[test]

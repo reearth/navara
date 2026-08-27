@@ -52,6 +52,7 @@ impl TileContentParser for B3dmParser {
             global_batch_ids: GlobalBatchIds {
                 handle: ids_handle,
                 batch_length: batch_length as u32,
+                instance_feature_indices: None,
             },
             appearance_modifier: None,
             extra_components: None,

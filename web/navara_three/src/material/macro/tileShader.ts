@@ -97,8 +97,18 @@ export function generateTileMapFragment(
   }`
     : "";
   return `
-  vec4 atlasColor = texture2D(uColorAtlas, vOrigUv);
-  vec4 atlasAttr  = texture2D(uAttrAtlas,  vOrigUv);
+  // The atlases are linear-filtered for display, but the pick pass reads
+  // encoded batch ids out of atlasColor: interpolating id colors at feature
+  // edges decodes to batch ids that don't exist (a thin draped polyline is
+  // almost all edge pixels). Snap to the texel center (nearest sampling)
+  // while picking.
+  vec2 nvr_atlasUv = vOrigUv;
+  if (uPickable > 0.) {
+    vec2 nvr_atlasSize = vec2(textureSize(uColorAtlas, 0));
+    nvr_atlasUv = (floor(vOrigUv * nvr_atlasSize) + 0.5) / nvr_atlasSize;
+  }
+  vec4 atlasColor = texture2D(uColorAtlas, nvr_atlasUv);
+  vec4 atlasAttr  = texture2D(uAttrAtlas,  nvr_atlasUv);
 
   // attr.a encodes (winningSlot + 1) / 255 — 0 means no contributing slot.
   int winIdx = int(round(atlasAttr.a * 255.0)) - 1;

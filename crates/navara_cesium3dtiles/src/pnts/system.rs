@@ -96,6 +96,7 @@ pub fn construct_model_by_pnts_layer(
                 // Dummy value
                 handle: Handle::default(),
                 batch_length: 0,
+                instance_feature_indices: None,
             },
             ModelGeometry {
                 coords: positions_center,

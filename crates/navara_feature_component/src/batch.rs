@@ -47,6 +47,10 @@ pub struct FeatureBatchId(pub u32);
 pub struct GlobalBatchIds {
     pub handle: Handle,
     pub batch_length: u32,
+    /// Maps each per-instance entry in `handle` to its feature ordinal (the row
+    /// index into the batch properties). `None` means instances and features are
+    /// 1:1, so the position in `handle` is already the feature ordinal.
+    pub instance_feature_indices: Option<Handle>,
 }
 
 // Search b3dm feature by global batch id
@@ -84,6 +88,9 @@ impl FeatureBatchIdMap {
 
             // remove global batch ids from buffer store
             buf.remove(&ids.handle);
+            if let Some(feature_indices) = ids.instance_feature_indices {
+                buf.remove(&feature_indices);
+            }
             self.map.remove(key);
             return true;
         }
