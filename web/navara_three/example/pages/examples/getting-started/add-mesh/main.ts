@@ -45,7 +45,7 @@ const basemap = await tilejson.addSource({
 view.addLayer({ type: "raster", source: basemap });
 
 const SPACING = 240;
-const rowX = (index: number) => (1.5 - index) * SPACING; // spread east → west
+const rowX = (index: number) => (1.5 - index) * SPACING;
 
 const addMeshes = (color: string) => {
   const accent = () => new Color().setStyle(color);
