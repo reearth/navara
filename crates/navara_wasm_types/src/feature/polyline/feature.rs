@@ -154,7 +154,7 @@ impl TransferablePolylineBatchedFeature {
 
         let batch_index = self.batch_indices[idx] as usize;
 
-        let batch_id = BatchId(self.batch_ids[batch_index] as f32);
+        let batch_id = BatchId(self.batch_ids[idx] as f32);
 
         (points, BatchIndex(batch_index as u32), batch_id)
     }
@@ -176,6 +176,22 @@ impl Iterator for TransferablePolylineBatchedFeature {
 #[cfg(test)]
 mod test {
     use super::TransferablePolylineBatchedFeature;
+    use navara_feature_component::batch::BatchIndex;
+
+    /// A MultiLineString feature owns several items sharing one batch index,
+    /// but each item carries its own per-instance pick id.
+    #[test]
+    fn multi_instance_items_keep_their_own_pick_id() {
+        let mut t = TransferablePolylineBatchedFeature::empty(3);
+        // Feature 0 owns the first two polylines; feature 1 the third.
+        t.add(&mut vec![0., 0., 0., 1., 1., 1.], BatchIndex(0));
+        t.add(&mut vec![2., 2., 2., 3., 3., 3.], BatchIndex(0));
+        t.add(&mut vec![4., 4., 4., 5., 5., 5.], BatchIndex(1));
+        t.add_batch_id(&mut vec![100, 101, 102]);
+
+        let items: Vec<_> = t.map(|(_, idx, id)| (idx.0, id.0)).collect();
+        assert_eq!(items, vec![(0, 100.0), (0, 101.0), (1, 102.0)]);
+    }
 
     #[test]
     fn it_should_get_a_points_of_batched_feature() {

@@ -110,6 +110,7 @@ pub fn construct_model_by_b3dm_layer(
             GlobalBatchIds {
                 handle: ids_handle,
                 batch_length: batch_length as u32,
+                instance_feature_indices: None,
             },
             ModelGeometry {
                 coords: center,

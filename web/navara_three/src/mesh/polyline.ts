@@ -32,6 +32,16 @@ import { setupRTECallback } from "./rtcRteHelper";
 // Sentinel value for picking coordinate when not picking (reused to avoid allocations)
 const PICKING_COORD_SENTINEL = new Vector2(-1, -1);
 
+/**
+ * Minimum stroke width used while rendering the pick pass. A hairline stroke
+ * covers too few pick-buffer texels to click reliably — on the draped path the
+ * 512px tile atlas resolves a thin line to scattered partial texels, so the
+ * decoded batch id is background almost everywhere the line is visible.
+ * Fattening the stroke only for the pick render gives lines the same "click
+ * tolerance" pointing devices get elsewhere; the visible width is untouched.
+ */
+const MIN_PICK_WIDTH = 10;
+
 type Attributes = BatchedFeatureAttributes<{
   position: BufferAttribute;
   // RTE mode attributes (only present when useRTE=true)
@@ -490,11 +500,21 @@ export class PolylineMesh extends BatchedFeatureMesh<
     return this.getEnhancer().states().effectIdsMask;
   }
 
+  /** Visible stroke width to restore after a pick-pass width bump. */
+  private _pickSavedWidth?: number;
+
   onBeforePicking(pickingCoord?: Vector2) {
-    this.getEnhancer().update({ base: { pickable: true } });
+    const enhancer = this.getEnhancer();
+    const width = enhancer.states().width;
+    if (width < MIN_PICK_WIDTH) {
+      this._pickSavedWidth = width;
+      enhancer.update({ base: { pickable: true, width: MIN_PICK_WIDTH } });
+    } else {
+      enhancer.update({ base: { pickable: true } });
+    }
     this.needsUpdate();
 
-    const mutates = this.getEnhancer().mutates();
+    const mutates = enhancer.mutates();
     if (pickingCoord) {
       mutates.setPickingCoord(pickingCoord);
     } else {
@@ -503,9 +523,17 @@ export class PolylineMesh extends BatchedFeatureMesh<
   }
 
   onAfterPicking() {
-    this.getEnhancer().update({ base: { pickable: false } });
+    const enhancer = this.getEnhancer();
+    if (this._pickSavedWidth !== undefined) {
+      enhancer.update({
+        base: { pickable: false, width: this._pickSavedWidth },
+      });
+      this._pickSavedWidth = undefined;
+    } else {
+      enhancer.update({ base: { pickable: false } });
+    }
     this.needsUpdate();
-    this.getEnhancer().mutates().setPickingCoord(PICKING_COORD_SENTINEL);
+    enhancer.mutates().setPickingCoord(PICKING_COORD_SENTINEL);
   }
 
   _getDefaultBatchAttributeValues(): DefaultBatchAttributeValues {

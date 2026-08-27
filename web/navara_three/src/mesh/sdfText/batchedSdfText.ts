@@ -81,7 +81,10 @@ type PositionsInfo = PositionsInfoBase &
 type LabelRecord = {
   /** Row block in the label data texture, and this label's declutter handle. */
   slot: number;
-  batchIndex: number;
+  /** Anchor (position) slot this label sits on, NOT the feature index: a
+   * feature spans several anchors for MultiPoint geometry and for labels
+   * derived from line/polygon vertices via `geometryTypes`. */
+  instanceIndex: number;
   batchId: number;
   /** The text currently laid out into the glyph run. */
   text: string;
@@ -179,8 +182,15 @@ export class BatchedSdfTextMesh
 
   /** Labels in slot order — `_labels[slot]` is also the declutter handle map. */
   private _labels: LabelRecord[] = [];
-  /** Sparse batchIndex → label; labels are created on first per-feature touch. */
-  private _labelByIndex: (LabelRecord | undefined)[] = [];
+  /** Sparse anchor slot → label; labels are created on first per-feature touch. */
+  private _labelByInstance: (LabelRecord | undefined)[] = [];
+  /**
+   * Feature (batch) index → this feature's anchor slots. A feature owns
+   * multiple anchors for MultiPoint geometry and for labels derived from
+   * line/polygon vertices via `geometryTypes`, so per-feature styling must fan
+   * out to all of them. `null` means anchors and features are 1:1.
+   */
+  private _batchIndexToInstances: Map<number, number[]> | null = null;
 
   /** In-flight per-feature text preparations; see {@link whenLabelsSettled}. */
   private _pendingTextPrepares = new PendingSettlement();
@@ -240,6 +250,7 @@ export class BatchedSdfTextMesh
     this._declutterPriority = material.declutterPriority ?? 0;
 
     this._positions = this.extractPositions(m);
+    this._rebuildBatchIndexMap(m);
     this._glyphs = new GlyphBuffers();
     this._labelData = new LabelDataTexture();
 
@@ -359,12 +370,12 @@ export class BatchedSdfTextMesh
     for (let i = 0; i < info.nPositions; i++) this._ensureLabel(i);
   }
 
-  private _ensureLabel(batchIndex: number): LabelRecord | undefined {
-    const existing = this._labelByIndex[batchIndex];
+  private _ensureLabel(instanceIndex: number): LabelRecord | undefined {
+    const existing = this._labelByInstance[instanceIndex];
     if (existing) return existing;
 
     const info = this._positions;
-    if (!info || batchIndex < 0 || batchIndex >= info.nPositions) {
+    if (!info || instanceIndex < 0 || instanceIndex >= info.nPositions) {
       return undefined;
     }
 
@@ -376,8 +387,10 @@ export class BatchedSdfTextMesh
 
     const record: LabelRecord = {
       slot,
-      batchIndex,
-      batchId: info.batchIDs ? info.batchIDs[batchIndex * info.batchIDSize] : 0,
+      instanceIndex,
+      batchId: info.batchIDs
+        ? info.batchIDs[instanceIndex * info.batchIDSize]
+        : 0,
       text: "",
       requestedText: "",
       prepareDeferred: false,
@@ -405,7 +418,7 @@ export class BatchedSdfTextMesh
     };
 
     this._labels.push(record);
-    this._labelByIndex[batchIndex] = record;
+    this._labelByInstance[instanceIndex] = record;
 
     this._writeAnchor(record);
     this._writeStyle(record);
@@ -419,7 +432,7 @@ export class BatchedSdfTextMesh
   private _writeAnchor(record: LabelRecord): void {
     const info = this._positions;
     if (!info) return;
-    const idx = record.batchIndex * info.positionSize;
+    const idx = record.instanceIndex * info.positionSize;
     const anchor = record.anchor;
 
     if (info.RTE) {
@@ -971,6 +984,51 @@ export class BatchedSdfTextMesh
     return null;
   }
 
+  /**
+   * Group anchor slots by their feature's batch index from the geometry's
+   * per-anchor `batch_index` buffer. The u32 view is consumed synchronously —
+   * other wasm calls may detach views, so it must not be stored. An identity
+   * mapping (every feature owns exactly one anchor, the common MVT case) skips
+   * the map entirely.
+   */
+  private _rebuildBatchIndexMap(m: NavaraTextMesh): void {
+    const batchIndexData = m.geometry.batch_index?.data;
+    const batchIndices =
+      batchIndexData !== undefined ? this.ctx.buf.u32(batchIndexData) : null;
+    this._batchIndexToInstances = null;
+    if (!batchIndices) return;
+
+    let identity = true;
+    for (let i = 0; i < batchIndices.length; i++) {
+      if (batchIndices[i] !== i) {
+        identity = false;
+        break;
+      }
+    }
+    if (identity) return;
+
+    const map = new Map<number, number[]>();
+    for (let i = 0; i < batchIndices.length; i++) {
+      const batchIndex = batchIndices[i];
+      let instances = map.get(batchIndex);
+      if (!instances) {
+        instances = [];
+        map.set(batchIndex, instances);
+      }
+      instances.push(i);
+    }
+    this._batchIndexToInstances = map;
+  }
+
+  /** All anchor slots owned by the feature at `batchIndex`. */
+  private _instancesOfBatchIndex(batchIndex: number): number[] {
+    if (this._batchIndexToInstances) {
+      return this._batchIndexToInstances.get(batchIndex) ?? [];
+    }
+    const nPositions = this._positions?.nPositions ?? 0;
+    return batchIndex >= 0 && batchIndex < nPositions ? [batchIndex] : [];
+  }
+
   async _update(m: NavaraTextMesh, needRender?: () => void) {
     if (needRender) this._needRender = needRender;
 
@@ -992,6 +1050,7 @@ export class BatchedSdfTextMesh
         "Number of positions in the updated geometry must match the initial geometry",
       );
       this._positions = positionInfo;
+      this._rebuildBatchIndexMap(m);
       this._enhancer
         .mutates()
         .setRtcCenter([m.transform.tx, m.transform.ty, m.transform.tz]);
@@ -1162,12 +1221,18 @@ export class BatchedSdfTextMesh
   // --- Per-feature API (the FeatureEvaluator contract) ---
 
   setTextByBatchIndex(batchIndex: number, text: string) {
+    for (const instanceIndex of this._instancesOfBatchIndex(batchIndex)) {
+      this._setTextByInstance(instanceIndex, text);
+    }
+  }
+
+  private _setTextByInstance(instanceIndex: number, text: string) {
     // An empty text on a label that doesn't exist yet changes nothing (a
     // lazily-skipped label is exactly an invisible empty-text label); only a
     // non-empty text forces one into existence.
     const record = text
-      ? this._ensureLabel(batchIndex)
-      : this._labelByIndex[batchIndex];
+      ? this._ensureLabel(instanceIndex)
+      : this._labelByInstance[instanceIndex];
     if (!record) return;
 
     // Record the intent up front so a slower prepare for an older text can
@@ -1284,57 +1349,69 @@ export class BatchedSdfTextMesh
   }
 
   override setFeatureColorByBatchIndex(batchIndex: number, color: Color) {
-    const record = this._ensureLabel(batchIndex);
-    if (!record) return;
-    record.colorHex = color.getHex();
-    this._writeStyle(record);
+    for (const instanceIndex of this._instancesOfBatchIndex(batchIndex)) {
+      const record = this._ensureLabel(instanceIndex);
+      if (!record) continue;
+      record.colorHex = color.getHex();
+      this._writeStyle(record);
+    }
   }
 
   override setFeatureShowByBatchIndex(batchIndex: number, rawVisible: boolean) {
-    // A label that doesn't exist yet is already effectively `show:false`, so
-    // only `show:true` needs to force one into existence — the common MVT case
-    // is thousands of features that stay hidden and never get a label.
-    const record = rawVisible
-      ? this._ensureLabel(batchIndex)
-      : this._labelByIndex[batchIndex];
-    if (!record) return;
-    record.requestedShow = rawVisible;
-    this._recomputeShow(record);
+    for (const instanceIndex of this._instancesOfBatchIndex(batchIndex)) {
+      // A label that doesn't exist yet is already effectively `show:false`, so
+      // only `show:true` needs to force one into existence — the common MVT
+      // case is thousands of features that stay hidden and never get a label.
+      const record = rawVisible
+        ? this._ensureLabel(instanceIndex)
+        : this._labelByInstance[instanceIndex];
+      if (!record) continue;
+      record.requestedShow = rawVisible;
+      this._recomputeShow(record);
+    }
     this._markDeclutterDirty();
   }
 
   override setFeatureHeightByBatchIndex(batchIndex: number, height: number) {
-    const record = this._ensureLabel(batchIndex);
-    if (!record) return;
-    record.addHeight = height;
-    this._writeAddHeight(record);
+    for (const instanceIndex of this._instancesOfBatchIndex(batchIndex)) {
+      const record = this._ensureLabel(instanceIndex);
+      if (!record) continue;
+      record.addHeight = height;
+      this._writeAddHeight(record);
+    }
     this._markDeclutterDirty();
   }
 
   setFeatureSizeByBatchIndex(batchIndex: number, size: number) {
-    const record = this._ensureLabel(batchIndex);
-    if (!record) return;
-    record.fontSize = Number.isFinite(size)
-      ? Math.max(0.0, size)
-      : record.fontSize;
-    this._writeFontSize(record);
+    for (const instanceIndex of this._instancesOfBatchIndex(batchIndex)) {
+      const record = this._ensureLabel(instanceIndex);
+      if (!record) continue;
+      record.fontSize = Number.isFinite(size)
+        ? Math.max(0.0, size)
+        : record.fontSize;
+      this._writeFontSize(record);
+    }
     this._markDeclutterDirty();
   }
 
   setFeatureOpacityByBatchIndex(batchIndex: number, opacity: number) {
-    const record = this._ensureLabel(batchIndex);
-    if (!record) return;
-    record.opacity = clamp01(opacity);
-    this._writeStyle(record);
+    for (const instanceIndex of this._instancesOfBatchIndex(batchIndex)) {
+      const record = this._ensureLabel(instanceIndex);
+      if (!record) continue;
+      record.opacity = clamp01(opacity);
+      this._writeStyle(record);
+    }
   }
 
   setFeatureDeclutterPriorityByBatchIndex(
     batchIndex: number,
     priority: number,
   ) {
-    const record = this._ensureLabel(batchIndex);
-    if (!record) return;
-    record.priorityOverride = priority;
+    for (const instanceIndex of this._instancesOfBatchIndex(batchIndex)) {
+      const record = this._ensureLabel(instanceIndex);
+      if (!record) continue;
+      record.priorityOverride = priority;
+    }
     this._markDeclutterDirty();
   }
 
@@ -1368,7 +1445,8 @@ export class BatchedSdfTextMesh
       record.retainedKeys = null;
     }
     this._labels.length = 0;
-    this._labelByIndex.length = 0;
+    this._labelByInstance.length = 0;
+    this._batchIndexToInstances = null;
 
     this._labelData.dispose();
     this._glyphs.dispose();

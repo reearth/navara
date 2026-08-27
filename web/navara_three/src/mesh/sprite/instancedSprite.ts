@@ -51,8 +51,6 @@ type PositionsInfo = {
         low: Float32Array<ArrayBufferLike>;
       };
   batchIDs: Float32Array<ArrayBufferLike> | null;
-  /** Per-instance feature (batch) index; a feature can span many instances. */
-  batchIndices: Uint32Array<ArrayBufferLike> | null;
   positionSize: number;
   batchIDSize: number;
   nPositions: number;
@@ -72,9 +70,11 @@ export class InstancedSpriteMesh
    * Feature (batch) index → this feature's instance ids. A feature owns
    * multiple instances for MultiPoint geometry and for points derived from
    * line/polygon vertices via `geometryTypes`, so per-feature styling must
-   * fan out to all of them.
+   * fan out to all of them. `null` means instances and features are 1:1.
    */
-  private _batchIndexToInstances = new Map<number, number[]>();
+  private _batchIndexToInstances: Map<number, number[]> | null = null;
+  /** Instance count of the current geometry; bounds the identity fallback. */
+  private _instanceCount = 0;
   private _initialColor: Color = new Color(0xffffff);
   private _initialHeight = 0.0;
   private _initialSize = -1.0; // Negative value indicates "use uScale" in shader
@@ -494,17 +494,10 @@ export class InstancedSpriteMesh
       colorBuffer[i * 3 + 0] = this._initialColor.r;
       colorBuffer[i * 3 + 1] = this._initialColor.g;
       colorBuffer[i * 3 + 2] = this._initialColor.b;
-
-      // Group instances by their feature's batch index; without the buffer
-      // fall back to one instance per feature (identity mapping).
-      const batchIndex = positionsInfo.batchIndices?.[i] ?? i;
-      let instances = this._batchIndexToInstances.get(batchIndex);
-      if (!instances) {
-        instances = [];
-        this._batchIndexToInstances.set(batchIndex, instances);
-      }
-      instances.push(i);
     }
+
+    this._instanceCount = instanceCount;
+    this._rebuildBatchIndexMap(m);
 
     if (m instanceof NavaraBillboardMesh) {
       // instanceUvRect: vec4(x, y, w, h) — this instance's atlas sub-rect in
@@ -655,9 +648,6 @@ export class InstancedSpriteMesh
     const batchIdsData = g.batch_ids;
     const batchIDs = buf.removeF32(batchIdsData.data);
     const batchIDSize = batchIdsData.size;
-    // Copy via the non-removing getter: the handle stays owned by the ECS
-    // geometry, whose destroy path frees it (`remove_from_buf`).
-    const batchIndices = buf.u32(g.batch_index.data)?.slice() ?? null;
 
     const positionData = g.position;
     const position = positionData
@@ -671,7 +661,6 @@ export class InstancedSpriteMesh
       return {
         position,
         batchIDs,
-        batchIndices,
         batchIDSize,
         positionSize,
         nPositions,
@@ -701,7 +690,6 @@ export class InstancedSpriteMesh
       return {
         position: { high: positionHigh, low: positionLow },
         batchIDs,
-        batchIndices,
         batchIDSize,
         positionSize: positionHighSize,
         nPositions,
@@ -818,9 +806,53 @@ export class InstancedSpriteMesh
     return this._enhancedMaterial;
   }
 
+  /**
+   * Group instances by their feature's batch index from the geometry's
+   * per-instance `batch_index` buffer. The u32 view is consumed synchronously,
+   * so other wasm calls may detach views, so it must not be stored. The handle
+   * stays owned by the ECS geometry, whose destroy path frees it
+   * (`remove_from_buf`). An identity mapping (every feature owns exactly one
+   * instance, the common case) skips the map entirely.
+   */
+  private _rebuildBatchIndexMap(
+    m: NavaraPointMesh | NavaraBillboardMesh,
+  ): void {
+    const batchIndexData = m.geometry.batch_index?.data;
+    const batchIndices =
+      batchIndexData !== undefined ? this.ctx.buf.u32(batchIndexData) : null;
+    this._batchIndexToInstances = null;
+    if (!batchIndices) return;
+
+    let identity = true;
+    for (let i = 0; i < batchIndices.length; i++) {
+      if (batchIndices[i] !== i) {
+        identity = false;
+        break;
+      }
+    }
+    if (identity) return;
+
+    const map = new Map<number, number[]>();
+    for (let i = 0; i < batchIndices.length; i++) {
+      const batchIndex = batchIndices[i];
+      let instances = map.get(batchIndex);
+      if (!instances) {
+        instances = [];
+        map.set(batchIndex, instances);
+      }
+      instances.push(i);
+    }
+    this._batchIndexToInstances = map;
+  }
+
   /** All instances owned by the feature at `batchIndex`; empty when unknown. */
   private instancesOfBatchIndex(batchIndex: number): number[] {
-    return this._batchIndexToInstances.get(batchIndex) ?? [];
+    if (this._batchIndexToInstances) {
+      return this._batchIndexToInstances.get(batchIndex) ?? [];
+    }
+    return batchIndex >= 0 && batchIndex < this._instanceCount
+      ? [batchIndex]
+      : [];
   }
 
   setFeatureColorByBatchIndex(batchIndex: number, color: Color) {
@@ -1034,7 +1066,7 @@ export class InstancedSpriteMesh
     (this.material as ShaderMaterial).dispose();
 
     // Clear internal collections to release references
-    this._batchIndexToInstances.clear();
+    this._batchIndexToInstances = null;
     this._anchors = null;
     this._declutterTargets = null;
     this._declutterPriorityOverrides = null;

@@ -21,40 +21,47 @@ impl App {
         batch_table.gen_global_batch_id()
     }
 
-    /// Get properties by a specified global batch id
+    /// Get properties by a specified global batch id. Also returns the
+    /// feature's canonical global batch id (its first instance's id): a
+    /// picked instance of a multi-instance feature carries its own id, while
+    /// the evaluator reports the canonical one, so callers correlating picks
+    /// with styling need the canonical id back.
     pub fn read_property_by_global_batch_id<V: PropertyValue>(
         &mut self,
         batch_id: &u32,
-    ) -> (Option<V>, Option<String>) {
+    ) -> (Option<V>, Option<String>, Option<u32>) {
         // For batched features like MVT(polygon, polyline) and Cesium 3D Tiles.
-        if let Some((entity, in_batch_id)) = self.search_feature_entity_by_global_batch_id(batch_id)
+        if let Some((entity, in_batch_id, canonical_batch_id)) =
+            self.search_feature_entity_by_global_batch_id(batch_id)
         {
             return self
                 .read_batch_table_by_global_batch_id(entity, &in_batch_id)
-                .map(|(properties, layer_id)| (Some(properties), Some(layer_id)))
-                .unwrap_or((None, None));
+                .map(|(properties, layer_id)| {
+                    (Some(properties), Some(layer_id), Some(canonical_batch_id))
+                })
+                .unwrap_or((None, None, None));
         };
 
         // For other features like GeoJSON and MVT point
         let batch_table = match self.app.world().get_resource::<BatchTable>() {
             Some(bt) => bt,
-            None => return (None, None),
+            None => return (None, None, None),
         };
 
         let batch_value = match batch_table.get(batch_id) {
             Some(bv) => bv,
-            None => return (None, None),
+            None => return (None, None, None),
         };
 
         let layer_id = batch_value.layer_id.clone();
 
         let Some(BatchProperty::Values(values)) = &batch_value.properties else {
-            return (None, layer_id);
+            return (None, layer_id, Some(*batch_id));
         };
         // This should include only one batch.
         let properties: Option<V> = json_value_to_property(&values[0]);
 
-        (properties, layer_id)
+        (properties, layer_id, Some(*batch_id))
     }
 
     fn read_batch_table_by_global_batch_id<V: PropertyValue>(
@@ -201,11 +208,33 @@ impl App {
             .ok()
             .and_then(|e| e.get::<GlobalBatchIds>());
 
-        let global_batch_id_array = global_batch_ids_opt.and_then(|ids| {
-            world
-                .get_resource::<BufferStore>()
-                .and_then(|store| store.get_u32(&ids.handle).map(|arr| arr.to_vec()))
-        });
+        // One representative global batch id per feature (per property row).
+        // Multi-instance features (e.g. MultiPoint) store per-instance ids, so
+        // map each feature to its first instance's id via the instance ->
+        // feature index buffer; without that buffer, positions already are
+        // feature ordinals.
+        let global_batch_id_array: Option<Vec<Option<u32>>> =
+            global_batch_ids_opt.and_then(|ids| {
+                let store = world.get_resource::<BufferStore>()?;
+                let instance_ids = store.get_u32(&ids.handle)?;
+                match ids
+                    .instance_feature_indices
+                    .and_then(|handle| store.get_u32(&handle))
+                {
+                    Some(feature_indices) => {
+                        let mut per_feature: Vec<Option<u32>> = Vec::new();
+                        for (&feature, &id) in feature_indices.iter().zip(instance_ids.iter()) {
+                            let feature = feature as usize;
+                            if feature >= per_feature.len() {
+                                per_feature.resize(feature + 1, None);
+                            }
+                            per_feature[feature].get_or_insert(id);
+                        }
+                        Some(per_feature)
+                    }
+                    None => Some(instance_ids.iter().map(|&id| Some(id)).collect()),
+                }
+            });
 
         match batch_prop {
             BatchProperty::Cesium3dTileset(in_batch_table) => {
@@ -222,7 +251,7 @@ impl App {
                             let props = in_batch_table.get_property(&batch_table_json, batch_idx);
                             let global_batch_id = global_batch_id_array
                                 .as_ref()
-                                .and_then(|arr| arr.get(batch_idx).copied())
+                                .and_then(|arr| arr.get(batch_idx).copied().flatten())
                                 .unwrap_or(batch_idx as u32);
                             callback(batch_idx, global_batch_id, BatchProperties::All(props))?;
                         }
@@ -239,7 +268,7 @@ impl App {
                             );
                             let global_batch_id = global_batch_id_array
                                 .as_ref()
-                                .and_then(|arr| arr.get(batch_idx).copied())
+                                .and_then(|arr| arr.get(batch_idx).copied().flatten())
                                 .unwrap_or(batch_idx as u32);
                             callback(batch_idx, global_batch_id, BatchProperties::Filtered(props))?;
                         }
@@ -262,7 +291,7 @@ impl App {
                                 binary.and_then(|b| gltf_table.table.get_properties(batch_idx, b));
                             let global_batch_id = global_batch_id_array
                                 .as_ref()
-                                .and_then(|arr| arr.get(batch_idx).copied())
+                                .and_then(|arr| arr.get(batch_idx).copied().flatten())
                                 .unwrap_or(batch_idx as u32);
                             callback(batch_idx, global_batch_id, BatchProperties::All(props))?;
                         }
@@ -276,7 +305,7 @@ impl App {
                             });
                             let global_batch_id = global_batch_id_array
                                 .as_ref()
-                                .and_then(|arr| arr.get(batch_idx).copied())
+                                .and_then(|arr| arr.get(batch_idx).copied().flatten())
                                 .unwrap_or(batch_idx as u32);
                             callback(batch_idx, global_batch_id, BatchProperties::Filtered(props))?;
                         }
@@ -287,7 +316,7 @@ impl App {
                 for (batch_idx, value) in values.iter().enumerate() {
                     let global_batch_id = global_batch_id_array
                         .as_ref()
-                        .and_then(|arr| arr.get(batch_idx).copied())
+                        .and_then(|arr| arr.get(batch_idx).copied().flatten())
                         .unwrap_or(feature_batch_id);
                     match keys {
                         None => {
@@ -305,7 +334,7 @@ impl App {
                 for batch_idx in 0..mvt_layer_data.feature_count() {
                     let global_batch_id = global_batch_id_array
                         .as_ref()
-                        .and_then(|arr| arr.get(batch_idx).copied())
+                        .and_then(|arr| arr.get(batch_idx).copied().flatten())
                         .unwrap_or(feature_batch_id);
                     match keys {
                         None => {

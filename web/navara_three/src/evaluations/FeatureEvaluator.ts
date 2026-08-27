@@ -99,6 +99,11 @@ export type { GeometryType };
  * Information about a feature batch, passed to evaluation callbacks.
  */
 export type FeatureInfo = {
+  /**
+   * The feature's canonical global batch id (its first instance's id when a
+   * feature spans several instances, e.g. MultiPoint). Pick events report the
+   * same canonical id, so picks and evaluations correlate through this field.
+   */
   batchId: number;
   properties: Record<string, unknown> | undefined;
   layerId: LayerId | undefined;

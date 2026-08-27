@@ -91,6 +91,7 @@ impl TileContentParser for GltfFeaturesParser {
             global_batch_ids: GlobalBatchIds {
                 handle: ids_handle,
                 batch_length: batch_length as u32,
+                instance_feature_indices: None,
             },
             appearance_modifier: Some(Box::new(|material: &mut navara_material::ModelMaterial| {
                 material.internal = Some(ModelInternalMaterial {
