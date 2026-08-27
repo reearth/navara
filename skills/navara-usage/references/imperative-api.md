@@ -36,7 +36,7 @@ layer.on("featureUpdated", ({ evaluator }) => {
 view.on("pick", (info) => info?.properties?.["gml:name"]);   // requires picking: true (default)
 const ecef = view.pickTerrainPosition(x, y);                  // terrain only
 const ecef2 = view.pickDepthPosition(x, y);                   // anything in the depth buffer
-const h = view.sampleTerrainHeight({ lat, lng });             // RADIANS in
+const h = view.sampleTerrainHeight({ lat, lng });             // degrees in
 const unobserve = view.observeTerrainHeightAt({ lat, lng }, (height) => { ... });
 const [g] = await view.sampleTerrainMostDetailed(terrainSource, [{ lat, lng }]); // fetches max-LOD tiles; g.height / g.level
 ```
@@ -47,11 +47,11 @@ Mouse events (`click`, `mousemove`, …) deliver `MapMouseEvent` with `.clientX/
 
 ## Geodetic / ECEF math (exported from `@navaramap/three`; standalone in `@navaramap/three-api`)
 
-Positions in the scene are **ECEF meters**. Geodetic helpers take **radians**.
+Positions in the scene are **ECEF meters**. Geodetic helpers take lat/lng in **degrees** (like every public lat/lng API).
 
 ```typescript
 import {
-  geodeticToVector3, vector3ToGeodetic, degreeToRadian,
+  geodeticToVector3, vector3ToGeodetic,
   eastNorthUpToFixedFrame, geodeticSurfaceNormal,
   getPickRay, getPlaneFromPointNormal, getRayPlaneIntersection,
   convertWorldToScreen, EllipsoidGeodesic,
@@ -61,8 +61,8 @@ import {
 // lng/lat. Build a tangent frame at the origin and pass it as matrixWorld; then
 // position/rotation/scale are offsets WITHIN that frame, in meters:
 const origin = geodeticToVector3({
-  lat: degreeToRadian(35.681236),
-  lng: degreeToRadian(139.767125),
+  lat: 35.681236,
+  lng: 139.767125,
   height: 0,
 });
 const enuFrame = eastNorthUpToFixedFrame(origin);

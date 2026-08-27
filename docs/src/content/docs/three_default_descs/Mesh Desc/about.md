@@ -53,7 +53,7 @@ view.registerMesh("box", BoxMeshDesc);
 
 await view.init();
 
-// Add a BoxMeshDesc
+// Add a BoxMeshDesc at a longitude / latitude (degrees) and height (meters)
 const boxDesc = view.addMesh<BoxMeshDesc>({
   box: {
     width: 100,
@@ -61,7 +61,7 @@ const boxDesc = view.addMesh<BoxMeshDesc>({
     depth: 100,
     color: new Color().setHex(0xff0000),
   },
-  position: { x: 0, y: 0, z: 1000 },
+  geodetic: { lng: 139.767125, lat: 35.681236, height: 1000 },
 });
 ```
 
@@ -73,16 +73,19 @@ All Mesh Descriptors have the following basic settings:
 |----------|------|---------|-------------|
 | `id` | `string` | Auto-generated | Unique identifier for the object |
 | `visible` | `boolean` | `true` | Toggle visibility of the object |
+| `geodetic` | `GeodeticPlacement` | - | Geographic placement: `lng` / `lat` in degrees, `height` in meters, plus `heading` / `pitch` / `roll` / `scale` / `heightReference`. See [Geographic Placement](../mesh-desc-base#geographic-placement-geodetic) |
 | `position` | `{ x: number, y: number, z: number }` | - | Position of the mesh (ECEF coordinate system) |
 | `rotation` | `{ x: number, y: number, z: number }` | - | Rotation of the mesh (Euler angles, radians) |
 | `scale` | `{ x: number, y: number, z: number }` | - | Scale of the mesh |
 
 ## Coordinate Transformation
 
+To place a mesh at a longitude / latitude you normally do not need any conversion: set the `geodetic` property instead, as in the example above (see [Geographic Placement](../mesh-desc-base#geographic-placement-geodetic)). The functions below are the low-level layer for working with ECEF coordinates directly.
+
 The `position` property of MeshDesc uses the ECEF (Earth-Centered, Earth-Fixed) coordinate system. To convert from latitude/longitude/altitude (geodetic coordinates) to the ECEF coordinate system, use the `geodeticToVector3()` function.
 
 :::note
-Latitude and longitude must be specified in **radians**. Use `degreeToRadian()` to convert from degrees to radians.
+Latitude and longitude are specified in **degrees**.
 :::
 
 ### Basic Coordinate Transformation
@@ -91,7 +94,6 @@ Latitude and longitude must be specified in **radians**. Use `degreeToRadian()` 
 import ThreeView, {
   Color,
   geodeticToVector3,
-  degreeToRadian,
 } from "@navaramap/three";
 import { SphereMeshDesc } from "@navaramap/three-default-descs";
 
@@ -101,8 +103,8 @@ await view.init();
 
 // Convert from latitude/longitude/altitude to ECEF coordinates
 const position = geodeticToVector3({
-  lat: degreeToRadian(35.681236),  // Latitude (radians)
-  lng: degreeToRadian(139.767125), // Longitude (radians)
+  lat: 35.681236,  // Latitude (degrees)
+  lng: 139.767125, // Longitude (degrees)
   height: 200,                      // Altitude (meters)
 });
 
@@ -120,45 +122,25 @@ const sphereDesc = view.addMesh<SphereMeshDesc>({
 });
 ```
 
-### Setting Rotation Along the Earth's Surface
+### Standing a Model Upright on the Surface
 
-To place a mesh along the Earth's surface, obtain the surface normal vector using `geodeticSurfaceNormal()` and compute the rotation.
+`geodetic` builds the surface-aligned frame for you: the mesh stands upright at the given longitude / latitude, and `heading` turns the asset's front (glTF `+Z`) clockwise from north. An unmodified glTF asset needs no up-axis correction.
 
 ```typescript
-import {
-  geodeticToVector3,
-  geodeticSurfaceNormal,
-  degreeToRadian,
-} from "@navaramap/three";
 import { GLTFModelDesc } from "@navaramap/three-default-descs";
-import { Vector3, Quaternion, Euler } from "three";
 
 // GLTFModelDesc must be registered
 
-// Compute position
-const lat = degreeToRadian(35.681236);
-const lng = degreeToRadian(139.767125);
-const height = 0;
-
-const position = geodeticToVector3({ lat, lng, height });
-
-// Get the surface normal vector
-const normal = geodeticSurfaceNormal({ lat, lng, height });
-
-// Compute rotation to align the Y-axis (up direction) with the normal
-const up = new Vector3(0, 1, 0);
-const quaternion = new Quaternion().setFromUnitVectors(up, normal);
-const euler = new Euler().setFromQuaternion(quaternion);
-
-// Place the model along the Earth's surface
+// Place the model upright on the Earth's surface, facing north-east
 const modelDesc = view.addMesh<GLTFModelDesc>({
   gltfModel: {
     url: "/models/building.gltf",
   },
-  position: { x: position.x, y: position.y, z: position.z },
-  rotation: { x: euler.x, y: euler.y, z: euler.z },
+  geodetic: { lng: 139.767125, lat: 35.681236, heading: 45 },
 });
 ```
+
+For frames `geodetic` does not build (ENU, NED and others), compose a `matrixWorld` with the [tangent-frame helpers](../mesh-desc-base#using-a-local-tangent-frame-enu-and-others).
 
 ### Using ENU (East-North-Up) Coordinate System
 
@@ -168,13 +150,12 @@ To place meshes using a local coordinate system (ENU: East-North-Up), use `eastN
 import {
   geodeticToVector3,
   eastNorthUpToFixedFrame,
-  degreeToRadian,
 } from "@navaramap/three";
 import { Vector3 } from "three";
 
 const position = geodeticToVector3({
-  lat: degreeToRadian(35.681236),
-  lng: degreeToRadian(139.767125),
+  lat: 35.681236,
+  lng: 139.767125,
   height: 0,
 });
 
@@ -191,23 +172,19 @@ const offsetPosition = position.clone().add(east.multiplyScalar(100));
 
 ### Reverse Conversion from ECEF to Geodetic Coordinates
 
-To convert back from ECEF coordinates to latitude/longitude/altitude, use `vector3ToGeodetic()` and `radianToDegree()`.
+To convert back from ECEF coordinates to latitude/longitude/altitude, use `vector3ToGeodetic()`.
 
 ```typescript
-import {
-  vector3ToGeodetic,
-  radianToDegree,
-} from "@navaramap/three";
+import { vector3ToGeodetic } from "@navaramap/three";
 
 // Get the current position of the mesh
 const worldPosition = meshDesc.ref.getWorldPosition();
 
-// Convert from ECEF to geodetic coordinates
+// Convert from ECEF to geodetic coordinates (degrees)
 const geodetic = vector3ToGeodetic(worldPosition);
 
-// Convert from radians to degrees
-const latitude = radianToDegree(geodetic.lat);
-const longitude = radianToDegree(geodetic.lng);
+const latitude = geodetic.lat;
+const longitude = geodetic.lng;
 const height = geodetic.height;
 
 console.log(`Latitude: ${latitude}°, Longitude: ${longitude}°, Altitude: ${height}m`);

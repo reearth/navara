@@ -283,7 +283,7 @@ type MyMeshUpdate = MeshUpdate & MyMeshDescription;
 
 ### Properties Managed by the Base Class
 
-`MeshDesc` automatically handles `position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, and `visible`. For a full description of these properties, transform composition modes, and picking behavior, see [MeshDesc](../../../three_default_descs/mesh-desc/mesh-desc-base).
+`MeshDesc` automatically handles `position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `geodetic`, `pickable`, and `visible`, so a custom descriptor can be placed at a longitude / latitude with `geodetic` like any built-in one. For a full description of these properties, transform composition modes, and picking behavior, see [MeshDesc](../../../three_default_descs/mesh-desc/mesh-desc-base).
 
 ### Specifying the Render Pass
 

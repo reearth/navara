@@ -1,5 +1,4 @@
 import {
-  degreeToRadian,
   geodeticToVector3,
   Color,
   type Layer as NavaraLayer,
@@ -67,8 +66,8 @@ export const ShelterLayer: FC<{ visible?: boolean }> = ({
       const [lon, lat] = f.geometry.coordinates as [number, number, number?];
       const altitude = 20;
       const p = geodeticToVector3({
-        lat: degreeToRadian(lat),
-        lng: degreeToRadian(lon),
+        lat,
+        lng: lon,
         height: altitude,
       });
       lights.push({

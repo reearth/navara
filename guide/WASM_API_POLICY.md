@@ -50,10 +50,19 @@ Instead of exposing WASM classes, create wrapper functions that:
 
 **Example - Geodetic to Vector3:**
 ```typescript
-// Public function accepts plain object, returns Three.js type
+// Public function accepts plain object (lat/lng in degrees), returns Three.js
+// type. The public API is degrees; the WASM layer works in radians, so the
+// wrapper converts at the boundary with the WASM-backed `angleToRadian` /
+// `angleToDegree` helpers. (Code that can run before the WASM module is
+// initialized — e.g. a plugin constructor — must use plain arithmetic or
+// three.js `MathUtils` instead.)
 export function geodeticToVector3(lle: LatLngHeight): Vector3 {
-  // Create WASM object internally
-  const wasmLLE = new LLE(lle.lat, lle.lng, lle.height);
+  // Create WASM object internally (radians)
+  const wasmLLE = new LLE(
+    angleToRadian(lle.lat),
+    angleToRadian(lle.lng),
+    lle.height,
+  );
   const wasmResult = geodeticToXyz(wasmLLE);
 
   // Convert to Three.js type
@@ -98,15 +107,21 @@ export function getPickRay(
 When a WASM class precomputes values for optimization, create a wrapper class instead of separate functions:
 
 ```typescript
-import { EllipsoidGeodesic as EllipsoidGeodesicImpl, LLE } from "@navaramap/engine-api";
+import {
+  EllipsoidGeodesic as EllipsoidGeodesicImpl,
+  LLE,
+  angleToRadian,
+  angleToDegree,
+} from "@navaramap/engine-api";
 
 export class EllipsoidGeodesic {
   private _raw: EllipsoidGeodesicImpl;
 
   constructor(start: LatLngHeight, end: LatLngHeight) {
+    // Public API is degrees; the WASM LLE is radians.
     this._raw = new EllipsoidGeodesicImpl(
-      new LLE(start.lat, start.lng, start.height),
-      new LLE(end.lat, end.lng, end.height),
+      new LLE(angleToRadian(start.lat), angleToRadian(start.lng), start.height),
+      new LLE(angleToRadian(end.lat), angleToRadian(end.lng), end.height),
     );
   }
 
@@ -117,7 +132,9 @@ export class EllipsoidGeodesic {
   interpolatePoints(granularity?: number): LatLngHeight[] {
     const wasmPoints = this._raw.interpolateGeodeticPoints(granularity ?? null);
     const results = wasmPoints.map((lle) => ({
-      lat: lle.lat, lng: lle.lng, height: lle.height,
+      lat: angleToDegree(lle.lat),
+      lng: angleToDegree(lle.lng),
+      height: lle.height,
     }));
     wasmPoints.forEach((lle) => lle.free());
     return results;

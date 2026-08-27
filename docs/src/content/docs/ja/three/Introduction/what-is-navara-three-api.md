@@ -22,12 +22,12 @@ sidebar:
 緯度経度（測地座標）と Three.js のワールド座標（ECEF）を相互に変換できます。
 
 ```typescript
-import { geodeticToVector3, degreeToRadian } from "@navaramap/three";
+import { geodeticToVector3 } from "@navaramap/three";
 
 // 東京の座標を Three.js の Vector3 に変換
 const position = geodeticToVector3({
-  lat: degreeToRadian(35.6762),
-  lng: degreeToRadian(139.6503),
+  lat: 35.6762,
+  lng: 139.6503,
   height: 100,
 });
 ```
@@ -65,11 +65,11 @@ mesh.matrix.copy(enuMatrix);
 2 点間の地球表面上での距離や方位角を計算できます。航路表示やエリア計算などに利用できます。
 
 ```typescript
-import { EllipsoidGeodesic, degreeToRadian } from "@navaramap/three";
+import { EllipsoidGeodesic } from "@navaramap/three";
 
 const geodesic = new EllipsoidGeodesic(tokyo, osaka);
 console.log(`距離: ${geodesic.distance / 1000} km`);
-console.log(`方位角: ${geodesic.startHeading} rad`);
+console.log(`方位角: ${geodesic.startHeading}°`);
 ```
 
 ## navara_three との関係

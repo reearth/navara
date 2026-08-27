@@ -1,5 +1,6 @@
 import type { LatLng } from "@navaramap/core";
 import {
+  angleToRadian,
   sampleQuantizedMeshHeights,
   sampleRasterDemHeights,
   terrainPositionsToTiles,
@@ -29,9 +30,9 @@ export type SampleTerrainOptions = {
 };
 
 export type SampledTerrainPosition = {
-  /** Latitude in radians, echoed from the input. */
+  /** Latitude in degrees, echoed from the input. */
   lat: number;
-  /** Longitude in radians, echoed from the input. */
+  /** Longitude in degrees, echoed from the input. */
   lng: number;
   /**
    * Terrain height in meters, or `undefined` when no tile covering the
@@ -104,7 +105,7 @@ type SourceConfig = {
  *
  * @param source - A `quantized-mesh` or `raster-dem` source description (the
  *   same shape `addSource` accepts)
- * @param positions - Geodetic positions (lat/lng in radians)
+ * @param positions - Geodetic positions (lat/lng in degrees)
  * @param options - Optional abort signal and fixed-level sampling
  * @returns One result per input position, in the same order (the input
  *   objects are not mutated)
@@ -123,10 +124,11 @@ export async function sampleTerrainMostDetailed(
   // Fixed-level sampling never falls back to parents.
   const floorLevel = options?.level != null ? startLevel : config.minZoom;
 
+  // The engine samplers work in radians; inputs and echoed outputs are degrees.
   const flat = new Float64Array(positions.length * 2);
   positions.forEach((p, i) => {
-    flat[i * 2] = p.lng;
-    flat[i * 2 + 1] = p.lat;
+    flat[i * 2] = angleToRadian(p.lng);
+    flat[i * 2 + 1] = angleToRadian(p.lat);
   });
 
   // Group positions by their containing tile at the starting level; each

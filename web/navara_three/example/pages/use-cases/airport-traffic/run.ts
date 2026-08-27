@@ -1,8 +1,4 @@
-import ThreeView, {
-  Color,
-  geodeticToVector3,
-  degreeToRadian,
-} from "@navaramap/three";
+import ThreeView, { Color, geodeticToVector3 } from "@navaramap/three";
 import {
   ToneMappingMode,
   type ArclineMeshDesc,
@@ -49,13 +45,13 @@ const constructData = async () => {
 
     // Calculate distance between src and dest using Vector3
     const srcVec = geodeticToVector3({
-      lat: degreeToRadian(source.lat),
-      lng: degreeToRadian(source.lng),
+      lat: source.lat,
+      lng: source.lng,
       height: 0,
     });
     const destVec = geodeticToVector3({
-      lat: degreeToRadian(destination.lat),
-      lng: degreeToRadian(destination.lng),
+      lat: destination.lat,
+      lng: destination.lng,
       height: 0,
     });
     const distance = srcVec.distanceTo(destVec);

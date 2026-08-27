@@ -1,9 +1,6 @@
 import ThreeView, {
   Color,
   MeshDesc,
-  degreeToRadian,
-  eastNorthUpToFixedFrame,
-  geodeticToVector3,
   setupMaterialForMRT,
   type MeshConfig,
   type ViewContext,
@@ -157,19 +154,13 @@ const basemap = await tilejson.addSource({
 });
 view.addLayer({ type: "raster", source: basemap });
 
-const anchor = geodeticToVector3({
-  lng: degreeToRadian(-86.25),
-  lat: degreeToRadian(39.15),
-  height: 1200,
-});
 const blob = view.addMesh<MarchingCubesMesh>({
   marchingCubes: {
     resolution: 48,
     material: createHatchingMaterial(),
     castShadow: true,
   },
-  matrixWorld: eastNorthUpToFixedFrame(anchor),
-  scale: new Vector3().setScalar(1500),
+  geodetic: { lng: -86.25, lat: 39.15, height: 1200, scale: 1500 },
 });
 
 view.on("preUpdate", (time) => {

@@ -22,7 +22,6 @@ import ThreeView, {
   Color,
   MeshDesc,
   PickableMesh,
-  degreeToRadian,
   geodeticToVector3,
   northUpEastToFixedFrame,
   setupMaterialForMRT,
@@ -267,8 +266,8 @@ const run = async () => {
   });
 
   const origin = geodeticToVector3({
-    lat: degreeToRadian(35.681236),
-    lng: degreeToRadian(139.767125),
+    lat: 35.681236,
+    lng: 139.767125,
     height: 0,
   });
   const nueFrame = northUpEastToFixedFrame(origin);

@@ -141,8 +141,8 @@ function geodeticToVector3(lle: LatLngHeight): Vector3;
 **Parameters:**
 
 - `lle`: 変換する測地座標
-  - `lat`: 緯度（ラジアン）
-  - `lng`: 経度（ラジアン）
+  - `lat`: 緯度（度）
+  - `lng`: 経度（度）
   - `height`: 高度（メートル）
 
 **Returns:**
@@ -152,11 +152,11 @@ ECEF 座標系での位置（Three.js Vector3）
 **Example:**
 
 ```typescript
-import { geodeticToVector3, degreeToRadian } from "@navaramap/three-api";
+import { geodeticToVector3 } from "@navaramap/three-api";
 
 const lle = {
-  lat: degreeToRadian(35.6762), // 東京の緯度
-  lng: degreeToRadian(139.6503), // 東京の経度
+  lat: 35.6762, // 東京の緯度
+  lng: 139.6503, // 東京の経度
   height: 100,
 };
 const position = geodeticToVector3(lle);
@@ -180,26 +180,26 @@ function vector3ToGeodetic(xyz: Vector3): LatLngHeight;
 **Returns:**
 
 測地座標:
-- `lat`: 緯度（ラジアン）
-- `lng`: 経度（ラジアン）
+- `lat`: 緯度（度）
+- `lng`: 経度（度）
 - `height`: 高度（メートル）
 
 **Example:**
 
 ```typescript
-import { vector3ToGeodetic, radianToDegree } from "@navaramap/three-api";
+import { vector3ToGeodetic } from "@navaramap/three-api";
 import { Vector3 } from "three";
 
 const position = new Vector3(-3946416, 3364068, 3702654);
 const lle = vector3ToGeodetic(position);
-console.log(`緯度: ${radianToDegree(lle.lat)}°`);
-console.log(`経度: ${radianToDegree(lle.lng)}°`);
+console.log(`緯度: ${lle.lat}°`);
+console.log(`経度: ${lle.lng}°`);
 console.log(`高度: ${lle.height} m`);
 ```
 
 ### degreeToRadian(degree)
 
-角度を度からラジアンに変換します。
+角度を度からラジアンに変換します。Navara の API における緯度経度はすでに度単位のため、このヘルパーは Three.js の Euler `rotation` フィールドなどラジアンを取る計算にのみ必要です。
 
 **Syntax:**
 
@@ -328,7 +328,7 @@ function convertWorldToScreen(
 ```typescript
 import { convertWorldToScreen, geodeticToVector3 } from "@navaramap/three-api";
 
-const lle = { lat: 0.622, lng: 2.435, height: 100 };
+const lle = { lat: 35.6812, lng: 139.7671, height: 100 };
 const worldPos = geodeticToVector3(lle);
 
 const screenPos = convertWorldToScreen(window, camera, worldPos);
@@ -507,11 +507,11 @@ function geodeticSurfaceNormal(lle: LatLngHeight): Vector3;
 **Example:**
 
 ```typescript
-import { geodeticSurfaceNormal, degreeToRadian } from "@navaramap/three-api";
+import { geodeticSurfaceNormal } from "@navaramap/three-api";
 
 const lle = {
-  lat: degreeToRadian(35.6762),
-  lng: degreeToRadian(139.6503),
+  lat: 35.6762,
+  lng: 139.6503,
   height: 0,
 };
 const normal = geodeticSurfaceNormal(lle);
@@ -542,12 +542,11 @@ function eastNorthUpToFixedFrame(origin: Vector3): Matrix4;
 import {
   eastNorthUpToFixedFrame,
   geodeticToVector3,
-  degreeToRadian,
 } from "@navaramap/three-api";
 
 const tokyoLle = {
-  lat: degreeToRadian(35.6762),
-  lng: degreeToRadian(139.6503),
+  lat: 35.6762,
+  lng: 139.6503,
   height: 0,
 };
 const origin = geodeticToVector3(tokyoLle);
@@ -638,12 +637,11 @@ WUN から ECEF への 4x4 変換行列（Three.js Matrix4）
 import {
   westUpNorthToFixedFrame,
   geodeticToVector3,
-  degreeToRadian,
 } from "@navaramap/three-api";
 
 const origin = geodeticToVector3({
-  lat: degreeToRadian(35.681236),
-  lng: degreeToRadian(139.767125),
+  lat: 35.681236,
+  lng: 139.767125,
   height: 0,
 });
 const matrix = westUpNorthToFixedFrame(origin);
@@ -653,7 +651,7 @@ const matrix = westUpNorthToFixedFrame(origin);
 
 地理的な位置に WUN 接線フレームを構築し、そこに heading・pitch・roll・scale を合成します。地理的な配置をワールド行列に変換する単一の呼び出しです。
 
-**この関数は度単位を取ります。** このページの [geodeticToVector3(lle)](#geodetictovector3lle) や他のヘルパー関数がラジアンを取るのとは異なり、`lng`/`lat` とここでのすべての角度は度単位です。これは `setCamera` や `geodetic` メッシュ Descriptor フィールドと同じです。
+`lng`/`lat` とここでのすべての角度は度単位です。これは [geodeticToVector3(lle)](#geodetictovector3lle) や `setCamera`、`geodetic` メッシュ Descriptor フィールドと同じ規約です。
 
 **Syntax:**
 
@@ -895,22 +893,22 @@ constructor(start: LatLngHeight, end: LatLngHeight)
 
 **Parameters:**
 
-- `start`: 開始点の測地座標（緯度経度はラジアン）
-- `end`: 終了点の測地座標（緯度経度はラジアン）
+- `start`: 開始点の測地座標（緯度経度は度単位）
+- `end`: 終了点の測地座標（緯度経度は度単位）
 
 **Example:**
 
 ```typescript
-import { EllipsoidGeodesic, degreeToRadian } from "@navaramap/three-api";
+import { EllipsoidGeodesic } from "@navaramap/three-api";
 
 const start = {
-  lat: degreeToRadian(35.6762), // 東京
-  lng: degreeToRadian(139.6503),
+  lat: 35.6762, // 東京
+  lng: 139.6503,
   height: 0,
 };
 const end = {
-  lat: degreeToRadian(34.6937), // 大阪
-  lng: degreeToRadian(135.5023),
+  lat: 34.6937, // 大阪
+  lng: 135.5023,
   height: 0,
 };
 
@@ -964,7 +962,7 @@ if (!geodesic.converged) {
 
 ### startHeading
 
-開始点での方位角（ラジアン）を取得します。
+開始点での方位角（度）を取得します。
 
 **Syntax:**
 
@@ -974,20 +972,18 @@ get startHeading(): number
 
 **Returns:**
 
-開始点での方位角（ラジアン）
+開始点での方位角（度）
 
 **Example:**
 
 ```typescript
-import { radianToDegree } from "@navaramap/three-api";
-
 const geodesic = new EllipsoidGeodesic(start, end);
-console.log(`開始点方位角: ${radianToDegree(geodesic.startHeading)}°`);
+console.log(`開始点方位角: ${geodesic.startHeading}°`);
 ```
 
 ### endHeading
 
-終了点での方位角（ラジアン）を取得します。
+終了点での方位角（度）を取得します。
 
 **Syntax:**
 
@@ -997,7 +993,7 @@ get endHeading(): number
 
 **Returns:**
 
-終了点での方位角（ラジアン）
+終了点での方位角（度）
 
 ### start
 
@@ -1055,7 +1051,7 @@ const points = geodesic.interpolatePoints(1000);
 console.log(`補間点数: ${points.length}`);
 
 points.forEach((point, index) => {
-  console.log(`点${index}: 緯度=${radianToDegree(point.lat)}°, 経度=${radianToDegree(point.lng)}°`);
+  console.log(`点${index}: 緯度=${point.lat}°, 経度=${point.lng}°`);
 });
 ```
 
@@ -1084,7 +1080,7 @@ const geodesic = new EllipsoidGeodesic(start, end);
 
 // 中間点を取得
 const midpoint = geodesic.interpolateDistance(geodesic.distance / 2);
-console.log(`中間点: 緯度=${radianToDegree(midpoint.lat)}°, 経度=${radianToDegree(midpoint.lng)}°`);
+console.log(`中間点: 緯度=${midpoint.lat}°, 経度=${midpoint.lng}°`);
 ```
 
 ### dispose()
@@ -1116,8 +1112,6 @@ geodesic.dispose();
 import {
   initNavaraApi,
   EllipsoidGeodesic,
-  degreeToRadian,
-  radianToDegree,
   geodeticToVector3,
 } from "@navaramap/three-api";
 
@@ -1125,13 +1119,13 @@ await initNavaraApi();
 
 // 東京から大阪への測地線を作成
 const tokyo = {
-  lat: degreeToRadian(35.6762),
-  lng: degreeToRadian(139.6503),
+  lat: 35.6762,
+  lng: 139.6503,
   height: 0,
 };
 const osaka = {
-  lat: degreeToRadian(34.6937),
-  lng: degreeToRadian(135.5023),
+  lat: 34.6937,
+  lng: 135.5023,
   height: 0,
 };
 
@@ -1139,8 +1133,8 @@ const geodesic = new EllipsoidGeodesic(tokyo, osaka);
 
 // 距離と方位角を表示
 console.log(`距離: ${(geodesic.distance / 1000).toFixed(2)} km`);
-console.log(`開始方位角: ${radianToDegree(geodesic.startHeading).toFixed(2)}°`);
-console.log(`終了方位角: ${radianToDegree(geodesic.endHeading).toFixed(2)}°`);
+console.log(`開始方位角: ${geodesic.startHeading.toFixed(2)}°`);
+console.log(`終了方位角: ${geodesic.endHeading.toFixed(2)}°`);
 
 // 10km間隔で補間点を生成し、3D座標に変換
 const points = geodesic.interpolatePoints(10000);
@@ -1164,8 +1158,8 @@ geodesic.dispose();
 
 ```typescript
 interface LatLngHeight {
-  lat: number; // 緯度（ラジアン）
-  lng: number; // 経度（ラジアン）
+  lat: number; // 緯度（度）
+  lng: number; // 経度（度）
   height: number; // 高度（メートル）
 }
 ```
@@ -1176,8 +1170,8 @@ interface LatLngHeight {
 
 ```typescript
 interface LatLng {
-  lat: number;  // 緯度（ラジアン）
-  lng: number;  // 経度（ラジアン）
+  lat: number;  // 緯度（度）
+  lng: number;  // 経度（度）
 }
 ```
 
@@ -1208,7 +1202,6 @@ interface WindowObject {
 ```typescript
 import ThreeView, {
   geodeticToVector3,
-  degreeToRadian,
   geodeticSurfaceNormal,
 } from "@navaramap/three";
 import { GLTFModelDesc } from "@navaramap/three-default-descs";
@@ -1234,8 +1227,8 @@ const altitude = 0;
 const modelDesc = view.addMesh<GLTFModelDesc>({
   gltfModel: { url: "/path/to/model.glb" },
   position: geodeticToVector3({
-    lat: degreeToRadian(latitude),
-    lng: degreeToRadian(longitude),
+    lat: latitude,
+    lng: longitude,
     height: altitude,
   }),
 });
@@ -1247,23 +1240,23 @@ const animate = () => {
 
   // 新しい位置を計算
   const pos = geodeticToVector3({
-    lat: degreeToRadian(latitude),
-    lng: degreeToRadian(longitude),
+    lat: latitude,
+    lng: longitude,
     height: altitude,
   });
 
   // 地表面の法線を計算
   const normal = geodeticSurfaceNormal({
-    lat: degreeToRadian(latitude),
-    lng: degreeToRadian(longitude),
+    lat: latitude,
+    lng: longitude,
     height: altitude,
   });
 
   // 移動方向を計算
   const nextLongitude = longitude + 0.01;
   const nextPos = geodeticToVector3({
-    lat: degreeToRadian(latitude),
-    lng: degreeToRadian(nextLongitude),
+    lat: latitude,
+    lng: nextLongitude,
     height: altitude,
   });
   const direction = new Vector3().subVectors(nextPos, pos).normalize();
@@ -1301,18 +1294,16 @@ animate();
 ```typescript
 import {
   initNavaraApi,
-  degreeToRadian,
   geodeticToVector3,
   vector3ToGeodetic,
-  radianToDegree,
 } from "@navaramap/three-api";
 
 // 初期化
 await initNavaraApi();
 
 const tokyoLle = {
-  lat: degreeToRadian(35.6762),
-  lng: degreeToRadian(139.6503),
+  lat: 35.6762,
+  lng: 139.6503,
   height: 100,
 };
 
@@ -1322,8 +1313,8 @@ console.log(`ECEF座標: [${ecefPos.x}, ${ecefPos.y}, ${ecefPos.z}]`);
 
 // ECEF座標を測地座標に戻す
 const convertedLle = vector3ToGeodetic(ecefPos);
-console.log(`緯度: ${radianToDegree(convertedLle.lat)}°`);
-console.log(`経度: ${radianToDegree(convertedLle.lng)}°`);
+console.log(`緯度: ${convertedLle.lat}°`);
+console.log(`経度: ${convertedLle.lng}°`);
 console.log(`高度: ${convertedLle.height} m`);
 ```
 
@@ -1377,14 +1368,13 @@ canvas.addEventListener("click", (event) => {
 import {
   geodeticToVector3,
   eastNorthUpToFixedFrame,
-  degreeToRadian,
 } from "@navaramap/three-api";
 import { Mesh, BoxGeometry, MeshBasicMaterial } from "three";
 
 // 東京の位置
 const tokyoLle = {
-  lat: degreeToRadian(35.6762),
-  lng: degreeToRadian(139.6503),
+  lat: 35.6762,
+  lng: 139.6503,
   height: 0,
 };
 
@@ -1413,7 +1403,6 @@ import {
   convertScreenToWorld,
   convertWorldToScreen,
   geodeticToVector3,
-  degreeToRadian,
 } from "@navaramap/three-api";
 import { Vector2 } from "three";
 
@@ -1425,8 +1414,8 @@ const windowObject = {
 
 // 世界座標をスクリーン座標に変換
 const worldPos = geodeticToVector3({
-  lat: degreeToRadian(35.6762),
-  lng: degreeToRadian(139.6503),
+  lat: 35.6762,
+  lng: 139.6503,
   height: 100,
 });
 

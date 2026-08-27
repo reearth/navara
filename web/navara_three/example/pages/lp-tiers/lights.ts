@@ -1,4 +1,4 @@
-import { degreeToRadian, geodeticToVector3 } from "@navaramap/three";
+import { geodeticToVector3 } from "@navaramap/three";
 import type { FogLightDefinition } from "@navaramap/three-default-descs";
 
 import { OSM_STREET_LAMPS } from "./street-lamps";
@@ -18,8 +18,8 @@ const light = (
   radius: number,
 ): FogLightDefinition => {
   const position = geodeticToVector3({
-    lat: degreeToRadian(lat),
-    lng: degreeToRadian(lng),
+    lat,
+    lng,
     height,
   });
   return {

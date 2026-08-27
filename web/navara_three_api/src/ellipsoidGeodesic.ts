@@ -2,17 +2,21 @@ import type { LatLngHeight } from "@navaramap/core";
 import {
   EllipsoidGeodesic as EllipsoidGeodesicImpl,
   LLE,
+  angleToRadian,
+  angleToDegree,
 } from "@navaramap/engine-api";
 
 /**
  * Wrapper class for geodesic calculations on an ellipsoid surface.
  * Precomputes common variables for optimization when instantiated.
  *
+ * All latitudes/longitudes and headings are in **degrees**.
+ *
  * @example
  * ```typescript
  * const geodesic = new EllipsoidGeodesic(
- *   { lat: 0.5, lng: 2.0, height: 0 },
- *   { lat: 0.6, lng: 2.1, height: 0 }
+ *   { lat: 35.6812, lng: 139.7671, height: 0 },
+ *   { lat: 34.7025, lng: 135.4959, height: 0 }
  * );
  *
  * console.log(geodesic.distance);
@@ -27,13 +31,13 @@ export class EllipsoidGeodesic {
 
   /**
    * Create a new geodesic between two points on the ellipsoid.
-   * @param start - Start point in geodetic coordinates (lat/lng in radians)
-   * @param end - End point in geodetic coordinates (lat/lng in radians)
+   * @param start - Start point in geodetic coordinates (lat/lng in degrees)
+   * @param end - End point in geodetic coordinates (lat/lng in degrees)
    */
   constructor(start: LatLngHeight, end: LatLngHeight) {
     this._raw = new EllipsoidGeodesicImpl(
-      new LLE(start.lat, start.lng, start.height),
-      new LLE(end.lat, end.lng, end.height),
+      new LLE(angleToRadian(start.lat), angleToRadian(start.lng), start.height),
+      new LLE(angleToRadian(end.lat), angleToRadian(end.lng), end.height),
     );
   }
 
@@ -52,32 +56,40 @@ export class EllipsoidGeodesic {
     return this._raw.converged;
   }
 
-  /** Heading at the start point in radians */
+  /** Heading at the start point in degrees */
   get startHeading(): number {
-    return this._raw.start_heading;
+    return angleToDegree(this._raw.start_heading);
   }
 
-  /** Heading at the end point in radians */
+  /** Heading at the end point in degrees */
   get endHeading(): number {
-    return this._raw.end_heading;
+    return angleToDegree(this._raw.end_heading);
   }
 
-  /** Start point in geodetic coordinates */
+  /** Start point in geodetic coordinates (lat/lng in degrees) */
   get start(): LatLngHeight {
     const lle = this._raw.start;
-    return { lat: lle.lat, lng: lle.lng, height: lle.height };
+    return {
+      lat: angleToDegree(lle.lat),
+      lng: angleToDegree(lle.lng),
+      height: lle.height,
+    };
   }
 
-  /** End point in geodetic coordinates */
+  /** End point in geodetic coordinates (lat/lng in degrees) */
   get end(): LatLngHeight {
     const lle = this._raw.end;
-    return { lat: lle.lat, lng: lle.lng, height: lle.height };
+    return {
+      lat: angleToDegree(lle.lat),
+      lng: angleToDegree(lle.lng),
+      height: lle.height,
+    };
   }
 
   /**
    * Interpolate points along the geodesic path.
    * @param granularity - Distance between interpolated points in meters (optional)
-   * @returns Array of interpolated points in geodetic coordinates
+   * @returns Array of interpolated points in geodetic coordinates (lat/lng in degrees)
    */
   interpolatePoints(granularity?: number): LatLngHeight[] {
     const wasmPoints = this._raw.interpolateGeodeticPoints(granularity ?? null);
@@ -85,8 +97,8 @@ export class EllipsoidGeodesic {
     const results: LatLngHeight[] = [];
     for (const point of wasmPoints) {
       results.push({
-        lat: point.lat,
-        lng: point.lng,
+        lat: angleToDegree(point.lat),
+        lng: angleToDegree(point.lng),
         height: point.height,
       });
       point.free();
@@ -98,14 +110,14 @@ export class EllipsoidGeodesic {
   /**
    * Interpolate a point at a specific distance along the geodesic path.
    * @param distance - Distance from start point in meters
-   * @returns Interpolated point in geodetic coordinates
+   * @returns Interpolated point in geodetic coordinates (lat/lng in degrees)
    */
   interpolateDistance(distance: number): LatLngHeight {
     const wasmPoint = this._raw.interpolateDistance(distance);
 
     const result: LatLngHeight = {
-      lat: wasmPoint.lat,
-      lng: wasmPoint.lng,
+      lat: angleToDegree(wasmPoint.lat),
+      lng: angleToDegree(wasmPoint.lng),
       height: wasmPoint.height,
     };
 

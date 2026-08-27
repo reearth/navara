@@ -121,8 +121,8 @@ export const run = async (view: ThreeView<DefaultDescriptions>) => {
       // spans east-west in one column and north-south in the other.
       const site = siteOf(i, -COLUMN_OFFSET);
       return {
-        lng: degreeToRadian(site.lng),
-        lat: degreeToRadian(site.lat),
+        lng: site.lng,
+        lat: site.lat,
       };
     }),
   );
@@ -149,8 +149,8 @@ export const run = async (view: ThreeView<DefaultDescriptions>) => {
     const legacyTransform: Transform = {
       matrixWorld: northUpEastToFixedFrame(
         geodeticToVector3({
-          lng: degreeToRadian(site.lng),
-          lat: degreeToRadian(site.lat),
+          lng: site.lng,
+          lat: site.lat,
           height: legacyGround[i].height ?? SITE_TERRAIN,
         }),
       ),

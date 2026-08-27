@@ -1,7 +1,5 @@
 import ThreeView, {
   TERRARIUM_ELEVATION_DECODER,
-  degreeToRadian,
-  radianToDegree,
   type AttributionItem,
   type AttributionPlugin,
   type EffectHandle,
@@ -381,7 +379,7 @@ export const run = async () => {
         startLat: cameraState.lat,
         startLng: cameraState.lng,
         startHeight: cameraState.height,
-        startHeading: degreeToRadian(cameraState.heading),
+        startHeading: cameraState.heading,
         minAlt: -1000,
         maxAlt: 1_000_000,
         cameraDistance: 10,
@@ -770,12 +768,12 @@ const addPersonPanel = (
 ) => {
   // Person view only authors position + heading; pitch/roll/fov are carried
   // over untouched so toggling back to the normal camera preserves them.
-  // CameraState stays in degrees (shared with the normal camera), while the
-  // person heading is authored in radians to match PersonViewPlugin's
-  // startHeading / teleport units so the copied config pastes verbatim.
+  // CameraState and the person heading are both in degrees, matching
+  // PersonViewPlugin's startHeading / teleport units so the copied config
+  // pastes verbatim.
   const params: CameraState = { ...initial };
   const personParams = {
-    heading: degreeToRadian(initial.heading),
+    heading: initial.heading,
     cameraPitch: personView.getCameraPitch(),
     fpvPitch: personView.getFpvPitch(),
     fpvHeightOffset: personView.getFpvHeightOffset(),
@@ -818,36 +816,36 @@ const addPersonPanel = (
   folder.addBinding(params, "lat", { readonly: true });
   folder.addBinding(params, "height", { readonly: true, label: "alt" });
 
-  // Heading (radians) is editable so the character orientation can be
+  // Heading (degrees) is editable so the character orientation can be
   // fine-tuned; applying it rotates the character in place.
   folder
-    .addBinding(personParams, "heading", { label: "heading (rad)" })
+    .addBinding(personParams, "heading", { label: "heading (deg)" })
     .on("change", () => {
       if (ignoreChange) return;
       personView.setHeading(personParams.heading);
     });
 
-  // TPV camera pitch (radians). Orbits the camera up and over the model
+  // TPV camera pitch (degrees). Orbits the camera up and over the model
   // while keeping it centered.
   folder
     .addBinding(personParams, "cameraPitch", {
-      label: "tpv pitch (rad)",
-      min: -1.5,
-      max: 1.5,
-      step: 0.01,
+      label: "tpv pitch (deg)",
+      min: -86,
+      max: 86,
+      step: 0.5,
     })
     .on("change", () => {
       if (ignoreChange) return;
       personView.setCameraPitch(personParams.cameraPitch);
     });
 
-  // FPV camera pitch (radians). Tilts the first-person view down in place.
+  // FPV camera pitch (degrees). Tilts the first-person view down in place.
   folder
     .addBinding(personParams, "fpvPitch", {
-      label: "fpv pitch (rad)",
-      min: -1.5,
-      max: 1.5,
-      step: 0.01,
+      label: "fpv pitch (deg)",
+      min: -86,
+      max: 86,
+      step: 0.5,
     })
     .on("change", () => {
       if (ignoreChange) return;
@@ -878,10 +876,10 @@ const addPersonPanel = (
     params.lng = s.lng;
     params.lat = s.lat;
     params.height = s.alt;
-    // s.heading is radians; keep CameraState (degrees) in sync for the
+    // s.heading is degrees; keep CameraState in sync for the
     // normal-mode carryover and the "Copy camera state" snippet.
     personParams.heading = s.heading;
-    params.heading = radianToDegree(s.heading);
+    params.heading = s.heading;
     viewParams.mode = s.mode;
     onCameraChange({ ...params });
     ignoreChange = true;
@@ -902,7 +900,7 @@ const addPersonPanel = (
         lng: city.lng,
         lat: city.lat,
         alt: city.height,
-        heading: degreeToRadian(city.heading),
+        heading: city.heading,
       });
     });
   }
@@ -921,9 +919,9 @@ const addPersonPanel = (
     formatCameraSnippet(params),
   );
 
-  // Accepts either a PersonViewPlugin config snippet (startLat/…/startHeading
-  // in radians) or a CameraState snippet (lat/…/heading in degrees). The two
-  // are distinguishable by their key names, so try the person config first.
+  // Accepts either a PersonViewPlugin config snippet (startLat/…/startHeading)
+  // or a CameraState snippet (lat/…/heading), both in degrees. The two are
+  // distinguishable by their key names, so try the person config first.
   addClipboardPasteButton(folder, "Paste config / camera state", (text) => {
     const personCfg = parsePersonViewSnippet(text);
     if (personCfg) {
@@ -963,7 +961,7 @@ const addPersonPanel = (
         lng: cam.lng,
         lat: cam.lat,
         alt: cam.height,
-        heading: degreeToRadian(cam.heading),
+        heading: cam.heading,
       });
       return true;
     }
@@ -1098,13 +1096,13 @@ const parseCameraSnippet = (text: string): CameraState | null => {
 };
 
 // Emits an object that can be spread straight into `new PersonViewPlugin({…})`.
-// `startHeading` is in radians, matching the plugin's unit and the radian
+// `startHeading` is in degrees, matching the plugin's unit and the degree
 // heading shown in the panel, so the value can be pasted verbatim.
 const formatPersonViewSnippet = (
   p: CameraState,
-  headingRad: number,
-  cameraPitchRad: number,
-  fpvPitchRad: number,
+  heading: number,
+  cameraPitch: number,
+  fpvPitch: number,
   fpvHeightOffset: number,
   mode: ViewMode,
 ): string => {
@@ -1112,9 +1110,9 @@ const formatPersonViewSnippet = (
     `  startLat: ${p.lat},`,
     `  startLng: ${p.lng},`,
     `  startHeight: ${p.height},`,
-    `  startHeading: ${headingRad},`,
-    `  cameraPitch: ${cameraPitchRad},`,
-    `  fpvPitch: ${fpvPitchRad},`,
+    `  startHeading: ${heading},`,
+    `  cameraPitch: ${cameraPitch},`,
+    `  fpvPitch: ${fpvPitch},`,
     `  fpvHeightOffset: ${fpvHeightOffset},`,
     `  initialView: "${mode}",`,
   ];

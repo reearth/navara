@@ -20,15 +20,13 @@ sidebar:
 **Example:**
 
 ```typescript
-import { geodeticToVector3, degreeToRadian, LLE } from "@navaramap/three";
+import { geodeticToVector3 } from "@navaramap/three";
 
-const position = geodeticToVector3(
-  new LLE(
-    degreeToRadian(35.67564356091717),  // 緯度
-    degreeToRadian(139.74511454748298), // 経度
-    10,                                  // 高度
-  ),
-);
+const position = geodeticToVector3({
+  lat: 35.67564356091717,
+  lng: 139.74511454748298,
+  height: 10,
+});
 
 {
   position: position,
@@ -339,7 +337,7 @@ const rainDesc = view.addMesh<RainMeshDesc>({
 ### 特定の位置に雨を配置
 
 ```typescript
-import ThreeView, { geodeticToVector3, degreeToRadian, LLE } from "@navaramap/three";
+import ThreeView, { geodeticToVector3 } from "@navaramap/three";
 import { RainMeshDesc } from "@navaramap/three-default-descs";
 
 const view = new ThreeView({ animation: true });
@@ -347,13 +345,11 @@ view.registerMesh("rain", RainMeshDesc);
 await view.init();
 
 // 東京の位置を計算
-const position = geodeticToVector3(
-  new LLE(
-    degreeToRadian(35.67564356091717),
-    degreeToRadian(139.74511454748298),
-    10,
-  ),
-);
+const position = geodeticToVector3({
+  lat: 35.67564356091717,
+  lng: 139.74511454748298,
+  height: 10,
+});
 
 // 位置を指定してRainMeshDescを追加
 const rainDesc = view.addMesh<RainMeshDesc>({

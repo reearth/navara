@@ -3,7 +3,6 @@ import {
   createReplacer,
   setupMaterialForMRT,
   geodeticToVector3,
-  degreeToRadian,
   calcCameraPosition,
   calcModelMatrixRTE,
   encodePositionRTE,
@@ -95,8 +94,8 @@ export class SmoothLine extends Object3D {
     this._pointsData = this._config.map((cfg) => {
       return cfg.points.map((point) => {
         return geodeticToVector3({
-          lat: degreeToRadian(point.lat),
-          lng: degreeToRadian(point.lng),
+          lat: point.lat,
+          lng: point.lng,
           height: point.height || 0,
         });
       });

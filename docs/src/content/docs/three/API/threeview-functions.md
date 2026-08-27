@@ -744,8 +744,8 @@ sampleTerrainHeight(pos: LatLng): number | undefined
 **Parameters:**
 
 - `pos`: Geodetic position
-  - `lat`: Latitude (radians)
-  - `lng`: Longitude (radians)
+  - `lat`: Latitude (degrees)
+  - `lng`: Longitude (degrees)
 
 **Returns:**
 
@@ -754,9 +754,9 @@ Terrain height (meters), or `undefined` if terrain data is not available
 **Example:**
 
 ```tsx
-// Specify latitude and longitude in radians
-const lat = degreeToRadian(35.6812);
-const lng = degreeToRadian(139.7671);
+// Specify latitude and longitude in degrees
+const lat = 35.6812;
+const lng = 139.7671;
 
 const height = view.sampleTerrainHeight({ lat, lng });
 
@@ -787,8 +787,8 @@ sampleTerrainMostDetailed(
 
 - `source`: A registered `quantized-mesh` / `raster-dem` source: either the `Source` handle returned by `addSource`, or its id
 - `positions`: Geodetic positions to sample
-  - `lat`: Latitude (radians)
-  - `lng`: Longitude (radians)
+  - `lat`: Latitude (degrees)
+  - `lng`: Longitude (degrees)
 - `options.level`: Sample at this fixed zoom level instead of probing down from the source's `maxZoom`. With a fixed level there is no fallback to parent tiles.
 - `options.signal`: `AbortSignal` to cancel in-flight tile fetches.
 
@@ -806,8 +806,8 @@ const terrain = view.addSource({
 });
 view.addLayer({ type: "terrain", source: terrain });
 
-const lat = degreeToRadian(35.6812);
-const lng = degreeToRadian(139.7671);
+const lat = 35.6812;
+const lng = 139.7671;
 
 const [ground] = await view.sampleTerrainMostDetailed(terrain, [{ lat, lng }]);
 if (ground.height !== undefined) {
@@ -833,8 +833,8 @@ observeTerrainHeightAt(pos: LatLng, cb: (height: number) => void): () => void
 **Parameters:**
 
 - `pos`: Position to monitor
-  - `lat`: Latitude (radians)
-  - `lng`: Longitude (radians)
+  - `lat`: Latitude (degrees)
+  - `lng`: Longitude (degrees)
 - `cb`: Callback invoked when the height is updated
 
 **Returns:**
@@ -844,9 +844,9 @@ A cleanup function to stop monitoring
 **Example:**
 
 ```tsx
-// Specify latitude and longitude in radians
-const lat = degreeToRadian(35.6812);
-const lng = degreeToRadian(139.7671);
+// Specify latitude and longitude in degrees
+const lat = 35.6812;
+const lng = 139.7671;
 
 const cleanup = view.observeTerrainHeightAt({ lat, lng }, (height) => {
   console.log(`Terrain height updated: ${height}m`);

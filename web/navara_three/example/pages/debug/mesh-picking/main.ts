@@ -1,6 +1,5 @@
 import ThreeView, {
   Color,
-  degreeToRadian,
   geodeticToVector3,
   northUpEastToFixedFrame,
 } from "@navaramap/three";
@@ -53,8 +52,8 @@ const run = async () => {
 
   // Shared origin frame — all meshes are offset from here in NUE coordinates
   const origin = geodeticToVector3({
-    lat: degreeToRadian(35.681236),
-    lng: degreeToRadian(139.767125),
+    lat: 35.681236,
+    lng: 139.767125,
     height: 0,
   });
   const nueFrame = northUpEastToFixedFrame(origin);
@@ -210,8 +209,8 @@ const run = async () => {
   // GLTFModelLayer uses RTE rendering and ignores matrixWorld; use position + scale
   const gltfColor = 0x88aaff;
   const gltfPos = geodeticToVector3({
-    lat: degreeToRadian(35.673136),
-    lng: degreeToRadian(139.76945),
+    lat: 35.673136,
+    lng: 139.76945,
     height: 100,
   });
   const gltfLayer = view.addMesh<GLTFModelDesc>({

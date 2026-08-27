@@ -9,6 +9,7 @@ import { PersonViewPlugin, type CollisionConfig } from "./PersonViewPlugin";
 // relies on (ENU columns are east / north / up, heading 0 = north) which is
 // what these tests exercise, without pulling in the ellipsoid math.
 const R = 6378137;
+const DEG = Math.PI / 180;
 
 /* eslint-disable @typescript-eslint/no-extraneous-class */
 vi.mock("@navaramap/three", () => ({
@@ -17,6 +18,7 @@ vi.mock("@navaramap/three", () => ({
   MeshHandle: class MeshHandle {},
   degreeToRadian: (deg: number) => (deg * Math.PI) / 180,
   radianToDegree: (rad: number) => (rad * 180) / Math.PI,
+  // Lat/lng cross this boundary in degrees, like the real helpers.
   geodeticToVector3: ({
     lat,
     lng,
@@ -27,15 +29,15 @@ vi.mock("@navaramap/three", () => ({
     height: number;
   }) =>
     new Vector3(
-      (R + height) * Math.cos(lat) * Math.cos(lng),
-      (R + height) * Math.cos(lat) * Math.sin(lng),
-      (R + height) * Math.sin(lat),
+      (R + height) * Math.cos(lat * DEG) * Math.cos(lng * DEG),
+      (R + height) * Math.cos(lat * DEG) * Math.sin(lng * DEG),
+      (R + height) * Math.sin(lat * DEG),
     ),
   vector3ToGeodetic: (v: Vector3) => {
     const radius = v.length();
     return {
-      lat: Math.asin(v.z / radius),
-      lng: Math.atan2(v.y, v.x),
+      lat: Math.asin(v.z / radius) / DEG,
+      lng: Math.atan2(v.y, v.x) / DEG,
       height: radius - R,
     };
   },
@@ -60,18 +62,20 @@ vi.mock("@navaramap/three", () => ({
 /* eslint-enable @typescript-eslint/no-extraneous-class */
 
 const START = { lat: 36.25, lng: 137.64 };
-const START_LAT_RAD = (START.lat * Math.PI) / 180;
 
 /** Terrain rising toward the north at the given grade. */
 const northSlope =
   (grade: number): TerrainFn =>
   (lat) =>
-    (lat - START_LAT_RAD) * R * grade;
+    (lat - START.lat) * DEG * R * grade;
 
-/** Terrain height in meters, from a position in radians. */
+/** Terrain height in meters, from a position in degrees. */
 type TerrainFn = (lat: number, lng: number) => number | undefined;
 
-const makeFakeView = (terrain: TerrainFn) => {
+const makeFakeView = (
+  terrain: TerrainFn,
+  mostDetailed: TerrainFn = terrain,
+) => {
   const loadListeners: (() => void)[] = [];
   const placements: {
     targetHeight: number;
@@ -102,6 +106,16 @@ const makeFakeView = (terrain: TerrainFn) => {
     }),
     sampleTerrainHeight: vi.fn(({ lat, lng }: { lat: number; lng: number }) =>
       terrain(lat, lng),
+    ),
+    sampleTerrainMostDetailed: vi.fn(
+      (_source: unknown, positions: { lat: number; lng: number }[]) =>
+        Promise.resolve(
+          positions.map(({ lat, lng }) => ({
+            lat,
+            lng,
+            height: mostDetailed(lat, lng),
+          })),
+        ),
     ),
     // The plugin passes a reused scratch Vector3 as the offset, so snapshot
     // each placement instead of holding on to the object.
@@ -214,6 +228,96 @@ describe("PersonViewPlugin terrain collision", () => {
       plugin.teleport({ ...START, alt: 800 });
 
       expect(plugin.getState().alt).toBe(800);
+    });
+  });
+
+  describe("resolveStartHeight", () => {
+    it("pins the start height to the most detailed terrain sample", async () => {
+      const view = makeFakeView(() => 1500);
+      const plugin = new PersonViewPlugin({
+        startLat: START.lat,
+        startLng: START.lng,
+        startHeight: 800,
+      });
+      await initPlugin(plugin, view);
+
+      await expect(plugin.resolveStartHeight("terrain")).resolves.toBe(1500);
+
+      // The sampler takes degrees, matching `ThreeView.sampleTerrainMostDetailed`.
+      const [, positions] = view.sampleTerrainMostDetailed.mock.calls[0];
+      expect(positions[0].lat).toBeCloseTo(START.lat);
+      expect(positions[0].lng).toBeCloseTo(START.lng);
+      expect(plugin.getState().alt).toBe(1500);
+    });
+
+    it("includes the collision's groundOffset like the collision itself", async () => {
+      const view = makeFakeView(() => 1500);
+      const plugin = new PersonViewPlugin({
+        collision: { mode: "ground", groundOffset: 2 },
+      });
+      await initPlugin(plugin, view);
+
+      await expect(plugin.resolveStartHeight("terrain")).resolves.toBe(1502);
+      expect(plugin.getState().alt).toBe(1502);
+    });
+
+    it("keeps the configured height when the source has no data there", async () => {
+      const view = makeFakeView(() => undefined);
+      const plugin = new PersonViewPlugin({ startHeight: 800 });
+      await initPlugin(plugin, view);
+
+      await expect(plugin.resolveStartHeight("terrain")).resolves.toBe(
+        undefined,
+      );
+      expect(plugin.getState().alt).toBe(800);
+    });
+
+    it("holds the resolved height against coarser tiles until movement", async () => {
+      // Render-resident tiles report 1000m while the most detailed data
+      // says 1500m — the situation right after load.
+      const view = makeFakeView(
+        () => 1000,
+        () => 1500,
+      );
+      const plugin = new PersonViewPlugin({
+        collision: { mode: "ground" },
+        startLat: START.lat,
+        startLng: START.lng,
+      });
+      await initPlugin(plugin, view);
+      await plugin.resolveStartHeight("terrain");
+
+      plugin.start();
+      let time = performance.now();
+      for (let i = 0; i < 100; i++) advance((time += 100));
+      expect(plugin.getState().alt).toBeCloseTo(1500, 6);
+
+      // The first movement input hands the altitude over to the collision,
+      // which settles onto the render-resident surface.
+      document.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyW" }));
+      for (let i = 0; i < 200; i++) advance((time += 100));
+      expect(plugin.getState().alt).toBeCloseTo(1000, 6);
+    });
+
+    it("releases the pinned height on teleport", async () => {
+      const view = makeFakeView(
+        () => 1000,
+        () => 1500,
+      );
+      const plugin = new PersonViewPlugin({
+        collision: { mode: "ground" },
+        startLat: START.lat,
+        startLng: START.lng,
+      });
+      await initPlugin(plugin, view);
+      await plugin.resolveStartHeight("terrain");
+
+      plugin.start();
+      plugin.teleport({ ...START, alt: 800 });
+      let time = performance.now();
+      for (let i = 0; i < 5; i++) advance((time += 100));
+
+      expect(plugin.getState().alt).toBeCloseTo(1000, 6);
     });
   });
 
@@ -387,6 +491,27 @@ describe("PersonViewPlugin terrain collision", () => {
       for (let i = 0; i < 200; i++) advance((time += 16));
     };
 
+    it("keeps the tilt alive while the start height is pinned", async () => {
+      const grade = 0.5;
+      const view = makeFakeView(northSlope(grade));
+      const plugin = new PersonViewPlugin({
+        character,
+        collision: { mode: "ground", alignToSlope: true },
+        startLat: START.lat,
+        startLng: START.lng,
+        startHeading: 0,
+      });
+      await initPlugin(plugin, view);
+      // Pinning must not read as airborne: the slope tilt still applies.
+      await plugin.resolveStartHeight("terrain");
+      plugin.start();
+      view.finishModelLoad();
+
+      settleTilt();
+
+      expect(tilt(view).forward).toBeCloseTo(Math.sin(Math.atan(grade)), 3);
+    });
+
     it("pitches the character nose-up when it faces uphill", async () => {
       const grade = 0.5;
       const { view } = await walkOn(northSlope(grade), {}, 0);
@@ -402,7 +527,7 @@ describe("PersonViewPlugin terrain collision", () => {
     it("rolls the character onto a slope that falls away sideways", async () => {
       const grade = 0.5;
       // Facing east, so the slope rises to the left.
-      const { view } = await walkOn(northSlope(grade), {}, Math.PI / 2);
+      const { view } = await walkOn(northSlope(grade), {}, 90);
 
       settleTilt();
 
@@ -444,7 +569,7 @@ describe("PersonViewPlugin terrain collision", () => {
       expect(tilt(view).forward).toBeCloseTo(Math.sin(Math.atan(grade)), 3);
 
       // Face east without advancing a frame: uphill is now to the left.
-      plugin.setHeading(Math.PI / 2);
+      plugin.setHeading(90);
 
       expect(tilt(view).forward).toBeCloseTo(0, 3);
       expect(tilt(view).right).toBeCloseTo(-Math.sin(Math.atan(grade)), 3);
@@ -453,7 +578,7 @@ describe("PersonViewPlugin terrain collision", () => {
     it("caps the tilt on near-vertical ground", async () => {
       // A 5:1 face is 79°, well past what the character should lie down to.
       const { view } = await walkOn(northSlope(5), {
-        maxSlopeTilt: Math.PI / 3,
+        maxSlopeTilt: 60,
       });
 
       settleTilt();
@@ -576,7 +701,9 @@ describe("PersonViewPlugin terrain collision", () => {
   });
 
   describe("camera slope pitch", () => {
-    const CAMERA_PITCH = 0.1;
+    // Config takes degrees; the geometric assertions below work in radians.
+    const CAMERA_PITCH_DEG = 6;
+    const CAMERA_PITCH = CAMERA_PITCH_DEG * DEG;
     const CAMERA_DISTANCE = 20;
 
     /** Where the chase camera ended up, as a pitch in radians. */
@@ -602,8 +729,8 @@ describe("PersonViewPlugin terrain collision", () => {
         startHeading: heading,
         initialView,
         cameraDistance: CAMERA_DISTANCE,
-        cameraPitch: CAMERA_PITCH,
-        fpvPitch: CAMERA_PITCH,
+        cameraPitch: CAMERA_PITCH_DEG,
+        fpvPitch: CAMERA_PITCH_DEG,
         cameraLerpSpeed: 10,
       });
       await initPlugin(plugin, view);
@@ -625,7 +752,7 @@ describe("PersonViewPlugin terrain collision", () => {
 
     it("rises above the slope on a descent", async () => {
       const grade = 0.7;
-      const { view } = await standOn(grade, Math.PI); // facing south, downhill
+      const { view } = await standOn(grade, 180); // facing south, downhill
 
       expect(cameraPitch(view)).toBeCloseTo(CAMERA_PITCH + Math.atan(grade), 2);
     });
@@ -674,7 +801,7 @@ describe("PersonViewPlugin terrain collision", () => {
         startHeight: CAMERA_DISTANCE * 2,
         startHeading: 0,
         cameraDistance: CAMERA_DISTANCE,
-        cameraPitch: CAMERA_PITCH,
+        cameraPitch: CAMERA_PITCH_DEG,
         cameraLerpSpeed: 10,
       });
       await initPlugin(plugin, view);

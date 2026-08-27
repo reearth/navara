@@ -667,8 +667,8 @@ sampleTerrainHeight(pos: LatLng): number | undefined
 **Parameters:**
 
 - `pos`: 測地位置
-  - `lat`: 緯度（ラジアン）
-  - `lng`: 経度（ラジアン）
+  - `lat`: 緯度（度）
+  - `lng`: 経度（度）
 
 **Returns:**
 
@@ -677,9 +677,9 @@ sampleTerrainHeight(pos: LatLng): number | undefined
 **Example:**
 
 ```tsx
-// 緯度・経度をラジアンで指定
-const lat = degreeToRadian(35.6812);
-const lng = degreeToRadian(139.7671);
+// 緯度・経度を度で指定
+const lat = 35.6812;
+const lng = 139.7671;
 
 const height = view.sampleTerrainHeight({ lat, lng });
 
@@ -710,8 +710,8 @@ sampleTerrainMostDetailed(
 
 - `source`: 登録済みの `quantized-mesh` / `raster-dem` ソース。`addSource` が返す `Source` ハンドル、またはその id
 - `positions`: サンプリングする測地位置の配列
-  - `lat`: 緯度（ラジアン）
-  - `lng`: 経度（ラジアン）
+  - `lat`: 緯度（度）
+  - `lng`: 経度（度）
 - `options.level`: ソースの `maxZoom` から探索する代わりに、この固定ズームレベルでサンプリングします。固定レベルでは親タイルへのフォールバックは行われません。
 - `options.signal`: 取得中のタイルフェッチをキャンセルする `AbortSignal`。
 
@@ -729,8 +729,8 @@ const terrain = view.addSource({
 });
 view.addLayer({ type: "terrain", source: terrain });
 
-const lat = degreeToRadian(35.6812);
-const lng = degreeToRadian(139.7671);
+const lat = 35.6812;
+const lng = 139.7671;
 
 const [ground] = await view.sampleTerrainMostDetailed(terrain, [{ lat, lng }]);
 if (ground.height !== undefined) {
@@ -756,8 +756,8 @@ observeTerrainHeightAt(pos: LatLng, cb: (height: number) => void): () => void
 **Parameters:**
 
 - `pos`: 監視する位置
-  - `lat`: 緯度（ラジアン）
-  - `lng`: 経度（ラジアン）
+  - `lat`: 緯度（度）
+  - `lng`: 経度（度）
 - `cb`: 高さが更新されたときに呼び出されるコールバック
 
 **Returns:**
@@ -767,9 +767,9 @@ observeTerrainHeightAt(pos: LatLng, cb: (height: number) => void): () => void
 **Example:**
 
 ```tsx
-// 緯度・経度をラジアンで指定
-const lat = degreeToRadian(35.6812);
-const lng = degreeToRadian(139.7671);
+// 緯度・経度を度で指定
+const lat = 35.6812;
+const lng = 139.7671;
 
 const cleanup = view.observeTerrainHeightAt({ lat, lng }, (height) => {
   console.log(`地形の高さが更新されました: ${height}m`);

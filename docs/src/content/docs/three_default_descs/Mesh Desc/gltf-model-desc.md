@@ -423,14 +423,15 @@ const view = new ThreeView();
 view.registerMesh("gltfModel", GLTFModelDesc);
 await view.init();
 
-// Add a GLTFModelDesc
+// Add a GLTFModelDesc, upright at a longitude / latitude. `heading` is the
+// compass bearing (degrees) the model's front faces.
 const modelDesc = view.addMesh<GLTFModelDesc>({
   gltfModel: {
     url: "https://example.com/models/character.glb",
     castShadow: true,
     receiveShadow: true,
   },
-  position: { x: 0, y: 0, z: 0 },
+  geodetic: { lng: 139.767125, lat: 35.681236, heading: 90 },
 });
 ```
 

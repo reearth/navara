@@ -104,7 +104,7 @@ const personView = new PersonViewPlugin({
 personView.setCollision({ mode: "off" });
 ```
 
-ほとんどの場面で指定が必要なのは `mode` だけです。残りのデフォルトは実際の地形を歩く用途に合わせてあり、後述のタイル読み込みによる揺れはプラグイン側で吸収します。`startHeight` には `startLat` / `startLng` 地点の地形に近い値を与えてください。そこから地表へ降りていきます。
+ほとんどの場面で指定が必要なのは `mode` だけです。残りのデフォルトは実際の地形を歩く用途に合わせてあり、後述のタイル読み込みによる揺れはプラグイン側で吸収します。`startHeight` には `startLat` / `startLng` 地点の地形に近い値を与えてください。確実に固定したい場合は、`start()` の前に [`resolveStartHeight()`](#resolvestartheightsource) を呼びます。
 
 モードは 3 種類あります。
 
@@ -149,15 +149,15 @@ new PersonViewPlugin(config?: PersonViewConfig)
 | `minAlt`              | `number`          | `50`            | 最低高度（メートル）。                                                                                                   |
 | `maxAlt`              | `number`          | `5000`          | 最高高度（メートル）。                                                                                                   |
 | `cameraDistance`      | `number`          | `50`            | 追従カメラ（TPV）の距離（メートル）。                                                                                    |
-| `cameraPitch`         | `number`          | `0`             | TPV カメラの下向きピッチ（ラジアン。モデルの上方へ回り込む）。                                                           |
+| `cameraPitch`         | `number`          | `0`             | TPV カメラの下向きピッチ（度。モデルの上方へ回り込む）。                                                           |
 | `cameraLerpSpeed`     | `number`          | `3`             | カメラ方位の補間速度。                                                                                                   |
 | `fpvForwardOffset`    | `number`          | `0`             | FPV 目線位置の前方オフセット（メートル）。                                                                               |
 | `fpvHeightOffset`     | `number`          | `1`             | アイレベルの高さオフセット（メートル）。FPV では目線の高さ、TPV ではカメラが回り込む共有アイレベル高さとして使われます。 |
-| `fpvPitch`            | `number`          | `0`             | FPV カメラの下向きピッチ（ラジアン。その場で視線を下に傾ける）。                                                         |
+| `fpvPitch`            | `number`          | `0`             | FPV カメラの下向きピッチ（度。その場で視線を下に傾ける）。                                                         |
 | `startLat`            | `number`          | `35.6812`       | 開始緯度（度）。                                                                                                         |
 | `startLng`            | `number`          | `139.7671`      | 開始経度（度）。                                                                                                         |
 | `startHeight`         | `number`          | `500`           | 開始高度（メートル）。                                                                                                   |
-| `startHeading`        | `number`          | `Math.PI * 1.3` | 開始方位（ラジアン、0 = 北）。                                                                                           |
+| `startHeading`        | `number`          | `234`           | 開始方位（度、0 = 北）。                                                                                           |
 | `keys`                | `KeyBindings`     | _デフォルト_    | キー割り当て。[KeyBindings](#keybindings) を参照。                                                                      |
 
 ### CharacterConfig
@@ -182,7 +182,7 @@ new PersonViewPlugin(config?: PersonViewConfig)
 | `groundOffset`        | `number`                       | `0`        | サンプリングした地表からの高さ（m）。`"ground"` では足元の位置、`"clamp"` では沈み込めない床の高さ。      |
 | `alignToSlope`        | `boolean`                      | `true`     | 立っている斜面に合わせてキャラクターを傾ける。1 フレームあたり数回の地形サンプリングが追加で必要。       |
 | `slopeSampleDistance` | `number`                       | `4`        | 斜面を平均する範囲（m）。地形メッシュの三角形間隔に合わせた値。                                          |
-| `maxSlopeTilt`        | `number`                       | `π / 4`    | `alignToSlope` が適用する傾きの上限（ラジアン）。ほぼ垂直な地形で壁に寝そべった姿勢になるのを防ぐ。       |
+| `maxSlopeTilt`        | `number`                       | `45`       | `alignToSlope` が適用する傾きの上限（度）。ほぼ垂直な地形で壁に寝そべった姿勢になるのを防ぐ。       |
 | `cameraSlopeFollow`   | `number`                       | `1`        | 地形の勾配にカメラのピッチをどれだけ追従させるか。`0`（固定）〜`1`（斜面と平行）。TPV / FPV 共通。       |
 
 ### AnimationConfig
@@ -224,6 +224,24 @@ new PersonViewPlugin(config?: PersonViewConfig)
 
 ## メソッド
 
+### resolveStartHeight(source)
+
+```typescript
+resolveStartHeight(source: string | Source): Promise<number | undefined>
+```
+
+開始位置の地表高をソースの最詳細データから `ThreeView.sampleTerrainMostDetailed` でサンプリングし、`startHeight` をその高さに固定します。これにより [`start()`](#start) は、動的に解決した `startHeight` でキャラクターを地面に配置できます。`start()` の前に呼び出してください。
+
+```typescript
+// terrain は登録済みの quantized-mesh または raster-dem ソース
+await personView.resolveStartHeight(terrain);
+personView.start();
+```
+
+解決した高さは**最初の移動入力まで保持されます**（[`teleport()`](#teleportoptions) でも解除されます）。読み込み直後のタイルは粗く、そのまま追従するとキャラクターが数十メートル引きずられてしまうためです。最初の移動キーで、高度は通常の[地形追従](#歩いている最中に読み込まれる地形)へ引き継がれます。
+
+返り値は使用された高さで、collision option の `groundOffset` を含みます。開始位置にソースのデータがない場合は `undefined` になり、設定済みの `startHeight` が維持されます。
+
 ### start()
 
 ```typescript
@@ -243,7 +261,7 @@ stop(): void
 ```typescript
 overviewButton.addEventListener("click", () => {
   personView.stop();
-  view.setCamera({ lng, lat, height: 20000, distance: 0, heading: 0, pitch: -Math.PI / 2, roll: 0 });
+  view.setCamera({ lng, lat, height: 20000, distance: 0, heading: 0, pitch: -90, roll: 0 });
 });
 resumeButton.addEventListener("click", () => personView.start());
 ```
@@ -261,34 +279,34 @@ teleport(options: {
 }): void
 ```
 
-新しい地理的位置に瞬時に移動させます。`heading` を省略した場合、現在のカメラ方位が維持されます。[地形コリジョン](#地形コリジョン) が有効な場合、移動先の地形にその場で着地します（追従の上限がテレポートを遅らせることはありません）。移動せずにその場で向きだけを変える場合は [`setHeading()`](#setheadingradians--getheading) を、カメラのピッチを変える場合は [`setCameraPitch()` / `setFpvPitch()`](#setcamerapitchradians--setfpvpitchradians) を使用してください。
+新しい地理的位置に瞬時に移動させます。`heading` を省略した場合、現在のカメラ方位が維持されます。[地形コリジョン](#地形コリジョン) が有効な場合、移動先の地形にその場で着地します（追従の上限がテレポートを遅らせることはありません）。移動せずにその場で向きだけを変える場合は [`setHeading()`](#setheadingdegrees--getheading) を、カメラのピッチを変える場合は [`setCameraPitch()` / `setFpvPitch()`](#setcamerapitchdegrees--setfpvpitchdegrees) を使用してください。
 
 | フィールド | 型                    | 説明                                               |
 | ---------- | --------------------- | -------------------------------------------------- |
 | `lng`      | `number`              | 経度（度）。                                       |
 | `lat`      | `number`              | 緯度（度）。                                       |
 | `alt`      | `number`              | 高度（メートル）。                                 |
-| `heading`  | `number \| undefined` | 方位（ラジアン、0 = 北、時計回りに増加、省略可）。 |
+| `heading`  | `number \| undefined` | 方位（度、0 = 北、時計回りに増加、省略可）。 |
 
-### setHeading(radians) / getHeading()
+### setHeading(degrees) / getHeading()
 
 ```typescript
-setHeading(radians: number): void
+setHeading(degrees: number): void
 getHeading(): number
 ```
 
-キャラクターを指定した方位（ラジアン、0 = 北、時計回りに増加）に**位置を変えずに**回転させます。チェイスカメラは追従してスナップし、フリーカメラモードではモデルのみが回転します。`getHeading()` は現在の方位を返します。
+キャラクターを指定した方位（度、0 = 北、時計回りに増加）に**位置を変えずに**回転させます。チェイスカメラは追従してスナップし、フリーカメラモードではモデルのみが回転します。`getHeading()` は現在の方位を返します。
 
-### setCameraPitch(radians) / setFpvPitch(radians)
+### setCameraPitch(degrees) / setFpvPitch(degrees)
 
 ```typescript
-setCameraPitch(radians: number): void
+setCameraPitch(degrees: number): void
 getCameraPitch(): number
-setFpvPitch(radians: number): void
+setFpvPitch(degrees: number): void
 getFpvPitch(): number
 ```
 
-カメラの下向きピッチ（ラジアン）を設定し、チェイス／固定カメラに即座に反映します。`setCameraPitch` は **TPV** のピッチ（カメラをモデルの上方へ回り込ませる）を、`setFpvPitch` は **FPV** のピッチ（その場で視線を下に傾ける）を制御します。対応するゲッターは現在の値を返します。
+カメラの下向きピッチ（度）を設定し、チェイス／固定カメラに即座に反映します。`setCameraPitch` は **TPV** のピッチ（カメラをモデルの上方へ回り込ませる）を、`setFpvPitch` は **FPV** のピッチ（その場で視線を下に傾ける）を制御します。対応するゲッターは現在の値を返します。
 
 ### setFpvHeightOffset(meters) / getFpvHeightOffset()
 
@@ -401,7 +419,7 @@ dispose(): void
 | `lng`            | `number`         | 現在の経度（度）。                                                                        |
 | `lat`            | `number`         | 現在の緯度（度）。                                                                        |
 | `alt`            | `number`         | 現在の高度（メートル）。                                                                  |
-| `heading`        | `number`         | 現在の方位（ラジアン、0 = 北、時計回りに増加）。                                          |
+| `heading`        | `number`         | 現在の方位（度、0 = 北、時計回りに増加）。                                                |
 | `speed`          | `number`         | 設定された移動速度（m/s。`moveSpeed`。ダッシュ中は `dashSpeedMultiplier` 倍・既定 2.5）。 |
 | `animationState` | `string \| null` | 現在再生中のクリップ名。キャラクター未設定の場合は `null`。                               |
 | `mode`           | `"tpv" \| "fpv"` | 現在の視点モード。                                                                        |

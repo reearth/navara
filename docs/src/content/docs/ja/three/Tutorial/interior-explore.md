@@ -47,7 +47,7 @@ view.addPlugin(plugin);
 const startLat = 35.6341630282;
 const startLng = 139.7420527162;
 const startHeight = 59.05;
-const startHeading = Math.PI * 1.6;
+const startHeading = 288;
 
 const personView = new PersonViewPlugin({
   character: {
@@ -68,7 +68,7 @@ const personView = new PersonViewPlugin({
   altSpeed: 5,
   rotationSpeed: 2,
   cameraDistance: 8,
-  cameraPitch: 0.06,
+  cameraPitch: 3.4,
   cameraLerpSpeed: 4,
   minAlt: -1000,
   maxAlt: 5000,
@@ -227,7 +227,7 @@ const view = new ThreeView<DefaultDescriptions>({
 const startLat = 35.6341630282;
 const startLng = 139.7420527162;
 const startHeight = 59.05;
-const startHeading = Math.PI * 1.6;
+const startHeading = 288;
 
 const personView = new PersonViewPlugin({
   character: {
@@ -248,7 +248,7 @@ const personView = new PersonViewPlugin({
   altSpeed: 5,
   rotationSpeed: 2,
   cameraDistance: 8,
-  cameraPitch: 0.06,
+  cameraPitch: 3.4,
   cameraLerpSpeed: 4,
   minAlt: -1000,
   maxAlt: 5000,

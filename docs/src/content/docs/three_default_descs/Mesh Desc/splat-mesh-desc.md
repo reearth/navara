@@ -102,7 +102,7 @@ splat.ref.on("error", (error) => {
 ### Basic Usage
 
 ```typescript
-import ThreeView, { geodeticToVector3, degreeToRadian } from "@navaramap/three";
+import ThreeView from "@navaramap/three";
 import type { SplatMeshDesc } from "@navaramap/three-default-descs";
 import {
   DefaultPlugin,
@@ -113,29 +113,22 @@ const view = new ThreeView<DefaultDescriptions>();
 view.addPlugin(new DefaultPlugin()); // registers "splat" → SplatMeshDesc
 await view.init();
 
-const pos = geodeticToVector3({
-  lat: degreeToRadian(35.7100),
-  lng: degreeToRadian(139.8107),
-  height: 10,
-});
-
 const splat = view.addMesh<SplatMeshDesc>({
   splat: {
     url: "/splat/your-asset.ply",
   },
-  position: { x: pos.x, y: pos.y, z: pos.z },
-  scale: { x: 30, y: 30, z: 30 },
+  geodetic: { lng: 139.8107, lat: 35.71, height: 10, scale: 30 },
 });
 ```
 
 ### Upside-down correction
 
-If a splat appears upside-down in the scene, apply a 180° rotation around the X axis to correct:
+Some captures are stored Y-down and appear upside-down in the scene. A 180° `pitch` in the `geodetic` placement flips them upright:
 
 ```typescript
 view.addMesh<SplatMeshDesc>({
   splat: { url: "..." },
-  rotation: { x: Math.PI, y: 0, z: 0 },
+  geodetic: { lng: 139.8107, lat: 35.71, pitch: 180 },
 });
 ```
 

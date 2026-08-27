@@ -1,6 +1,5 @@
 import ThreeView, {
   TERRARIUM_ELEVATION_DECODER,
-  degreeToRadian,
   geodeticToVector3,
   type AttributionPlugin,
 } from "@navaramap/three";
@@ -398,8 +397,8 @@ export const run = async () => {
     }
     if (scene.rain || scene.snow) {
       const meshPosition = geodeticToVector3({
-        lat: degreeToRadian(scene.camera.lat),
-        lng: degreeToRadian(scene.camera.lng),
+        lat: scene.camera.lat,
+        lng: scene.camera.lng,
         height: 10,
       });
       if (scene.rain) {

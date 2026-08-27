@@ -1,9 +1,4 @@
-import ThreeView, {
-  Color,
-  degreeToRadian,
-  geodeticToVector3,
-  northUpEastToFixedFrame,
-} from "@navaramap/three";
+import ThreeView, { Color } from "@navaramap/three";
 import type {
   BoxMeshDesc,
   CylinderMeshDesc,
@@ -49,37 +44,25 @@ const basemap = await tilejson.addSource({
 });
 view.addLayer({ type: "raster", source: basemap });
 
-// Mesh transforms are ECEF by default; a tangent frame at the target
-// coordinate turns position/rotation/scale into local offsets (x north,
-// y up, z east). One frame shared across several meshes is why this page
-// uses `matrixWorld` — for a single mesh, `geodetic` is simpler.
-const frame = northUpEastToFixedFrame(
-  geodeticToVector3({
-    lng: degreeToRadian(STAGE.lng),
-    lat: degreeToRadian(STAGE.lat),
-    height: 0,
-  }),
-);
-
 const SPACING = 240;
-const rowZ = (index: number) => (index - 1.5) * SPACING;
+const rowX = (index: number) => (1.5 - index) * SPACING;
 
 const addMeshes = (color: string) => {
   const accent = () => new Color().setStyle(color);
   const box = view.addMesh<BoxMeshDesc>({
     box: { width: 100, height: 150, depth: 100, color: accent() },
-    matrixWorld: frame,
-    position: { x: 0, y: 75, z: rowZ(0) },
+    geodetic: STAGE,
+    position: { x: rowX(0), y: 75, z: 0 },
   });
   const sphere = view.addMesh<SphereMeshDesc>({
     sphere: { radius: 65, color: accent() },
-    matrixWorld: frame,
-    position: { x: 0, y: 65, z: rowZ(1) },
+    geodetic: STAGE,
+    position: { x: rowX(1), y: 65, z: 0 },
   });
   const cylinder = view.addMesh<CylinderMeshDesc>({
     cylinder: { radiusTop: 50, radiusBottom: 50, height: 150, color: accent() },
-    matrixWorld: frame,
-    position: { x: 0, y: 75, z: rowZ(2) },
+    geodetic: STAGE,
+    position: { x: rowX(2), y: 75, z: 0 },
   });
   const tube = view.addMesh<TubeMeshDesc>({
     tube: {
@@ -94,8 +77,8 @@ const addMeshes = (color: string) => {
       radialSegments: 12,
       color: accent(),
     },
-    matrixWorld: frame,
-    position: { x: 0, y: 75, z: rowZ(3) },
+    geodetic: STAGE,
+    position: { x: rowX(3), y: 75, z: 0 },
   });
   return { box, sphere, cylinder, tube };
 };

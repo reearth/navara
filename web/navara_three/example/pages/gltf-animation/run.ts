@@ -2,7 +2,6 @@
 
 import ThreeView, {
   geodeticToVector3,
-  degreeToRadian,
   geodeticSurfaceNormal,
 } from "@navaramap/three";
 import {
@@ -115,15 +114,15 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
 
     // Calculate new position
     const pos = geodeticToVector3({
-      lat: degreeToRadian(latitude),
-      lng: degreeToRadian(longitude),
+      lat: latitude,
+      lng: longitude,
       height: altitude,
     });
 
     // Calculate surface normal at new position
     const normal = geodeticSurfaceNormal({
-      lat: degreeToRadian(latitude),
-      lng: degreeToRadian(longitude),
+      lat: latitude,
+      lng: longitude,
       height: altitude,
     });
 
@@ -136,8 +135,8 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       const nextLongitude =
         longitude + runningModelParams.movementSpeed * speedMultiplier;
       const nextPos = geodeticToVector3({
-        lat: degreeToRadian(latitude),
-        lng: degreeToRadian(nextLongitude),
+        lat: latitude,
+        lng: nextLongitude,
         height: altitude,
       });
       direction = new Vector3().subVectors(nextPos, pos).normalize();

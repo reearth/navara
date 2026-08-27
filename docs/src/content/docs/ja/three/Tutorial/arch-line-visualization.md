@@ -169,7 +169,7 @@ const data: AirportTrafficData = await response.json();
 `ColorMap` クラスを使うと、数値データを色にマッピングできます。ここでは便数に基づいて色を割り当てます。
 
 ```typescript
-import { Color, ColorMap, geodeticToVector3, degreeToRadian } from "@navaramap/three";
+import { Color, ColorMap, geodeticToVector3 } from "@navaramap/three";
 
 // ref: https://matplotlib.org/stable/users/explain/colors/colormaps.html
 const PLASMA_COLORMAP = new ColorMap("sequential", "Plasma", [
@@ -192,13 +192,13 @@ const arcLines = data.features.map((feature) => {
 
   // 2点間の距離を計算（アニメーション速度の調整に使用）
   const srcVec = geodeticToVector3({
-    lat: degreeToRadian(source.lat),
-    lng: degreeToRadian(source.lng),
+    lat: source.lat,
+    lng: source.lng,
     height: 0,
   });
   const destVec = geodeticToVector3({
-    lat: degreeToRadian(destination.lat),
-    lng: degreeToRadian(destination.lng),
+    lat: destination.lat,
+    lng: destination.lng,
     height: 0,
   });
   const distance = srcVec.distanceTo(destVec);
@@ -285,7 +285,6 @@ import ThreeView, {
   Color,
   ColorMap,
   geodeticToVector3,
-  degreeToRadian,
 } from "@navaramap/three";
 import {
   ToneMappingMode,
@@ -335,13 +334,13 @@ const constructData = async () => {
     const destination = { lng: coords[1][0], lat: coords[1][1] };
 
     const srcVec = geodeticToVector3({
-      lat: degreeToRadian(source.lat),
-      lng: degreeToRadian(source.lng),
+      lat: source.lat,
+      lng: source.lng,
       height: 0,
     });
     const destVec = geodeticToVector3({
-      lat: degreeToRadian(destination.lat),
-      lng: degreeToRadian(destination.lng),
+      lat: destination.lat,
+      lng: destination.lng,
       height: 0,
     });
     const distance = srcVec.distanceTo(destVec);

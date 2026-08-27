@@ -274,15 +274,15 @@ describe("MeshDesc geodetic placement", () => {
 });
 
 describe("MeshDesc terrain-referenced placement", () => {
-  type LatLngRad = { lat: number; lng: number };
+  type LatLngDeg = { lat: number; lng: number };
 
   const terrainView = (height: number | undefined) => {
     const listeners: ((h: number) => void)[] = [];
     const unsubscribe = vi.fn();
     const spy = {
-      sampleTerrainHeight: vi.fn((_pos: LatLngRad) => height),
+      sampleTerrainHeight: vi.fn((_pos: LatLngDeg) => height),
       observeTerrainHeightAt: vi.fn(
-        (_pos: LatLngRad, cb: (h: number) => void) => {
+        (_pos: LatLngDeg, cb: (h: number) => void) => {
           listeners.push(cb);
           return unsubscribe;
         },
@@ -297,8 +297,6 @@ describe("MeshDesc terrain-referenced placement", () => {
     return desc;
   };
 
-  const rad = (deg: number) => (deg * Math.PI) / 180;
-
   it("seeds from the resident-tile sample and subscribes", () => {
     const { view, spy } = terrainView(300);
     createWith(view, {
@@ -308,10 +306,10 @@ describe("MeshDesc terrain-referenced placement", () => {
     expect(spy.sampleTerrainHeight).toHaveBeenCalled();
     expect(spy.observeTerrainHeightAt).toHaveBeenCalled();
 
-    // Both engine methods take RADIANS, while `geodetic` is degrees.
+    // Both terrain methods take the same degrees `geodetic` carries.
     const pos = spy.sampleTerrainHeight.mock.calls[0][0];
-    expect(pos.lat).toBeCloseTo(rad(TOKYO.lat), 9);
-    expect(pos.lng).toBeCloseTo(rad(TOKYO.lng), 9);
+    expect(pos.lat).toBeCloseTo(TOKYO.lat, 9);
+    expect(pos.lng).toBeCloseTo(TOKYO.lng, 9);
 
     // terrain 300 + requested 10
     expect(lastPlacement()?.height).toBeCloseTo(310, 9);

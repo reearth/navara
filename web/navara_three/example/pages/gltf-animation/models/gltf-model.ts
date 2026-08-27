@@ -3,7 +3,6 @@
 import ThreeView, {
   type MeshHandle,
   geodeticToVector3,
-  degreeToRadian,
   geodeticSurfaceNormal,
   Color,
 } from "@navaramap/three";
@@ -46,13 +45,13 @@ export const addTestModelForNormal = (
   view: ThreeView<DefaultDescriptions>,
 ): MeshHandle<GLTFModelDesc> => {
   const pos = geodeticToVector3({
-    lat: degreeToRadian(SAPPORO_COORDINATES.latitude),
-    lng: degreeToRadian(SAPPORO_COORDINATES.longitude),
+    lat: SAPPORO_COORDINATES.latitude,
+    lng: SAPPORO_COORDINATES.longitude,
     height: SAPPORO_COORDINATES.altitude,
   });
   const normal = geodeticSurfaceNormal({
-    lat: degreeToRadian(SAPPORO_COORDINATES.latitude),
-    lng: degreeToRadian(SAPPORO_COORDINATES.longitude),
+    lat: SAPPORO_COORDINATES.latitude,
+    lng: SAPPORO_COORDINATES.longitude,
     height: SAPPORO_COORDINATES.altitude,
   });
 
@@ -472,13 +471,13 @@ export const addRunningModelAroundEarth = (
   const OSAKA_COORDINATES = getCoordinatesFromGeoJSON(OSAKA_GEOJSON);
 
   const pos = geodeticToVector3({
-    lat: degreeToRadian(OSAKA_COORDINATES.latitude),
-    lng: degreeToRadian(OSAKA_COORDINATES.longitude),
+    lat: OSAKA_COORDINATES.latitude,
+    lng: OSAKA_COORDINATES.longitude,
     height: OSAKA_COORDINATES.altitude,
   });
   const normal = geodeticSurfaceNormal({
-    lat: degreeToRadian(OSAKA_COORDINATES.latitude),
-    lng: degreeToRadian(OSAKA_COORDINATES.longitude),
+    lat: OSAKA_COORDINATES.latitude,
+    lng: OSAKA_COORDINATES.longitude,
     height: OSAKA_COORDINATES.altitude,
   });
 

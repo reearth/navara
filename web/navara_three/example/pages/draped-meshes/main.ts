@@ -1,7 +1,6 @@
 import ThreeView, {
   Color,
   JAPAN_GSI_ELEVATION_DECODER,
-  degreeToRadian,
   northUpEastToFixedFrame,
   geodeticToVector3,
 } from "@navaramap/three";
@@ -83,8 +82,8 @@ const run = async () => {
 
   // Positions & ENU matrices around Mt. Fuji
   const boxPosition = geodeticToVector3({
-    lat: degreeToRadian(35.365),
-    lng: degreeToRadian(138.735),
+    lat: 35.365,
+    lng: 138.735,
     height: 100,
   });
   const boxMatrixWorld = northUpEastToFixedFrame(boxPosition);
@@ -104,8 +103,8 @@ const run = async () => {
   });
 
   const cylinderPosition = geodeticToVector3({
-    lat: degreeToRadian(35.355),
-    lng: degreeToRadian(138.72),
+    lat: 35.355,
+    lng: 138.72,
     height: 100,
   });
   const cylinderMatrixWorld = northUpEastToFixedFrame(cylinderPosition);

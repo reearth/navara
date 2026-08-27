@@ -23,7 +23,7 @@ import initApi, {
   getWGS84Flattening as nvGetWGS84Flattening,
   getWGS84Eccentricity as nvGetWGS84Eccentricity,
 } from "@navaramap/engine-api";
-import { Vector3, Vector2, Matrix4, MathUtils, PerspectiveCamera } from "three";
+import { Vector3, Vector2, Matrix4, PerspectiveCamera } from "three";
 
 import {
   composeHeadingPitchRoll,
@@ -56,11 +56,13 @@ export async function initNavaraApi() {
 
 /**
  * Converts geodetic coordinates (longitude, latitude, height) to a Cartesian Vector3 in ECEF coordinates.
- * @param lle - Geodetic coordinates (lng in radians, lat in radians, height in meters)
+ * @param lle - Geodetic coordinates (lng in degrees, lat in degrees, height in meters)
  * @returns Cartesian Vector3 in Earth-Centered Earth-Fixed (ECEF) coordinates
  */
 export function geodeticToVector3(lle: LatLngHeight): Vector3 {
-  const pos = geodeticToXyz(new LLE(lle.lat, lle.lng, lle.height));
+  const pos = geodeticToXyz(
+    new LLE(angleToRadian(lle.lat), angleToRadian(lle.lng), lle.height),
+  );
   const result = new Vector3(pos.x, pos.y, pos.z);
   pos.free();
   return result;
@@ -69,12 +71,16 @@ export function geodeticToVector3(lle: LatLngHeight): Vector3 {
 /**
  * Converts a Cartesian Vector3 in ECEF coordinates to geodetic coordinates.
  * @param xyz - Cartesian Vector3 in Earth-Centered Earth-Fixed (ECEF) coordinates
- * @returns Geodetic coordinates (lng in radians, lat in radians, height in meters)
+ * @returns Geodetic coordinates (lng in degrees, lat in degrees, height in meters)
  */
 export function vector3ToGeodetic(xyz: Vector3): LatLngHeight {
   const vec3 = new Vec3(xyz.x, xyz.y, xyz.z);
   const lle = xyzToGeodetic(vec3);
-  const result = { lat: lle.lat, lng: lle.lng, height: lle.height };
+  const result = {
+    lat: angleToDegree(lle.lat),
+    lng: angleToDegree(lle.lng),
+    height: lle.height,
+  };
   lle.free();
   return result;
 }
@@ -155,11 +161,13 @@ export function convertScreenToWorld(
 
 /**
  * Computes the surface normal vector at a geodetic position on the WGS84 ellipsoid.
- * @param lle - Geodetic coordinates (lng in radians, lat in radians, height in meters)
+ * @param lle - Geodetic coordinates (lng in degrees, lat in degrees, height in meters)
  * @returns Unit normal vector pointing outward from the ellipsoid surface
  */
 export function geodeticSurfaceNormal(lle: LatLngHeight): Vector3 {
-  const pos = nvGeodeticSurfaceNormal(new LLE(lle.lat, lle.lng, lle.height));
+  const pos = nvGeodeticSurfaceNormal(
+    new LLE(angleToRadian(lle.lat), angleToRadian(lle.lng), lle.height),
+  );
   const result = new Vector3(pos.x, pos.y, pos.z);
   pos.free();
   return result;
@@ -240,7 +248,6 @@ export function westUpNorthToFixedFrame(origin: Vector3): Matrix4 {
  * engines differ in which axis they treat as an asset's front, so a model
  * ported from one may need a multiple of 90° added to its heading.
  *
- * NOTE: unlike {@link geodeticToVector3} and the other helpers in this module,
  * `lng`/`lat` and all angles here are in **degrees**, matching
  * `setCamera` and the `geodetic` mesh Descriptor field.
  *
@@ -254,8 +261,8 @@ export function headingPitchRollToFixedFrame(
   placement: Omit<GeodeticPlacement, "heightReference">,
 ): Matrix4 {
   const origin = geodeticToVector3({
-    lng: MathUtils.degToRad(placement.lng),
-    lat: MathUtils.degToRad(placement.lat),
+    lng: placement.lng,
+    lat: placement.lat,
     height: placement.height ?? 0,
   });
   return composeHeadingPitchRoll(westUpNorthToFixedFrame(origin), placement);

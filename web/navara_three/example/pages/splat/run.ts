@@ -1,6 +1,5 @@
 import ThreeView, {
   geodeticToVector3,
-  degreeToRadian,
   northUpEastToFixedFrame,
 } from "@navaramap/three";
 import type { SplatMeshDesc } from "@navaramap/three-default-descs";
@@ -100,8 +99,8 @@ const placeSplat = (
   const lng = CENTER.lng + sample.dLng;
   const height = CENTER.height + (sample.dHeight ?? 0);
   const pos = geodeticToVector3({
-    lat: degreeToRadian(lat),
-    lng: degreeToRadian(lng),
+    lat,
+    lng,
     height,
   });
   // NUE frame at `pos` (Y = surface normal). Flip 180° around X for Y-down

@@ -8,8 +8,6 @@ import ThreeView, {
   type Window,
   geodeticToVector3,
   vector3ToGeodetic,
-  degreeToRadian,
-  radianToDegree,
   convertWorldToScreen,
   geodeticSurfaceNormal,
   eastNorthUpToFixedFrame,
@@ -325,8 +323,8 @@ const addRunningObject = (view: ThreeView<CustomDescriptions>) => {
     }
 
     const pos = geodeticToVector3({
-      lat: degreeToRadian(lat),
-      lng: degreeToRadian(lng),
+      lat,
+      lng,
       height: 1000000,
     });
     sphere.position.set(pos.x, pos.y, pos.z);
@@ -383,13 +381,13 @@ const placeOneBall = (
 
 const addTestModelForNormal = (view: ThreeView<CustomDescriptions>) => {
   const pos = geodeticToVector3({
-    lat: degreeToRadian(43.0618),
-    lng: degreeToRadian(141.3545),
+    lat: 43.0618,
+    lng: 141.3545,
     height: 0,
   });
   const normal = geodeticSurfaceNormal({
-    lat: degreeToRadian(43.0618),
-    lng: degreeToRadian(141.3545),
+    lat: 43.0618,
+    lng: 141.3545,
     height: 0,
   });
 
@@ -441,8 +439,8 @@ const addTestModelForNormal = (view: ThreeView<CustomDescriptions>) => {
 // `raw` directly would fight that machinery and lose the model.
 const placeFujiModel = () => {
   const pos = geodeticToVector3({
-    lat: degreeToRadian(gFujiPos[0]),
-    lng: degreeToRadian(gFujiPos[1]),
+    lat: gFujiPos[0],
+    lng: gFujiPos[1],
     height: gPaneParams.fujiHeight,
   });
   gModelFujiHandle?.update({ matrixWorld: northUpEastToFixedFrame(pos) });
@@ -450,8 +448,8 @@ const placeFujiModel = () => {
 
 const addTestModelForTerrainHeight = (view: ThreeView<CustomDescriptions>) => {
   const pos = geodeticToVector3({
-    lat: degreeToRadian(gFujiPos[0]),
-    lng: degreeToRadian(gFujiPos[1]),
+    lat: gFujiPos[0],
+    lng: gFujiPos[1],
     height: 0,
   });
 
@@ -492,7 +490,7 @@ const sampleFujiSummitHeight = (view: ThreeView<CustomDescriptions>) => {
   }
   view
     .sampleTerrainMostDetailed(gTerrainSource, [
-      { lat: degreeToRadian(gFujiPos[0]), lng: degreeToRadian(gFujiPos[1]) },
+      { lat: gFujiPos[0], lng: gFujiPos[1] },
     ])
     .then(([ground]) => {
       if (ground.height !== undefined) {
@@ -837,13 +835,13 @@ const makeCylinder = (
 
 const onDistPosChange = () => {
   const start = {
-    lat: degreeToRadian(gPaneParams.latStart),
-    lng: degreeToRadian(gPaneParams.lngStart),
+    lat: gPaneParams.latStart,
+    lng: gPaneParams.lngStart,
     height: 0,
   };
   const end = {
-    lat: degreeToRadian(gPaneParams.latEnd),
-    lng: degreeToRadian(gPaneParams.lngEnd),
+    lat: gPaneParams.latEnd,
+    lng: gPaneParams.lngEnd,
     height: 0,
   };
 
@@ -988,8 +986,8 @@ const testSampleTerrainHeight = (view: ThreeView<CustomDescriptions>) => {
 
       const height = view.sampleTerrainHeight(lle);
 
-      gPaneParams.sampleLng = radianToDegree(lle.lng);
-      gPaneParams.sampleLat = radianToDegree(lle.lat);
+      gPaneParams.sampleLng = lle.lng;
+      gPaneParams.sampleLat = lle.lat;
       gPaneParams.sampleTerrainHeight = height ?? 0;
       gFolderSample?.refresh();
     }
@@ -1114,7 +1112,7 @@ const onRegisterChange = () => {
 
   if (gPaneParams.fujiRegistered) {
     gFujiUnregister = gView?.observeTerrainHeightAt(
-      { lat: degreeToRadian(gFujiPos[0]), lng: degreeToRadian(gFujiPos[1]) },
+      { lat: gFujiPos[0], lng: gFujiPos[1] },
       (height) => {
         gPaneParams.fujiHeight = height ?? 0;
         gFolderHeightEvent?.refresh();
@@ -1125,7 +1123,7 @@ const onRegisterChange = () => {
 
   if (gPaneParams.kitaRegistered) {
     gKitaUnregister = gView?.observeTerrainHeightAt(
-      { lat: degreeToRadian(gKitaPos[0]), lng: degreeToRadian(gKitaPos[1]) },
+      { lat: gKitaPos[0], lng: gKitaPos[1] },
       (height) => {
         gPaneParams.kitaHeight = height ?? 0;
         gFolderHeightEvent?.refresh();
@@ -1159,8 +1157,8 @@ const testShowModelInfo = (view: ThreeView<CustomDescriptions>) => {
     }
 
     gPickedPos = geodeticToVector3({
-      lat: degreeToRadian(y),
-      lng: degreeToRadian(x),
+      lat: y,
+      lng: x,
       height: z,
     });
 

@@ -57,7 +57,6 @@ import ThreeView, {
   Color,
   geodeticToVector3,
   eastNorthUpToFixedFrame,
-  degreeToRadian,
 } from "@navaramap/three";
 import { BoxMeshDesc } from "@navaramap/three-default-descs";
 
@@ -67,8 +66,8 @@ await view.init();
 
 // 地理的な原点での ENU フレームを計算
 const origin = geodeticToVector3({
-  lat: degreeToRadian(35.681236),
-  lng: degreeToRadian(139.767125),
+  lat: 35.681236,
+  lng: 139.767125,
   height: 0,
 });
 const enuFrame = eastNorthUpToFixedFrame(origin);
@@ -301,7 +300,7 @@ type PickedFeature = {
 `position` プロパティは ECEF（Earth-Centered, Earth-Fixed）座標系を使用します。緯度・経度・高度（測地座標系）から ECEF に変換するには、`geodeticToVector3()` 関数を使用します。
 
 :::note
-緯度・経度は**ラジアン**で指定する必要があります。度からラジアンに変換するには `degreeToRadian()` を使用してください。
+緯度・経度は**度**で指定します。
 :::
 
 ### 基本的な座標変換
@@ -310,7 +309,6 @@ type PickedFeature = {
 import ThreeView, {
   Color,
   geodeticToVector3,
-  degreeToRadian,
 } from "@navaramap/three";
 import { SphereMeshDesc } from "@navaramap/three-default-descs";
 
@@ -320,8 +318,8 @@ await view.init();
 
 // 緯度・経度・高度からECEF座標に変換
 const position = geodeticToVector3({
-  lat: degreeToRadian(35.681236),  // 緯度（ラジアン）
-  lng: degreeToRadian(139.767125), // 経度（ラジアン）
+  lat: 35.681236,  // 緯度（度）
+  lng: 139.767125, // 経度（度）
   height: 200,                      // 高度（メートル）
 });
 
@@ -358,15 +356,14 @@ const sphereDesc = view.addMesh<SphereMeshDesc>({
 import {
   geodeticToVector3,
   eastNorthUpToFixedFrame,
-  degreeToRadian,
 } from "@navaramap/three";
 import { GLTFModelDesc } from "@navaramap/three-default-descs";
 
 // GLTFModelDesc が登録済みであること
 
 const origin = geodeticToVector3({
-  lat: degreeToRadian(35.681236),
-  lng: degreeToRadian(139.767125),
+  lat: 35.681236,
+  lng: 139.767125,
   height: 0,
 });
 const enuFrame = eastNorthUpToFixedFrame(origin);

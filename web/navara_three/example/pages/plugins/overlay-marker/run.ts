@@ -40,7 +40,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       modelScale: 1,
     },
     cameraDistance: 20,
-    cameraPitch: Math.PI * 0.12,
+    cameraPitch: 21.6,
     fpvHeightOffset: 0,
     fpvForwardOffset: 0.1,
   });

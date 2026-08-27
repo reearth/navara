@@ -104,7 +104,7 @@ const personView = new PersonViewPlugin({
 personView.setCollision({ mode: "off" });
 ```
 
-`mode` is the only field most scenes need: the remaining defaults are tuned for walking real terrain, and the plugin handles the terrain loading described below on its own. Give `startHeight` a value near the terrain at `startLat` / `startLng`. The character settles onto the surface from there.
+`mode` is the only field most scenes need: the remaining defaults are tuned for walking real terrain, and the plugin handles the terrain loading described below on its own. Give `startHeight` a value near the terrain at `startLat` / `startLng`, or skip the hand-measuring and call [`resolveStartHeight()`](#resolvestartheightsource) before `start()`.
 
 There are three modes:
 
@@ -149,15 +149,15 @@ new PersonViewPlugin(config?: PersonViewConfig)
 | `minAlt`              | `number`          | `50`            | Minimum altitude in meters.                                                                                  |
 | `maxAlt`              | `number`          | `5000`          | Maximum altitude in meters.                                                                                  |
 | `cameraDistance`      | `number`          | `50`            | Chase camera distance (TPV) in meters.                                                                       |
-| `cameraPitch`         | `number`          | `0`             | Downward TPV camera pitch in radians (orbits up and over the model).                                         |
+| `cameraPitch`         | `number`          | `0`             | Downward TPV camera pitch in degrees (orbits up and over the model).                                         |
 | `cameraLerpSpeed`     | `number`          | `3`             | Camera heading interpolation speed.                                                                          |
 | `fpvForwardOffset`    | `number`          | `0`             | Forward offset (m) applied to the FPV eye position.                                                          |
 | `fpvHeightOffset`     | `number`          | `1`             | Eye-line height offset (m): the FPV eye height, and the shared eye-line height the TPV camera orbits around. |
-| `fpvPitch`            | `number`          | `0`             | Downward FPV camera pitch in radians (tilts the view down in place).                                         |
+| `fpvPitch`            | `number`          | `0`             | Downward FPV camera pitch in degrees (tilts the view down in place).                                         |
 | `startLat`            | `number`          | `35.6812`       | Starting latitude in degrees.                                                                                |
 | `startLng`            | `number`          | `139.7671`      | Starting longitude in degrees.                                                                               |
 | `startHeight`         | `number`          | `500`           | Starting altitude in meters.                                                                                 |
-| `startHeading`        | `number`          | `Math.PI * 1.3` | Starting heading in radians (0 = north).                                                                     |
+| `startHeading`        | `number`          | `234`           | Starting heading in degrees (0 = north).                                                                     |
 | `keys`                | `KeyBindings`     | _defaults_      | Keyboard bindings. See [KeyBindings](#keybindings).                                                         |
 
 ### CharacterConfig
@@ -182,7 +182,7 @@ See [Terrain Collision](#terrain-collision) for how the modes behave.
 | `groundOffset`        | `number`                          | `0`     | Height (m) kept above the sampled surface: the character's feet in `"ground"` mode, the floor it cannot sink below in `"clamp"`. |
 | `alignToSlope`        | `boolean`                         | `true`  | Tilt the character to match the slope it stands on. Costs several extra terrain lookups per frame.                              |
 | `slopeSampleDistance` | `number`                          | `4`     | Footprint (m) the slope is averaged over, matched to the triangle spacing of terrain meshes.                                    |
-| `maxSlopeTilt`        | `number`                          | `π / 4` | Largest tilt (radians) `alignToSlope` may apply, so near-vertical ground does not lay the character flat against it.            |
+| `maxSlopeTilt`        | `number`                          | `45`    | Largest tilt (degrees) `alignToSlope` may apply, so near-vertical ground does not lay the character flat against it.            |
 | `cameraSlopeFollow`   | `number`                          | `1`     | How much of the terrain's slope the camera pitch follows, from `0` (fixed pitch) to `1` (parallel to the slope). Applies to TPV and FPV. |
 
 ### AnimationConfig
@@ -224,6 +224,24 @@ Each entry takes an array of `KeyboardEvent.code` values (e.g. `["KeyW"]`, `["Ar
 
 ## Methods
 
+### resolveStartHeight(source)
+
+```typescript
+resolveStartHeight(source: string | Source): Promise<number | undefined>
+```
+
+Pins `startHeight` to the terrain surface at the start position, sampled from the source's most detailed data via `ThreeView.sampleTerrainMostDetailed`. [`start()`](#start) then places the character on the ground at a dynamically resolved `startHeight`. Call it before `start()`.
+
+```typescript
+// terrain is a registered quantized-mesh or raster-dem source
+await personView.resolveStartHeight(terrain);
+personView.start();
+```
+
+The resolved height is **held until the first movement input** (or a [`teleport()`](#teleportoptions)): the tiles resident right after load are coarse, and following them would pull the character tens of meters off it. The first movement key hands the altitude over to the normal [terrain following](#terrain-that-loads-while-you-walk-on-it).
+
+Returns the height used, including the collision's `groundOffset`, or `undefined` when the source has no data at the start position (the configured `startHeight` is then kept).
+
 ### start()
 
 ```typescript
@@ -243,7 +261,7 @@ The counterpart to `start()`: hands the camera back to the view's own controls a
 ```typescript
 overviewButton.addEventListener("click", () => {
   personView.stop();
-  view.setCamera({ lng, lat, height: 20000, distance: 0, heading: 0, pitch: -Math.PI / 2, roll: 0 });
+  view.setCamera({ lng, lat, height: 20000, distance: 0, heading: 0, pitch: -90, roll: 0 });
 });
 resumeButton.addEventListener("click", () => personView.start());
 ```
@@ -261,34 +279,34 @@ teleport(options: {
 }): void
 ```
 
-Instantly moves to a new geographic position. When `heading` is omitted, the current camera heading is kept. With [terrain collision](#terrain-collision) enabled, the character lands on the terrain at the destination right away. Settling never delays a teleport. To rotate in place without moving, use [`setHeading()`](#setheadingradians--getheading). For the camera pitch, use [`setCameraPitch()` / `setFpvPitch()`](#setcamerapitchradians--setfpvpitchradians).
+Instantly moves to a new geographic position. When `heading` is omitted, the current camera heading is kept. With [terrain collision](#terrain-collision) enabled, the character lands on the terrain at the destination right away. Settling never delays a teleport. To rotate in place without moving, use [`setHeading()`](#setheadingdegrees--getheading). For the camera pitch, use [`setCameraPitch()` / `setFpvPitch()`](#setcamerapitchdegrees--setfpvpitchdegrees).
 
 | Field     | Type                  | Description                                                    |
 | --------- | --------------------- | -------------------------------------------------------------- |
 | `lng`     | `number`              | Longitude in degrees.                                          |
 | `lat`     | `number`              | Latitude in degrees.                                           |
 | `alt`     | `number`              | Altitude in meters.                                            |
-| `heading` | `number \| undefined` | Optional heading in radians (0 = north, increasing clockwise). |
+| `heading` | `number \| undefined` | Optional heading in degrees (0 = north, increasing clockwise). |
 
-### setHeading(radians) / getHeading()
+### setHeading(degrees) / getHeading()
 
 ```typescript
-setHeading(radians: number): void
+setHeading(degrees: number): void
 getHeading(): number
 ```
 
-Rotates the character to the given heading in radians (0 = north, increasing clockwise) **without changing position**. The chase camera snaps to match. In free-camera mode only the model rotates. `getHeading()` returns the current heading.
+Rotates the character to the given heading in degrees (0 = north, increasing clockwise) **without changing position**. The chase camera snaps to match. In free-camera mode only the model rotates. `getHeading()` returns the current heading.
 
-### setCameraPitch(radians) / setFpvPitch(radians)
+### setCameraPitch(degrees) / setFpvPitch(degrees)
 
 ```typescript
-setCameraPitch(radians: number): void
+setCameraPitch(degrees: number): void
 getCameraPitch(): number
-setFpvPitch(radians: number): void
+setFpvPitch(degrees: number): void
 getFpvPitch(): number
 ```
 
-Set the downward camera pitch in radians, taking effect immediately for the chase / locked camera. `setCameraPitch` controls the **TPV** pitch (orbits the camera up and over the model), while `setFpvPitch` controls the **FPV** pitch (tilts the view down in place). The matching getters return the current values.
+Set the downward camera pitch in degrees, taking effect immediately for the chase / locked camera. `setCameraPitch` controls the **TPV** pitch (orbits the camera up and over the model), while `setFpvPitch` controls the **FPV** pitch (tilts the view down in place). The matching getters return the current values.
 
 ### setFpvHeightOffset(meters) / getFpvHeightOffset()
 
@@ -405,7 +423,7 @@ The state object emitted by `onStateChange()`:
 | `lng`            | `number`         | Current longitude in degrees.                                                                                      |
 | `lat`            | `number`         | Current latitude in degrees.                                                                                       |
 | `alt`            | `number`         | Current altitude in meters.                                                                                        |
-| `heading`        | `number`         | Current heading in radians (0 = north, increasing clockwise).                                                      |
+| `heading`        | `number`         | Current heading in degrees (0 = north, increasing clockwise).                                                      |
 | `speed`          | `number`         | Configured movement speed in m/s (`moveSpeed`, multiplied by `dashSpeedMultiplier`, default 2.5, while dashing). |
 | `animationState` | `string \| null` | Name of the currently playing clip. `null` when no character.                                                      |
 | `mode`           | `"tpv" \| "fpv"` | Current view mode.                                                                                                 |

@@ -1,7 +1,6 @@
 import ThreeView, {
   Color,
   JAPAN_GSI_ELEVATION_DECODER,
-  degreeToRadian,
   geodeticToVector3,
   northUpEastToFixedFrame,
 } from "@navaramap/three";
@@ -101,8 +100,8 @@ const run = async () => {
 
   // Position the group at Tokyo Station
   const groupPosition = geodeticToVector3({
-    lat: degreeToRadian(35.6812),
-    lng: degreeToRadian(139.7671),
+    lat: 35.6812,
+    lng: 139.7671,
     height: 0,
   });
   const matrixWorld = northUpEastToFixedFrame(groupPosition);

@@ -59,7 +59,6 @@ import ThreeView, {
   Color,
   geodeticToVector3,
   eastNorthUpToFixedFrame,
-  degreeToRadian,
 } from "@navaramap/three";
 import { BoxMeshDesc } from "@navaramap/three-default-descs";
 
@@ -69,8 +68,8 @@ await view.init();
 
 // Compute the ENU frame at a geographic origin
 const origin = geodeticToVector3({
-  lat: degreeToRadian(35.681236),
-  lng: degreeToRadian(139.767125),
+  lat: 35.681236,
+  lng: 139.767125,
   height: 0,
 });
 const enuFrame = eastNorthUpToFixedFrame(origin);
@@ -331,7 +330,7 @@ For implementing picking in custom Descriptors, see [Custom Descriptor: Implemen
 The `position` property uses the ECEF (Earth-Centered, Earth-Fixed) coordinate system. To convert from latitude/longitude/altitude (geodetic coordinates) to ECEF, use the `geodeticToVector3()` function.
 
 :::note
-Latitude and longitude must be specified in **radians**. Use `degreeToRadian()` to convert from degrees to radians.
+Latitude and longitude are specified in **degrees**.
 :::
 
 ### Basic Coordinate Transformation
@@ -340,7 +339,6 @@ Latitude and longitude must be specified in **radians**. Use `degreeToRadian()` 
 import ThreeView, {
   Color,
   geodeticToVector3,
-  degreeToRadian,
 } from "@navaramap/three";
 import { SphereMeshDesc } from "@navaramap/three-default-descs";
 
@@ -350,8 +348,8 @@ await view.init();
 
 // Convert from latitude/longitude/altitude to ECEF coordinates
 const position = geodeticToVector3({
-  lat: degreeToRadian(35.681236),  // Latitude (radians)
-  lng: degreeToRadian(139.767125), // Longitude (radians)
+  lat: 35.681236,  // Latitude (degrees)
+  lng: 139.767125, // Longitude (degrees)
   height: 200,                      // Altitude (meters)
 });
 
@@ -388,7 +386,6 @@ The most common choice is ENU (`eastNorthUpToFixedFrame()`):
 import {
   geodeticToVector3,
   eastNorthUpToFixedFrame,
-  degreeToRadian,
 } from "@navaramap/three";
 import { GLTFModelDesc } from "@navaramap/three-default-descs";
 
@@ -396,8 +393,8 @@ import { GLTFModelDesc } from "@navaramap/three-default-descs";
 
 // Compute position
 const origin = geodeticToVector3({
-  lat: degreeToRadian(35.681236),
-  lng: degreeToRadian(139.767125),
+  lat: 35.681236,
+  lng: 139.767125,
   height: 0,
 });
 const enuFrame = eastNorthUpToFixedFrame(origin);

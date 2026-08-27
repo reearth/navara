@@ -1,7 +1,6 @@
 import type ThreeView from "@navaramap/three";
 import {
   EffectDesc,
-  degreeToRadian,
   geodeticToVector3,
   type EffectConfig,
   type EffectUpdate,
@@ -340,8 +339,8 @@ export class PuddleGeometryEffectDesc extends EffectDesc<
 
     const centers = this.config.puddleGeometry?.centers ?? DEFAULT_CENTERS;
     for (let i = 0; i < centers.length; i++) {
-      const lng = degreeToRadian(centers[i].lng);
-      const lat = degreeToRadian(centers[i].lat);
+      const lng = centers[i].lng;
+      const lat = centers[i].lat;
       const height = this.view.sampleTerrainHeight({ lng, lat }) ?? 0;
       this._instance.worldCenters[i].copy(
         geodeticToVector3({ lng, lat, height }),

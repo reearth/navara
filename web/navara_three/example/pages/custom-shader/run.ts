@@ -5,7 +5,6 @@ import ThreeView, {
   type MeshConfig,
   type PassKey,
   type ViewContext,
-  degreeToRadian,
   eastNorthUpToFixedFrame,
   geodeticToVector3,
 } from "@navaramap/three";
@@ -229,8 +228,8 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   );
 
   const position = geodeticToVector3({
-    lat: degreeToRadian(35.67564356091717),
-    lng: degreeToRadian(139.75711454748298),
+    lat: 35.67564356091717,
+    lng: 139.75711454748298,
     height: 1000,
   });
 

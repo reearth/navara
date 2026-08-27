@@ -3,7 +3,6 @@ import ThreeView, {
   MeshHandle,
   EffectHandle,
   type LayerDescription,
-  degreeToRadian,
   geodeticToVector3,
   Color,
 } from "@navaramap/three";
@@ -298,8 +297,8 @@ const addWeatherControl = (
   rainDropEffect: EffectHandle<RainDropEffectDesc>,
 ) => {
   const position = geodeticToVector3({
-    lat: degreeToRadian(35.67564356091717),
-    lng: degreeToRadian(139.74511454748298),
+    lat: 35.67564356091717,
+    lng: 139.74511454748298,
     height: 10,
   });
 
