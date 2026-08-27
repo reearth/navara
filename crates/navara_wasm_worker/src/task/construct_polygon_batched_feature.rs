@@ -239,10 +239,10 @@ pub fn construct_polygon(
         let center = rtc_center.unwrap();
         translate_positions_to_center(&mut combined_attributes, &center);
         // Also translate outline positions to RTC space
-        for chunk in outline_positions.chunks_exact_mut(3) {
-            chunk[0] -= center.x as f32;
-            chunk[1] -= center.y as f32;
-            chunk[2] -= center.z as f32;
+        for [x, y, z] in outline_positions.as_chunks_mut::<3>().0 {
+            *x -= center.x as f32;
+            *y -= center.y as f32;
+            *z -= center.z as f32;
         }
         Some(center.into())
     };

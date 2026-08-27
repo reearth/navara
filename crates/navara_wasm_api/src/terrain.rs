@@ -28,10 +28,14 @@ fn tiling_scheme(geographic: bool, tms: bool) -> TilingScheme {
 fn positions_from_pairs(
     positions: &[f64],
 ) -> impl Iterator<Item = LngLat<FloatType, navara_core::Radians>> + '_ {
-    positions.chunks_exact(2).map(|p| LngLat {
-        lng: Rad::new(p[0]),
-        lat: Rad::new(p[1]),
-    })
+    positions
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .map(|&[lng, lat]| LngLat {
+            lng: Rad::new(lng),
+            lat: Rad::new(lat),
+        })
 }
 
 /// Tile (x, y) containing each `[lng, lat]` pair at `level`, flattened as
