@@ -240,7 +240,7 @@ personView.start();
 
 解決した高さは**最初の移動入力まで保持されます**（[`teleport()`](#teleportoptions) でも解除されます）。読み込み直後のタイルは粗く、そのまま追従するとキャラクターが数十メートル引きずられてしまうためです。最初の移動キーで、高度は通常の[地形追従](#歩いている最中に読み込まれる地形)へ引き継がれます。
 
-返り値は使用された高さで、collision optionの `groundOffset` を含みます。開始位置にソースのデータがない場合は `undefined` になり、設定済みの `startHeight` が維持されます。
+返り値は使用された高さで、collision option の `groundOffset` を含みます。開始位置にソースのデータがない場合は `undefined` になり、設定済みの `startHeight` が維持されます。
 
 ### start()
 
