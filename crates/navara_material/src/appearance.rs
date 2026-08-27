@@ -25,6 +25,41 @@ pub struct HillshadeConfig {
     pub exaggeration: f32,
 }
 
+/// Source geometry category a vector appearance consumes.
+///
+/// By default an appearance renders only its native geometry (point-like
+/// appearances consume [`SourceGeometryType::Point`], polyline consumes
+/// [`SourceGeometryType::Line`]). Opting extra entries into a material's
+/// `geometry_types` derives additional representations: polygon boundary
+/// rings render as polylines, and line/polygon vertices render as points.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SourceGeometryType {
+    Point,
+    Line,
+    Polygon,
+}
+
+impl SourceGeometryType {
+    /// Parse the JS-facing name (`"point" | "line" | "polygon"`).
+    pub fn parse(value: &str) -> Option<Self> {
+        match value {
+            "point" => Some(Self::Point),
+            "line" => Some(Self::Line),
+            "polygon" => Some(Self::Polygon),
+            _ => None,
+        }
+    }
+
+    /// JS-facing name of this geometry type.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Point => "point",
+            Self::Line => "line",
+            Self::Polygon => "polygon",
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Appearance {
     Point(PointMaterial),
@@ -98,6 +133,10 @@ pub struct PointMaterial {
     /// Placement priority for decluttering; higher wins. Only meaningful when
     /// `declutter` is enabled.
     pub declutter_priority: f32,
+    /// Source geometry types this appearance consumes. Defaults to the native
+    /// geometry only; opting in `Line`/`Polygon` also emits a point per
+    /// line-string / polygon-ring vertex.
+    pub geometry_types: Vec<SourceGeometryType>,
     // post effect
     pub effect_ids: Option<Vec<String>>,
     pub emissive_intensity: Option<f32>,
@@ -120,6 +159,7 @@ impl Default for PointMaterial {
             opacity: 1.0,
             declutter: true,
             declutter_priority: 0.0,
+            geometry_types: vec![SourceGeometryType::Point],
             // post effect
             effect_ids: None,
             emissive_intensity: None,
@@ -160,6 +200,10 @@ pub struct BillboardMaterial {
     /// Placement priority for decluttering; higher wins. Only meaningful when
     /// `declutter` is enabled.
     pub declutter_priority: f32,
+    /// Source geometry types this appearance consumes. Defaults to the native
+    /// geometry only; opting in `Line`/`Polygon` also emits a billboard per
+    /// line-string / polygon-ring vertex.
+    pub geometry_types: Vec<SourceGeometryType>,
     // post effect
     pub effect_ids: Option<Vec<String>>,
     pub emissive_intensity: Option<f32>,
@@ -184,6 +228,7 @@ impl Default for BillboardMaterial {
             alpha_test: 0.1,
             declutter: true,
             declutter_priority: 0.0,
+            geometry_types: vec![SourceGeometryType::Point],
             // post effect
             effect_ids: None,
             emissive_intensity: None,
@@ -257,6 +302,10 @@ pub struct TextMaterial {
     /// Placement priority for decluttering; higher wins. Only meaningful when
     /// `declutter` is enabled.
     pub declutter_priority: f32,
+    /// Source geometry types this appearance consumes. Defaults to the native
+    /// geometry only; opting in `Line`/`Polygon` also emits a label per
+    /// line-string / polygon-ring vertex.
+    pub geometry_types: Vec<SourceGeometryType>,
 }
 
 impl Default for TextMaterial {
@@ -295,6 +344,7 @@ impl Default for TextMaterial {
 
             declutter: true,
             declutter_priority: 0.0,
+            geometry_types: vec![SourceGeometryType::Point],
         }
     }
 }
@@ -320,6 +370,11 @@ pub struct PolylineMaterial {
     pub clamp_to_ground: bool,
     pub tiled: bool,
     pub height: f32,
+    /// Source geometry types this appearance consumes. Defaults to the native
+    /// geometry only; opting in `Polygon` also renders polygon boundary rings
+    /// (outer ring and holes) as closed polylines at the ring's base height —
+    /// `extruded_height` edges stay the polygon material's `outline` feature.
+    pub geometry_types: Vec<SourceGeometryType>,
     pub internal: Option<PolylineInternalMaterial>,
     // post effect
     pub effect_ids: Option<Vec<String>>,
@@ -346,6 +401,7 @@ impl Default for PolylineMaterial {
             clamp_to_ground: true,
             tiled: false,
             height: 1.,
+            geometry_types: vec![SourceGeometryType::Line],
             internal: None,
             // post effect
             effect_ids: None,

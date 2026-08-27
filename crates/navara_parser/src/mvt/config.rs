@@ -47,10 +47,27 @@ impl LayerParseKind {
 /// Each coordinate of a point/multipoint geometry is emitted once per enabled
 /// emitter, at the emitter's own `height`. The three kinds keep independent
 /// heights, so they cannot be collapsed into a single scalar.
+///
+/// The `from_*` flags mirror the appearance's opt-in `geometry_types`: besides
+/// point geometry, an emitter can derive a point per line-string vertex and/or
+/// per polygon-ring vertex.
 #[derive(Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct PointEmitter {
     pub kind: LayerParseKind,
     pub height: f32,
+    /// Emit for point/multipoint geometry (the native source).
+    #[serde(default = "default_true")]
+    pub from_points: bool,
+    /// Also emit one point per line-string vertex.
+    #[serde(default)]
+    pub from_lines: bool,
+    /// Also emit one point per polygon-ring vertex (closing duplicate skipped).
+    #[serde(default)]
+    pub from_polygons: bool,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 /// Instructions for parsing the features of a single matched target layer.
@@ -66,8 +83,12 @@ pub struct LayerParseConfig {
     pub flat: bool,
     /// Point-like emitters (Point/Billboard/Text) and their heights.
     pub point_emitters: Vec<PointEmitter>,
-    /// Whether a polyline appearance is present.
+    /// Whether a polyline appearance consumes line geometry.
     pub polyline: bool,
+    /// Whether the polyline appearance also renders polygon boundary rings
+    /// (outer ring and holes) as closed polylines.
+    #[serde(default)]
+    pub polyline_from_polygons: bool,
     /// Whether a polygon appearance is present.
     pub polygon: bool,
     /// Optional MVT sublayer name filter.

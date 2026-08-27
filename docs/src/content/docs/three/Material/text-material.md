@@ -221,6 +221,24 @@ view.addFontFamily({
 }
 ```
 
+### geometryTypes
+
+**Type:** `("point" | "line" | "polygon")[] | undefined`
+
+**Description:** Source geometry categories this material consumes. Adding `"line"` emits one label per line-string vertex, and adding `"polygon"` emits one label per polygon-ring vertex (the closing duplicate vertex is skipped). Setting the array replaces the default, so include `"point"` when point geometry should keep rendering. This option applies when the layer's geometry is built: set it at layer creation. `layer.update()` applies a new value only to tiles loaded afterwards, so already-loaded tiles keep their previous geometry until the layer is re-created.
+
+**Default:** `["point"]`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    geometryTypes: ["point", "polygon"]
+  }
+}
+```
+
 ### height
 
 **Type:** `number | undefined`

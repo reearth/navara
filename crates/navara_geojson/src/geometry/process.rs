@@ -4,8 +4,8 @@ use bevy_ecs::system::Commands;
 use navara_buffer_store::BufferStore;
 use navara_core::CRS;
 use navara_feature_component::batch::BatchTable;
-use navara_geometry::{Hierarchy, WindingOrder};
-use navara_material::Appearance;
+use navara_geometry::{Hierarchy, WindingOrder, close_flat_ring, open_ring_len};
+use navara_material::{Appearance, SourceGeometryType};
 use navara_math::Vec3;
 use navara_parser::geojson::{GeoJson, Geometry, GeometryValue, Position};
 
@@ -19,6 +19,20 @@ fn multi_flat_coords(f: &[Position]) -> Vec<f64> {
     f.iter()
         .flat_map(|p| [p[0], p[1], if p.len() > 2 { p[2] } else { 0. }])
         .collect::<Vec<_>>()
+}
+
+/// Ring vertices without the closing duplicate (GeoJSON rings repeat the
+/// first position at the end). Falls back to the full slice for open rings.
+fn ring_vertices(ring: &[Position]) -> &[Position] {
+    &ring[..open_ring_len(ring, |p| (p[0], p[1]))]
+}
+
+/// Flatten a polygon ring and close it when the source ring omits the closing
+/// duplicate, so derived boundary polylines are always closed.
+fn closed_ring_coords(ring: &[Position]) -> Vec<f64> {
+    let mut coords = multi_flat_coords(ring);
+    close_flat_ring(&mut coords);
+    coords
 }
 
 fn get_polygon_holes(f: &[Vec<Position>]) -> Option<Vec<Hierarchy>> {
@@ -100,7 +114,13 @@ fn process_geometry(
     for appearance in appearances {
         match appearance {
             Appearance::Point(m) => {
-                accumulate_point_rte(builder, geometry, GeometryAppearanceKind::Point, m.height);
+                accumulate_point_rte(
+                    builder,
+                    geometry,
+                    GeometryAppearanceKind::Point,
+                    m.height,
+                    &m.geometry_types,
+                );
             }
             Appearance::Billboard(m) => {
                 accumulate_point_rte(
@@ -108,15 +128,22 @@ fn process_geometry(
                     geometry,
                     GeometryAppearanceKind::Billboard,
                     m.height,
+                    &m.geometry_types,
                 );
             }
             Appearance::Text(m) => {
-                accumulate_point_rte(builder, geometry, GeometryAppearanceKind::Text, m.height);
+                accumulate_point_rte(
+                    builder,
+                    geometry,
+                    GeometryAppearanceKind::Text,
+                    m.height,
+                    &m.geometry_types,
+                );
             }
             Appearance::Polyline(p) => {
                 // Skip clamped/tiled polylines - they go through the tiled rendering pipeline
                 if !p.clamp_to_ground && !p.tiled {
-                    accumulate_polyline(builder, geometry);
+                    accumulate_polyline(builder, geometry, &p.geometry_types);
                 }
             }
             // Skip clamped/tiled polygons - they go through the tiled rendering pipeline
@@ -129,19 +156,59 @@ fn process_geometry(
 }
 
 /// Accumulate point geometry with RTE encoding (GeoJSON direct path).
+///
+/// `geometry_types` opts the point-like appearance into deriving a point per
+/// line-string vertex and/or polygon-ring vertex (closing duplicates skipped).
 fn accumulate_point_rte(
     builder: &mut GeometryBuilder,
     geometry: &Geometry,
     kind: GeometryAppearanceKind,
     height: f32,
+    geometry_types: &[SourceGeometryType],
 ) {
-    match &geometry.value {
-        GeometryValue::Point { coordinates: f } => {
+    let add_vertices = |builder: &mut GeometryBuilder, ps: &[Position]| {
+        for f in ps {
             builder.add_point(kind, coords(f), CRS::Geographic, height);
         }
-        GeometryValue::MultiPoint { coordinates: fs } => {
+    };
+
+    match &geometry.value {
+        GeometryValue::Point { coordinates: f }
+            if geometry_types.contains(&SourceGeometryType::Point) =>
+        {
+            builder.add_point(kind, coords(f), CRS::Geographic, height);
+        }
+        GeometryValue::MultiPoint { coordinates: fs }
+            if geometry_types.contains(&SourceGeometryType::Point) =>
+        {
+            add_vertices(builder, fs);
+        }
+        GeometryValue::LineString { coordinates: f }
+            if geometry_types.contains(&SourceGeometryType::Line) =>
+        {
+            add_vertices(builder, f);
+        }
+        GeometryValue::MultiLineString { coordinates: fs }
+            if geometry_types.contains(&SourceGeometryType::Line) =>
+        {
             for f in fs {
-                builder.add_point(kind, coords(f), CRS::Geographic, height);
+                add_vertices(builder, f);
+            }
+        }
+        GeometryValue::Polygon { coordinates: rings }
+            if geometry_types.contains(&SourceGeometryType::Polygon) =>
+        {
+            for ring in rings {
+                add_vertices(builder, ring_vertices(ring));
+            }
+        }
+        GeometryValue::MultiPolygon { coordinates: fs }
+            if geometry_types.contains(&SourceGeometryType::Polygon) =>
+        {
+            for rings in fs {
+                for ring in rings {
+                    add_vertices(builder, ring_vertices(ring));
+                }
             }
         }
         _ => {}
@@ -149,14 +216,41 @@ fn accumulate_point_rte(
 }
 
 /// Accumulate polyline geometry into the builder.
-fn accumulate_polyline(builder: &mut GeometryBuilder, geometry: &Geometry) {
+///
+/// `geometry_types` opts the polyline appearance into deriving a closed
+/// polyline per polygon ring (outer ring and holes).
+fn accumulate_polyline(
+    builder: &mut GeometryBuilder,
+    geometry: &Geometry,
+    geometry_types: &[SourceGeometryType],
+) {
     match &geometry.value {
-        GeometryValue::LineString { coordinates: f } => {
+        GeometryValue::LineString { coordinates: f }
+            if geometry_types.contains(&SourceGeometryType::Line) =>
+        {
             builder.add_polyline(multi_flat_coords(f), CRS::Geographic);
         }
-        GeometryValue::MultiLineString { coordinates: fs } => {
+        GeometryValue::MultiLineString { coordinates: fs }
+            if geometry_types.contains(&SourceGeometryType::Line) =>
+        {
             for f in fs {
                 builder.add_polyline(multi_flat_coords(f), CRS::Geographic);
+            }
+        }
+        GeometryValue::Polygon { coordinates: rings }
+            if geometry_types.contains(&SourceGeometryType::Polygon) =>
+        {
+            for ring in rings {
+                builder.add_polyline(closed_ring_coords(ring), CRS::Geographic);
+            }
+        }
+        GeometryValue::MultiPolygon { coordinates: fs }
+            if geometry_types.contains(&SourceGeometryType::Polygon) =>
+        {
+            for rings in fs {
+                for ring in rings {
+                    builder.add_polyline(closed_ring_coords(ring), CRS::Geographic);
+                }
             }
         }
         _ => {}
@@ -912,6 +1006,232 @@ mod test {
 
         let output = app.world().resource::<TestOutput>();
         assert_eq!(output.0.len(), 1);
+    }
+
+    const MIXED_LINE_AND_POLYGON: &str = r#"{
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "properties": {"type": "line"},
+            "geometry": {
+                "coordinates": [[139.70, 35.60], [139.71, 35.61], [139.72, 35.62]],
+                "type": "LineString"
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {"type": "polygon"},
+            "geometry": {
+                "coordinates": [
+                    [
+                        [139.75, 35.68],
+                        [139.76, 35.68],
+                        [139.76, 35.69],
+                        [139.75, 35.69],
+                        [139.75, 35.68]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        }
+    ]
+}"#;
+
+    #[test]
+    fn polyline_geometry_types_polygon_derives_boundary_rings() {
+        // With geometry_types opted into polygons, both the line and the
+        // polygon boundary accumulate into the polyline batch.
+        let mut app = run_construct(
+            MIXED_LINE_AND_POLYGON,
+            vec![Appearance::Polyline(PolylineMaterial {
+                clamp_to_ground: false,
+                tiled: false,
+                geometry_types: vec![SourceGeometryType::Line, SourceGeometryType::Polygon],
+                ..Default::default()
+            })],
+        );
+
+        let mut geom_query = app
+            .world_mut()
+            .query_filtered::<&BatchedPolylineGeometry, With<PolylineMarker>>();
+        let geoms: Vec<_> = geom_query.iter(app.world()).collect();
+        assert_eq!(geoms.len(), 1);
+        let buf = app.world().resource::<BufferStore>();
+        // 1 line string + 1 polygon outer ring
+        assert_eq!(geoms[0].feature_count(buf), 2);
+        // Two distinct features → two batch indices
+        assert_eq!(geoms[0].batch_indices(buf).unwrap(), &[0, 1]);
+    }
+
+    #[test]
+    fn polyline_default_geometry_types_ignores_polygons() {
+        let mut app = run_construct(
+            MIXED_LINE_AND_POLYGON,
+            vec![Appearance::Polyline(PolylineMaterial {
+                clamp_to_ground: false,
+                tiled: false,
+                ..Default::default()
+            })],
+        );
+
+        let mut geom_query = app
+            .world_mut()
+            .query_filtered::<&BatchedPolylineGeometry, With<PolylineMarker>>();
+        let geoms: Vec<_> = geom_query.iter(app.world()).collect();
+        assert_eq!(geoms.len(), 1);
+        let buf = app.world().resource::<BufferStore>();
+        // Only the line string accumulates by default.
+        assert_eq!(geoms[0].feature_count(buf), 1);
+    }
+
+    #[test]
+    fn polygon_with_holes_derives_polyline_per_ring() {
+        let mut app = run_construct(
+            r#"{
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "properties": {},
+            "geometry": {
+                "coordinates": [
+                    [
+                        [139.75, 35.68],
+                        [139.78, 35.68],
+                        [139.78, 35.71],
+                        [139.75, 35.71],
+                        [139.75, 35.68]
+                    ],
+                    [
+                        [139.76, 35.69],
+                        [139.77, 35.69],
+                        [139.77, 35.70],
+                        [139.76, 35.70],
+                        [139.76, 35.69]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        }
+    ]
+}"#,
+            vec![Appearance::Polyline(PolylineMaterial {
+                clamp_to_ground: false,
+                tiled: false,
+                geometry_types: vec![SourceGeometryType::Line, SourceGeometryType::Polygon],
+                ..Default::default()
+            })],
+        );
+
+        let mut geom_query = app
+            .world_mut()
+            .query_filtered::<&BatchedPolylineGeometry, With<PolylineMarker>>();
+        let geoms: Vec<_> = geom_query.iter(app.world()).collect();
+        assert_eq!(geoms.len(), 1);
+        let buf = app.world().resource::<BufferStore>();
+        // Outer ring + hole ring, both from the same feature.
+        assert_eq!(geoms[0].feature_count(buf), 2);
+        assert_eq!(geoms[0].batch_indices(buf).unwrap(), &[0, 0]);
+    }
+
+    #[test]
+    fn open_polygon_ring_derives_closed_boundary_polyline() {
+        // The source ring omits the closing duplicate; the derived boundary
+        // must still be closed, matching the tiled paths.
+        let mut app = run_construct(
+            r#"{
+    "type": "Feature",
+    "properties": {},
+    "geometry": {
+        "coordinates": [
+            [
+                [139.75, 35.68],
+                [139.76, 35.68],
+                [139.76, 35.69],
+                [139.75, 35.69]
+            ]
+        ],
+        "type": "Polygon"
+    }
+}"#,
+            vec![Appearance::Polyline(PolylineMaterial {
+                clamp_to_ground: false,
+                tiled: false,
+                geometry_types: vec![SourceGeometryType::Line, SourceGeometryType::Polygon],
+                ..Default::default()
+            })],
+        );
+
+        let mut geom_query = app
+            .world_mut()
+            .query_filtered::<&BatchedPolylineGeometry, With<PolylineMarker>>();
+        let geoms: Vec<_> = geom_query.iter(app.world()).collect();
+        assert_eq!(geoms.len(), 1);
+        let buf = app.world().resource::<BufferStore>();
+        let points = geoms[0].points(buf).unwrap();
+        // 4 source vertices + appended closing duplicate = 5 * 3 coords.
+        assert_eq!(points.len(), 15);
+        assert_eq!(points[..3], points[points.len() - 3..]);
+    }
+
+    #[test]
+    fn point_geometry_types_derives_vertices_without_closing_duplicate() {
+        // LineString has 3 vertices; the polygon ring has 5 positions with a
+        // closing duplicate, contributing 4.
+        let mut app = run_construct(
+            MIXED_LINE_AND_POLYGON,
+            vec![Appearance::Point(PointMaterial {
+                geometry_types: vec![
+                    SourceGeometryType::Point,
+                    SourceGeometryType::Line,
+                    SourceGeometryType::Polygon,
+                ],
+                ..Default::default()
+            })],
+        );
+
+        let mut geom_query = app
+            .world_mut()
+            .query_filtered::<&BatchedPointGeometry, With<PointMarker>>();
+        let geoms: Vec<_> = geom_query.iter(app.world()).collect();
+        assert_eq!(geoms.len(), 1);
+        assert_eq!(geoms[0].coords.len(), 7);
+    }
+
+    #[test]
+    fn point_default_geometry_types_ignores_lines_and_polygons() {
+        let mut app = run_construct(
+            MIXED_LINE_AND_POLYGON,
+            vec![Appearance::Point(PointMaterial::default())],
+        );
+
+        let mut batched_query = app
+            .world_mut()
+            .query_filtered::<&BatchedFeature, With<PointMarker>>();
+        assert_eq!(batched_query.iter(app.world()).count(), 0);
+    }
+
+    #[test]
+    fn point_geometry_types_can_opt_out_of_native_points() {
+        // geometry_types replaces the default: with only Line, a point
+        // geometry no longer emits.
+        let mut app = run_construct(
+            r#"{
+    "type": "Feature",
+    "properties": {},
+    "geometry": { "coordinates": [139.75, 35.68], "type": "Point" }
+}"#,
+            vec![Appearance::Point(PointMaterial {
+                geometry_types: vec![SourceGeometryType::Line],
+                ..Default::default()
+            })],
+        );
+
+        let mut batched_query = app
+            .world_mut()
+            .query_filtered::<&BatchedFeature, With<PointMarker>>();
+        assert_eq!(batched_query.iter(app.world()).count(), 0);
     }
 
     #[test]

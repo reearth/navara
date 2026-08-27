@@ -5,12 +5,29 @@ use navara_core::CRS;
 use navara_core::TileXYZ;
 use navara_feature_component::batch::BatchTable;
 use navara_geojson_vt::types::TileGeometry;
-use navara_geometry::{Hierarchy, WindingOrder};
-use navara_material::Appearance;
+use navara_geometry::{
+    Hierarchy, WindingOrder, close_flat_ring, open_ring_len, tile_ring_boundary_runs,
+};
+use navara_material::{Appearance, SourceGeometryType};
 use navara_tile_component::{OverscaledTileHandle, TileExtent, TileHandle};
 use navara_vector_tile::{PosConverter, VectorTileFeatureMarker};
 
 use crate::geometry::builder::GeometryBuilder;
+
+/// Emit one raw tile-space ring's boundary runs as non-draped polylines,
+/// dropping tile-clip edges (see [`tile_ring_boundary_runs`]) so the tile
+/// outline is not drawn through polygon interiors.
+fn add_boundary_runs(builder: &mut GeometryBuilder, converter: &PosConverter, ring: &[[f64; 2]]) {
+    // Strip the closing duplicate so run indices address unique vertices.
+    let ring = &ring[..open_ring_len(ring, |p| (p[0], p[1]))];
+    let runs = tile_ring_boundary_runs(ring.iter().map(|p| (p[0], p[1])), converter.extent());
+    for run in runs {
+        let projected = converter.project_points(run.iter().map(|&i| ring[i]));
+        if !projected.is_empty() {
+            builder.add_polyline(projected, CRS::Geographic);
+        }
+    }
+}
 
 /// Construct polygon entities from GeoJsonVt tile features.
 ///
@@ -43,6 +60,20 @@ pub(crate) fn construct_geojson_tile_geometry(
             || matches!(a, Appearance::Polyline(p) if p.clamp_to_ground)
     });
 
+    let has_polygon = appearances
+        .iter()
+        .any(|a| matches!(a, Appearance::Polygon(_)));
+    // Which source geometry the polyline appearances consume on this tiled path.
+    let polyline_from_lines = appearances.iter().any(|a| {
+        matches!(a, Appearance::Polyline(p)
+            if p.geometry_types.contains(&SourceGeometryType::Line))
+    });
+    let polyline_from_polygons = appearances.iter().any(|a| {
+        matches!(a, Appearance::Polyline(p)
+            if (p.clamp_to_ground || (p.tiled && !flat))
+                && p.geometry_types.contains(&SourceGeometryType::Polygon))
+    });
+
     let converter = PosConverter::new(
         TileXYZ {
             x: tile.x as usize,
@@ -62,13 +93,13 @@ pub(crate) fn construct_geojson_tile_geometry(
         builder.begin_feature(&props_map);
 
         match &feature.geometry {
-            TileGeometry::Polygons(polygons) => {
+            TileGeometry::Polygons(polygons) if has_polygon || polyline_from_polygons => {
                 for polygon in polygons {
                     if polygon.is_empty() {
                         continue;
                     }
 
-                    let outer_ring = if !flat {
+                    let mut outer_ring = if !flat {
                         converter.project_points(&polygon[0])
                     } else {
                         converter.project_points_on_center(&polygon[0])
@@ -95,15 +126,48 @@ pub(crate) fn construct_geojson_tile_geometry(
                         continue;
                     }
 
-                    let winding_order = if flat {
-                        WindingOrder::CounterClockwise
-                    } else {
-                        WindingOrder::Clockwise
-                    };
-                    builder.add_polygon(outer_ring, &holes, winding_order, CRS::Geographic);
+                    if has_polygon {
+                        let winding_order = if flat {
+                            WindingOrder::CounterClockwise
+                        } else {
+                            WindingOrder::Clockwise
+                        };
+                        // Keep the ring only when boundary derivation reads it below.
+                        let ring = if polyline_from_polygons && flat {
+                            outer_ring.clone()
+                        } else {
+                            std::mem::take(&mut outer_ring)
+                        };
+                        builder.add_polygon(ring, &holes, winding_order, CRS::Geographic);
+                    }
+
+                    // Derived boundary polylines reuse the rings the fill
+                    // consumed above; fill/stroke stacking is resolved by the
+                    // renderer (strokes get a higher render order), not by
+                    // emission order.
+                    if polyline_from_polygons {
+                        if flat {
+                            // Draped boundaries reuse the projected rings as
+                            // closed polylines; the bake clips the tile-buffer
+                            // zone, so clip edges never show.
+                            close_flat_ring(&mut outer_ring);
+                            builder.add_polyline(outer_ring, CRS::Geographic);
+                            for hole in holes {
+                                let mut ring = hole.outer_ring;
+                                close_flat_ring(&mut ring);
+                                builder.add_polyline(ring, CRS::Geographic);
+                            }
+                        } else {
+                            // Non-draped boundaries render as real geometry,
+                            // so tile-clip edges must be dropped instead.
+                            for ring in polygon {
+                                add_boundary_runs(&mut builder, &converter, ring);
+                            }
+                        }
+                    }
                 }
             }
-            TileGeometry::Lines(lines) => {
+            TileGeometry::Lines(lines) if polyline_from_lines => {
                 for line in lines {
                     if line.is_empty() {
                         continue;
@@ -607,6 +671,131 @@ mod test {
             WindingOrder::Clockwise as u8,
             "non-clamped outer ring should hint Clockwise (same as MVT non-flat path)"
         );
+    }
+
+    // ── polygon boundary derivation (geometry_types) tests ─────────────
+
+    fn boundary_polyline_appearances() -> Vec<Appearance> {
+        vec![Appearance::Polyline(PolylineMaterial {
+            clamp_to_ground: true,
+            geometry_types: vec![SourceGeometryType::Line, SourceGeometryType::Polygon],
+            ..Default::default()
+        })]
+    }
+
+    #[test]
+    fn polygon_derives_boundary_polyline_when_opted_in() {
+        let outer = vec![
+            [0.0, 0.0],
+            [4096.0, 0.0],
+            [4096.0, 4096.0],
+            [0.0, 4096.0],
+            [0.0, 0.0],
+        ];
+        let tile = make_tile(vec![polygon_feature(vec![outer])]);
+        let mut appearances = polygon_appearances();
+        appearances.extend(boundary_polyline_appearances());
+        let mut app = run_construct(tile, appearances);
+
+        // Both the fill and the derived boundary spawn.
+        let mut poly_query = app
+            .world_mut()
+            .query_filtered::<&BatchedPolygonGeometry, With<PolygonMarker>>();
+        assert_eq!(poly_query.iter(app.world()).count(), 1);
+
+        let mut line_query = app
+            .world_mut()
+            .query_filtered::<&BatchedPolylineGeometry, With<PolylineMarker>>();
+        let geoms: Vec<_> = line_query.iter(app.world()).collect();
+        assert_eq!(geoms.len(), 1);
+        let buf = app.world().resource::<BufferStore>();
+        assert_eq!(geoms[0].feature_count(buf), 1);
+    }
+
+    #[test]
+    fn polygon_derives_boundary_polyline_without_polygon_appearance() {
+        // A polyline-only layer opted into polygons renders the boundary and
+        // spawns no polygon entity.
+        let outer = vec![
+            [0.0, 0.0],
+            [4096.0, 0.0],
+            [4096.0, 4096.0],
+            [0.0, 4096.0],
+            [0.0, 0.0],
+        ];
+        let hole = vec![
+            [1024.0, 1024.0],
+            [1024.0, 3072.0],
+            [3072.0, 3072.0],
+            [3072.0, 1024.0],
+            [1024.0, 1024.0],
+        ];
+        let tile = make_tile(vec![polygon_feature(vec![outer, hole])]);
+        let mut app = run_construct(tile, boundary_polyline_appearances());
+
+        let mut poly_query = app
+            .world_mut()
+            .query_filtered::<&BatchedPolygonGeometry, With<PolygonMarker>>();
+        assert_eq!(poly_query.iter(app.world()).count(), 0);
+
+        let mut line_query = app
+            .world_mut()
+            .query_filtered::<&BatchedPolylineGeometry, With<PolylineMarker>>();
+        let geoms: Vec<_> = line_query.iter(app.world()).collect();
+        assert_eq!(geoms.len(), 1);
+        let buf = app.world().resource::<BufferStore>();
+        // Outer ring + hole ring, sharing the feature's batch index.
+        assert_eq!(geoms[0].feature_count(buf), 2);
+        assert_eq!(geoms[0].batch_indices(buf).unwrap(), &[0, 0]);
+    }
+
+    #[test]
+    fn non_draped_tiled_boundary_drops_tile_clip_edges() {
+        // Two vertices sit in the tile's clip buffer (x = -64); the edge
+        // between them traces the tile outline and must not render.
+        let outer = vec![
+            [-64.0, 10.0],
+            [100.0, 10.0],
+            [100.0, 100.0],
+            [-64.0, 100.0],
+            [-64.0, 10.0],
+        ];
+        let tile = make_tile(vec![polygon_feature(vec![outer])]);
+        let appearances = vec![Appearance::Polyline(PolylineMaterial {
+            clamp_to_ground: false,
+            tiled: true,
+            geometry_types: vec![SourceGeometryType::Line, SourceGeometryType::Polygon],
+            ..Default::default()
+        })];
+        let mut app = run_construct(tile, appearances);
+
+        let mut line_query = app
+            .world_mut()
+            .query_filtered::<&BatchedPolylineGeometry, With<PolylineMarker>>();
+        let geoms: Vec<_> = line_query.iter(app.world()).collect();
+        assert_eq!(geoms.len(), 1);
+        let buf = app.world().resource::<BufferStore>();
+        assert_eq!(geoms[0].feature_count(buf), 1);
+        let points = geoms[0].points(buf).unwrap();
+        // One open run over the four real vertices (3 coords each).
+        assert_eq!(points.len(), 12);
+        assert_ne!(points[..3], points[points.len() - 3..]);
+    }
+
+    #[test]
+    fn polygon_without_boundary_opt_in_derives_nothing() {
+        let outer = vec![
+            [0.0, 0.0],
+            [4096.0, 0.0],
+            [4096.0, 4096.0],
+            [0.0, 4096.0],
+            [0.0, 0.0],
+        ];
+        let tile = make_tile(vec![polygon_feature(vec![outer])]);
+        // Default polyline appearance consumes lines only.
+        let app = run_construct(tile, polyline_appearances());
+        let out = app.world().resource::<TestOutput>();
+        assert!(out.0.is_none());
     }
 
     // ── polyline (TileGeometry::Lines) tests ───────────────────────────

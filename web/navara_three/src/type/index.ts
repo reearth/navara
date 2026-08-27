@@ -76,6 +76,27 @@ type ConvertColorFields<T> = {
 type WithColorSupport<T> = ConvertColorFields<T>;
 
 /**
+ * Source geometry categories a vector appearance can consume via its
+ * `geometryTypes` option. Each appearance defaults to its native geometry only
+ * (`"point"` for point/billboard/text, `"line"` for polyline); adding entries
+ * derives extra representations, e.g. `polyline: { geometryTypes: ["line",
+ * "polygon"] }` also renders polygon boundary rings as polylines.
+ */
+export type SourceGeometryType = "point" | "line" | "polygon";
+
+/**
+ * Helper type to narrow the generated `geometryTypes?: string[]` material
+ * fields to the {@link SourceGeometryType} literal union.
+ */
+type ConvertGeometryTypeFields<T> = {
+  [K in keyof T]: K extends "geometryTypes"
+    ? SourceGeometryType[] | Extract<T[K], undefined>
+    : T[K] extends object | undefined
+      ? ConvertGeometryTypeFields<T[K]> | Extract<T[K], undefined>
+      : T[K];
+};
+
+/**
  * A reference to a {@link Source}: either the source handle returned by
  * `addSource`, or its `id` string.
  */
@@ -87,7 +108,7 @@ export type SourceLayerBase<Layer extends { source?: string | undefined }> =
   };
 
 type VectorLayerBase = WithColorSupport<
-  Layer<VectorLayerDescription & { type: "vector" }>
+  ConvertGeometryTypeFields<Layer<VectorLayerDescription & { type: "vector" }>>
 >;
 
 /**

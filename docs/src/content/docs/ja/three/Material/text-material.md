@@ -221,6 +221,24 @@ view.addFontFamily({
 }
 ```
 
+### geometryTypes
+
+**Type:** `("point" | "line" | "polygon")[] | undefined`
+
+**Description:** このマテリアルが消費するソースジオメトリのカテゴリーです。`"line"` を含めるとラインの頂点ごとに、`"polygon"` を含めるとポリゴンリングの頂点ごとに 1 つのラベルを描画します（リングを閉じる重複頂点はスキップされます）。配列を指定するとデフォルトは置き換えられるため、ポイントジオメトリも描画し続けたい場合は `"point"` を含めてください。このオプションはジオメトリ構築時に適用されます。レイヤー作成時に指定してください。`layer.update()` で変更しても読み込み済みのタイルには反映されず、変更後に読み込まれたタイルにのみ適用されます（すべてに反映するにはレイヤーを作り直してください）。
+
+**Default:** `["point"]`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    geometryTypes: ["point", "polygon"]
+  }
+}
+```
+
 ### height
 
 **Type:** `number | undefined`

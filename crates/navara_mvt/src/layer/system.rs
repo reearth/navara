@@ -16,8 +16,8 @@ use navara_layer::{DeleteMvtLayerMarker, LayerId, LayerStore, MvtLayer, UpdateMv
 use navara_material::Appearance;
 use navara_tile_component::VectorTileQuadtree;
 use navara_vector_tile::{
-    LayerResources, RenderedTile, TileCacheManager, TileSource, VectorTileSource,
-    VectorTileSourceCache, VectorTileSourceResources,
+    LayerResources, ReloadSourceTiles, RenderedTile, TileCacheManager, TileSource,
+    VectorTileSource, VectorTileSourceCache, VectorTileSourceResources,
 };
 
 use navara_pmtiles::PmtilesSource;
@@ -90,6 +90,11 @@ pub fn prepare_layer_resource(
                         tile_cache_manager,
                     });
                 }
+                // The source's resident tiles were rendered without the new
+                // layers, and nothing re-parses a resident tile; mark the
+                // source so `reload_source_tiles` rebuilds them with the
+                // updated layer list.
+                commands.entity(existing).insert(ReloadSourceTiles);
             }
         } else {
             let owned_layers: Vec<OwnedMatchedLayerInfo> = layer_entities

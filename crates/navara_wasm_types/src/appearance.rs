@@ -3,6 +3,37 @@ use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
 use crate::{TextureFragment, TileUvTransform, Vec2, Vec3 as WasmVec3};
+
+/// Parse the JS-facing `geometryTypes` names into typed values. The given
+/// array always replaces the material default, matching the Rust-level
+/// contract: an explicitly empty array means "consume no geometry". Unknown
+/// names are dropped with a warning, and a warning also fires when dropping
+/// them empties a non-empty list, since that silences the whole appearance.
+fn parse_geometry_types(
+    value: &Option<Vec<String>>,
+) -> Option<Vec<navara_material::SourceGeometryType>> {
+    let list = value.as_ref()?;
+    let mut parsed = Vec::with_capacity(list.len());
+    for name in list {
+        match navara_material::SourceGeometryType::parse(name) {
+            Some(t) => parsed.push(t),
+            None => bevy_log::warn!(
+                "geometryTypes: unknown geometry type {name:?} (expected \"point\", \"line\" or \"polygon\")"
+            ),
+        }
+    }
+    if parsed.is_empty() && !list.is_empty() {
+        bevy_log::warn!(
+            "geometryTypes: no valid geometry types remain in {list:?}; the appearance consumes no geometry"
+        );
+    }
+    Some(parsed)
+}
+
+/// Inverse of [`parse_geometry_types`] for the material→wasm direction.
+fn geometry_type_names(value: &[navara_material::SourceGeometryType]) -> Vec<String> {
+    value.iter().map(|t| t.as_str().to_string()).collect()
+}
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PointMaterial {
@@ -39,6 +70,12 @@ pub struct PointMaterial {
     #[wasm_bindgen(js_name = declutterPriority)]
     #[serde(rename = "declutterPriority")]
     pub declutter_priority: Option<f32>,
+    /// Source geometry types this appearance consumes: `"point"`, `"line"`,
+    /// `"polygon"`. Defaults to `["point"]`; adding `"line"`/`"polygon"` also
+    /// emits a point per line-string / polygon-ring vertex.
+    #[wasm_bindgen(getter_with_clone, js_name = geometryTypes)]
+    #[serde(rename = "geometryTypes")]
+    pub geometry_types: Option<Vec<String>>,
     // SelectiveEffect
     /// IDs of selective effects to apply (e.g., "bloom", "outline")
     #[wasm_bindgen(getter_with_clone, js_name = effectIds)]
@@ -71,6 +108,8 @@ impl From<PointMaterial> for navara_material::PointMaterial {
             opacity: val.opacity.unwrap_or(default.opacity),
             declutter: val.declutter.unwrap_or(default.declutter),
             declutter_priority: val.declutter_priority.unwrap_or(default.declutter_priority),
+            geometry_types: parse_geometry_types(&val.geometry_types)
+                .unwrap_or(default.geometry_types),
             effect_ids: val.effect_ids.or(default.effect_ids),
             emissive_intensity: val.emissive_intensity.or(default.emissive_intensity),
             emissive_color: val.emissive_color.or(default.emissive_color),
@@ -93,6 +132,7 @@ impl<'a> From<&'a navara_material::PointMaterial> for PointMaterial {
             opacity: Some(value.opacity),
             declutter: Some(value.declutter),
             declutter_priority: Some(value.declutter_priority),
+            geometry_types: Some(geometry_type_names(&value.geometry_types)),
             effect_ids: value.effect_ids.clone(),
             emissive_intensity: value.emissive_intensity,
             emissive_color: value.emissive_color,
@@ -116,6 +156,8 @@ impl PointMaterial {
             opacity: self.opacity.unwrap_or(other.opacity),
             declutter: self.declutter.unwrap_or(other.declutter),
             declutter_priority: self.declutter_priority.unwrap_or(other.declutter_priority),
+            geometry_types: parse_geometry_types(&self.geometry_types)
+                .unwrap_or_else(|| other.geometry_types.clone()),
             effect_ids: self.effect_ids.clone().or_else(|| other.effect_ids.clone()),
             emissive_intensity: self.emissive_intensity.or(other.emissive_intensity),
             emissive_color: self.emissive_color.or(other.emissive_color),
@@ -171,6 +213,12 @@ pub struct BillboardMaterial {
     #[wasm_bindgen(js_name = declutterPriority)]
     #[serde(rename = "declutterPriority")]
     pub declutter_priority: Option<f32>,
+    /// Source geometry types this appearance consumes: `"point"`, `"line"`,
+    /// `"polygon"`. Defaults to `["point"]`; adding `"line"`/`"polygon"` also
+    /// emits a billboard per line-string / polygon-ring vertex.
+    #[wasm_bindgen(getter_with_clone, js_name = geometryTypes)]
+    #[serde(rename = "geometryTypes")]
+    pub geometry_types: Option<Vec<String>>,
     // SelectiveEffect
     /// IDs of selective effects to apply (e.g., "bloom", "outline")
     #[wasm_bindgen(getter_with_clone, js_name = effectIds)]
@@ -205,6 +253,8 @@ impl From<BillboardMaterial> for navara_material::BillboardMaterial {
             alpha_test: val.alpha_test.unwrap_or(default.alpha_test),
             declutter: val.declutter.unwrap_or(default.declutter),
             declutter_priority: val.declutter_priority.unwrap_or(default.declutter_priority),
+            geometry_types: parse_geometry_types(&val.geometry_types)
+                .unwrap_or(default.geometry_types),
             effect_ids: val.effect_ids.or(default.effect_ids),
             emissive_intensity: val.emissive_intensity.or(default.emissive_intensity),
             emissive_color: val.emissive_color.or(default.emissive_color),
@@ -229,6 +279,7 @@ impl<'a> From<&'a navara_material::BillboardMaterial> for BillboardMaterial {
             alpha_test: Some(value.alpha_test),
             declutter: Some(value.declutter),
             declutter_priority: Some(value.declutter_priority),
+            geometry_types: Some(geometry_type_names(&value.geometry_types)),
             effect_ids: value.effect_ids.clone(),
             emissive_intensity: value.emissive_intensity,
             emissive_color: value.emissive_color,
@@ -257,6 +308,8 @@ impl BillboardMaterial {
             alpha_test: self.alpha_test.unwrap_or(other.alpha_test),
             declutter: self.declutter.unwrap_or(other.declutter),
             declutter_priority: self.declutter_priority.unwrap_or(other.declutter_priority),
+            geometry_types: parse_geometry_types(&self.geometry_types)
+                .unwrap_or_else(|| other.geometry_types.clone()),
             effect_ids: self.effect_ids.clone().or_else(|| other.effect_ids.clone()),
             emissive_intensity: self.emissive_intensity.or(other.emissive_intensity),
             emissive_color: self.emissive_color.or(other.emissive_color),
@@ -382,6 +435,12 @@ pub struct TextMaterial {
     #[wasm_bindgen(js_name = declutterPriority)]
     #[serde(rename = "declutterPriority")]
     pub declutter_priority: Option<f32>,
+    /// Source geometry types this appearance consumes: `"point"`, `"line"`,
+    /// `"polygon"`. Defaults to `["point"]`; adding `"line"`/`"polygon"` also
+    /// emits a label per line-string / polygon-ring vertex.
+    #[wasm_bindgen(getter_with_clone, js_name = geometryTypes)]
+    #[serde(rename = "geometryTypes")]
+    pub geometry_types: Option<Vec<String>>,
 }
 
 impl From<TextMaterial> for navara_material::TextMaterial {
@@ -424,6 +483,8 @@ impl From<TextMaterial> for navara_material::TextMaterial {
 
             declutter: val.declutter.unwrap_or(default.declutter),
             declutter_priority: val.declutter_priority.unwrap_or(default.declutter_priority),
+            geometry_types: parse_geometry_types(&val.geometry_types)
+                .unwrap_or(default.geometry_types),
         }
     }
 }
@@ -463,6 +524,7 @@ impl<'a> From<&'a navara_material::TextMaterial> for TextMaterial {
 
             declutter: Some(value.declutter),
             declutter_priority: Some(value.declutter_priority),
+            geometry_types: Some(geometry_type_names(&value.geometry_types)),
         }
     }
 }
@@ -506,6 +568,8 @@ impl TextMaterial {
 
             declutter: self.declutter.unwrap_or(other.declutter),
             declutter_priority: self.declutter_priority.unwrap_or(other.declutter_priority),
+            geometry_types: parse_geometry_types(&self.geometry_types)
+                .unwrap_or_else(|| other.geometry_types.clone()),
         }
     }
 }
@@ -543,6 +607,14 @@ pub struct PolylineMaterial {
     #[serde(rename = "tiled")]
     pub tiled: Option<bool>,
     pub height: Option<f32>,
+    /// Source geometry types this appearance consumes: `"line"`, `"polygon"`.
+    /// Defaults to `["line"]`; adding `"polygon"` also renders polygon boundary
+    /// rings (outer ring and holes) as closed polylines at the ring's base
+    /// height. Extruded-polygon edges stay the polygon material's `outline`
+    /// feature.
+    #[wasm_bindgen(getter_with_clone, js_name = geometryTypes)]
+    #[serde(rename = "geometryTypes")]
+    pub geometry_types: Option<Vec<String>>,
     #[wasm_bindgen(getter_with_clone)]
     pub __internal__: Option<PolylineInternalMaterial>,
     // SelectiveEffect
@@ -595,6 +667,7 @@ impl PolylineMaterial {
             height,
             width,
             max_width,
+            geometry_types: None,
             __internal__,
             effect_ids: None,
             emissive_intensity: None,
@@ -622,6 +695,8 @@ impl PolylineMaterial {
             clamp_to_ground: self.clamp_to_ground.unwrap_or(other.clamp_to_ground),
             tiled: self.tiled.unwrap_or(other.tiled),
             height: self.height.unwrap_or(other.height),
+            geometry_types: parse_geometry_types(&self.geometry_types)
+                .unwrap_or_else(|| other.geometry_types.clone()),
             internal: self
                 .__internal__
                 .as_ref()
@@ -651,6 +726,8 @@ impl From<PolylineMaterial> for navara_material::PolylineMaterial {
             clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
             tiled: val.tiled.unwrap_or(default.tiled),
             height: val.height.unwrap_or(default.height),
+            geometry_types: parse_geometry_types(&val.geometry_types)
+                .unwrap_or(default.geometry_types),
             internal: val.__internal__.map(|v| v.into()),
             effect_ids: val.effect_ids.or(default.effect_ids),
             emissive_intensity: val.emissive_intensity.or(default.emissive_intensity),
@@ -674,6 +751,7 @@ impl<'a> From<&'a navara_material::PolylineMaterial> for PolylineMaterial {
             clamp_to_ground: Some(value.clamp_to_ground),
             tiled: Some(value.tiled),
             height: Some(value.height),
+            geometry_types: Some(geometry_type_names(&value.geometry_types)),
             __internal__: value.internal.as_ref().map(|v| v.into()),
             effect_ids: value.effect_ids.clone(),
             emissive_intensity: value.emissive_intensity,
@@ -698,6 +776,7 @@ impl From<navara_material::PolylineMaterial> for PolylineMaterial {
             clamp_to_ground: Some(value.clamp_to_ground),
             tiled: Some(value.tiled),
             height: Some(value.height),
+            geometry_types: Some(geometry_type_names(&value.geometry_types)),
             __internal__: value.internal.map(|v| v.into()),
             effect_ids: value.effect_ids.clone(),
             emissive_intensity: value.emissive_intensity,
@@ -1773,4 +1852,42 @@ pub struct ElevationHeatmapMaterial {
 pub struct HillshadeMaterial {
     /// Exaggeration factor for hillshade effect (default: 1.0)
     pub exaggeration: Option<f32>,
+}
+
+#[cfg(test)]
+mod test {
+    use super::parse_geometry_types;
+    use navara_material::SourceGeometryType;
+
+    #[test]
+    fn parse_geometry_types_keeps_valid_names() {
+        let value = Some(vec!["line".to_string(), "polygon".to_string()]);
+        assert_eq!(
+            parse_geometry_types(&value),
+            Some(vec![SourceGeometryType::Line, SourceGeometryType::Polygon])
+        );
+    }
+
+    #[test]
+    fn parse_geometry_types_drops_unknown_names() {
+        let value = Some(vec!["Line".to_string(), "polygon".to_string()]);
+        assert_eq!(
+            parse_geometry_types(&value),
+            Some(vec![SourceGeometryType::Polygon])
+        );
+    }
+
+    /// The array replaces the material default even when it ends up empty:
+    /// an explicitly empty array means "consume no geometry", and an
+    /// all-invalid list warns instead of silently reverting to the default.
+    /// Only an absent field reads as unspecified.
+    #[test]
+    fn parse_geometry_types_preserves_empty_result() {
+        assert_eq!(parse_geometry_types(&None), None);
+        assert_eq!(parse_geometry_types(&Some(vec![])), Some(vec![]));
+        assert_eq!(
+            parse_geometry_types(&Some(vec!["Line".to_string(), "polyline".to_string()])),
+            Some(vec![])
+        );
+    }
 }

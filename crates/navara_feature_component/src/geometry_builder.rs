@@ -316,6 +316,13 @@ impl GeometryGroups {
                 continue;
             }
 
+            // Check the appearance match before allocating the batch-id
+            // buffer: `spawn_batched_entity` drops unmatched kinds, which
+            // would leak the freshly created handle.
+            if find_matching_appearance(group.kind, appearances).is_none() {
+                continue;
+            }
+
             let batch_length = group.global_batch_ids.len() as u32;
 
             let batched = BatchedFeature {
@@ -447,6 +454,23 @@ pub fn spawn_point_entity(
     }
 }
 
+/// The first appearance whose variant matches `kind`, if any.
+fn find_matching_appearance(
+    kind: GeometryAppearanceKind,
+    appearances: &[Appearance],
+) -> Option<&Appearance> {
+    appearances.iter().find(|a| {
+        matches!(
+            (kind, a),
+            (GeometryAppearanceKind::Point, Appearance::Point(_))
+                | (GeometryAppearanceKind::Billboard, Appearance::Billboard(_))
+                | (GeometryAppearanceKind::Text, Appearance::Text(_))
+                | (GeometryAppearanceKind::Polyline, Appearance::Polyline(_))
+                | (GeometryAppearanceKind::Polygon, Appearance::Polygon(_))
+        )
+    })
+}
+
 /// Spawn a `BatchedFeature` parent entity with the appropriate marker and material.
 fn spawn_batched_entity(
     commands: &mut Commands,
@@ -457,16 +481,7 @@ fn spawn_batched_entity(
     feature_batch_id: FeatureBatchId,
     global_batch_ids: GlobalBatchIds,
 ) -> Option<Entity> {
-    let appearance = appearances.iter().find(|a| {
-        matches!(
-            (kind, a),
-            (GeometryAppearanceKind::Point, Appearance::Point(_))
-                | (GeometryAppearanceKind::Billboard, Appearance::Billboard(_))
-                | (GeometryAppearanceKind::Text, Appearance::Text(_))
-                | (GeometryAppearanceKind::Polyline, Appearance::Polyline(_))
-                | (GeometryAppearanceKind::Polygon, Appearance::Polygon(_))
-        )
-    })?;
+    let appearance = find_matching_appearance(kind, appearances)?;
 
     let mut ec = commands.spawn((
         batched,

@@ -14,7 +14,7 @@ import {
   PolygonMesh,
   PolylineMesh,
 } from "../mesh";
-import { FEATURE_RENDER_ORDER } from "../renderOrder";
+import { FEATURE_RENDER_ORDER, STROKE_RENDER_ORDER } from "../renderOrder";
 import type { Scenes } from "../scene";
 
 import type { EventContext } from "./context";
@@ -190,7 +190,20 @@ export async function processRenderableFeatureAdded(
     setTransform(obj, transform);
   }
 
-  obj.renderOrder = FEATURE_RENDER_ORDER;
+  // Strokes draw after fills: sibling meshes are created asynchronously in
+  // arbitrary order, and a fill drawn after a coplanar stroke either paints
+  // over it (bake scene) or z-fights against its depth (MRT scene), so the
+  // stacking must come from renderOrder, not insertion order. Only polylines
+  // stroking polygon rings sit on a sibling fill; standalone line strokes
+  // keep the base order — elevated, they would deterministically composite
+  // over every marker and outline they merely cross (PolylineMesh skips the
+  // depth test in the MRT scene).
+  const strokesSiblingFills =
+    polyline?.material.geometryTypes?.includes("polygon") ?? false;
+  obj.renderOrder =
+    obj instanceof PolylineMesh && strokesSiblingFills
+      ? STROKE_RENDER_ORDER
+      : FEATURE_RENDER_ORDER;
 
   // Add to MRT scene if not draped (draped features render to texturized scene)
   const isDraped =

@@ -54,7 +54,23 @@ pub fn create_polyline_geometry(
         CRS::ESPG { code: _code } => unimplemented!(),
     };
 
-    let cartographics = unique_with_delta_e(cartographics, 9);
+    // `unique_with_delta_e` filters duplicates globally, so it also strips the
+    // closing duplicate of a closed ring (e.g. a derived polygon boundary),
+    // which would leave a gap on the closing edge. Detect closure first and
+    // re-close the ring after filtering.
+    let is_closed_ring = cartographics.len() > 3
+        && cartographics
+            .first()
+            .zip(cartographics.last())
+            .is_some_and(|(first, last)| {
+                (first.lng.val() - last.lng.val()).abs() <= 1e-9
+                    && (first.lat.val() - last.lat.val()).abs() <= 1e-9
+                    && (first.height.val() - last.height.val()).abs() <= 1e-9
+            });
+    let mut cartographics = unique_with_delta_e(cartographics, 9);
+    if is_closed_ring && cartographics.len() >= 3 {
+        cartographics.push(cartographics[0]);
+    }
     let cartographics_length = cartographics.len();
 
     if cartographics_length < 2 {
@@ -666,6 +682,86 @@ mod test {
 
         assert_eq!(geometry.indices.len(), 36 * 3);
         assert_eq!(geometry.attributes.position.data.len(), 24 * 3);
+    }
+
+    #[test]
+    fn closed_ring_keeps_its_closing_segment() {
+        let square = |close: bool| {
+            let mut positions = vec![
+                LLE::<f64, Degrees>::from_float(0.01, 0.01, 0.).rad(),
+                LLE::<f64, Degrees>::from_float(0.02, 0.01, 0.).rad(),
+                LLE::<f64, Degrees>::from_float(0.02, 0.02, 0.).rad(),
+                LLE::<f64, Degrees>::from_float(0.01, 0.02, 0.).rad(),
+            ];
+            if close {
+                positions.push(LLE::<f64, Degrees>::from_float(0.01, 0.01, 0.).rad());
+            }
+            create_polyline_geometry(
+                WGS84_64,
+                PolylineGeometryOptions {
+                    positions,
+                    granularity: 0.0,
+                    ..Default::default()
+                },
+            )
+            .unwrap()
+        };
+        let open = square(false);
+        let closed = square(true);
+        // The global duplicate filter must not strip the ring-closing vertex:
+        // a closed ring renders one more segment than the open path.
+        assert!(
+            closed.attributes.position.data.len() > open.attributes.position.data.len(),
+            "closing segment was dropped"
+        );
+    }
+
+    #[test]
+    fn path_closed_only_in_2d_is_not_reclosed() {
+        // A ramp returning over its start point at a different height is an
+        // open path: re-closing it would append a zero-length segment whose
+        // normal computation yields NaN.
+        let geometry = create_polyline_geometry(
+            WGS84_64,
+            PolylineGeometryOptions {
+                positions: vec![
+                    LLE::<f64, Degrees>::from_float(0.01, 0.01, 0.).rad(),
+                    LLE::<f64, Degrees>::from_float(0.02, 0.01, 0.).rad(),
+                    LLE::<f64, Degrees>::from_float(0.02, 0.02, 0.).rad(),
+                    LLE::<f64, Degrees>::from_float(0.01, 0.01, 100.).rad(),
+                ],
+                granularity: 0.0,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+
+        let assert_finite = |data: &[f32], name: &str| {
+            assert!(
+                data.iter().all(|v| v.is_finite()),
+                "{name} contains non-finite values"
+            );
+        };
+        assert_finite(&geometry.attributes.position.data, "position");
+        assert_finite(
+            &geometry
+                .attributes
+                .right_normal_and_texture_coordinate_normalization_y
+                .data,
+            "right_normal_and_texture_coordinate_normalization_y",
+        );
+        if let Some(attr) = &geometry.attributes.start_normals {
+            assert_finite(&attr.data, "start_normals");
+        }
+        if let Some(attr) = &geometry
+            .attributes
+            .end_normal_and_texture_coordinate_normalization_x
+        {
+            assert_finite(
+                &attr.data,
+                "end_normal_and_texture_coordinate_normalization_x",
+            );
+        }
     }
 
     #[test]

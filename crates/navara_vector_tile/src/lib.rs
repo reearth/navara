@@ -71,6 +71,7 @@ impl Plugin for VectorTilePlugin {
         app.init_resource::<VectorTileSourceCache>().add_systems(
             Update,
             (
+                tile::system::reload_source_tiles,
                 tile::system::update_tiles,
                 tile::system::transfer_mesh,
                 data_requester::system::filter_requestable_data_requester,

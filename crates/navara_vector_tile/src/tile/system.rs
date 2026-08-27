@@ -24,7 +24,7 @@ use navara_window::Window;
 use rustc_hash::FxHashSet;
 
 use crate::{
-    VectorResolveRevision, VectorTileFeatureMarker, VectorTileSourceResources,
+    ReloadSourceTiles, VectorResolveRevision, VectorTileFeatureMarker, VectorTileSourceResources,
     data_requester::{ChangedVectorTileDataRequesterQuery, VectorTileDataRequesterQuery},
     layer::{resource::LayerResources, tile_cache_manager::TileCacheManager},
     source::TileSource,
@@ -433,6 +433,55 @@ fn destroy_rendered_tile(
     // Remove features from each layer's store
     for (layer_id, removed_features) in removed_by_layer {
         layer_store.remove_features(&layer_id, &removed_features);
+    }
+}
+
+/// Destroys every resident tile of sources marked with [`ReloadSourceTiles`].
+///
+/// A layer that attaches to an already-cached source finds tiles that were
+/// rendered without it; nothing re-parses a resident tile, so the layer would
+/// stay invisible until natural eviction. Dropping the rendered tiles (and
+/// flagging a re-traversal) rebuilds each tile with the source's current layer
+/// list; worker parses in flight for the destroyed tiles are cancelled by the
+/// existing eviction handling.
+#[allow(clippy::too_many_arguments)]
+pub fn reload_source_tiles(
+    mut commands: Commands,
+    mut layer_store: ResMut<LayerStore>,
+    marked: Query<(Entity, &VectorTileSourceResources), With<ReloadSourceTiles>>,
+    mut qts: Query<&mut VectorTileQuadtree>,
+    mut tcs: Query<&mut TileCacheManager>,
+    mut rendered_tiles: Query<&mut RenderedTile>,
+    features: Query<(&FeatureId, &LayerId)>,
+    batched_features: Query<&BatchedFeature>,
+    mut tile_sources: Query<&mut TileSource>,
+) {
+    for (source_entity, resources) in &marked {
+        if let (Ok(mut qt), Ok(mut tc)) = (
+            qts.get_mut(resources.quadtree),
+            tcs.get_mut(resources.tile_cache_manager),
+        ) {
+            let cached: Vec<Entity> = tc.rendered_tile_caches.values().copied().collect();
+            for entity in cached {
+                let Ok(mut rendered_tile) = rendered_tiles.get_mut(entity) else {
+                    continue;
+                };
+                destroy_rendered_tile(
+                    &mut commands,
+                    &mut layer_store,
+                    &mut qt,
+                    &mut tc,
+                    &mut tile_sources,
+                    source_entity,
+                    entity,
+                    &mut rendered_tile,
+                    &features,
+                    &batched_features,
+                );
+            }
+            tc.needs_update = true;
+        }
+        commands.entity(source_entity).remove::<ReloadSourceTiles>();
     }
 }
 
@@ -948,6 +997,52 @@ mod memory_budget_tests {
             ..Default::default()
         });
         app
+    }
+
+    #[test]
+    fn reload_source_tiles_rebuilds_marked_source() {
+        use crate::source_cache::{SourceId, TraversalConfig};
+
+        let mut app = new_app(None);
+        let setup = setup(&mut app, 100);
+
+        // Attach the shared resources + reload marker to a source entity, as
+        // `prepare_layer_resource` does when a layer joins a cached source.
+        let source_entity = app
+            .world_mut()
+            .query_filtered::<Entity, With<TileSource>>()
+            .single(app.world())
+            .unwrap();
+        app.world_mut().entity_mut(source_entity).insert((
+            VectorTileSourceResources::new(
+                SourceId::new(
+                    "https://example.com/tiles".to_string(),
+                    TraversalConfig::default(),
+                ),
+                setup.quadtree,
+                setup.tile_cache_manager,
+                vec![],
+            ),
+            ReloadSourceTiles,
+        ));
+
+        app.add_systems(Update, reload_source_tiles);
+        app.update();
+
+        // The resident tile is destroyed so the next traversal re-renders it
+        // with the source's current layer list, and the marker is consumed.
+        assert!(app.world().get_entity(setup.rendered_tile_entity).is_err());
+        let tc = app
+            .world()
+            .get::<TileCacheManager>(setup.tile_cache_manager)
+            .unwrap();
+        assert!(tc.rendered_tile_caches.is_empty());
+        assert!(tc.needs_update);
+        assert!(
+            app.world()
+                .get::<ReloadSourceTiles>(source_entity)
+                .is_none()
+        );
     }
 
     #[test]

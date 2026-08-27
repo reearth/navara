@@ -12,7 +12,7 @@ use navara_feature_component::{
         AccumulatedGeometry, GeometryAppearanceKind, GeometryGroup, GeometryGroups,
     },
 };
-use navara_material::Appearance;
+use navara_material::{Appearance, SourceGeometryType};
 use navara_math::{FloatType, Transform, Vec3};
 use navara_parser::mvt::{
     LayerParseConfig, LayerParseKind, MvtLayerData, ParsedGeometry, ParsedLayerGroup, PointEmitter,
@@ -45,34 +45,59 @@ pub(crate) fn layer_parse_config(matched: &MatchedLayerInfo) -> LayerParseConfig
         _ => false,
     });
 
+    let point_emitter = |kind, height, geometry_types: &[SourceGeometryType]| PointEmitter {
+        kind,
+        height,
+        from_points: geometry_types.contains(&SourceGeometryType::Point),
+        from_lines: geometry_types.contains(&SourceGeometryType::Line),
+        from_polygons: geometry_types.contains(&SourceGeometryType::Polygon),
+    };
+
     let mut point_emitters = Vec::new();
     let mut polyline = false;
+    let mut polyline_from_polygons = false;
     let mut polygon = false;
     for a in matched.appearances {
         match a {
-            Appearance::Point(m) => point_emitters.push(PointEmitter {
-                kind: LayerParseKind::Point,
-                height: m.height,
-            }),
-            Appearance::Billboard(m) => point_emitters.push(PointEmitter {
-                kind: LayerParseKind::Billboard,
-                height: m.height,
-            }),
-            Appearance::Text(m) => point_emitters.push(PointEmitter {
-                kind: LayerParseKind::Text,
-                height: m.height,
-            }),
-            Appearance::Polyline(_) => polyline = true,
+            Appearance::Point(m) => point_emitters.push(point_emitter(
+                LayerParseKind::Point,
+                m.height,
+                &m.geometry_types,
+            )),
+            Appearance::Billboard(m) => point_emitters.push(point_emitter(
+                LayerParseKind::Billboard,
+                m.height,
+                &m.geometry_types,
+            )),
+            Appearance::Text(m) => point_emitters.push(point_emitter(
+                LayerParseKind::Text,
+                m.height,
+                &m.geometry_types,
+            )),
+            Appearance::Polyline(m) => {
+                polyline |= m.geometry_types.contains(&SourceGeometryType::Line);
+                // Boundary derivation requires the polyline's render
+                // interpretation to match the layer projection: a clamped
+                // polyline drapes the flat tile-local rings, and when nothing
+                // forces `flat` the rings stay geographic for a non-clamped
+                // polyline.
+                polyline_from_polygons |= (m.clamp_to_ground || !flat)
+                    && m.geometry_types.contains(&SourceGeometryType::Polygon);
+            }
             Appearance::Polygon(_) => polygon = true,
             _ => {}
         }
     }
+    // Drop emitters whose geometry_types opted out of every source; they can
+    // never emit and would only slow down the per-coordinate walk.
+    point_emitters.retain(|e| e.from_points || e.from_lines || e.from_polygons);
 
     LayerParseConfig {
         layer_id: matched.layer_id.to_owned(),
         flat,
         point_emitters,
         polyline,
+        polyline_from_polygons,
         polygon,
         limit_layers: matched.limit_layers.clone(),
     }
@@ -553,6 +578,77 @@ mod test {
         app.add_systems(Update, test_construct_system);
         app.update();
         app
+    }
+
+    #[test]
+    fn boundary_derivation_is_guarded_against_flat_projection_mismatch() {
+        // A clamped polygon forces flat projection; a non-clamped, non-tiled
+        // polyline would interpret the projected rings as geographic, so its
+        // boundary derivation must stay off.
+        let appearances = vec![
+            Appearance::Polygon(PolygonMaterial {
+                clamp_to_ground: true,
+                ..Default::default()
+            }),
+            Appearance::Polyline(PolylineMaterial {
+                clamp_to_ground: false,
+                tiled: false,
+                geometry_types: vec![SourceGeometryType::Line, SourceGeometryType::Polygon],
+                ..Default::default()
+            }),
+        ];
+        let matched = MatchedLayerInfo {
+            layer_id: "l",
+            appearances: &appearances,
+            limit_layers: &None,
+        };
+        let config = layer_parse_config(&matched);
+        assert!(config.flat);
+        assert!(config.polyline);
+        assert!(!config.polyline_from_polygons);
+
+        // The material's `tiled` flag changes neither the projection nor the
+        // render interpretation on MVT, so it must not bypass the guard.
+        let appearances = vec![
+            Appearance::Polygon(PolygonMaterial {
+                clamp_to_ground: true,
+                ..Default::default()
+            }),
+            Appearance::Polyline(PolylineMaterial {
+                clamp_to_ground: false,
+                tiled: true,
+                geometry_types: vec![SourceGeometryType::Line, SourceGeometryType::Polygon],
+                ..Default::default()
+            }),
+        ];
+        let matched = MatchedLayerInfo {
+            layer_id: "l",
+            appearances: &appearances,
+            limit_layers: &None,
+        };
+        let config = layer_parse_config(&matched);
+        assert!(config.flat);
+        assert!(!config.polyline_from_polygons);
+    }
+
+    #[test]
+    fn boundary_derivation_stays_on_for_fully_geographic_layers() {
+        // With nothing forcing flat projection, rings stay geographic and a
+        // non-clamped polyline can derive boundaries safely.
+        let appearances = vec![Appearance::Polyline(PolylineMaterial {
+            clamp_to_ground: false,
+            tiled: false,
+            geometry_types: vec![SourceGeometryType::Line, SourceGeometryType::Polygon],
+            ..Default::default()
+        })];
+        let matched = MatchedLayerInfo {
+            layer_id: "l",
+            appearances: &appearances,
+            limit_layers: &None,
+        };
+        let config = layer_parse_config(&matched);
+        assert!(!config.flat);
+        assert!(config.polyline_from_polygons);
     }
 
     #[test]

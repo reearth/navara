@@ -46,6 +46,20 @@ impl AsXYZ for Coord<f64> {
     }
 }
 
+// Iterating a slice yields references, so projecting from a `&[P]` without an
+// intermediate copy needs the reference to implement the trait too.
+impl<T: AsXYZ> AsXYZ for &T {
+    fn x(&self) -> f64 {
+        (**self).x()
+    }
+    fn y(&self) -> f64 {
+        (**self).y()
+    }
+    fn z(&self) -> f64 {
+        (**self).z()
+    }
+}
+
 #[derive(Debug)]
 pub struct PosConverter {
     x0: f64,
@@ -78,6 +92,11 @@ impl PosConverter {
         converter
     }
 
+    /// The tile extent this converter was built with (tile-local coordinate range).
+    pub fn extent(&self) -> f64 {
+        self.extent as f64
+    }
+
     /// Project a single point from tile coordinates (f64) to geographic coordinates.
     pub fn project_point(&self, px: f64, py: f64) -> (FloatType, FloatType) {
         let x = (px + self.x0) * self.scale_x - 180.0;
@@ -87,9 +106,16 @@ impl PosConverter {
         (x as FloatType, y as FloatType)
     }
 
-    /// Project a slice of coordinates to geographic coordinates.
-    pub fn project_points<P: AsXYZ>(&self, points: &[P]) -> Vec<FloatType> {
-        let mut ret = Vec::with_capacity(points.len() * 3);
+    /// Project coordinates to geographic coordinates. Accepts any iterator of
+    /// vertices (e.g. a slice, or a `map` adapting another vertex layout), so
+    /// callers never build a temporary buffer just to change the item type.
+    pub fn project_points<P, I>(&self, points: I) -> Vec<FloatType>
+    where
+        P: AsXYZ,
+        I: IntoIterator<Item = P>,
+    {
+        let points = points.into_iter();
+        let mut ret = Vec::with_capacity(points.size_hint().0 * 3);
 
         for pt in points {
             let (x, y) = self.project_point(pt.x(), pt.y());
@@ -109,10 +135,16 @@ impl PosConverter {
         (x, y)
     }
 
-    /// Construct points based on the extent center.
-    pub fn project_points_on_center<P: AsXYZ>(&self, points: &[P]) -> Vec<FloatType> {
+    /// Construct points based on the extent center. Accepts any iterator of
+    /// vertices, same as [`PosConverter::project_points`].
+    pub fn project_points_on_center<P, I>(&self, points: I) -> Vec<FloatType>
+    where
+        P: AsXYZ,
+        I: IntoIterator<Item = P>,
+    {
         let half_extent = self.extent as f64 / 2.0;
-        let mut ret = Vec::with_capacity(points.len() * 3);
+        let points = points.into_iter();
+        let mut ret = Vec::with_capacity(points.size_hint().0 * 3);
 
         for pt in points {
             let x = (pt.x() - half_extent) / half_extent;

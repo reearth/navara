@@ -11,7 +11,9 @@ use std::sync::Arc;
 use geozero::GeomProcessor;
 use geozero::mvt::{Message, Tile as MvtTile, process_geom, tile};
 use navara_core::{CRS, TileXYZ, WGS84_64};
-use navara_geometry::{Hierarchy, WindingOrder};
+use navara_geometry::{
+    Hierarchy, WindingOrder, is_closed_flat_ring, open_ring_len, tile_ring_boundary_runs,
+};
 use navara_math::{FloatType, Vec3};
 
 use super::config::{LayerParseConfig, LayerParseKind};
@@ -260,6 +262,19 @@ struct MvtFeatureProcessor<'a> {
     in_point: bool,
     /// Whether `linestring_end` should push to rings (polygon) vs a polyline.
     in_polygon: bool,
+    /// Raw (unprojected) vertices of the current linestring/ring, collected
+    /// only when a point emitter derives from line/polygon geometry. Points
+    /// always project geographically, so the flat-projected `projected` buffer
+    /// cannot be reused for them.
+    raw_ring: Vec<(f64, f64)>,
+    /// Whether any point emitter derives from line-string vertices.
+    derive_points_from_lines: bool,
+    /// Whether any point emitter derives from polygon-ring vertices.
+    derive_points_from_polygons: bool,
+    /// Whether derived boundary polylines render as real (non-draped)
+    /// geometry, which requires splitting rings at tile-clip edges (the raw
+    /// ring is collected alongside `projected` for the split).
+    derive_boundary_runs: bool,
 }
 
 impl<'a> MvtFeatureProcessor<'a> {
@@ -275,6 +290,10 @@ impl<'a> MvtFeatureProcessor<'a> {
             holes: Vec::new(),
             in_point: false,
             in_polygon: false,
+            raw_ring: Vec::new(),
+            derive_points_from_lines: config.point_emitters.iter().any(|e| e.from_lines),
+            derive_points_from_polygons: config.point_emitters.iter().any(|e| e.from_polygons),
+            derive_boundary_runs: config.polyline_from_polygons && !config.flat,
         }
     }
 
@@ -351,15 +370,46 @@ impl<'a> MvtFeatureProcessor<'a> {
         // `&mut self` free without cloning the emitter Vec on every coordinate.
         let config = self.config;
         for emitter in &config.point_emitters {
-            self.accumulate_point(x, y, emitter.kind);
+            if emitter.from_points {
+                self.accumulate_point(x, y, emitter.kind);
+            }
         }
     }
 
-    fn accumulate_polyline(&mut self) {
-        if !self.config.polyline {
+    /// Emit derived points for the raw vertices collected for the current
+    /// linestring/ring, honoring each emitter's `from_lines`/`from_polygons`.
+    /// Polygon rings skip the closing duplicate vertex when present.
+    fn emit_derived_ring_points(&mut self, is_polygon_ring: bool) {
+        if self.raw_ring.is_empty() {
             return;
         }
-        let points = std::mem::take(&mut self.projected);
+        let ring = std::mem::take(&mut self.raw_ring);
+        let count = if is_polygon_ring {
+            open_ring_len(&ring, |p| *p)
+        } else {
+            ring.len()
+        };
+        let config = self.config;
+        for emitter in &config.point_emitters {
+            let enabled = if is_polygon_ring {
+                emitter.from_polygons
+            } else {
+                emitter.from_lines
+            };
+            if !enabled {
+                continue;
+            }
+            for &(x, y) in &ring[..count] {
+                self.accumulate_point(x, y, emitter.kind);
+            }
+        }
+        // Hand the buffer (and its capacity) back for the next ring.
+        self.raw_ring = ring;
+        self.raw_ring.clear();
+    }
+
+    /// Push one polyline into the polyline group.
+    fn push_polyline(&mut self, points: Vec<f64>) {
         if points.is_empty() {
             return;
         }
@@ -372,6 +422,64 @@ impl<'a> MvtFeatureProcessor<'a> {
         {
             points_sizes.push(points.len() as u32);
             p.extend(points);
+            batch_indices.push(batch_index);
+        }
+    }
+
+    fn accumulate_polyline(&mut self) {
+        if !self.config.polyline {
+            return;
+        }
+        let points = std::mem::take(&mut self.projected);
+        self.push_polyline(points);
+    }
+
+    /// Accumulate a copy of the current projected ring as a closed polyline
+    /// (polygon-boundary derivation). MVT rings close via `ClosePath` without
+    /// repeating the first vertex, so the ring is closed here when needed.
+    fn accumulate_ring_polyline(&mut self) {
+        if self.projected.is_empty() {
+            return;
+        }
+        // Non-draped boundaries render as real geometry, so edges introduced
+        // by tile clipping must not be drawn. They would trace the tile
+        // outline through polygon interiors. Split the ring at clip edges
+        // (classified on the raw tile coordinates) and emit each surviving
+        // run; draped boundaries keep the whole ring since the bake clips the
+        // buffer zone anyway.
+        if self.derive_boundary_runs {
+            debug_assert_eq!(self.raw_ring.len() * 3, self.projected.len());
+            // Strip a closing duplicate so run indices address unique vertices.
+            let n = open_ring_len(&self.raw_ring, |p| *p);
+            let runs = tile_ring_boundary_runs(
+                self.raw_ring[..n].iter().copied(),
+                self.converter.extent(),
+            );
+            for run in runs {
+                let mut points = Vec::with_capacity(run.len() * 3);
+                for i in run {
+                    points.extend_from_slice(&self.projected[i * 3..i * 3 + 3]);
+                }
+                self.push_polyline(points);
+            }
+            return;
+        }
+        let needs_close = self.projected.len() >= 6 && !is_closed_flat_ring(&self.projected);
+        let (idx, batch_index) = self.commit_group(LayerParseKind::Polyline);
+        // Extend the group buffer straight from `projected` (disjoint field
+        // borrows) instead of cloning the ring into a temporary Vec.
+        if let GeomBuf::Polylines {
+            points,
+            points_sizes,
+            batch_indices,
+        } = &mut self.groups[idx].geom
+        {
+            let closing = if needs_close { 3 } else { 0 };
+            points_sizes.push((self.projected.len() + closing) as u32);
+            points.extend_from_slice(&self.projected);
+            if needs_close {
+                points.extend_from_slice(&self.projected[..3]);
+            }
             batch_indices.push(batch_index);
         }
     }
@@ -438,16 +546,28 @@ impl GeomProcessor for MvtFeatureProcessor<'_> {
     ) -> geozero::error::Result<()> {
         if self.in_point {
             self.accumulate_points_from_coord(x, y);
-        } else if self.config.flat {
-            let (cx, cy) = self.converter.project_point_on_center(x, y);
-            self.projected.push(cx);
-            self.projected.push(cy);
-            self.projected.push(0.0);
         } else {
-            let (gx, gy) = self.converter.project_point(x, y);
-            self.projected.push(gx);
-            self.projected.push(gy);
-            self.projected.push(0.0);
+            if self.config.flat {
+                let (cx, cy) = self.converter.project_point_on_center(x, y);
+                self.projected.push(cx);
+                self.projected.push(cy);
+                self.projected.push(0.0);
+            } else {
+                let (gx, gy) = self.converter.project_point(x, y);
+                self.projected.push(gx);
+                self.projected.push(gy);
+                self.projected.push(0.0);
+            }
+            // Keep the raw vertex around for point derivation (points always
+            // project geographically regardless of `flat`) and for splitting
+            // non-draped boundary polylines at tile-clip edges.
+            if if self.in_polygon {
+                self.derive_points_from_polygons || self.derive_boundary_runs
+            } else {
+                self.derive_points_from_lines
+            } {
+                self.raw_ring.push((x, y));
+            }
         }
         Ok(())
     }
@@ -480,11 +600,18 @@ impl GeomProcessor for MvtFeatureProcessor<'_> {
     ) -> geozero::error::Result<()> {
         self.projected.clear();
         self.projected.reserve(size * 3);
+        self.raw_ring.clear();
         Ok(())
     }
 
     fn linestring_end(&mut self, _tagged: bool, _idx: usize) -> geozero::error::Result<()> {
         if self.in_polygon {
+            // Derived representations read the ring before it moves into the
+            // polygon buffers.
+            if self.config.polyline_from_polygons {
+                self.accumulate_ring_polyline();
+            }
+            self.emit_derived_ring_points(true);
             if self.outer_ring.is_empty() {
                 self.outer_ring = std::mem::take(&mut self.projected);
             } else {
@@ -499,6 +626,7 @@ impl GeomProcessor for MvtFeatureProcessor<'_> {
                 });
             }
         } else {
+            self.emit_derived_ring_points(false);
             self.accumulate_polyline();
         }
         Ok(())
@@ -743,15 +871,23 @@ mod test {
         TileXYZ { x: 0, y: 0, z: 0 }
     }
 
+    fn point_emitter() -> super::super::config::PointEmitter {
+        super::super::config::PointEmitter {
+            kind: LayerParseKind::Point,
+            height: 0.0,
+            from_points: true,
+            from_lines: false,
+            from_polygons: false,
+        }
+    }
+
     fn point_config() -> LayerParseConfig {
         LayerParseConfig {
             layer_id: "layer".to_string(),
             flat: false,
-            point_emitters: vec![super::super::config::PointEmitter {
-                kind: LayerParseKind::Point,
-                height: 0.0,
-            }],
+            point_emitters: vec![point_emitter()],
             polyline: false,
+            polyline_from_polygons: false,
             polygon: false,
             limit_layers: None,
         }
@@ -763,6 +899,7 @@ mod test {
             flat: false,
             point_emitters: vec![],
             polyline: true,
+            polyline_from_polygons: false,
             polygon: false,
             limit_layers: None,
         }
@@ -774,6 +911,7 @@ mod test {
             flat: false,
             point_emitters: vec![],
             polyline: false,
+            polyline_from_polygons: false,
             polygon: true,
             limit_layers: None,
         }
@@ -940,6 +1078,246 @@ mod test {
         let bin = encode_tile(vec![make_layer("l", vec![point_feature(1, 1, vec![])])]);
         let groups = parse_mvt_tile(&bin, xyz(), Vec3::ZERO, &[]);
         assert!(groups.is_empty());
+    }
+
+    #[test]
+    fn polyline_from_polygons_derives_closed_boundary_ring() {
+        let mut config = polyline_config();
+        config.polyline_from_polygons = true;
+        let bin = encode_tile(vec![make_layer(
+            "l",
+            vec![polygon_feature(
+                &[(10, 10), (100, 10), (100, 100), (10, 100)],
+                vec![],
+            )],
+        )]);
+        let groups = parse_mvt_tile(&bin, xyz(), Vec3::ZERO, &[config]);
+        assert_eq!(groups.len(), 1);
+        let g = &groups[0];
+        assert_eq!(g.kind, LayerParseKind::Polyline);
+        assert_eq!(g.feature_count, 1);
+        match &g.geometry {
+            ParsedGeometry::Polylines {
+                points,
+                points_sizes,
+                batch_indices,
+            } => {
+                // 4 ring vertices + closing vertex, 3 components each.
+                assert_eq!(points_sizes, &vec![15]);
+                assert_eq!(batch_indices, &vec![0]);
+                // The derived boundary is closed: first vertex repeats at the end.
+                assert_eq!(points[..3], points[points.len() - 3..]);
+            }
+            _ => panic!("expected polylines"),
+        }
+    }
+
+    #[test]
+    fn polyline_from_polygons_drops_border_coincident_clip_edges() {
+        let mut config = polyline_config();
+        config.polyline_from_polygons = true;
+        // A buffer-less tileset clamps clipped vertices exactly onto the tile
+        // border: the two edges lying on x = 0 and y = 0 are clip artifacts
+        // and must not be stroked, leaving one open run over the real edges.
+        let bin = encode_tile(vec![make_layer(
+            "l",
+            vec![polygon_feature(
+                &[(0, 0), (100, 0), (100, 100), (0, 100)],
+                vec![],
+            )],
+        )]);
+        let groups = parse_mvt_tile(&bin, xyz(), Vec3::ZERO, &[config]);
+        assert_eq!(groups.len(), 1);
+        match &groups[0].geometry {
+            ParsedGeometry::Polylines { points_sizes, .. } => {
+                // One open run of 3 vertices: (100,0) -> (100,100) -> (0,100).
+                assert_eq!(points_sizes, &vec![9]);
+            }
+            _ => panic!("expected polylines"),
+        }
+    }
+
+    #[test]
+    fn polyline_from_polygons_emits_ring_per_hole() {
+        let mut config = polyline_config();
+        config.polyline = false;
+        config.polyline_from_polygons = true;
+        let bin = encode_tile(vec![make_layer(
+            "l",
+            vec![polygon_with_holes_feature(
+                &[
+                    &[(0, 0), (100, 0), (100, 100), (0, 100)],
+                    &[(20, 20), (20, 80), (80, 80), (80, 20)],
+                ],
+                vec![],
+            )],
+        )]);
+        let groups = parse_mvt_tile(&bin, xyz(), Vec3::ZERO, &[config]);
+        assert_eq!(groups.len(), 1);
+        let g = &groups[0];
+        assert_eq!(g.kind, LayerParseKind::Polyline);
+        match &g.geometry {
+            ParsedGeometry::Polylines {
+                points_sizes,
+                batch_indices,
+                ..
+            } => {
+                // Outer ring + hole ring share the feature's batch index.
+                assert_eq!(points_sizes.len(), 2);
+                assert_eq!(batch_indices, &vec![0, 0]);
+            }
+            _ => panic!("expected polylines"),
+        }
+    }
+
+    #[test]
+    fn non_draped_boundary_drops_tile_clip_edges() {
+        // Two vertices sit in the tile's clip buffer (x = -64); the edge
+        // between them is a clip artifact and must not render as geometry.
+        let mut config = polyline_config();
+        config.polyline = false;
+        config.polyline_from_polygons = true;
+        let bin = encode_tile(vec![make_layer(
+            "l",
+            vec![polygon_feature(
+                &[(-64, 10), (100, 10), (100, 100), (-64, 100)],
+                vec![],
+            )],
+        )]);
+        let groups = parse_mvt_tile(&bin, xyz(), Vec3::ZERO, &[config]);
+        assert_eq!(groups.len(), 1);
+        match &groups[0].geometry {
+            ParsedGeometry::Polylines {
+                points,
+                points_sizes,
+                ..
+            } => {
+                // One open run over the four real vertices instead of a
+                // closed five-vertex ring.
+                assert_eq!(points_sizes, &vec![12]);
+                assert_ne!(points[..3], points[points.len() - 3..]);
+            }
+            _ => panic!("expected polylines"),
+        }
+    }
+
+    #[test]
+    fn draped_boundary_keeps_full_ring_including_clip_edges() {
+        // The draped bake clips the buffer zone itself, so the boundary stays
+        // one closed ring even when it crosses the clip buffer.
+        let mut config = polyline_config();
+        config.flat = true;
+        config.polyline = false;
+        config.polyline_from_polygons = true;
+        let bin = encode_tile(vec![make_layer(
+            "l",
+            vec![polygon_feature(
+                &[(-64, 10), (100, 10), (100, 100), (-64, 100)],
+                vec![],
+            )],
+        )]);
+        let groups = parse_mvt_tile(&bin, xyz(), Vec3::ZERO, &[config]);
+        assert_eq!(groups.len(), 1);
+        match &groups[0].geometry {
+            ParsedGeometry::Polylines {
+                points,
+                points_sizes,
+                ..
+            } => {
+                assert_eq!(points_sizes, &vec![15]);
+                assert_eq!(points[..3], points[points.len() - 3..]);
+            }
+            _ => panic!("expected polylines"),
+        }
+    }
+
+    #[test]
+    fn polygon_config_without_derivation_ignores_polygon_boundaries() {
+        let bin = encode_tile(vec![make_layer(
+            "l",
+            vec![polygon_feature(
+                &[(0, 0), (100, 0), (100, 100), (0, 100)],
+                vec![],
+            )],
+        )]);
+        let groups = parse_mvt_tile(&bin, xyz(), Vec3::ZERO, &[polyline_config()]);
+        assert!(groups.is_empty());
+    }
+
+    #[test]
+    fn point_emitter_from_polygons_derives_ring_vertices() {
+        let mut config = point_config();
+        config.point_emitters[0].from_polygons = true;
+        let bin = encode_tile(vec![make_layer(
+            "l",
+            vec![polygon_feature(
+                &[(0, 0), (100, 0), (100, 100), (0, 100)],
+                vec![],
+            )],
+        )]);
+        let groups = parse_mvt_tile(&bin, xyz(), Vec3::ZERO, &[config]);
+        assert_eq!(groups.len(), 1);
+        let g = &groups[0];
+        assert_eq!(g.kind, LayerParseKind::Point);
+        match &g.geometry {
+            ParsedGeometry::Points { coords, .. } => {
+                // 4 distinct ring vertices; the closing duplicate is skipped.
+                assert_eq!(coords.len(), 4);
+            }
+            _ => panic!("expected points"),
+        }
+    }
+
+    #[test]
+    fn point_emitter_from_lines_derives_line_vertices() {
+        let mut config = point_config();
+        config.point_emitters[0].from_lines = true;
+        let bin = encode_tile(vec![make_layer(
+            "l",
+            vec![linestring_feature(&[(0, 0), (50, 50), (100, 0)], vec![])],
+        )]);
+        let groups = parse_mvt_tile(&bin, xyz(), Vec3::ZERO, &[config]);
+        assert_eq!(groups.len(), 1);
+        match &groups[0].geometry {
+            ParsedGeometry::Points { coords, .. } => {
+                assert_eq!(coords.len(), 3);
+            }
+            _ => panic!("expected points"),
+        }
+    }
+
+    #[test]
+    fn point_emitter_can_opt_out_of_native_points() {
+        let mut config = point_config();
+        config.point_emitters[0].from_points = false;
+        config.point_emitters[0].from_lines = true;
+        let bin = encode_tile(vec![make_layer("l", vec![point_feature(1, 1, vec![])])]);
+        let groups = parse_mvt_tile(&bin, xyz(), Vec3::ZERO, &[config]);
+        assert!(groups.is_empty());
+    }
+
+    #[test]
+    fn derived_polyline_and_polygon_share_source_feature() {
+        // A polygon feature rendered as both fill and boundary produces one
+        // group per kind, each with its own batch index space.
+        let mut config = polygon_config();
+        config.polyline_from_polygons = true;
+        let bin = encode_tile(vec![make_layer(
+            "l",
+            vec![polygon_feature(
+                &[(0, 0), (100, 0), (100, 100), (0, 100)],
+                vec![0, 0],
+            )],
+        )]);
+        let groups = parse_mvt_tile(&bin, xyz(), Vec3::ZERO, &[config]);
+        assert_eq!(groups.len(), 2);
+        let kinds: Vec<_> = groups.iter().map(|g| g.kind).collect();
+        assert!(kinds.contains(&LayerParseKind::Polygon));
+        assert!(kinds.contains(&LayerParseKind::Polyline));
+        for g in &groups {
+            assert_eq!(g.feature_count, 1);
+            assert_eq!(g.feature_tags_flat, vec![0, 0]);
+        }
     }
 
     #[test]
