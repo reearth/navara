@@ -73,11 +73,7 @@ pub fn compute_boundary_edges(triangles: &[u32]) -> Vec<Edge> {
             });
     };
 
-    for tri in triangles.chunks_exact(3) {
-        let a = tri[0];
-        let b = tri[1];
-        let c = tri[2];
-
+    for &[a, b, c] in triangles.as_chunks::<3>().0 {
         process_edge(a, b);
         process_edge(b, c);
         process_edge(c, a);

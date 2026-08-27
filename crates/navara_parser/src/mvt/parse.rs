@@ -105,8 +105,10 @@ pub fn unflatten_vec3(flat: &[f64]) -> Vec<Vec3> {
         "packed vec3 stream length {} is not a multiple of 3",
         flat.len()
     );
-    flat.chunks_exact(3)
-        .map(|c| Vec3::new(c[0], c[1], c[2]))
+    flat.as_chunks::<3>()
+        .0
+        .iter()
+        .map(|&[x, y, z]| Vec3::new(x, y, z))
         .collect()
 }
 
