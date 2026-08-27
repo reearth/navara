@@ -279,7 +279,7 @@ type MyMeshUpdate = MeshUpdate & MyMeshDescription;
 
 ### 基底クラスが管理するプロパティ
 
-`MeshDesc` は `position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible` を自動的に処理します。これらのプロパティ、トランスフォーム合成モード、ピッキング動作の詳細については [MeshDesc](../../../three_default_descs/mesh-desc/mesh-desc-base) を参照してください。
+`MeshDesc` は `position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`geodetic`、`pickable`、`visible` を自動的に処理します。そのためカスタム Descriptor もビルトインと同様に `geodetic` で経度・緯度に配置できます。これらのプロパティ、トランスフォーム合成モード、ピッキング動作の詳細については [MeshDesc](../../../three_default_descs/mesh-desc/mesh-desc-base) を参照してください。
 
 ### レンダーパスの指定
 

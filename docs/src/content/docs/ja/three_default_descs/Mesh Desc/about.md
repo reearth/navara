@@ -53,7 +53,7 @@ view.registerMesh("box", BoxMeshDesc);
 
 await view.init();
 
-// BoxMeshDescを追加
+// BoxMeshDescを経度・緯度（度）と高さ（メートル）で追加
 const boxDesc = view.addMesh<BoxMeshDesc>({
   box: {
     width: 100,
@@ -61,7 +61,7 @@ const boxDesc = view.addMesh<BoxMeshDesc>({
     depth: 100,
     color: new Color().setHex(0xff0000),
   },
-  position: { x: 0, y: 0, z: 1000 },
+  geodetic: { lng: 139.767125, lat: 35.681236, height: 1000 },
 });
 ```
 

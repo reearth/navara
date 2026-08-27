@@ -423,14 +423,14 @@ const view = new ThreeView();
 view.registerMesh("gltfModel", GLTFModelDesc);
 await view.init();
 
-// GLTFModelDescを追加
+// GLTFModelDescを経度・緯度に直立配置。`heading` はモデルの正面が向く方位（度）
 const modelDesc = view.addMesh<GLTFModelDesc>({
   gltfModel: {
     url: "https://example.com/models/character.glb",
     castShadow: true,
     receiveShadow: true,
   },
-  position: { x: 0, y: 0, z: 0 },
+  geodetic: { lng: 139.767125, lat: 35.681236, heading: 90 },
 });
 ```
 

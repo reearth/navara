@@ -94,7 +94,10 @@ const addMarker = (point: GeodeticPoint) =>
       emissiveColor: new Color().setStyle("#ff6b2c"),
       emissiveIntensity: 0.35,
     },
-    position: geodeticToVector3(point),
+    geodetic: {
+      lng: radianToDegree(point.lng),
+      lat: radianToDegree(point.lat),
+    },
   });
 
 const addLabel = (midpoint: GeodeticPoint, label: string) => {

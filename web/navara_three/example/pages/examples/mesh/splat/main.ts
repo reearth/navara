@@ -1,8 +1,4 @@
-import ThreeView, {
-  degreeToRadian,
-  geodeticToVector3,
-  northUpEastToFixedFrame,
-} from "@navaramap/three";
+import ThreeView from "@navaramap/three";
 import type { SplatMeshDesc } from "@navaramap/three-default-descs";
 import {
   DefaultPlugin,
@@ -48,19 +44,9 @@ const basemap = await tilejson.addSource({
 });
 view.addLayer({ type: "raster", source: basemap });
 
-const frame = northUpEastToFixedFrame(
-  geodeticToVector3({
-    lng: degreeToRadian(CENTER.lng),
-    lat: degreeToRadian(CENTER.lat),
-    height: CENTER.height,
-  }),
-);
-
 const splat = view.addMesh<SplatMeshDesc>({
-  matrixWorld: frame,
+  geodetic: { ...CENTER, pitch: 180 },
   splat: { url: SPLAT_URL, lod: false },
-  rotation: { x: Math.PI, y: -Math.PI / 2, z: 0 },
-  scale: { x: 1, y: 1, z: 1 },
 });
 
 view.attribution?.add([

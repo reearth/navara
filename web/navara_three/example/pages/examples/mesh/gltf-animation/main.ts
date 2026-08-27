@@ -1,22 +1,16 @@
-import ThreeView, {
-  Color,
-  degreeToRadian,
-  eastNorthUpToFixedFrame,
-  geodeticToVector3,
-} from "@navaramap/three";
+import ThreeView, { Color } from "@navaramap/three";
 import type { GLTFModelDesc } from "@navaramap/three-default-descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navaramap/three-default-plugin";
 import { TileJsonPlugin } from "@navaramap/three-plugins";
-import { Euler, Quaternion, Vector3 } from "three";
 
 import { addButton } from "../../../../helpers/button";
 import { initializeExample } from "../../../../helpers/initialize";
 
 const FOX = { lng: 137.6479, lat: 36.2517 };
-const FOX_HEADING = 100;
+const FOX_HEADING = 280;
 
 const view = new ThreeView<DefaultDescriptions>({
   backgroundColor: new Color().setStyle("#cccccc"),
@@ -41,7 +35,7 @@ view.setCamera({
   lat: FOX.lat,
   height: 5,
   distance: 22,
-  heading: FOX_HEADING + 135,
+  heading: FOX_HEADING - 45,
   pitch: -18,
   roll: 0,
 });
@@ -52,23 +46,6 @@ const basemap = await tilejson.addSource({
 });
 view.addLayer({ type: "raster", source: basemap });
 
-// With `matrixWorld` set to an ENU frame, rotation is an in-frame offset: in ENU
-// up is +Z, so stand the Y-up model up (+90° about East), then yaw it about up.
-const frameOrigin = geodeticToVector3({
-  lng: degreeToRadian(FOX.lng),
-  lat: degreeToRadian(FOX.lat),
-  height: 0,
-});
-const matrixWorld = eastNorthUpToFixedFrame(frameOrigin);
-
-const rotation = new Euler().setFromQuaternion(
-  new Quaternion()
-    .setFromAxisAngle(new Vector3(0, 0, 1), -degreeToRadian(FOX_HEADING))
-    .multiply(
-      new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), Math.PI / 2),
-    ),
-);
-
 const fox = view.addMesh<GLTFModelDesc>({
   gltfModel: {
     url: "/glTF/Fox/Fox.glb",
@@ -78,9 +55,7 @@ const fox = view.addMesh<GLTFModelDesc>({
     animationAutoPlay: true,
     animationCrossfadeDuration: 0.4,
   },
-  scale: { x: 0.12, y: 0.12, z: 0.12 },
-  matrixWorld,
-  rotation: { x: rotation.x, y: rotation.y, z: rotation.z },
+  geodetic: { ...FOX, heading: FOX_HEADING, scale: 0.12 },
 });
 
 // Crossfade between the three clips the Fox model ships with.

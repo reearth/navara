@@ -1,9 +1,4 @@
-import ThreeView, {
-  Color,
-  degreeToRadian,
-  geodeticToVector3,
-  northUpEastToFixedFrame,
-} from "@navaramap/three";
+import ThreeView, { Color } from "@navaramap/three";
 import type {
   InstancedGltfModelMeshDesc,
   ModelChildConfig,
@@ -50,15 +45,6 @@ const basemap = await tilejson.addSource({
 });
 view.addLayer({ type: "raster", source: basemap });
 
-// north-up-east frame at the city center: instance positions are x=north, z=east.
-const matrixWorld = northUpEastToFixedFrame(
-  geodeticToVector3({
-    lng: degreeToRadian(CITY.lng),
-    lat: degreeToRadian(CITY.lat),
-    height: 0,
-  }),
-);
-
 const generateLanterns = (count: number): ModelChildConfig[] => {
   const out: ModelChildConfig[] = [];
   for (let i = 0; i < count; i++) {
@@ -82,7 +68,7 @@ const lanterns = view.addMesh<InstancedGltfModelMeshDesc>({
     emissiveIntensity: 3,
     children: generateLanterns(density),
   },
-  matrixWorld,
+  geodetic: CITY,
 });
 
 const buttons = DENSITIES.map((n) => {

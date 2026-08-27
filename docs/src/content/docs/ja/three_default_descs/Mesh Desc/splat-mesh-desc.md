@@ -102,7 +102,7 @@ splat.ref.on("error", (error) => {
 ### 基本的な使い方
 
 ```typescript
-import ThreeView, { geodeticToVector3, degreeToRadian } from "@navaramap/three";
+import ThreeView from "@navaramap/three";
 import type { SplatMeshDesc } from "@navaramap/three-default-descs";
 import {
   DefaultPlugin,
@@ -113,29 +113,22 @@ const view = new ThreeView<DefaultDescriptions>();
 view.addPlugin(new DefaultPlugin()); // "splat" → SplatMeshDesc を登録
 await view.init();
 
-const pos = geodeticToVector3({
-  lat: degreeToRadian(35.7100),
-  lng: degreeToRadian(139.8107),
-  height: 10,
-});
-
 const splat = view.addMesh<SplatMeshDesc>({
   splat: {
     url: "/splat/your-asset.ply",
   },
-  position: { x: pos.x, y: pos.y, z: pos.z },
-  scale: { x: 30, y: 30, z: 30 },
+  geodetic: { lng: 139.8107, lat: 35.71, height: 10, scale: 30 },
 });
 ```
 
 ### 逆さま表示の補正
 
-splat がシーン上で逆さまに表示される場合は、X 軸まわりに 180° 回転で補正できます:
+Y-down で保存されたキャプチャはシーン上で逆さまに表示されます。`geodetic` の `pitch` を 180° にすると正立します:
 
 ```typescript
 view.addMesh<SplatMeshDesc>({
   splat: { url: "..." },
-  rotation: { x: Math.PI, y: 0, z: 0 },
+  geodetic: { lng: 139.8107, lat: 35.71, pitch: 180 },
 });
 ```
 
