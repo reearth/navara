@@ -184,6 +184,10 @@ export class PickHelper {
       if (!position) return;
       this.hoverPosition = undefined;
 
+      // Listeners may have been removed between the mousemove that
+      // scheduled this frame and now. Re-check so no orphan pick runs.
+      if (!this.shouldHoverPick()) return;
+
       const batchId = this.pickBatchIdAt(position.x, position.y);
       this.onHoverCallback(batchId > 0 ? [batchId] : []);
     });

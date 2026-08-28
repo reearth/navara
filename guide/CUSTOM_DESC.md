@@ -39,8 +39,8 @@ export class Plugin {
 Plugins are registered before initialization and initialized during `view.init()`:
 
 ```typescript
-view.addPlugin(plugin);   // Register before init()
-await view.init();        // Calls plugin.init(view) for each registered plugin
+view.addPlugin(plugin); // Register before init()
+await view.init(); // Calls plugin.init(view) for each registered plugin
 ```
 
 Light, effect, and mesh descriptors are registered through the plugin system (e.g., `@navaramap/three-default-plugin`). Core effect descriptors (MRT, selective effects, final copy) are registered by `@navaramap/three` itself.
@@ -207,13 +207,13 @@ See the `mesh-layers/custom-pickable` example for a complete reference.
 
 #### Listening for pick events
 
-Enable picking on the view and listen for the `"pick"` event:
+Enable picking on the view and listen for the `"featureClick"` event (hover picking is also available via `"featureHover"` / `"featureEnter"` / `"featureLeave"`):
 
 ```typescript
 const view = new ThreeView({ picking: true });
 // ...
 
-view.on("pick", (info) => {
+view.on("featureClick", (info) => {
   if (info) {
     console.log("Picked batch ID:", info.batchId);
     console.log("Layer ID:", info.layerId);
@@ -235,7 +235,12 @@ import {
   type ViewContext,
   Color,
 } from "@navaramap/three";
-import { BoxGeometry, Color as ThreeColor, MeshLambertMaterial, Vector3 } from "three";
+import {
+  BoxGeometry,
+  Color as ThreeColor,
+  MeshLambertMaterial,
+  Vector3,
+} from "three";
 
 type BoxChildConfig = InstancedChildConfig & {
   width?: number;
@@ -253,7 +258,11 @@ type MyConfig = InstancedMeshConfig & { boxes?: BoxesDescription };
 type MyUpdate = InstancedMeshUpdate & { boxes?: BoxesDescription };
 
 class InstancedBoxMeshDesc extends InstancedMeshDesc<
-  BoxGeometry, MeshLambertMaterial, MyConfig, MyUpdate, BoxChildConfig
+  BoxGeometry,
+  MeshLambertMaterial,
+  MyConfig,
+  MyUpdate,
+  BoxChildConfig
 > {
   private config: MyConfig;
 
@@ -262,13 +271,19 @@ class InstancedBoxMeshDesc extends InstancedMeshDesc<
     this.config = config;
   }
 
-  protected createGeometry() { return new BoxGeometry(1, 1, 1); }
-
-  protected createMaterial() {
-    return new MeshLambertMaterial({ color: this.config.boxes?.color?.raw ?? 0xffffff });
+  protected createGeometry() {
+    return new BoxGeometry(1, 1, 1);
   }
 
-  protected getChildConfigs() { return this.config.boxes?.children ?? []; }
+  protected createMaterial() {
+    return new MeshLambertMaterial({
+      color: this.config.boxes?.color?.raw ?? 0xffffff,
+    });
+  }
+
+  protected getChildConfigs() {
+    return this.config.boxes?.children ?? [];
+  }
 
   protected getInstanceColor(config: BoxChildConfig) {
     return config.color ? new ThreeColor(config.color.raw) : undefined;
@@ -319,9 +334,12 @@ class MyPlugin extends Plugin {
 
 ```typescript
 import ThreeView from "@navaramap/three";
-import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three-default-plugin";
+import {
+  DefaultPlugin,
+  type DefaultDescriptions,
+} from "@navaramap/three-default-plugin";
 
-const view = new ThreeView<DefaultDescriptions>({ /* options */ });
+const view = new ThreeView<DefaultDescriptions>({/* options */});
 view.addPlugin(new DefaultPlugin());
 await view.init();
 ```
