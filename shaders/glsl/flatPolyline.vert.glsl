@@ -32,7 +32,6 @@ void main() {
     float miterLength = right_normal_and_texture_coordinate_normalization_y.w; // signed: +/- for left/right, scaled for miter
 
     // Line width in normalized coordinates (width is in pixels, need to scale)
-    // For a 512x512 render target, convert pixels to normalized coords
     // Use batchLineWidth when >= 0.0, otherwise fall back to default width.
     // Negative batchLineWidth indicates "use default width from minMaxHeightAndWidth.z"
     #ifdef USE_BATCH_LINE_WIDTH
@@ -40,7 +39,9 @@ void main() {
     #else
         float baseWidth = minMaxHeightAndWidth.z;
     #endif
-    float lineWidth = baseWidth / 512.0;
+    // Positions span [-1, 1] (2.0 units) across the 512-texel render target,
+    // so one texel of width is 2.0 / 512.0 in normalized coordinates.
+    float lineWidth = baseWidth * (2.0 / 512.0);
 
     // Compensate for parent tile zoom-in: when a parent tile's mesh is rendered
     // for a child tile, the ortho camera narrows its bounds, magnifying the geometry.
