@@ -95,7 +95,7 @@ view.addLayer({
 
 ### Deriving representations with geometryTypes
 
-The `point`, `billboard`, `text`, and `polyline` materials accept a `geometryTypes` array listing the source geometry categories they consume: `"point"`, `"line"`, or `"polygon"`. When the array is omitted, each material consumes only its native category (`["point"]` for point-like materials and `["line"]` for `polyline`). Setting the array replaces the default, so include the native category when you still want it.
+The `point`, `billboard`, `text`, and `polyline` materials accept a `geometryTypes` array listing the source geometry categories they consume: point-like materials take `"point"`, `"line"`, or `"polygon"`, while `polyline` takes `"line"` or `"polygon"`. When the array is omitted, each material consumes only its native category (`["point"]` for point-like materials and `["line"]` for `polyline`). Setting the array replaces the default, so include the native category when you still want it.
 
 Derivation is downward only:
 

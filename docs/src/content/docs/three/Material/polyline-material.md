@@ -141,7 +141,7 @@ import { Color } from "@navaramap/three";
 
 ### geometryTypes
 
-**Type:** `("point" | "line" | "polygon")[] | undefined`
+**Type:** `("line" | "polygon")[] | undefined`
 
 **Description:** Source geometry categories this material consumes. When set to include `"polygon"`, polygon boundary rings (the outer ring and any holes) render as closed polylines at the ring's base height. Extruded side edges are not included, so use the polygon material's [`outline`](../polygon-material/#outline) for extruded polygons. Setting the array replaces the default, so include `"line"` when line geometry should keep rendering. This option applies when the layer's geometry is built: set it at layer creation. `layer.update()` applies a new value only to tiles loaded afterwards, so already-loaded tiles keep their previous geometry until the layer is re-created.
 

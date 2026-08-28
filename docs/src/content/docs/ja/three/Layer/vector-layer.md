@@ -95,7 +95,7 @@ view.addLayer({
 
 ### geometryTypes による表現の派生
 
-`point`、`billboard`、`text`、`polyline` の各マテリアルは、消費するソースジオメトリのカテゴリー（`"point"`、`"line"`、`"polygon"`）を列挙する `geometryTypes` 配列を受け付けます。省略時は各マテリアル本来のカテゴリーのみを消費します（点系マテリアルは `["point"]`、`polyline` は `["line"]`）。配列を指定するとデフォルトは置き換えられるため、本来のカテゴリーも描画し続けたい場合は配列に含めてください。
+`point`、`billboard`、`text`、`polyline` の各マテリアルは、消費するソースジオメトリのカテゴリーを列挙する `geometryTypes` 配列を受け付けます。点系マテリアルは `"point"`、`"line"`、`"polygon"` を、`polyline` は `"line"` と `"polygon"` を指定できます。省略時は各マテリアル本来のカテゴリーのみを消費します（点系マテリアルは `["point"]`、`polyline` は `["line"]`）。配列を指定するとデフォルトは置き換えられるため、本来のカテゴリーも描画し続けたい場合は配列に含めてください。
 
 派生はダウンコンバートのみです。
 
