@@ -14,7 +14,7 @@ in vec4 right_normal_and_texture_coordinate_normalization_y;
 
 uniform vec3 minMaxHeightAndWidth;
 
-out float nvr_vBatchId;
+flat out float nvr_vBatchId;
 
 void main() {
     #include <begin_vertex>

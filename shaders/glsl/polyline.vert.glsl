@@ -44,7 +44,7 @@ flat out float v_endPlaneOffsetEc;
 out vec4 v_endEcAndStartEcX;
 out vec4 v_texcoordNormalizationAndStartEcYZ;
 out vec3 vViewPosition;
-out float nvr_vBatchId;
+flat out float nvr_vBatchId;
 out vec3 vNormal;
 
 

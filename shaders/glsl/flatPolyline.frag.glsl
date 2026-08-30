@@ -9,7 +9,7 @@
 uniform vec3 color;
 uniform float nvr_uPickable;
 
-in float nvr_vBatchId;
+flat in float nvr_vBatchId;
 
 #include chunks/show_pars_fragment;
 

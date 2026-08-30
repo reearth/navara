@@ -68,7 +68,7 @@ in float attrBatchId;
 in vec4 scaleNormalAndCap;
 
 uniform vec2 uMinMaxHeight;
-out float nvr_vBatchId;
+flat out float nvr_vBatchId;
 
 ${useRTE ? RteParsVertex : ""}
 ${ShowParsVertex}
@@ -162,7 +162,7 @@ uniform float nvr_uPickable;
 uniform bool uIsTexturized;
 ${POLYGON_BASE_SHADER_MARKERS.fragment.UNIFORM_END}
 
-in float nvr_vBatchId;
+flat in float nvr_vBatchId;
 
 ${ShowParsFragment}
 

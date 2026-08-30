@@ -52,7 +52,7 @@ export const transformShader = (
 #include <packing>
 
 in float batchId;
-out float nvr_vBatchId;
+flat out float nvr_vBatchId;
 out vec3 vPosition;
 
 ${ShowParsVertex}
@@ -93,7 +93,7 @@ uniform float nvr_uPickable;
 // uEffectIdsMask is declared by overrideMaterialsForMRT (#ifdef USE_SELECTIVE_EFFECT block)
 ${MODEL_BASE_SHADER_MARKERS.fragment.UNIFORM_END}
 
-in float nvr_vBatchId;
+flat in float nvr_vBatchId;
 
 ${ShowParsFragment}
 

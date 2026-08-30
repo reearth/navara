@@ -45,7 +45,7 @@ uniform float uScreenHeightPx;
 
 varying vec2 vUv;
 varying vec3 vColor;
-varying float vBatchID;
+flat varying float vBatchID;
 varying float vFragDepth;
 varying float vOpacity; // Pass opacity to fragment shader
 
