@@ -1,5 +1,6 @@
-import { SparkRenderer } from "@sparkjsdev/spark";
+import type { SparkRenderer } from "@sparkjsdev/spark";
 import { PerspectiveCamera, Quaternion, Vector3 } from "three";
+
 
 /**
  * Floating-origin ("RTC") patch for SparkJS at globe (ECEF) scale.
@@ -47,8 +48,15 @@ export type OriginUpdater = (camera: PerspectiveCamera) => void;
 /** Marker on the prototype so HMR re-imports don't wrap `onBeforeRender` twice. */
 const PATCH_MARKER = "__navaraOriginPatched";
 
-export function ensureSparkOriginPatch(): void {
-  const proto = SparkRenderer.prototype as unknown as {
+/**
+ * @param SparkRendererClass - The (lazily loaded) SparkRenderer class; taken
+ *   as an argument so this module needs no static import of
+ *   `@sparkjsdev/spark` (see the loader in SplatMeshDesc/index.ts).
+ */
+export function ensureSparkOriginPatch(
+  SparkRendererClass: typeof SparkRenderer,
+): void {
+  const proto = SparkRendererClass.prototype as unknown as {
     onBeforeRender: (
       renderer: unknown,
       scene: unknown,
@@ -77,7 +85,7 @@ export function ensureSparkOriginPatch(): void {
   ) {
     // `sparkOverride` is the instance actually driving accumulation/draw.
     const spark =
-      (SparkRenderer as unknown as { sparkOverride?: SparkLike })
+      (SparkRendererClass as unknown as { sparkOverride?: SparkLike })
         .sparkOverride ?? this;
     const cam = camera as PerspectiveCamera;
 

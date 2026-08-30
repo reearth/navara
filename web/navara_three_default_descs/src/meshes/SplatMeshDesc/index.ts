@@ -6,7 +6,7 @@ import {
   type PassKey,
   type ViewContext,
 } from "@navaramap/three";
-import { SparkRenderer, SplatMesh } from "@sparkjsdev/spark";
+import type { SparkRenderer, SplatMesh } from "@sparkjsdev/spark";
 import { SRGBColorSpace, type Scene } from "three";
 
 import {
@@ -15,6 +15,39 @@ import {
   ensureSparkOriginPatch,
 } from "./sparkOriginPatch";
 import { SplatOriginController } from "./splatOriginController";
+
+
+/**
+ * Lazily loaded @sparkjsdev/spark module. Spark is a ~5MB module (its WASM is
+ * inlined as base64 in its dist), so it must not be a static import: that
+ * would land the whole splat stack in every bundle that merely registers
+ * `SplatMeshDesc` (e.g. via DefaultPlugin).
+ */
+type SparkModule = typeof import("@sparkjsdev/spark");
+let spark: SparkModule | undefined;
+let sparkLoading: Promise<SparkModule> | undefined;
+
+function loadSpark(): Promise<SparkModule> {
+  sparkLoading ??= import("@sparkjsdev/spark").then(
+    (m) => (spark = m),
+    (error: unknown) => {
+      // Allow a later retry (e.g. a transient network failure).
+      sparkLoading = undefined;
+      throw error;
+    },
+  );
+  return sparkLoading;
+}
+
+/** The loaded spark module; only callable once `loadSpark()` has resolved. */
+function requireSpark(): SparkModule {
+  if (!spark) {
+    throw new Error(
+      "SplatMeshDesc: @sparkjsdev/spark is not loaded yet (onCreate awaits it before any spark use).",
+    );
+  }
+  return spark;
+}
 
 /** Default grid cell (m) for the dynamic RTC origin. See {@link SplatOriginController}. */
 const DEFAULT_ORIGIN_CELL_SIZE = 2000;
@@ -76,7 +109,7 @@ function acquireSparkRenderer(
     existing.listeners.add(opts.onDirty);
     existing.refCount += 1;
     // Re-assert in case another view changed the global override.
-    SparkRenderer.sparkOverride = existing.renderer;
+    requireSpark().SparkRenderer.sparkOverride = existing.renderer;
     return { enableLod: existing.enableLod, controller: existing.controller };
   }
 
@@ -84,6 +117,7 @@ function acquireSparkRenderer(
   const encodeLinear =
     ctx.getInputBuffer().texture.colorSpace !== SRGBColorSpace;
 
+  const { SparkRenderer } = requireSpark();
   const listeners = new Set<() => void>([opts.onDirty]);
   const renderer = new SparkRenderer({
     renderer: ctx.getRenderer(),
@@ -98,7 +132,7 @@ function acquireSparkRenderer(
   const controller = new SplatOriginController(opts.cellSize);
   renderer.userData[ORIGIN_KEY] = controller.origin;
   renderer.userData[ORIGIN_UPDATER] = controller.update;
-  ensureSparkOriginPatch();
+  ensureSparkOriginPatch(SparkRenderer);
 
   target.add(renderer);
   SparkRenderer.sparkOverride = renderer;
@@ -125,6 +159,7 @@ function releaseSparkRenderer(ctx: ViewContext, listener: () => void): void {
   target.remove(entry.renderer);
   entry.renderer.dispose();
   // Clear (not restore): a saved override could outlive its renderer.
+  const { SparkRenderer } = requireSpark();
   if (SparkRenderer.sparkOverride === entry.renderer) {
     SparkRenderer.sparkOverride = undefined;
   }
@@ -159,6 +194,8 @@ export class SplatMeshDesc extends MeshDesc<
   private onSparkDirty?: () => void;
   /** Shared dynamic-origin driver this splat registers with (RTC). */
   private controller?: SplatOriginController;
+  /** Set by onDestroy; a still-pending async onCreate bails out on it. */
+  private destroyed = false;
 
   constructor(view: ThreeView, ctx: ViewContext, config: SplatMeshConfig) {
     super(view, ctx, config);
@@ -200,7 +237,7 @@ export class SplatMeshDesc extends MeshDesc<
     // Pin url locally so a concurrent `onUpdateConfig()` doesn't make
     // the catch log the new url for an old failure.
     const url = cfg.url;
-    const mesh = new SplatMesh({ url, lod: effectiveLod });
+    const mesh = new (requireSpark().SplatMesh)({ url, lod: effectiveLod });
 
     mesh.initialized
       .then(() => {
@@ -215,7 +252,16 @@ export class SplatMeshDesc extends MeshDesc<
     return mesh;
   }
 
-  override onCreate(): void {
+  /**
+   * Async (see `BaseDesc.onCreate`): awaits the lazily loaded spark module,
+   * then runs the normal synchronous creation flow. `addMesh` returns the
+   * handle immediately; the splat appears once the module has loaded, and an
+   * import failure surfaces as this descriptor's `error` event.
+   */
+  override async onCreate(): Promise<void> {
+    await loadSpark();
+    // Deleted while the module was loading — don't create anything.
+    if (this.destroyed) return;
     super.onCreate();
     // Base class has applied the (ECEF) world transform. Register with the
     // dynamic-origin controller, which recenters this mesh to a camera-tracking
@@ -302,6 +348,7 @@ export class SplatMeshDesc extends MeshDesc<
   }
 
   override onDestroy(): void {
+    this.destroyed = true;
     // Capture before super: super removes from scene and nulls `_instance`.
     const mesh = this._instance;
     super.onDestroy();

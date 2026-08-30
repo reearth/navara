@@ -9,6 +9,8 @@ sidebar:
 
 `DefaultPlugin` により `"splat"` mesh キーで登録されているため、`view.addMesh({ splat: { ... } })` 呼び出しはこの Descriptor にルーティングされます。
 
+スプラットレンダラー（[Spark](https://sparkjs.dev/)）は、ページ読み込み時ではなく最初にスプラットメッシュを追加したときにダウンロードされます。`addMesh` は即座にハンドルを返し、レンダラーとアセットのロード完了後にスプラットが表示されます。レンダラーのロードに失敗した場合は `error` イベントで通知されます。
+
 以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`geodetic`、`visible`）が利用できます。詳細は [MeshDesc](../mesh-desc-base) を参照してください。
 
 ## Properties

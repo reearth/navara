@@ -92,8 +92,15 @@ export abstract class BaseDesc<
   /**
    * Called when the this class is added to the scene. Override this to create the Three.js objects.
    * This is where you should initialize `this._instance` and add it to the appropriate scene.
+   *
+   * May return a promise: a descriptor whose implementation loads lazily
+   * (e.g. an `await import(...)` of a heavy renderer dependency) can be
+   * `async`, awaiting the module before delegating to `super.onCreate()`.
+   * `addMesh`/`addLight`/`addEffect` still return their handle synchronously;
+   * the instance appears once the promise settles, and a rejection is
+   * reported through the descriptor's `error` event (when it declares one).
    */
-  abstract onCreate(): void;
+  abstract onCreate(): void | Promise<void>;
 
   /**
    * Called when the configuration is updated via `BaseHandle.update()`.
