@@ -2188,9 +2188,13 @@ export default class ThreeView<
 
       // Trigger re-render
       meshDesc.on("needsUpdate", this.forceUpdate);
+
+      this.forceUpdate();
     });
 
     const l = new MeshHandle(meshDesc);
+
+    l.on("deleted", this.forceUpdate);
 
     // Store the mesh descriptor
     this.layersManager.add(l);
@@ -2229,9 +2233,13 @@ export default class ThreeView<
 
       // Trigger re-render
       lightDesc.on("needsUpdate", this.forceUpdate);
+
+      this.forceUpdate();
     });
 
     const l = new LightHandle(lightDesc);
+
+    l.on("deleted", this.forceUpdate);
 
     // Store the light descriptor
     this.layersManager.add(l);
@@ -2275,7 +2283,10 @@ export default class ThreeView<
     // and recompiles shaders when the derived configuration actually changes,
     // so tune effects via `update()` rather than re-adding them.
     this._syncGBuffers();
-    l.on("deleted", this._syncGBuffers);
+    l.on("deleted", () => {
+      this._syncGBuffers();
+      this.forceUpdate();
+    });
 
     // Initialize the effect; hooks are wired once the instance exists.
     this._trackAsyncCreate("effect", effectDesc, effectDesc.onCreate(), () => {
@@ -2289,6 +2300,8 @@ export default class ThreeView<
 
       // Trigger re-render
       effectDesc.on("needsUpdate", this.forceUpdate);
+
+      this.forceUpdate();
     });
 
     // Return handle for imperative access

@@ -60,7 +60,6 @@ const placeMarker = async (lat: number, lng: number, initialHeight = 0) => {
       height: initialHeight,
     },
   });
-  view.forceUpdate();
 
   // Apply the most detailed terrain height after rendering the sphere.
   const [ground] = await view.sampleTerrainMostDetailed(terrain, [
@@ -68,7 +67,6 @@ const placeMarker = async (lat: number, lng: number, initialHeight = 0) => {
   ]);
   if (ground.height === undefined) return;
   marker.update({ geodetic: { height: ground.height } });
-  view.forceUpdate();
 };
 
 view.on("click", (event) => {
