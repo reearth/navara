@@ -2075,6 +2075,24 @@ export default class ThreeView<
   }
 
   /**
+   * Tracks a possibly-async `onCreate()` (see `BaseDesc.onCreate`): the
+   * `add*` methods still return their handle synchronously, the descriptor's
+   * instance appears when the promise settles, and a rejection is logged and
+   * reported through the descriptor's `error` event (when it declares one).
+   */
+  private _trackAsyncCreate(
+    kind: "mesh" | "light" | "effect",
+    desc: { emit: (event: never, ...args: never[]) => void },
+    result: void | Promise<void>,
+  ): void {
+    if (!(result instanceof Promise)) return;
+    result.catch((error: unknown) => {
+      console.error(`Failed to create ${kind} descriptor:`, error);
+      (desc.emit as (event: string, payload: unknown) => void)("error", error);
+    });
+  }
+
+  /**
    * Adds a 3D mesh to the scene.
    * The mesh kind is determined by the nested key (e.g., `{ box: { width: 200 } }`).
    * @param desc - Mesh configuration object
@@ -2093,7 +2111,7 @@ export default class ThreeView<
     const meshDesc = this.registries.mesh.create(meshType, config);
 
     // Initialize the mesh
-    meshDesc.onCreate();
+    this._trackAsyncCreate("mesh", meshDesc, meshDesc.onCreate());
 
     // Set up update listener
     if (meshDesc.update) {
@@ -2140,7 +2158,7 @@ export default class ThreeView<
     const lightDesc = this.registries.light.create(lightType, config);
 
     // Initialize the light
-    lightDesc.onCreate();
+    this._trackAsyncCreate("light", lightDesc, lightDesc.onCreate());
 
     // Set up update listener if the descriptor has an update method
     if (lightDesc.update) {
@@ -2197,7 +2215,7 @@ export default class ThreeView<
     l.on("deleted", this._syncGBuffers);
 
     // Initialize the effect
-    effectDesc.onCreate();
+    this._trackAsyncCreate("effect", effectDesc, effectDesc.onCreate());
 
     // Set up update listener if the descriptor has an update method
     if (effectDesc.update) {

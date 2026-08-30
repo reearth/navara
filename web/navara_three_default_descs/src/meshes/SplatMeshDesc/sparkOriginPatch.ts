@@ -1,7 +1,6 @@
 import type { SparkRenderer } from "@sparkjsdev/spark";
 import { PerspectiveCamera, Quaternion, Vector3 } from "three";
 
-
 /**
  * Floating-origin ("RTC") patch for SparkJS at globe (ECEF) scale.
  *

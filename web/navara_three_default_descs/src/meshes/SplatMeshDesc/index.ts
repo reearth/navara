@@ -16,7 +16,6 @@ import {
 } from "./sparkOriginPatch";
 import { SplatOriginController } from "./splatOriginController";
 
-
 /**
  * Lazily loaded @sparkjsdev/spark module. Spark is a ~5MB module (its WASM is
  * inlined as base64 in its dist), so it must not be a static import: that
