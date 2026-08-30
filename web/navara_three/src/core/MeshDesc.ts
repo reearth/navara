@@ -598,7 +598,6 @@ export abstract class MeshDesc<
     assertNoTransformConflict(nextGeodetic, nextMatrix, nextMatrixWorld);
 
     super.onUpdateConfig(updates);
-    invariant(this.raw);
 
     const spatialChanged =
       updates.matrix !== undefined ||
@@ -635,6 +634,8 @@ export abstract class MeshDesc<
       this.lit = updates.lit;
       this.applyLit();
     }
+
+    if (!this.raw) return;
 
     if (spatialChanged) {
       // With a frame present, the effective transform depends on the

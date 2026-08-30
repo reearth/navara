@@ -76,6 +76,8 @@ export abstract class BaseDesc<
 
   private _visible?: boolean;
 
+  private _destroyed = false;
+
   constructor(
     view: ThreeView,
     ctx: ViewContext,
@@ -95,10 +97,15 @@ export abstract class BaseDesc<
    *
    * May return a promise: a descriptor whose implementation loads lazily
    * (e.g. an `await import(...)` of a heavy renderer dependency) can be
-   * `async`, awaiting the module before delegating to `super.onCreate()`.
-   * `addMesh`/`addLight`/`addEffect` still return their handle synchronously;
-   * the instance appears once the promise settles, and a rejection is
-   * reported through the descriptor's `error` event (when it declares one).
+   * `async`, awaiting the module before delegating to `super.onCreate()`
+   * (after checking {@link destroyed}). `addMesh`/`addLight`/`addEffect`
+   * still return their handle synchronously; the instance appears once the
+   * promise settles, and a rejection is reported through the descriptor's
+   * `error` event (when it declares one). Handle calls issued while the
+   * promise is pending are safe: `update()`/`visible` store their fields
+   * without touching the missing instance (the deferred `super.onCreate()`
+   * applies them), and per-frame/resize hooks are wired only after creation
+   * completes.
    */
   abstract onCreate(): void | Promise<void>;
 
@@ -129,7 +136,17 @@ export abstract class BaseDesc<
    * Override this to clean up resources. Remember to call `super.onDestroy()`.
    */
   onDestroy(): void {
+    this._destroyed = true;
     this._instance = undefined;
+  }
+
+  /**
+   * True once {@link onDestroy} has run. An async {@link onCreate} (and the
+   * hook wiring that waits on it) checks this after its awaited module
+   * resolves, so a descriptor deleted mid-load creates nothing.
+   */
+  get destroyed(): boolean {
+    return this._destroyed;
   }
 
   /**

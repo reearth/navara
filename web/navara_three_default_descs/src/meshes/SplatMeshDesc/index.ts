@@ -193,8 +193,6 @@ export class SplatMeshDesc extends MeshDesc<
   private onSparkDirty?: () => void;
   /** Shared dynamic-origin driver this splat registers with (RTC). */
   private controller?: SplatOriginController;
-  /** Set by onDestroy; a still-pending async onCreate bails out on it. */
-  private destroyed = false;
 
   constructor(view: ThreeView, ctx: ViewContext, config: SplatMeshConfig) {
     super(view, ctx, config);
@@ -347,7 +345,6 @@ export class SplatMeshDesc extends MeshDesc<
   }
 
   override onDestroy(): void {
-    this.destroyed = true;
     // Capture before super: super removes from scene and nulls `_instance`.
     const mesh = this._instance;
     super.onDestroy();

@@ -2079,14 +2079,23 @@ export default class ThreeView<
    * `add*` methods still return their handle synchronously, the descriptor's
    * instance appears when the promise settles, and a rejection is logged and
    * reported through the descriptor's `error` event (when it declares one).
+   *
+   * `wire` binds the descriptor's lifecycle hooks (per-frame `update`,
+   * `onResize`, `needsUpdate`). It runs immediately for a synchronous
+   * creation, and only after the promise resolves for an async one — the
+   * hooks must not fire while the descriptor has no instance yet.
    */
   private _trackAsyncCreate(
     kind: "mesh" | "light" | "effect",
     desc: { emit: (event: never, ...args: never[]) => void },
     result: void | Promise<void>,
+    wire: () => void,
   ): void {
-    if (!(result instanceof Promise)) return;
-    result.catch((error: unknown) => {
+    if (!(result instanceof Promise)) {
+      wire();
+      return;
+    }
+    result.then(wire, (error: unknown) => {
       console.error(`Failed to create ${kind} descriptor:`, error);
       (desc.emit as (event: string, payload: unknown) => void)("error", error);
     });
@@ -2110,25 +2119,28 @@ export default class ThreeView<
     // Create mesh descriptor instance
     const meshDesc = this.registries.mesh.create(meshType, config);
 
-    // Initialize the mesh
-    this._trackAsyncCreate("mesh", meshDesc, meshDesc.onCreate());
+    // Initialize the mesh; hooks are wired once the instance exists.
+    this._trackAsyncCreate("mesh", meshDesc, meshDesc.onCreate(), () => {
+      // If deleted while an async creation was loading, nothing to wire.
+      if (meshDesc.destroyed) return;
 
-    // Set up update listener
-    if (meshDesc.update) {
-      this.on("preRender", meshDesc.update.bind(meshDesc));
-    }
-
-    if (meshDesc.onResize) {
-      this.on("resize", meshDesc.onResize.bind(meshDesc));
-
-      const canvasSize = this._getCanvasSize();
-      if (canvasSize) {
-        meshDesc.onResize(canvasSize.width, canvasSize.height);
+      // Set up update listener
+      if (meshDesc.update) {
+        this.on("preRender", meshDesc.update.bind(meshDesc));
       }
-    }
 
-    // Trigger re-render
-    meshDesc.on("needsUpdate", this.forceUpdate);
+      if (meshDesc.onResize) {
+        this.on("resize", meshDesc.onResize.bind(meshDesc));
+
+        const canvasSize = this._getCanvasSize();
+        if (canvasSize) {
+          meshDesc.onResize(canvasSize.width, canvasSize.height);
+        }
+      }
+
+      // Trigger re-render
+      meshDesc.on("needsUpdate", this.forceUpdate);
+    });
 
     const l = new MeshHandle(meshDesc);
 
@@ -2157,16 +2169,19 @@ export default class ThreeView<
     // Create light descriptor instance
     const lightDesc = this.registries.light.create(lightType, config);
 
-    // Initialize the light
-    this._trackAsyncCreate("light", lightDesc, lightDesc.onCreate());
+    // Initialize the light; hooks are wired once the instance exists.
+    this._trackAsyncCreate("light", lightDesc, lightDesc.onCreate(), () => {
+      // Deleted while an async creation was loading — nothing to wire.
+      if (lightDesc.destroyed) return;
 
-    // Set up update listener if the descriptor has an update method
-    if (lightDesc.update) {
-      this.on("preRender", lightDesc.update.bind(lightDesc));
-    }
+      // Set up update listener if the descriptor has an update method
+      if (lightDesc.update) {
+        this.on("preRender", lightDesc.update.bind(lightDesc));
+      }
 
-    // Trigger re-render
-    lightDesc.on("needsUpdate", this.forceUpdate);
+      // Trigger re-render
+      lightDesc.on("needsUpdate", this.forceUpdate);
+    });
 
     const l = new LightHandle(lightDesc);
 
@@ -2214,16 +2229,19 @@ export default class ThreeView<
     this._syncGBuffers();
     l.on("deleted", this._syncGBuffers);
 
-    // Initialize the effect
-    this._trackAsyncCreate("effect", effectDesc, effectDesc.onCreate());
+    // Initialize the effect; hooks are wired once the instance exists.
+    this._trackAsyncCreate("effect", effectDesc, effectDesc.onCreate(), () => {
+      // Deleted while an async creation was loading — nothing to wire.
+      if (effectDesc.destroyed) return;
 
-    // Set up update listener if the descriptor has an update method
-    if (effectDesc.update) {
-      this.on("preRender", effectDesc.update.bind(effectDesc));
-    }
+      // Set up update listener if the descriptor has an update method
+      if (effectDesc.update) {
+        this.on("preRender", effectDesc.update.bind(effectDesc));
+      }
 
-    // Trigger re-render
-    effectDesc.on("needsUpdate", this.forceUpdate);
+      // Trigger re-render
+      effectDesc.on("needsUpdate", this.forceUpdate);
+    });
 
     // Return handle for imperative access
     return l as EffectHandle<L>;
