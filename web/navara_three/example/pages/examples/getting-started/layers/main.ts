@@ -78,7 +78,6 @@ const styleButton = addButton("Switch color");
 toggleButton.onclick = () => {
   if (layer) {
     layer.delete();
-    view.forceUpdate(); // repaint the on-demand scene
     layer = undefined;
   } else {
     layer = addLayer(color);

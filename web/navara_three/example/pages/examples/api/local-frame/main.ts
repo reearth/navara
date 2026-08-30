@@ -79,7 +79,6 @@ addSwitch(
   DEFAULT_FRAME,
   (index) => {
     cylinder.update({ matrixWorld: FRAMES[index].toFixedFrame(origin) });
-    view.forceUpdate();
   },
 );
 

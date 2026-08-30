@@ -80,7 +80,6 @@ const buttons = DENSITIES.map((n) => {
   button.onclick = () => {
     density = n;
     lanterns.ref.replaceAll(generateLanterns(density));
-    view.forceUpdate();
     buttons.forEach((b, i) => (b.disabled = DENSITIES[i] === density));
   };
   return button;
