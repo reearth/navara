@@ -224,7 +224,12 @@ export * from "./layers";
 export * from "./passes";
 export * from "./evaluations";
 export { SKY_RENDER_ORDER, STARS_RENDER_ORDER } from "./renderOrder";
-export { CLICK_PIXEL_TOLERANCE, TAP_PIXEL_TOLERANCE } from "./pick/pickHelper";
+export {
+  CLICK_PIXEL_TOLERANCE,
+  TAP_PIXEL_TOLERANCE,
+  PICK_RADIUS,
+  TOUCH_PICK_RADIUS,
+} from "./pick/pickHelper";
 export * from "@navaramap/three-api";
 export * from "./Color";
 export { type BlendMode, blendFunction, createReplacer } from "./utils";

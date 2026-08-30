@@ -42,7 +42,17 @@ export function isClickGesture(
 }
 
 /**
- * GPU picking using a dedicated single-pixel render pass.
+ * Pick search radius in CSS pixels around the pointer. The pick reads a
+ * (2r+1)² window and takes the non-zero batch id closest to its center, so
+ * small features (points, thin lines) don't demand pixel-perfect aim.
+ */
+export const PICK_RADIUS = 3;
+
+/** Pick search radius for touch: fingertips land less precisely than a cursor. */
+export const TOUCH_PICK_RADIUS = 10;
+
+/**
+ * GPU picking using a dedicated render pass over a small search window.
  *
  * The pick pass does NOT reuse the main render pipeline (globe / MRT /
  * draped / copy passes). Instead, every pickable raw — regardless of
@@ -346,16 +356,23 @@ export class PickHelper {
   }
 
   private onClickPick(event: PointerEvent) {
-    const batchId = this.pickBatchIdAt(event.clientX, event.clientY);
+    const radius =
+      event.pointerType === "touch" ? TOUCH_PICK_RADIUS : PICK_RADIUS;
+    const batchId = this.pickBatchIdAt(event.clientX, event.clientY, radius);
     const pickArr = batchId > 0 ? [batchId] : [];
     this.onPickCallback(pickArr);
   }
 
   /**
-   * Runs the single-pixel pick render at the given client coordinates and
-   * returns the decoded batch ID (0 when nothing pickable is hit).
+   * Runs the pick render in a search window around the given client
+   * coordinates and returns the non-zero batch ID closest to its center
+   * (0 when nothing pickable is inside the window).
    */
-  private pickBatchIdAt(clientX: number, clientY: number): number {
+  private pickBatchIdAt(
+    clientX: number,
+    clientY: number,
+    radiusCss: number = PICK_RADIUS,
+  ): number {
     const rect = this.element.getBoundingClientRect();
     const x = clientX - rect.left;
     const y = clientY - rect.top;
@@ -380,29 +397,58 @@ export class PickHelper {
     );
     const readY = fullHeight - 1 - pixelY;
 
+    // The search window in device pixels, clamped to the viewport.
+    const radius = Math.max(0, Math.round(radiusCss * pixelRatio));
+    const minX = Math.max(0, pixelX - radius);
+    const maxX = Math.min(fullWidth - 1, pixelX + radius);
+    const minY = Math.max(0, readY - radius);
+    const maxY = Math.min(fullHeight - 1, readY + radius);
+    const width = maxX - minX + 1;
+    const height = maxY - minY + 1;
+
     // Keep the camera projection unchanged for wide lines / screen-space
-    // expanded shaders, and limit fragment work to one pixel via scissor.
-    this._renderer.setScissor(pixelX, readY, 1, 1);
+    // expanded shaders, and limit fragment work to the window via scissor.
+    this._renderer.setScissor(minX, minY, width, height);
     this._renderer.setScissorTest(true);
 
     this.processRender(this.pickRenderTarget, pickingCoord);
 
+    if (this.pixelBuffer.length < width * height * 4) {
+      this.pixelBuffer = new Uint8Array(width * height * 4);
+    }
     this._renderer.readRenderTargetPixels(
       this.pickRenderTarget,
-      pixelX,
-      readY,
-      1,
-      1,
+      minX,
+      minY,
+      width,
+      height,
       this.pixelBuffer,
     );
 
     this._renderer.setScissorTest(false);
 
-    return (
-      (this.pixelBuffer[0] << 16) +
-      (this.pixelBuffer[1] << 8) +
-      this.pixelBuffer[2]
-    );
+    // The non-zero batch id nearest to the pointer wins, so a small feature
+    // beside a large one is still pickable by aiming at it.
+    let bestId = 0;
+    let bestDistSq = Infinity;
+    for (let row = 0; row < height; row++) {
+      for (let col = 0; col < width; col++) {
+        const i = (row * width + col) * 4;
+        const id =
+          (this.pixelBuffer[i] << 16) +
+          (this.pixelBuffer[i + 1] << 8) +
+          this.pixelBuffer[i + 2];
+        if (id === 0) continue;
+        const dx = minX + col - pixelX;
+        const dy = minY + row - readY;
+        const distSq = dx * dx + dy * dy;
+        if (distSq < bestDistSq) {
+          bestDistSq = distSq;
+          bestId = id;
+        }
+      }
+    }
+    return bestId;
   }
 
   public dispose() {

@@ -62,6 +62,9 @@ describe("isClickGesture", () => {
 const createRendererStub = () => {
   const state = {
     pixel: [0, 0, 0] as [number, number, number],
+    /** Per-pixel override for the readback, keyed by device coords. */
+    pixelAt: undefined as
+      ((x: number, y: number) => [number, number, number]) | undefined,
     renderCount: 0,
     scissors: [] as { x: number; y: number; w: number; h: number }[],
   };
@@ -84,14 +87,22 @@ const createRendererStub = () => {
     setScissorTest: () => undefined,
     readRenderTargetPixels: (
       _target: unknown,
-      _x: number,
-      _y: number,
-      _w: number,
-      _h: number,
+      x: number,
+      y: number,
+      w: number,
+      h: number,
       buffer: Uint8Array,
     ) => {
-      [buffer[0], buffer[1], buffer[2]] = state.pixel;
-      buffer[3] = 255;
+      for (let row = 0; row < h; row++) {
+        for (let col = 0; col < w; col++) {
+          const i = (row * w + col) * 4;
+          const [r, g, b] = state.pixelAt?.(x + col, y + row) ?? state.pixel;
+          buffer[i] = r;
+          buffer[i + 1] = g;
+          buffer[i + 2] = b;
+          buffer[i + 3] = 255;
+        }
+      }
     },
   } as unknown as WebGLRenderer;
   return { renderer, state };
@@ -185,14 +196,31 @@ describe("PickHelper", () => {
       expect(picks).toEqual([[]]);
     });
 
-    it("limits GPU work to the clicked pixel via scissor", () => {
+    it("limits GPU work to the search window via scissor", () => {
       const { state, pointer } = setup();
 
       pointer("pointerdown", 30, 40);
       pointer("pointerup", 30, 40);
 
-      // y is flipped into WebGL space: 600 - 1 - 40.
-      expect(state.scissors).toEqual([{ x: 30, y: 559, w: 1, h: 1 }]);
+      // A (2 * PICK_RADIUS + 1)² window centered on the click; y is flipped
+      // into WebGL space: 600 - 1 - 40.
+      expect(state.scissors).toEqual([{ x: 27, y: 556, w: 7, h: 7 }]);
+    });
+
+    it("picks the non-zero id closest to the pointer within the window", () => {
+      const { state, picks, pointer } = setup();
+      // Two hits inside the window around (100, 100) (device y = 499):
+      // id 5 at 3px away, id 9 at 1px away. The closer one wins.
+      state.pixelAt = (x, y) => {
+        if (x === 103 && y === 499) return [0, 0, 5];
+        if (x === 101 && y === 499) return [0, 0, 9];
+        return [0, 0, 0];
+      };
+
+      pointer("pointerdown", 100, 100);
+      pointer("pointerup", 100, 100);
+
+      expect(picks).toEqual([[9]]);
     });
 
     it("does not pick when the gesture is a drag", () => {
@@ -272,6 +300,16 @@ describe("PickHelper", () => {
       expect(state.renderCount).toBe(0);
     });
 
+    it("searches a wider window than the mouse (fingers are less precise)", () => {
+      const { state, pointer } = setup();
+
+      pointer("pointerdown", 100, 100, touch);
+      pointer("pointerup", 100, 100, touch);
+
+      // (2 * TOUCH_PICK_RADIUS + 1)² centered on the tap (device y = 499).
+      expect(state.scissors).toEqual([{ x: 90, y: 489, w: 21, h: 21 }]);
+    });
+
     it("does not pick when the browser cancels the gesture", () => {
       const { state, picks, pointer } = setup();
 
@@ -298,7 +336,7 @@ describe("PickHelper", () => {
 
       expect(hovers).toEqual([[7]]);
       expect(state.renderCount).toBe(1);
-      expect(state.scissors).toEqual([{ x: 30, y: 569, w: 1, h: 1 }]);
+      expect(state.scissors).toEqual([{ x: 27, y: 566, w: 7, h: 7 }]);
     });
 
     it("reports an empty hover for a miss", () => {
