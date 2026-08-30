@@ -182,7 +182,6 @@ window.addEventListener("click", (event) => {
     measure(start, point);
     start = undefined;
   }
-  view.forceUpdate();
 });
 
 const initialStart = toGeodetic(LONDON);

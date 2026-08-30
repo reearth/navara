@@ -92,7 +92,6 @@ const styleButton = addButton("Switch color");
 toggleButton.onclick = () => {
   if (meshes) {
     Object.values(meshes).forEach((mesh) => mesh.delete());
-    view.forceUpdate(); // repaint the on-demand scene
     meshes = undefined;
   } else {
     meshes = addMeshes(color);
