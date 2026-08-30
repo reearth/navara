@@ -19,18 +19,26 @@ export type PickHelperOptions = {
 };
 
 /**
- * Travel tolerance in CSS pixels between mousedown and mouseup to count as a click.
+ * Travel tolerance in CSS pixels between pointerdown and pointerup to count as a click.
  * Follows Cesium's `_clickPixelTolerance` (MapLibre uses 3px).
  * ref: https://github.com/CesiumGS/cesium/blob/9fda7ab97a762e40c74b1d0e1814c98a2de43337/packages/engine/Source/Core/ScreenSpaceEventHandler.js#L1012
  * ref: https://github.com/maplibre/maplibre-gl-js/blob/3a0a4f795fef5b2a29034d71833475589c344eaf/src/ui/map.ts#L542
  */
-const CLICK_PIXEL_TOLERANCE = 5;
+export const CLICK_PIXEL_TOLERANCE = 5;
+
+/**
+ * Travel tolerance for touch taps. Finger contact jitters far more than a
+ * mouse, so follows MapLibre's tap `MAX_DIST` instead.
+ * ref: https://github.com/maplibre/maplibre-gl-js/blob/3a0a4f795fef5b2a29034d71833475589c344eaf/src/ui/handler/tap_recognizer.ts
+ */
+export const TAP_PIXEL_TOLERANCE = 30;
 
 export function isClickGesture(
   downPosition: Vector2,
   upPosition: Vector2,
+  tolerance: number = CLICK_PIXEL_TOLERANCE,
 ): boolean {
-  return downPosition.distanceTo(upPosition) < CLICK_PIXEL_TOLERANCE;
+  return downPosition.distanceTo(upPosition) < tolerance;
 }
 
 /**
@@ -48,11 +56,14 @@ export function isClickGesture(
  * transforms, so world matrices of the re-parented objects are
  * unaffected.
  *
- * Two gestures trigger a pick: a click (mousedown/mouseup within
- * {@link CLICK_PIXEL_TOLERANCE}) and hovering, throttled to at most one
- * pick per animation frame. Both are lazy: a pick runs only while the
- * matching `shouldClickPick` / `shouldHoverPick` gate returns true
- * (i.e. someone is listening for the result).
+ * Two gestures trigger a pick: a click or touch tap (pointerdown/pointerup
+ * within {@link CLICK_PIXEL_TOLERANCE} / {@link TAP_PIXEL_TOLERANCE}) and
+ * hovering, throttled to at most one pick per animation frame. Both are
+ * lazy: a pick runs only while the matching `shouldClickPick` /
+ * `shouldHoverPick` gate returns true (i.e. someone is listening for the
+ * result). The gestures are detected from pointer events, which fire for
+ * touch as well. The camera-input handlers call `preventDefault()` on
+ * touch events, so the compatibility mouse events never do.
  */
 export class PickHelper {
   private element: HTMLElement;
@@ -76,12 +87,13 @@ export class PickHelper {
   /** Hover picks run only while this returns true (e.g. hover listeners exist). */
   private shouldHoverPick: () => boolean;
 
-  private mouseDownPosition?: Vector2;
-  private mouseDownHandler: (event: MouseEvent) => void;
-  private mouseUpHandler: (event: MouseEvent) => void;
-  private hoverMoveHandler: (event: MouseEvent) => void;
+  private pointerDownPosition?: Vector2;
+  private pointerDownHandler: (event: PointerEvent) => void;
+  private pointerUpHandler: (event: PointerEvent) => void;
+  private pointerCancelHandler: () => void;
+  private hoverMoveHandler: (event: PointerEvent) => void;
   private hoverLeaveHandler: () => void;
-  /** Latest mousemove position awaiting a hover pick, in client coords. */
+  /** Latest pointermove position awaiting a hover pick, in client coords. */
   private hoverPosition?: Vector2;
   private hoverRafId?: number;
 
@@ -106,10 +118,13 @@ export class PickHelper {
     this.shouldClickPick = shouldClickPick;
     this.shouldHoverPick = shouldHoverPick;
 
-    this.mouseDownHandler = (event: MouseEvent) => this.onMouseDown(event);
-    this.mouseUpHandler = (event: MouseEvent) => this.onMouseUp(event);
-    this.hoverMoveHandler = (event: MouseEvent) => this.onHoverMouseMove(event);
-    this.hoverLeaveHandler = () => this.onHoverMouseLeave();
+    this.pointerDownHandler = (event: PointerEvent) =>
+      this.onPointerDown(event);
+    this.pointerUpHandler = (event: PointerEvent) => this.onPointerUp(event);
+    this.pointerCancelHandler = () => this.onPointerCancel();
+    this.hoverMoveHandler = (event: PointerEvent) =>
+      this.onHoverPointerMove(event);
+    this.hoverLeaveHandler = () => this.onHoverPointerLeave();
 
     const width = this._renderer.getContext().drawingBufferWidth;
     const height = this._renderer.getContext().drawingBufferHeight;
@@ -130,48 +145,75 @@ export class PickHelper {
     }
   }
 
-  private onMouseDown(event: MouseEvent) {
-    this.mouseDownPosition = new Vector2(event.clientX, event.clientY);
+  private onPointerDown(event: PointerEvent) {
+    // A second concurrent pointer (e.g. the pinch-zoom finger) turns the
+    // gesture into something other than a tap; abandon the pending click.
+    if (!event.isPrimary) {
+      this.pointerDownPosition = undefined;
+      return;
+    }
+    this.pointerDownPosition = new Vector2(event.clientX, event.clientY);
   }
 
-  private onMouseUp(event: MouseEvent) {
-    const downPosition = this.mouseDownPosition;
-    this.mouseDownPosition = undefined;
+  private onPointerUp(event: PointerEvent) {
+    if (!event.isPrimary) return;
+
+    const downPosition = this.pointerDownPosition;
+    this.pointerDownPosition = undefined;
     if (!downPosition) return;
 
     // Skip the GPU pick entirely when nobody is listening for the result.
     if (!this.shouldClickPick()) return;
 
+    const tolerance =
+      event.pointerType === "touch"
+        ? TAP_PIXEL_TOLERANCE
+        : CLICK_PIXEL_TOLERANCE;
     if (
-      isClickGesture(downPosition, new Vector2(event.clientX, event.clientY))
+      isClickGesture(
+        downPosition,
+        new Vector2(event.clientX, event.clientY),
+        tolerance,
+      )
     ) {
-      this.onMouseClick(event);
+      this.onClickPick(event);
     }
+  }
+
+  /** The browser took over the gesture (scroll, app switch): not a click. */
+  private onPointerCancel() {
+    this.pointerDownPosition = undefined;
   }
 
   enablePick(bPick: boolean) {
     if (bPick) {
-      this.element.addEventListener("mousedown", this.mouseDownHandler);
-      this.element.addEventListener("mouseup", this.mouseUpHandler);
-      this.element.addEventListener("mousemove", this.hoverMoveHandler);
-      this.element.addEventListener("mouseleave", this.hoverLeaveHandler);
+      this.element.addEventListener("pointerdown", this.pointerDownHandler);
+      this.element.addEventListener("pointerup", this.pointerUpHandler);
+      this.element.addEventListener("pointercancel", this.pointerCancelHandler);
+      this.element.addEventListener("pointermove", this.hoverMoveHandler);
+      this.element.addEventListener("pointerleave", this.hoverLeaveHandler);
     } else {
-      this.element.removeEventListener("mousedown", this.mouseDownHandler);
-      this.element.removeEventListener("mouseup", this.mouseUpHandler);
-      this.element.removeEventListener("mousemove", this.hoverMoveHandler);
-      this.element.removeEventListener("mouseleave", this.hoverLeaveHandler);
+      this.element.removeEventListener("pointerdown", this.pointerDownHandler);
+      this.element.removeEventListener("pointerup", this.pointerUpHandler);
+      this.element.removeEventListener(
+        "pointercancel",
+        this.pointerCancelHandler,
+      );
+      this.element.removeEventListener("pointermove", this.hoverMoveHandler);
+      this.element.removeEventListener("pointerleave", this.hoverLeaveHandler);
       this.cancelPendingHoverPick();
     }
   }
 
   /**
    * Hover picking: schedules at most one GPU pick per animation frame from
-   * the latest mousemove position. Suppressed while any mouse button is
-   * pressed (camera drags would otherwise trigger a pick per frame) and
-   * while `shouldHoverPick` returns false, so pages without hover
-   * listeners pay nothing.
+   * the latest pointermove position. Suppressed while any button is pressed
+   * (Camera drags would otherwise trigger a pick per frame. For touch,
+   * contact itself sets `buttons`, so touch never hover-picks) and while
+   * `shouldHoverPick` returns false, so pages without hover listeners pay
+   * nothing.
    */
-  private onHoverMouseMove(event: MouseEvent) {
+  private onHoverPointerMove(event: PointerEvent) {
     if (event.buttons !== 0 || !this.shouldHoverPick()) return;
 
     if (!this.hoverPosition) this.hoverPosition = new Vector2();
@@ -184,7 +226,7 @@ export class PickHelper {
       if (!position) return;
       this.hoverPosition = undefined;
 
-      // Listeners may have been removed between the mousemove that
+      // Listeners may have been removed between the pointermove that
       // scheduled this frame and now. Re-check so no orphan pick runs.
       if (!this.shouldHoverPick()) return;
 
@@ -193,7 +235,7 @@ export class PickHelper {
     });
   }
 
-  private onHoverMouseLeave() {
+  private onHoverPointerLeave() {
     this.cancelPendingHoverPick();
     // Report "nothing hovered" so diff-based enter/leave synthesis can
     // close out the current hover when the cursor exits the canvas.
@@ -303,7 +345,7 @@ export class PickHelper {
     this.debugBufferView.render(this._renderer, this.debugRenderTarget);
   }
 
-  private onMouseClick(event: MouseEvent) {
+  private onClickPick(event: PointerEvent) {
     const batchId = this.pickBatchIdAt(event.clientX, event.clientY);
     const pickArr = batchId > 0 ? [batchId] : [];
     this.onPickCallback(pickArr);

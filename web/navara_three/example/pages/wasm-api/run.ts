@@ -4,7 +4,7 @@ import ThreeView, {
   type PickedFeature,
   type Nullable,
   type XYZ,
-  type MapMouseEvent,
+  type MapPointerEvent,
   type Window,
   geodeticToVector3,
   vector3ToGeodetic,
@@ -191,7 +191,7 @@ export const run = async (
     sampleFujiSummitHeight(view);
   };
 
-  view.on("mousedown", (event: MapMouseEvent) => {
+  view.on("pointerdown", (event: MapPointerEvent) => {
     console.log("3D Position:", event.map);
     console.log("Screen Position:", event.clientX, event.clientY);
   });
@@ -339,7 +339,7 @@ const testScreenToWorld = (
   view: ThreeView<CustomDescriptions>,
   canvas: HTMLCanvasElement,
 ) => {
-  const onMouseMove = (event: MouseEvent) => {
+  const onPointerMove = (event: PointerEvent) => {
     if (!gPaneParams.convertScreenToWorld) {
       return;
     }
@@ -356,7 +356,7 @@ const testScreenToWorld = (
     }
   };
 
-  canvas.addEventListener("mousemove", onMouseMove);
+  canvas.addEventListener("pointermove", onPointerMove);
 };
 
 const placeOneBall = (
@@ -718,10 +718,10 @@ const testRayPlane = (
   let cylinder: Mesh | undefined = undefined;
   let bMouseMoved = false;
 
-  const onMouseDown = (_e: MapMouseEvent) => {
+  const onPointerDown = (_e: MapPointerEvent) => {
     bMouseMoved = false;
   };
-  const onMouseMove = (event: MapMouseEvent) => {
+  const onPointerMove = (event: MapPointerEvent) => {
     bMouseMoved = true;
 
     const rect = canvas.getBoundingClientRect();
@@ -768,7 +768,7 @@ const testRayPlane = (
       }
     }
   };
-  const onMouseUp = (event: MapMouseEvent) => {
+  const onPointerUp = (event: MapPointerEvent) => {
     if (bMouseMoved || !gPaneParams.extrudeCylinder) {
       return;
     }
@@ -797,9 +797,9 @@ const testRayPlane = (
     cylinder = undefined;
   };
 
-  view.on("mousedown", onMouseDown);
-  view.on("mousemove", onMouseMove);
-  view.on("mouseup", onMouseUp);
+  view.on("pointerdown", onPointerDown);
+  view.on("pointermove", onPointerMove);
+  view.on("pointerup", onPointerUp);
 };
 
 const makeCylinder = (
@@ -977,7 +977,7 @@ const createPolylineMesh = (view: ThreeView<CustomDescriptions>) => {
 };
 
 const testSampleTerrainHeight = (view: ThreeView<CustomDescriptions>) => {
-  const onMouseMove = (event: MapMouseEvent) => {
+  const onPointerMove = (event: MapPointerEvent) => {
     const mapPos = event.map;
 
     if (mapPos) {
@@ -993,7 +993,7 @@ const testSampleTerrainHeight = (view: ThreeView<CustomDescriptions>) => {
     }
   };
 
-  view.on("mousemove", onMouseMove);
+  view.on("pointermove", onPointerMove);
 };
 
 // Like testScreenToWorld, but the ball sits on the network-sampled max-LOD
@@ -1083,7 +1083,7 @@ const testSampleTerrainMostDetailed = (
     }
   };
 
-  view.on("mousemove", (event: MapMouseEvent) => {
+  view.on("pointermove", (event: MapPointerEvent) => {
     if (!gPaneParams.sampleMostDetailed || !event.map) {
       return;
     }

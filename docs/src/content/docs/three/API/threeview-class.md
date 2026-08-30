@@ -225,7 +225,7 @@ A numeric value (hexadecimal color code) can also be passed directly in the cons
 
 **Type:** `boolean | undefined`
 
-**Description:** Configuration option for feature picking. When enabled, the `featureClick` event fires when a feature is clicked.
+**Description:** Configuration option for feature picking. When enabled, the `featureClick` event fires when a feature is clicked or tapped, and the `featureHover` / `featureEnter` / `featureLeave` events fire as the pointer hovers features.
 
 **Default:** `true`
 

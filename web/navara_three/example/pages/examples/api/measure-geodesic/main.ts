@@ -160,16 +160,8 @@ const measure = (start: GeodeticPoint, end: GeodeticPoint) => {
   geodesic.dispose();
 };
 
-// Place the point only with a click.
-let downX = 0;
-let downY = 0;
-window.addEventListener("mousedown", (event) => {
-  downX = event.clientX;
-  downY = event.clientY;
-});
 let start: GeodeticPoint | undefined;
-window.addEventListener("click", (event) => {
-  if (Math.hypot(event.clientX - downX, event.clientY - downY) > 4) return;
+view.on("click", (event) => {
   const picked = view.pickTerrainPosition(event.clientX, event.clientY);
   if (!picked) return;
   const { lat, lng } = vector3ToGeodetic(picked);

@@ -99,7 +99,7 @@ view.on("resize", (width, height) => {
 
 **Description:**
 
-Fires when a feature is clicked. Receives the clicked feature information, or `null` if empty space was clicked. For raw click coordinates, use the `click` event instead.
+Fires when a feature is clicked or tapped. Receives the clicked feature information, or `null` if empty space was clicked. For raw click coordinates, use the `click` event instead.
 
 The click pick is lazy: the GPU pick runs only while at least one `featureClick` listener is registered.
 
@@ -143,9 +143,9 @@ view.on("featureClick", (info) => {
 
 **Description:**
 
-Fires when the hovered feature changes as the pointer moves. Receives the newly hovered feature, or `null` when the pointer leaves all pickable features. The event fires only on change, not on every mouse move.
+Fires when the hovered feature changes as the pointer moves. Receives the newly hovered feature, or `null` when the pointer leaves all pickable features. The event fires only on change, not on every pointer move.
 
-Hover picking runs a GPU pick per frame while the pointer moves, so it is activated lazily: picks run only while at least one `featureHover`, `featureEnter`, or `featureLeave` listener is registered, and are suppressed while a mouse button is pressed (for example, during a camera drag).
+Hover picking runs a GPU pick per frame while the pointer moves, so it is activated lazily: picks run only while at least one `featureHover`, `featureEnter`, or `featureLeave` listener is registered, and are suppressed while a button or finger is pressed (for example, during a camera drag). Because touch contact always counts as pressed, hover events never fire for touch.
 
 :::note
 To use this event, you must set `picking: true` in the ThreeView constructor (enabled by default).
@@ -341,131 +341,157 @@ view.on("postRender", (time) => {
 });
 ```
 
-### mousedown
+### pointerdown
 
 **Description:**
 
-Fires when a mouse button is pressed on the map. Receives a `MapMouseEvent` containing map coordinates.
+Fires when a pointer (mouse button, touch, or pen) is pressed on the map. Receives a `MapPointerEvent` containing map coordinates. Use `event.pointerType` (`"mouse"`, `"touch"`, or `"pen"`) to tell the input kinds apart.
 
 **Handler Type:**
 
 ```tsx
-(event: MapMouseEvent) => void
+(event: MapPointerEvent) => void
 ```
 
 **Parameters:**
 
-- `event`: Mouse event (containing map coordinates)
+- `event`: Pointer event (containing map coordinates)
+
+```tsx
+type MapPointerEvent = {
+  map: { x: number; y: number; z: number }; // ECEF coordinates on the globe surface
+} & PointerEvent;
+```
 
 **Example:**
 
 ```tsx
-view.on("mousedown", (event) => {
-  console.log(`Mouse down position: ${event.clientX}, ${event.clientY}`);
+view.on("pointerdown", (event) => {
+  console.log(`Pointer down position: ${event.clientX}, ${event.clientY}`);
   console.log(
     `Map coordinates (ECEF): ${event.map.x}, ${event.map.y}, ${event.map.z}`
   );
 });
 ```
 
-### mouseenter
+### pointerenter
 
 **Description:**
 
-Fires when the mouse enters the canvas area. Receives a `MapMouseEvent` containing map coordinates.
+Fires when a pointer enters the canvas area. Receives a `MapPointerEvent` containing map coordinates.
 
 **Handler Type:**
 
 ```tsx
-(event: MapMouseEvent) => void
+(event: MapPointerEvent) => void
 ```
 
 **Parameters:**
 
-- `event`: Mouse event (containing map coordinates)
+- `event`: Pointer event (containing map coordinates)
 
 **Example:**
 
 ```tsx
-view.on("mouseenter", (event) => {
-  console.log("Mouse entered the map");
+view.on("pointerenter", (event) => {
+  console.log("Pointer entered the map");
   console.log(`Map coordinates: ${event.map.x}, ${event.map.y}, ${event.map.z}`);
 });
 ```
 
-### mouseleave
+### pointerleave
 
 **Description:**
 
-Fires when the mouse leaves the canvas area. Receives a `MapMouseEvent` containing map coordinates.
+Fires when a pointer leaves the canvas area. Receives a `MapPointerEvent` containing map coordinates. For touch, this fires after the finger is lifted.
 
 **Handler Type:**
 
 ```tsx
-(event: MapMouseEvent) => void
+(event: MapPointerEvent) => void
 ```
 
 **Parameters:**
 
-- `event`: Mouse event (containing map coordinates)
+- `event`: Pointer event (containing map coordinates)
 
 **Example:**
 
 ```tsx
-view.on("mouseleave", (event) => {
-  console.log("Mouse left the map");
+view.on("pointerleave", (event) => {
+  console.log("Pointer left the map");
 });
 ```
 
-### mousemove
+### pointermove
 
 **Description:**
 
-Fires when the mouse moves on the map. Receives a `MapMouseEvent` containing map coordinates.
+Fires when a pointer moves on the map. Receives a `MapPointerEvent` containing map coordinates. For touch, this fires while a finger drags across the map.
 
 **Handler Type:**
 
 ```tsx
-(event: MapMouseEvent) => void
+(event: MapPointerEvent) => void
 ```
 
 **Parameters:**
 
-- `event`: Mouse event (containing map coordinates)
+- `event`: Pointer event (containing map coordinates)
 
 **Example:**
 
 ```tsx
-view.on("mousemove", (event) => {
-  console.log(`Mouse position: ${event.clientX}, ${event.clientY}`);
+view.on("pointermove", (event) => {
+  console.log(`Pointer position: ${event.clientX}, ${event.clientY}`);
   console.log(
     `Map coordinates (ECEF): ${event.map.x}, ${event.map.y}, ${event.map.z}`
   );
 });
 ```
 
-### mouseup
+### pointerup
 
 **Description:**
 
-Fires when a mouse button is released on the map. Receives a `MapMouseEvent` containing map coordinates.
+Fires when a pointer (mouse button, touch, or pen) is released on the map. Receives a `MapPointerEvent` containing map coordinates.
 
 **Handler Type:**
 
 ```tsx
-(event: MapMouseEvent) => void
+(event: MapPointerEvent) => void
 ```
 
 **Parameters:**
 
-- `event`: Mouse event (containing map coordinates)
+- `event`: Pointer event (containing map coordinates)
 
 **Example:**
 
 ```tsx
-view.on("mouseup", (event) => {
-  console.log(`Mouse up position: ${event.clientX}, ${event.clientY}`);
+view.on("pointerup", (event) => {
+  console.log(`Pointer up position: ${event.clientX}, ${event.clientY}`);
   console.log(`Map coordinates: ${event.map.x}, ${event.map.y}, ${event.map.z}`);
+});
+```
+
+### pointercancel
+
+**Description:**
+
+Fires when the browser cancels an active pointer, for example when a system gesture takes over a touch. Receives the raw `PointerEvent` without map coordinates.
+
+**Handler Type:**
+
+```tsx
+(event: PointerEvent) => void
+```
+
+**Example:**
+
+```tsx
+view.on("pointercancel", () => {
+  console.log("Pointer interaction cancelled");
 });
 ```
 
@@ -497,23 +523,24 @@ Use the `idleThreshold` constructor option to control how long the engine must b
 
 **Description:**
 
-Fires when the map is clicked. Receives a `MapMouseEvent` containing map coordinates.
+Fires when the map is clicked or tapped. Receives a `MapPointerEvent` containing map coordinates; `event.pointerType` tells the input kinds apart.
 
 **Handler Type:**
 
 ```tsx
-(event: MapMouseEvent) => void
+(event: MapPointerEvent) => void
 ```
 
 **Parameters:**
 
-- `event`: Mouse event (containing map coordinates)
+- `event`: Pointer event (containing map coordinates)
 
 **Example:**
 
 ```tsx
 view.on("click", (event) => {
   console.log(`Click position: ${event.clientX}, ${event.clientY}`);
+  console.log(`Input type: ${event.pointerType}`);
   console.log(
     `Map coordinates (ECEF): ${event.map.x}, ${event.map.y}, ${event.map.z}`
   );

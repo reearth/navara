@@ -71,15 +71,7 @@ const placeMarker = async (lat: number, lng: number, initialHeight = 0) => {
   view.forceUpdate();
 };
 
-let downX = 0;
-let downY = 0;
-window.addEventListener("mousedown", (event) => {
-  downX = event.clientX;
-  downY = event.clientY;
-});
-
-window.addEventListener("click", (event) => {
-  if (Math.hypot(event.clientX - downX, event.clientY - downY) > 4) return;
+view.on("click", (event) => {
   const picked = view.pickTerrainPosition(event.clientX, event.clientY);
   if (!picked) return;
   const { lat, lng, height } = vector3ToGeodetic(picked);

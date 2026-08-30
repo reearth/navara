@@ -96,15 +96,7 @@ view.on("featureClick", (info) => {
   lastPick = info;
 });
 
-let downX = 0;
-let downY = 0;
-view.on("mousedown", (event) => {
-  downX = event.clientX;
-  downY = event.clientY;
-});
-
 view.on("click", (event) => {
-  if (Math.hypot(event.clientX - downX, event.clientY - downY) > 4) return;
   const previous = selectedKey;
 
   if (lastPick?.properties && featureKey(lastPick.properties) != null) {

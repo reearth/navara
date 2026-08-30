@@ -118,7 +118,12 @@ import {
 } from "./material";
 import type { TileMesh } from "./mesh/tile";
 import { RenderPassOrchestrator } from "./orchestrators/RenderPassOrchestrator";
-import { PickHelper } from "./pick/pickHelper";
+import {
+  CLICK_PIXEL_TOLERANCE,
+  isClickGesture,
+  PickHelper,
+  TAP_PIXEL_TOLERANCE,
+} from "./pick/pickHelper";
 import { TerrainPicker } from "./pick/pickTerrain";
 import { AttributionPlugin, type AttributionPluginOptions } from "./plugins";
 import { TexturizedSceneByTileCoordinates, type Scenes } from "./scene";
@@ -219,6 +224,7 @@ export * from "./layers";
 export * from "./passes";
 export * from "./evaluations";
 export { SKY_RENDER_ORDER, STARS_RENDER_ORDER } from "./renderOrder";
+export { CLICK_PIXEL_TOLERANCE, TAP_PIXEL_TOLERANCE } from "./pick/pickHelper";
 export * from "@navaramap/three-api";
 export * from "./Color";
 export { type BlendMode, blendFunction, createReplacer } from "./utils";
@@ -311,8 +317,8 @@ export type Options = {
   backgroundColor?: CoreColor;
   /**
    * Feature picking configuration (default: true). Enables the `featureClick`
-   * event (click) and the `featureHover` / `featureEnter` / `featureLeave`
-   * events (mousemove).
+   * event (click or touch tap) and the `featureHover` / `featureEnter` /
+   * `featureLeave` events (pointer hover).
    */
   picking?: boolean;
   /** When true, renders every frame. When false, renders only on changes or when forceUpdate() is called. */
@@ -404,12 +410,13 @@ export type Options = {
 } & GlobeOptions;
 
 /**
- * Mouse event extended with map coordinates at the event location.
+ * Pointer event extended with map coordinates at the event location.
+ * Fired for every input type; `pointerType` tells them apart.
  */
-export type MapMouseEvent = {
-  /** World coordinates (ECEF) at the mouse position on the globe surface. */
+export type MapPointerEvent = {
+  /** World coordinates (ECEF) at the pointer position on the globe surface. */
   map: XYZ;
-} & MouseEvent;
+} & PointerEvent;
 
 /**
  * Event types emitted by ThreeView. Subscribe using `view.on(eventName, callback)`.
@@ -418,13 +425,13 @@ export type ViewEvents = {
   /** Emitted when the view is resized. Receives width and height in pixels. */
   resize: (w: number, h: number) => void;
   /**
-   * Emitted when a feature is clicked (click-gesture GPU pick). Receives the
-   * clicked feature, or null when empty space was clicked. For raw click
-   * coordinates use the `click` event instead.
+   * Emitted when a feature is clicked or tapped (click-gesture GPU pick).
+   * Receives the clicked feature, or null when empty space was clicked. For
+   * raw click coordinates use the `click` event instead.
    */
   featureClick: (info: Nullable<PickedFeature>) => void;
   /**
-   * Emitted when the hovered feature changes (mousemove picking). Receives
+   * Emitted when the hovered feature changes (hover picking). Receives
    * the newly hovered feature, or null when the pointer leaves all pickable
    * features. Hover picking runs a GPU pick per frame while the pointer
    * moves, and is active only while at least one `featureHover` /
@@ -451,18 +458,26 @@ export type ViewEvents = {
   postRender: (t: number) => void;
   /** @private Emitted when terrain height sampling completes. */
   _sample_terrain_height_received: (ev: TerrainHeightUpdatedEvent) => void;
-  /** Emitted on mouse down with map coordinates. */
-  mousedown: (event: MapMouseEvent) => void;
-  /** Emitted when mouse enters the canvas with map coordinates. */
-  mouseenter: (event: MapMouseEvent) => void;
-  /** Emitted when mouse leaves the canvas with map coordinates. */
-  mouseleave: (event: MapMouseEvent) => void;
-  /** Emitted on mouse move with map coordinates. */
-  mousemove: (event: MapMouseEvent) => void;
-  /** Emitted on mouse up with map coordinates. */
-  mouseup: (event: MapMouseEvent) => void;
-  /** Emitted on click with map coordinates. */
-  click: (event: MapMouseEvent) => void;
+  /** Emitted on pointerdown with map coordinates, for every input type. */
+  pointerdown: (event: MapPointerEvent) => void;
+  /** Emitted when a pointer enters the canvas with map coordinates, for every input type. */
+  pointerenter: (event: MapPointerEvent) => void;
+  /** Emitted when a pointer leaves the canvas with map coordinates, for every input type. */
+  pointerleave: (event: MapPointerEvent) => void;
+  /** Emitted on pointermove with map coordinates, for every input type. */
+  pointermove: (event: MapPointerEvent) => void;
+  /** Emitted on pointerup with map coordinates, for every input type. */
+  pointerup: (event: MapPointerEvent) => void;
+  /** Emitted when the browser cancels an active pointer (e.g. a system gesture takes over). */
+  pointercancel: (event: PointerEvent) => void;
+  /**
+   * Emitted on a click or touch tap with map coordinates: a primary-pointer
+   * press and release within the travel tolerance
+   * ({@link CLICK_PIXEL_TOLERANCE}, or {@link TAP_PIXEL_TOLERANCE} for
+   * touch). Camera drags and pinches never fire it. `pointerType` tells the
+   * input kinds apart.
+   */
+  click: (event: MapPointerEvent) => void;
   /** Emitted when the engine becomes idle (no Rust-side events for `idleThreshold` ms). */
   idle: () => void;
 };
@@ -1173,9 +1188,9 @@ export default class ThreeView<
   }
 
   /**
-   * Convert a mouse event to a MapMouseEvent by adding map coordinates
+   * Extend a pointer event with map coordinates at its location
    */
-  private convertMouseEventToMapEvent(event: MouseEvent): MapMouseEvent | null {
+  private convertToMapEvent(event: PointerEvent): MapPointerEvent | null {
     const rect = this._renderer.domElement.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
@@ -1188,7 +1203,7 @@ export default class ThreeView<
           y: xyz.y,
           z: xyz.z,
         },
-      }) as MapMouseEvent;
+      });
     }
 
     return null;
@@ -1624,46 +1639,74 @@ export default class ThreeView<
 
     this._camera.core = this._core;
 
-    this._renderer.domElement.addEventListener("mousedown", (event) => {
-      const mapEvent = this.convertMouseEventToMapEvent(event);
+    // The map events are fed from pointer events; touch produces no
+    // compatibility mouse events because the camera-input handlers call
+    // preventDefault() on touch events. `click` is a gesture, not the DOM
+    // event: a primary-pointer press and release within the travel
+    // tolerance, with no pinch and no cancellation. Camera drags never
+    // fire it.
+    let clickStart: Vector2 | undefined;
+
+    this._renderer.domElement.addEventListener("pointerdown", (event) => {
+      // A second finger turns the gesture into a pinch, not a tap.
+      clickStart =
+        event.isPrimary && event.button === 0
+          ? new Vector2(event.clientX, event.clientY)
+          : undefined;
+      const mapEvent = this.convertToMapEvent(event);
       if (mapEvent) {
-        this.emit("mousedown", mapEvent);
+        this.emit("pointerdown", mapEvent);
       }
     });
 
-    this._renderer.domElement.addEventListener("mouseenter", (event) => {
-      const mapEvent = this.convertMouseEventToMapEvent(event);
+    this._renderer.domElement.addEventListener("pointerenter", (event) => {
+      const mapEvent = this.convertToMapEvent(event);
       if (mapEvent) {
-        this.emit("mouseenter", mapEvent);
+        this.emit("pointerenter", mapEvent);
       }
     });
 
-    this._renderer.domElement.addEventListener("mouseleave", (event) => {
-      const mapEvent = this.convertMouseEventToMapEvent(event);
+    this._renderer.domElement.addEventListener("pointerleave", (event) => {
+      const mapEvent = this.convertToMapEvent(event);
       if (mapEvent) {
-        this.emit("mouseleave", mapEvent);
+        this.emit("pointerleave", mapEvent);
       }
     });
 
-    this._renderer.domElement.addEventListener("mousemove", (event) => {
-      const mapEvent = this.convertMouseEventToMapEvent(event);
+    this._renderer.domElement.addEventListener("pointermove", (event) => {
+      const mapEvent = this.convertToMapEvent(event);
       if (mapEvent) {
-        this.emit("mousemove", mapEvent);
+        this.emit("pointermove", mapEvent);
       }
     });
 
-    this._renderer.domElement.addEventListener("mouseup", (event) => {
-      const mapEvent = this.convertMouseEventToMapEvent(event);
+    this._renderer.domElement.addEventListener("pointerup", (event) => {
+      const mapEvent = this.convertToMapEvent(event);
       if (mapEvent) {
-        this.emit("mouseup", mapEvent);
+        this.emit("pointerup", mapEvent);
       }
-    });
-
-    this._renderer.domElement.addEventListener("click", (event) => {
-      const mapEvent = this.convertMouseEventToMapEvent(event);
-      if (mapEvent) {
+      if (!event.isPrimary || event.button !== 0) return;
+      const start = clickStart;
+      clickStart = undefined;
+      if (!start || !mapEvent) return;
+      const tolerance =
+        event.pointerType === "touch"
+          ? TAP_PIXEL_TOLERANCE
+          : CLICK_PIXEL_TOLERANCE;
+      if (
+        isClickGesture(
+          start,
+          new Vector2(event.clientX, event.clientY),
+          tolerance,
+        )
+      ) {
         this.emit("click", mapEvent);
       }
+    });
+
+    this._renderer.domElement.addEventListener("pointercancel", (event) => {
+      clickStart = undefined;
+      this.emit("pointercancel", event);
     });
   }
 

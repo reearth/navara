@@ -225,7 +225,7 @@ const view = new ThreeView({
 
 **Type:** `boolean | undefined`
 
-**Description:** 地物ピッキングの設定オプション。有効にすると、地物をクリックした際に `featureClick` イベントが発火します。
+**Description:** 地物ピッキングの設定オプション。有効にすると、地物のクリックまたはタップで `featureClick` イベントが、ポインタのホバーで `featureHover`・`featureEnter`・`featureLeave` イベントが発火します。
 
 **Default:** `true`
 

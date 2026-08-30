@@ -99,7 +99,7 @@ view.on("resize", (width, height) => {
 
 **Description:**
 
-地物がクリックされたときに発火します。クリックされた地物情報、または何もない場所をクリックした場合は `null` を受け取ります。クリックの生の座標が必要な場合は `click` イベントを使用してください。
+地物がクリックまたはタップされたときに発火します。クリックされた地物情報、または何もない場所をクリックした場合は `null` を受け取ります。クリックの生の座標が必要な場合は `click` イベントを使用してください。
 
 クリックピックは遅延起動されます。`featureClick` のリスナーが 1 つ以上登録されている間だけ GPU ピックが実行されます。
 
@@ -143,9 +143,9 @@ view.on("featureClick", (info) => {
 
 **Description:**
 
-ポインタの移動によってホバー中の地物が変わったときに発火します。新たにホバーされた地物、またはどのピッカブルな地物からもポインタが外れた場合は `null` を受け取ります。マウス移動のたびではなく、ホバー対象が変化したときのみ発火します。
+ポインタの移動によってホバー中の地物が変わったときに発火します。新たにホバーされた地物、またはどのピッカブルな地物からもポインタが外れた場合は `null` を受け取ります。ポインタ移動のたびではなく、ホバー対象が変化したときのみ発火します。
 
-ホバーピッキングはポインタ移動中に毎フレーム GPU ピックを実行するため、遅延起動されます。`featureHover`・`featureEnter`・`featureLeave` のいずれかのリスナーが登録されている間だけピックが実行され、マウスボタンが押されている間（カメラドラッグ中など）は抑制されます。
+ホバーピッキングはポインタ移動中に毎フレーム GPU ピックを実行するため、遅延起動されます。`featureHover`・`featureEnter`・`featureLeave` のいずれかのリスナーが登録されている間だけピックが実行され、ボタンや指が押されている間（カメラドラッグ中など）は抑制されます。タッチは接触中が常に押下扱いになるため、ホバー系イベントはタッチでは発火しません。
 
 :::note
 このイベントを使用するには、ThreeView のコンストラクタで `picking: true` を設定する必要があります（デフォルトで有効）。
@@ -341,131 +341,157 @@ view.on("postRender", (time) => {
 });
 ```
 
-### mousedown
+### pointerdown
 
 **Description:**
 
-マップ上でマウスボタンが押されたときに発火します。マップ座標を含む `MapMouseEvent` を受け取ります。
+マップ上でポインタ（マウスボタン・タッチ・ペン）が押されたときに発火します。マップ座標を含む `MapPointerEvent` を受け取ります。入力の種類は `event.pointerType`（`"mouse"`・`"touch"`・`"pen"`）で判別できます。
 
 **Handler Type:**
 
 ```tsx
-(event: MapMouseEvent) => void
+(event: MapPointerEvent) => void
 ```
 
 **Parameters:**
 
-- `event`: マウスイベント（マップ座標を含む）
+- `event`: ポインタイベント（マップ座標を含む）
+
+```tsx
+type MapPointerEvent = {
+  map: { x: number; y: number; z: number }; // 地球表面上の ECEF 座標
+} & PointerEvent;
+```
 
 **Example:**
 
 ```tsx
-view.on("mousedown", (event) => {
-  console.log(`マウスダウン位置: ${event.clientX}, ${event.clientY}`);
+view.on("pointerdown", (event) => {
+  console.log(`ポインタダウン位置: ${event.clientX}, ${event.clientY}`);
   console.log(
     `マップ座標（ECEF）: ${event.map.x}, ${event.map.y}, ${event.map.z}`
   );
 });
 ```
 
-### mouseenter
+### pointerenter
 
 **Description:**
 
-マウスが canvas 領域に入ったときに発火します。マップ座標を含む `MapMouseEvent` を受け取ります。
+ポインタが canvas 領域に入ったときに発火します。マップ座標を含む `MapPointerEvent` を受け取ります。
 
 **Handler Type:**
 
 ```tsx
-(event: MapMouseEvent) => void
+(event: MapPointerEvent) => void
 ```
 
 **Parameters:**
 
-- `event`: マウスイベント（マップ座標を含む）
+- `event`: ポインタイベント（マップ座標を含む）
 
 **Example:**
 
 ```tsx
-view.on("mouseenter", (event) => {
-  console.log("マウスがマップに入りました");
+view.on("pointerenter", (event) => {
+  console.log("ポインタがマップに入りました");
   console.log(`マップ座標: ${event.map.x}, ${event.map.y}, ${event.map.z}`);
 });
 ```
 
-### mouseleave
+### pointerleave
 
 **Description:**
 
-マウスが canvas 領域から出たときに発火します。マップ座標を含む `MapMouseEvent` を受け取ります。
+ポインタが canvas 領域から出たときに発火します。マップ座標を含む `MapPointerEvent` を受け取ります。タッチの場合は指が離れた後に発火します。
 
 **Handler Type:**
 
 ```tsx
-(event: MapMouseEvent) => void
+(event: MapPointerEvent) => void
 ```
 
 **Parameters:**
 
-- `event`: マウスイベント（マップ座標を含む）
+- `event`: ポインタイベント（マップ座標を含む）
 
 **Example:**
 
 ```tsx
-view.on("mouseleave", (event) => {
-  console.log("マウスがマップから出ました");
+view.on("pointerleave", (event) => {
+  console.log("ポインタがマップから出ました");
 });
 ```
 
-### mousemove
+### pointermove
 
 **Description:**
 
-マップ上でマウスが移動したときに発火します。マップ座標を含む `MapMouseEvent` を受け取ります。
+マップ上でポインタが移動したときに発火します。マップ座標を含む `MapPointerEvent` を受け取ります。タッチの場合は指がマップ上をドラッグしている間に発火します。
 
 **Handler Type:**
 
 ```tsx
-(event: MapMouseEvent) => void
+(event: MapPointerEvent) => void
 ```
 
 **Parameters:**
 
-- `event`: マウスイベント（マップ座標を含む）
+- `event`: ポインタイベント（マップ座標を含む）
 
 **Example:**
 
 ```tsx
-view.on("mousemove", (event) => {
-  console.log(`マウス位置: ${event.clientX}, ${event.clientY}`);
+view.on("pointermove", (event) => {
+  console.log(`ポインタ位置: ${event.clientX}, ${event.clientY}`);
   console.log(
     `マップ座標（ECEF）: ${event.map.x}, ${event.map.y}, ${event.map.z}`
   );
 });
 ```
 
-### mouseup
+### pointerup
 
 **Description:**
 
-マップ上でマウスボタンが離されたときに発火します。マップ座標を含む `MapMouseEvent` を受け取ります。
+マップ上でポインタ（マウスボタン・タッチ・ペン）が離されたときに発火します。マップ座標を含む `MapPointerEvent` を受け取ります。
 
 **Handler Type:**
 
 ```tsx
-(event: MapMouseEvent) => void
+(event: MapPointerEvent) => void
 ```
 
 **Parameters:**
 
-- `event`: マウスイベント（マップ座標を含む）
+- `event`: ポインタイベント（マップ座標を含む）
 
 **Example:**
 
 ```tsx
-view.on("mouseup", (event) => {
-  console.log(`マウスアップ位置: ${event.clientX}, ${event.clientY}`);
+view.on("pointerup", (event) => {
+  console.log(`ポインタアップ位置: ${event.clientX}, ${event.clientY}`);
   console.log(`マップ座標: ${event.map.x}, ${event.map.y}, ${event.map.z}`);
+});
+```
+
+### pointercancel
+
+**Description:**
+
+ブラウザがアクティブなポインタをキャンセルしたとき（システムジェスチャーがタッチを引き継いだときなど）に発火します。マップ座標を含まない生の `PointerEvent` を受け取ります。
+
+**Handler Type:**
+
+```tsx
+(event: PointerEvent) => void
+```
+
+**Example:**
+
+```tsx
+view.on("pointercancel", () => {
+  console.log("ポインタ操作がキャンセルされました");
 });
 ```
 
@@ -497,23 +523,24 @@ view.on("idle", () => {
 
 **Description:**
 
-マップがクリックされたときに発火します。マップ座標を含む `MapMouseEvent` を受け取ります。
+マップがクリックまたはタップされたときに発火します。マップ座標を含む `MapPointerEvent` を受け取ります。入力の種類は `event.pointerType` で判別できます。
 
 **Handler Type:**
 
 ```tsx
-(event: MapMouseEvent) => void
+(event: MapPointerEvent) => void
 ```
 
 **Parameters:**
 
-- `event`: マウスイベント（マップ座標を含む）
+- `event`: ポインタイベント（マップ座標を含む）
 
 **Example:**
 
 ```tsx
 view.on("click", (event) => {
   console.log(`クリック位置: ${event.clientX}, ${event.clientY}`);
+  console.log(`入力の種類: ${event.pointerType}`);
   console.log(
     `マップ座標（ECEF）: ${event.map.x}, ${event.map.y}, ${event.map.z}`
   );
