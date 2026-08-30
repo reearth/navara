@@ -13,11 +13,51 @@ import { Tabs, TabItem } from "@astrojs/starlight/components";
 
 ## 前提条件
 
-[Node.js](https://nodejs.org/)（v18 以降）と、npm・yarn・pnpm などのパッケージマネージャーがインストールされている必要があります。
+[Node.js](https://nodejs.org/)と、npm・yarn・pnpm などのパッケージマネージャーがインストールされている必要があります。
+
+## プロジェクトのセットアップ
+
+Navara はどのバンドラー構成でも動作します。このガイドでは [Vite](https://vite.dev/) TypeScript プロジェクトを使用します。`vanilla-ts` テンプレートでプロジェクトを作成してください（詳細は [Scaffolding Your First Vite Project](https://vite.dev/guide/#scaffolding-your-first-vite-project) を参照）。
+
+<Tabs syncKey="pkg">
+
+<TabItem label="npm">
+
+```bash
+npm create vite@latest my-navara-app -- --template vanilla-ts
+```
+
+</TabItem>
+
+<TabItem label="yarn">
+
+```bash
+yarn create vite my-navara-app --template vanilla-ts
+```
+
+</TabItem>
+
+<TabItem label="pnpm">
+
+```bash
+pnpm create vite my-navara-app --template vanilla-ts
+```
+
+</TabItem>
+
+</Tabs>
+
+Navara はデフォルトでビューポート全体を覆うキャンバスを作成します。地球儀をフル画面で表示するには、`index.html` の `<body>` にスタイルを指定してブラウザーデフォルトのページ余白を取り除きます。
+
+```html
+<body style="margin: 0; width: 100%; height: 100%; overflow: hidden;">
+  <!-- ... -->
+</body>
+```
 
 ## パッケージのインストール
 
-Navara は npm の [`@navaramap`](https://www.npmjs.com/org/navaramap) スコープで公開されています。プロジェクト（バンドラーは何でも構いません。素の [Vite](https://vite.dev/) TypeScript プロジェクトで十分です）に、Three.js レンダラーの `@navaramap/three`、デフォルトプラグインの `@navaramap/three-default-plugin`、および peer dependencies の `three` と `postprocessing` をインストールします。
+Navara は npm の [`@navaramap`](https://www.npmjs.com/org/navaramap) スコープで公開されています。プロジェクトに、Three.js レンダラーの `@navaramap/three`、デフォルトプラグインの `@navaramap/three-default-plugin`、および peer dependencies の `three` と `postprocessing` をインストールします。
 
 <Tabs syncKey="pkg">
 
@@ -49,7 +89,7 @@ pnpm add @navaramap/three @navaramap/three-default-plugin three postprocessing
 
 ## 最小限の例
 
-3D 地球儀を作成し、衛星画像を表示し、フォトリアルな空と大気を有効にするコアコードは以下の通りです（[What is Navara?](../what-is-navara/) に掲載しているものと同じ例です）。プロジェクトのエントリーポイント（Vite プロジェクトであれば `src/main.ts` など）に追加し、開発サーバーを起動してください。
+3D 地球儀を作成し、衛星画像を表示し、フォトリアルな空と大気を有効にするコアコードは以下の通りです（[What is Navara?](../what-is-navara/) に掲載しているものと同じ例です）。プロジェクトのエントリーポイント（上で作成した Vite プロジェクトでは `src/main.ts`）の中身をこのコードに置き換え、開発サーバーを起動してください。
 
 ![Hero](@assets/hero.png)
 
@@ -105,6 +145,10 @@ view.attribution?.add([{ attributionHtml: `Imagery courtesy of <a href="https://
 最後の `view.attribution` はビルトインの Attribution UI です。`add()` で使用しているデータソースのクレジットを表示できます。
 
 この例ではデフォルトのカメラのまま、地球全体が見える状態です。特定の場所に移動するには、即座に移動する `setCamera()` か、アニメーション付きで遷移する `flyTo()` を使用します。
+
+## AI コーディングエージェントとの開発
+
+Claude Code などの AI コーディングエージェントで開発する場合は、Navara リポジトリで提供している [navara-usage スキル](https://github.com/reearth/navara/tree/main/skills/navara-usage) を利用できます。セットアップの順序、間違えやすい API の使い方、動作するシーンの構成例など、`@navaramap/three` のベストプラクティスを簡潔にまとめたガイドです。プロジェクトの skills ディレクトリにコピーする（またはエージェントに参照させる）ことで、生成されるコードが正しい API の使い方に沿うようになります。
 
 ## 次のステップ
 

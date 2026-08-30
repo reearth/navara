@@ -13,11 +13,51 @@ This page walks you through the minimal code needed to display a 3D globe with N
 
 ## Prerequisites
 
-You need [Node.js](https://nodejs.org/) (v18 or later) and a package manager such as npm, yarn, or pnpm installed on your machine.
+You need [Node.js](https://nodejs.org/) and a package manager such as npm, yarn, or pnpm installed on your machine.
+
+## Project Setup
+
+Any bundler setup works with Navara. This guide uses a [Vite](https://vite.dev/) TypeScript project. Scaffold one with the `vanilla-ts` template (see [Scaffolding Your First Vite Project](https://vite.dev/guide/#scaffolding-your-first-vite-project) for details):
+
+<Tabs syncKey="pkg">
+
+<TabItem label="npm">
+
+```bash
+npm create vite@latest my-navara-app -- --template vanilla-ts
+```
+
+</TabItem>
+
+<TabItem label="yarn">
+
+```bash
+yarn create vite my-navara-app --template vanilla-ts
+```
+
+</TabItem>
+
+<TabItem label="pnpm">
+
+```bash
+pnpm create vite my-navara-app --template vanilla-ts
+```
+
+</TabItem>
+
+</Tabs>
+
+Navara creates a canvas that fills the viewport by default. To display the globe full screen, remove the browser's default page margin by styling the `<body>` in `index.html`:
+
+```html
+<body style="margin: 0; width: 100%; height: 100%; overflow: hidden;">
+  <!-- ... -->
+</body>
+```
 
 ## Install the Packages
 
-Navara is published on npm under the [`@navaramap`](https://www.npmjs.com/org/navaramap) scope. Any bundler setup works. A plain [Vite](https://vite.dev/) TypeScript project is enough. In your project, install the Three.js renderer `@navaramap/three`, the default plugin `@navaramap/three-default-plugin`, and the peer dependencies `three` and `postprocessing`:
+Navara is published on npm under the [`@navaramap`](https://www.npmjs.com/org/navaramap) scope. In your project, install the Three.js renderer `@navaramap/three`, the default plugin `@navaramap/three-default-plugin`, and the peer dependencies `three` and `postprocessing`:
 
 <Tabs syncKey="pkg">
 
@@ -49,7 +89,7 @@ pnpm add @navaramap/three @navaramap/three-default-plugin three postprocessing
 
 ## Minimal Example
 
-Here is the core code, the same example shown in [What is Navara?](../what-is-navara/). It creates a 3D globe, displays satellite imagery, and enables the photorealistic sky and atmosphere. Add it to your project's entry point (for example `src/main.ts` in a Vite project) and start the dev server:
+Here is the core code, the same example shown in [What is Navara?](../what-is-navara/). It creates a 3D globe, displays satellite imagery, and enables the photorealistic sky and atmosphere. Replace the contents of your project's entry point (`src/main.ts` in the Vite project above) with this code and start the dev server:
 
 ![Hero](@assets/hero.png)
 
@@ -105,6 +145,10 @@ After initialization, `addDefaultPhotorealScene()` adds the sky, stars, sunlight
 Finally, `view.attribution` is the built-in attribution UI. `add()` displays credits for the data sources you use.
 
 This example keeps the default camera, which shows the whole globe. To move somewhere specific, use `setCamera()` for an instant jump or `flyTo()` for an animated transition.
+
+## Building with AI Coding Agents
+
+If you develop with an AI coding agent such as Claude Code, the Navara repository provides the [navara-usage skill](https://github.com/reearth/navara/tree/main/skills/navara-usage), a concise guide to best practices for `@navaramap/three`. It covers the setup order, common API mistakes, and working scene examples. Copy it into your project's skills directory (or point your agent at it) so the generated code follows correct API usage.
 
 ## Next Steps
 
