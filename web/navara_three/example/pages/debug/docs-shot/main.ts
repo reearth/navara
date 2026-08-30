@@ -5,6 +5,7 @@
  *
  * ?m=clouds|rain|snow|water|ssr   realistic-atmosphere.md
  * ?m=interior                    interior-explore.md
+ * ?m=basic-terrain|basic-geojson basic-visualization.mdx
  * ?exp=<number>                  overrides toneMappingExposure
  */
 import ThreeView, { Color } from "@navaramap/three";
@@ -141,6 +142,89 @@ if (MODE === "interior") {
   });
 
   personView.start();
+} else if (MODE === "basic-terrain" || MODE === "basic-geojson") {
+  // basic-visualization.mdx — "Displaying Terrain" / "Displaying GeoJSON Data"
+  const { TileJsonPlugin } = await import("@navaramap/three-plugins");
+
+  const plugin = new DefaultPlugin();
+  const view = new ThreeView<DefaultDescriptions>({ shadow: true });
+  view.addPlugin(plugin);
+
+  const tilejson = new TileJsonPlugin();
+  view.addPlugin(tilejson);
+
+  await view.init();
+
+  view.addLight({
+    sun: {},
+  });
+  view.atmosphere.date = new Date("2026-07-16T01:00:00Z");
+
+  const terrainSource = view.addSource({
+    type: "quantized-mesh",
+    url: "https://terrain.reearth.land/cesium-mesh/ellipsoid/{z}/{x}/{y}.terrain",
+    requestVertexNormals: true,
+    maxZoom: 18,
+  });
+  view.addLayer({
+    type: "terrain",
+    source: terrainSource,
+    terrain: {
+      castShadow: true,
+      receiveShadow: true,
+    },
+  });
+
+  const basemapSource = await tilejson.addSource({
+    type: "raster-tile",
+    url: "https://papers.reearth.land/styles/protomaps-light/tilejson.json",
+  });
+  view.addLayer({
+    type: "raster",
+    source: basemapSource,
+  });
+
+  if (MODE === "basic-geojson") {
+    const geojsonSource = view.addSource({
+      type: "geojson",
+      data: {
+        type: "Feature",
+        properties: { name: "Area" },
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [138.7, 35.425],
+              [138.7, 35.4],
+              [138.745, 35.4],
+              [138.745, 35.425],
+              [138.7, 35.425],
+            ],
+          ],
+        },
+      },
+    });
+    view.addLayer({
+      type: "vector",
+      source: geojsonSource,
+      polygon: {
+        color: new Color().setHex(0xff3b30),
+        clampToGround: true,
+        opacity: 0.75,
+        transparent: true,
+      },
+    });
+  }
+
+  view.setCamera(
+    camera({
+      lng: 138.75,
+      lat: 35.5,
+      height: 6000,
+      heading: 185,
+      pitch: -26,
+    }),
+  );
 } else {
   const plugin = new DefaultPlugin();
   const view = new ThreeView<DefaultDescriptions>({

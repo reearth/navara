@@ -9,14 +9,16 @@ import { Tabs, TabItem } from "@astrojs/starlight/components";
 
 ## Setup
 
-This tutorial assumes a TypeScript project with a bundler such as [Vite](https://vite.dev/). Install the Navara packages and their peer dependencies:
+This tutorial builds on the project from [Getting Started](../../../guides/introduction/getting-started/). Follow its setup first: scaffold a Vite TypeScript project, style the `<body>`, and install the Navara packages and their peer dependencies.
+
+In addition, this tutorial uses `TileJsonPlugin` from `@navaramap/three-plugins`, so install that package as well:
 
 <Tabs syncKey="pkg">
 
 <TabItem label="npm">
 
 ```bash
-npm install @navaramap/three @navaramap/three-default-plugin @navaramap/three-plugins three postprocessing
+npm install @navaramap/three-plugins
 ```
 
 </TabItem>
@@ -24,7 +26,7 @@ npm install @navaramap/three @navaramap/three-default-plugin @navaramap/three-pl
 <TabItem label="yarn">
 
 ```bash
-yarn add @navaramap/three @navaramap/three-default-plugin @navaramap/three-plugins three postprocessing
+yarn add @navaramap/three-plugins
 ```
 
 </TabItem>
@@ -32,7 +34,7 @@ yarn add @navaramap/three @navaramap/three-default-plugin @navaramap/three-plugi
 <TabItem label="pnpm">
 
 ```bash
-pnpm add @navaramap/three @navaramap/three-default-plugin @navaramap/three-plugins three postprocessing
+pnpm add @navaramap/three-plugins
 ```
 
 </TabItem>
@@ -43,23 +45,7 @@ pnpm add @navaramap/three @navaramap/three-default-plugin @navaramap/three-plugi
 
 ### Adding a Raster Layer
 
-Create `index.html` at the project root with the following content:
-
-```html
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Navara Three</title>
-  </head>
-  <body style="margin: 0; overflow: hidden">
-    <script type="module" src="/src/main.ts"></script>
-  </body>
-</html>
-```
-
-Next, create `src/main.ts` with the following content:
+Replace the contents of `src/main.ts` with the following:
 
 ```typescript
 import ThreeView from "@navaramap/three";
@@ -222,14 +208,48 @@ view.addLayer({
 
 The data is the global quantized-mesh dataset published by [Re:Earth Terrain](https://terrain.reearth.land/).
 
-- `requestVertexNormals` asks the server for vertex normals, which let the scene lighting shade the terrain. Add a `sun` light when you request them.
+- `requestVertexNormals` asks the server for vertex normals, which the sun light added in the next step uses to shade the slopes.
 - Fetch settings such as `maxZoom` live on the source. `terrain` holds only how the mesh is rendered (shadows, skirts).
 
 For details, see [Terrain Layer](../../../three/layer/terrain-layer/).
 
+### Replacing the Ambient Light with a Sun Light
+
+Ambient light shades every surface uniformly, so the terrain relief stays invisible under it. Replace the `view.addLight({ ambient: {} })` call with a `sun` light, which shades the slopes using the vertex normals requested above:
+
+```typescript
+view.addLight({
+  sun: {},
+});
+view.atmosphere.date = new Date("2026-07-16T01:00:00Z");
+```
+
+The sun direction is derived from `view.atmosphere.date`. Use a UTC string (`"...Z"`) so the scene looks the same on every machine. For details, see [SunLightDesc](../../../three_default_descs/light-desc/sun-light-desc/).
+
+The sun also casts shadows onto the terrain through the `castShadow` and `receiveShadow` options set on the terrain layer. Shadow mapping must be enabled when the view is constructed (`shadow` is an initialization-only option), so change the `ThreeView` constructor call:
+
+```typescript
+const view = new ThreeView<DefaultDescriptions>({ shadow: true });
+```
+
+### Moving the Camera to a Mountainous Area
+
+Move the camera to Mount Fuji, where the relief stands out. Change the `view.setCamera()` call:
+
+```typescript
+view.setCamera({
+  lng: 138.75,
+  lat: 35.5,
+  height: 6000,
+  heading: 185, // -180 to 180
+  pitch: -26, // -180 to 0
+  roll: 0, // -180 to 180
+});
+```
+
 ### Result
 
-When you tilt the map, you can see the terrain relief.
+The sunlight shades the slopes of Mount Fuji, making the terrain relief clearly visible.
 
 ![Terrain Map](@assets/tutorial/terrain.png)
 
@@ -241,7 +261,7 @@ import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three-defaul
 import { TileJsonPlugin } from "@navaramap/three-plugins";
 
 const plugin = new DefaultPlugin();
-const view = new ThreeView<DefaultDescriptions>({});
+const view = new ThreeView<DefaultDescriptions>({ shadow: true });
 view.addPlugin(plugin);
 
 const tilejson = new TileJsonPlugin();
@@ -250,8 +270,9 @@ view.addPlugin(tilejson);
 await view.init();
 
 view.addLight({
-  ambient: {},
+  sun: {},
 });
+view.atmosphere.date = new Date("2026-07-16T01:00:00Z");
 
 const terrainSource = view.addSource({
   type: "quantized-mesh",
@@ -278,11 +299,11 @@ view.addLayer({
 });
 
 view.setCamera({
-  lng: 139.7671,
-  lat: 35.6812,
-  height: 1000,
-  heading: 0, // -180 to 180
-  pitch: -30, // -180 to 0
+  lng: 138.75,
+  lat: 35.5,
+  height: 6000,
+  heading: 185, // -180 to 180
+  pitch: -26, // -180 to 0
   roll: 0, // -180 to 180
 });
 ```
@@ -290,6 +311,8 @@ view.setCamera({
 ## Displaying GeoJSON Data
 
 ### Adding a GeoJSON Layer
+
+Add a polygon covering the northern slope of Mount Fuji, the area the camera is now looking at:
 
 ```typescript
 const geojsonSource = view.addSource({
@@ -301,11 +324,11 @@ const geojsonSource = view.addSource({
       type: "Polygon",
       coordinates: [
         [
-          [139.75843063805576, 35.70688252862743],
-          [139.75843063805576, 35.700933240062355],
-          [139.77157543771887, 35.700933240062355],
-          [139.77157543771887, 35.70688252862743],
-          [139.75843063805576, 35.70688252862743],
+          [138.7, 35.425],
+          [138.7, 35.4],
+          [138.745, 35.4],
+          [138.745, 35.425],
+          [138.7, 35.425],
         ],
       ],
     },
@@ -316,18 +339,16 @@ view.addLayer({
   source: geojsonSource,
   polygon: {
     color: new Color().setHex(0xff3b30),
-    height: 0,
+    clampToGround: true,
     opacity: 0.75,
     transparent: true,
   },
 });
 ```
 
-Register the GeoJSON as a source with `view.addSource({ type: "geojson", ... })`, then draw it with `view.addLayer({ type: "vector", source, ... })`. The `polygon` material carries the styling such as colour, height, and transparency. For details, see [Vector Layer](../../../three/layer/vector-layer/).
+Register the GeoJSON as a source with `view.addSource({ type: "geojson", ... })`, then draw it with `view.addLayer({ type: "vector", source, ... })`. The `polygon` material carries the styling such as colour and transparency. `clampToGround: true` drapes the polygon onto the terrain surface, so it follows the slope instead of sinking into the mountain at a fixed height. For details, see [Vector Layer](../../../three/layer/vector-layer/).
 
 ### Result
-
-A polygon is displayed on the map.
 
 ![GeoJSON Map](@assets/tutorial/geojson.png)
 
@@ -339,7 +360,7 @@ import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three-defaul
 import { TileJsonPlugin } from "@navaramap/three-plugins";
 
 const plugin = new DefaultPlugin();
-const view = new ThreeView<DefaultDescriptions>({});
+const view = new ThreeView<DefaultDescriptions>({ shadow: true });
 view.addPlugin(plugin);
 
 const tilejson = new TileJsonPlugin();
@@ -348,8 +369,9 @@ view.addPlugin(tilejson);
 await view.init();
 
 view.addLight({
-  ambient: {},
+  sun: {},
 });
+view.atmosphere.date = new Date("2026-07-16T01:00:00Z");
 
 const terrainSource = view.addSource({
   type: "quantized-mesh",
@@ -379,16 +401,16 @@ const geojsonSource = view.addSource({
   type: "geojson",
   data: {
     type: "Feature",
-    properties: {},
+    properties: { name: "Area" },
     geometry: {
       type: "Polygon",
       coordinates: [
         [
-          [139.75843063805576, 35.70688252862743],
-          [139.75843063805576, 35.700933240062355],
-          [139.77157543771887, 35.700933240062355],
-          [139.77157543771887, 35.70688252862743],
-          [139.75843063805576, 35.70688252862743],
+          [138.7, 35.425],
+          [138.7, 35.4],
+          [138.745, 35.4],
+          [138.745, 35.425],
+          [138.7, 35.425],
         ],
       ],
     },
@@ -399,18 +421,17 @@ view.addLayer({
   source: geojsonSource,
   polygon: {
     color: new Color().setHex(0xff3b30),
-    height: 0,
     opacity: 0.75,
     transparent: true,
   },
 });
 
 view.setCamera({
-  lng: 139.7671,
-  lat: 35.6812,
-  height: 1000,
-  heading: 0, // -180 to 180
-  pitch: -30, // -180 to 0
+  lng: 138.75,
+  lat: 35.5,
+  height: 6000,
+  heading: 185, // -180 to 180
+  pitch: -26, // -180 to 0
   roll: 0, // -180 to 180
 });
 ```

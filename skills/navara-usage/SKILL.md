@@ -119,6 +119,8 @@ Built-in lights — register via `DefaultPlugin`, then `view.addLight<T>({ ... }
 
 `addDefaultPhotorealScene()` already adds a `sun` + `skyLightProbe` — start there for realistic scenes and add `ambient`/`lightProbe` to taste.
 
+A `sun` light also works standalone, without `addDefaultPhotorealScene()`: its direction still follows `atmosphere.date`, and its color is computed from the atmosphere transmittance texture, which loads on demand (verified 2026-08 shading quantized-mesh terrain with only `view.addLight({ sun: {} })`). Note `view.toneMappingExposure` has no visible effect in such a scene — tone mapping is inactive without the photoreal effect stack, so don't reach for exposure to fix brightness there; use the light's `intensity`.
+
 **`atmosphere.date` is local-time-sensitive.** It's a plain JS `Date`, so `new Date("2024-06-21T12:00:00")` is read in the _device's_ timezone — the sun lands in a different place per machine. Pin a global instant with an explicit UTC string (`new Date("2024-06-21T12:00:00Z")`). To hold the same time-of-day or sun elevation while flying the camera to another country, don't recompute by hand — use `view.atmosphere.setDateFromCameraAt({ lng })` (keeps local solar time) or `setElevationFromCameraAt({ lat, lng })` (keeps sun elevation).
 
 ## Where to verify — never guess API details

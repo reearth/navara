@@ -9,14 +9,16 @@ import { Tabs, TabItem } from "@astrojs/starlight/components";
 
 ## セットアップ
 
-このチュートリアルは、[Vite](https://vite.dev/) などのバンドラーを使った TypeScript プロジェクトを前提としています。Navara のパッケージと peer dependencies をインストールします：
+このチュートリアルは、[Getting Started](../../../guides/introduction/getting-started/) で作成したプロジェクトを前提としています。まずそちらの手順に従って、Vite の TypeScript プロジェクトの作成、`<body>` のスタイル設定、Navara のパッケージと peer dependencies のインストールを済ませてください。
+
+このチュートリアルではさらに `@navaramap/three-plugins` の `TileJsonPlugin` を使うため、このパッケージも追加でインストールします：
 
 <Tabs syncKey="pkg">
 
 <TabItem label="npm">
 
 ```bash
-npm install @navaramap/three @navaramap/three-default-plugin @navaramap/three-plugins three postprocessing
+npm install @navaramap/three-plugins
 ```
 
 </TabItem>
@@ -24,7 +26,7 @@ npm install @navaramap/three @navaramap/three-default-plugin @navaramap/three-pl
 <TabItem label="yarn">
 
 ```bash
-yarn add @navaramap/three @navaramap/three-default-plugin @navaramap/three-plugins three postprocessing
+yarn add @navaramap/three-plugins
 ```
 
 </TabItem>
@@ -32,7 +34,7 @@ yarn add @navaramap/three @navaramap/three-default-plugin @navaramap/three-plugi
 <TabItem label="pnpm">
 
 ```bash
-pnpm add @navaramap/three @navaramap/three-default-plugin @navaramap/three-plugins three postprocessing
+pnpm add @navaramap/three-plugins
 ```
 
 </TabItem>
@@ -43,23 +45,7 @@ pnpm add @navaramap/three @navaramap/three-default-plugin @navaramap/three-plugi
 
 ### ラスタレイヤーを追加する
 
-プロジェクトルートに、以下の内容で `index.html` を作成します。
-
-```html
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Navara Three</title>
-  </head>
-  <body style="margin: 0; overflow: hidden">
-    <script type="module" src="/src/main.ts"></script>
-  </body>
-</html>
-```
-
-次に、以下の内容で `src/main.ts` を作成します。
+`src/main.ts` の内容を以下のコードに置き換えます。
 
 ```typescript
 import ThreeView from "@navaramap/three";
@@ -222,14 +208,46 @@ view.addLayer({
 
 データは [Re:Earth Terrain](https://terrain.reearth.land/) が配信する全球の quantized-mesh です。
 
-- `requestVertexNormals` は法線をサーバーに要求します。法線により地形はライティングで陰影がつきます。法線が指定されている場合は `sun` ライトを追加する必要があります。
+- `requestVertexNormals` は法線をサーバーに要求します。次のステップで追加する `sun` ライトが、この法線を使って斜面に陰影をつけます。
 - `maxZoom` などの取得設定はソースに、`terrain` にはメッシュの描画設定（影・スカート）だけを書きます。
 
 詳細については、[Terrain Layer](../../../three/layer/terrain-layer/) を参照してください。
 
-### 実行結果
+### Ambient ライトを Sun ライトに置き換える
 
-地図を傾けると、地形の起伏を確認できます。
+環境光はすべての面を均一に照らすため、環境光だけでは地形の起伏が見えません。`view.addLight({ ambient: {} })` の呼び出しを `sun` ライトに置き換えます。`sun` ライトは、先ほど要求した法線を使って斜面に陰影をつけます。
+
+```typescript
+view.addLight({
+  sun: {},
+});
+view.atmosphere.date = new Date("2026-07-16T01:00:00Z");
+```
+
+太陽の方向は `view.atmosphere.date` から導出されます。どのマシンでも同じ見た目になるよう、UTC 文字列（`"...Z"`）で指定してください。詳細については、[SunLightDesc](../../../three_default_descs/light-desc/sun-light-desc/) を参照してください。
+
+太陽は、地形レイヤーに設定した `castShadow` / `receiveShadow` オプションを通じて地形に影も落とします。シャドウマッピングはビューの構築時に有効化する必要があるため（`shadow` は初期化時にのみ設定できるオプションです）、`ThreeView` のコンストラクタ呼び出しを変更します。
+
+```typescript
+const view = new ThreeView<DefaultDescriptions>({ shadow: true });
+```
+
+### カメラを山岳地帯に移動する
+
+起伏が際立つ富士山にカメラを移動します。`view.setCamera()` の呼び出しを変更します。
+
+```typescript
+view.setCamera({
+  lng: 138.75,
+  lat: 35.5,
+  height: 6000,
+  heading: 185, // -180 to 180
+  pitch: -26, // -180 to 0
+  roll: 0, // -180 to 180
+});
+```
+
+### 実行結果
 
 ![Terrain Map](@assets/tutorial/terrain.png)
 
@@ -241,7 +259,7 @@ import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three-defaul
 import { TileJsonPlugin } from "@navaramap/three-plugins";
 
 const plugin = new DefaultPlugin();
-const view = new ThreeView<DefaultDescriptions>({});
+const view = new ThreeView<DefaultDescriptions>({ shadow: true });
 view.addPlugin(plugin);
 
 const tilejson = new TileJsonPlugin();
@@ -250,8 +268,9 @@ view.addPlugin(tilejson);
 await view.init();
 
 view.addLight({
-  ambient: {},
+  sun: {},
 });
+view.atmosphere.date = new Date("2026-07-16T01:00:00Z");
 
 const terrainSource = view.addSource({
   type: "quantized-mesh",
@@ -278,11 +297,11 @@ view.addLayer({
 });
 
 view.setCamera({
-  lng: 139.7671,
-  lat: 35.6812,
-  height: 1000,
-  heading: 0, // -180 to 180
-  pitch: -30, // -180 to 0
+  lng: 138.75,
+  lat: 35.5,
+  height: 6000,
+  heading: 185, // -180 to 180
+  pitch: -26, // -180 to 0
   roll: 0, // -180 to 180
 });
 ```
@@ -290,6 +309,8 @@ view.setCamera({
 ## GeoJSON データを表示する
 
 ### GeoJSON レイヤーを追加する
+
+カメラが向いている富士山の北側斜面を覆うポリゴンを追加します。
 
 ```typescript
 const geojsonSource = view.addSource({
@@ -301,11 +322,11 @@ const geojsonSource = view.addSource({
       type: "Polygon",
       coordinates: [
         [
-          [139.75843063805576, 35.70688252862743],
-          [139.75843063805576, 35.700933240062355],
-          [139.77157543771887, 35.700933240062355],
-          [139.77157543771887, 35.70688252862743],
-          [139.75843063805576, 35.70688252862743],
+          [138.7, 35.425],
+          [138.7, 35.4],
+          [138.745, 35.4],
+          [138.745, 35.425],
+          [138.7, 35.425],
         ],
       ],
     },
@@ -316,18 +337,17 @@ view.addLayer({
   source: geojsonSource,
   polygon: {
     color: new Color().setHex(0xff3b30),
-    height: 0,
     opacity: 0.75,
     transparent: true,
   },
 });
 ```
 
-`view.addSource({ type: "geojson", ... })` で GeoJSON を Source として登録し、`view.addLayer({ type: "vector", source, ... })` で描画します。スタイル（色・高さ・透明度）は `polygon` Material が担います。詳細については、[Vector Layer](../../../three/layer/vector-layer/) を参照してください。
+`view.addSource({ type: "geojson", ... })` で GeoJSON を Source として登録し、`view.addLayer({ type: "vector", source, ... })` で描画します。スタイル（色・透明度）は `polygon` Material が担います。`clampToGround: true` を指定するとポリゴンが地形の表面にドレープされ、固定の高さで山に埋もれることなく斜面に沿って表示されます。詳細については、[Vector Layer](../../../three/layer/vector-layer/) を参照してください。
 
 ### 実行結果
 
-地図上にポリゴンが表示されます。
+富士山の斜面に、地形に沿ったポリゴンが表示されます。
 
 ![GeoJSON Map](@assets/tutorial/geojson.png)
 
@@ -339,7 +359,7 @@ import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three-defaul
 import { TileJsonPlugin } from "@navaramap/three-plugins";
 
 const plugin = new DefaultPlugin();
-const view = new ThreeView<DefaultDescriptions>({});
+const view = new ThreeView<DefaultDescriptions>({ shadow: true });
 view.addPlugin(plugin);
 
 const tilejson = new TileJsonPlugin();
@@ -348,8 +368,9 @@ view.addPlugin(tilejson);
 await view.init();
 
 view.addLight({
-  ambient: {},
+  sun: {},
 });
+view.atmosphere.date = new Date("2026-07-16T01:00:00Z");
 
 const terrainSource = view.addSource({
   type: "quantized-mesh",
@@ -379,16 +400,16 @@ const geojsonSource = view.addSource({
   type: "geojson",
   data: {
     type: "Feature",
-    properties: {},
+    properties: { name: "Area" },
     geometry: {
       type: "Polygon",
       coordinates: [
         [
-          [139.75843063805576, 35.70688252862743],
-          [139.75843063805576, 35.700933240062355],
-          [139.77157543771887, 35.700933240062355],
-          [139.77157543771887, 35.70688252862743],
-          [139.75843063805576, 35.70688252862743],
+          [138.7, 35.425],
+          [138.7, 35.4],
+          [138.745, 35.4],
+          [138.745, 35.425],
+          [138.7, 35.425],
         ],
       ],
     },
@@ -399,18 +420,17 @@ view.addLayer({
   source: geojsonSource,
   polygon: {
     color: new Color().setHex(0xff3b30),
-    height: 0,
     opacity: 0.75,
     transparent: true,
   },
 });
 
 view.setCamera({
-  lng: 139.7671,
-  lat: 35.6812,
-  height: 1000,
-  heading: 0, // -180 to 180
-  pitch: -30, // -180 to 0
+  lng: 138.75,
+  lat: 35.5,
+  height: 6000,
+  heading: 185, // -180 to 180
+  pitch: -26, // -180 to 0
   roll: 0, // -180 to 180
 });
 ```
