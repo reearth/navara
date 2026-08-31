@@ -42,7 +42,16 @@ export function familyLabel(id: string, locale: string | undefined): string {
   return locale === "ja" ? family.labelJa : family.label;
 }
 
-/** Landing href for a section, prefixed for the current locale. */
+/** Site base path without a trailing slash (e.g. `/docs`), `""` when serving at the root. */
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+/** Landing href for a section, prefixed with the site base and the current locale. */
 export function localizedHref(href: string, locale: string | undefined): string {
-  return locale === "ja" ? `/ja${href}` : href;
+  return locale === "ja" ? `${base}/ja${href}` : `${base}${href}`;
+}
+
+/** URL path segments with the site base stripped (e.g. `/docs/ja/three/` → `["ja", "three"]`). */
+export function pathSegmentsWithoutBase(pathname: string): string[] {
+  const path = pathname.startsWith(base) ? pathname.slice(base.length) : pathname;
+  return path.split("/").filter(Boolean);
 }

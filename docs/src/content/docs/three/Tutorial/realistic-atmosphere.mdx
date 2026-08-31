@@ -5,6 +5,8 @@ sidebar:
   order: 210
 ---
 
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
 ![Result](@assets/tutorial/realistic-atmosphere-result.png)
 
 **What you will learn in this tutorial:**
@@ -14,6 +16,40 @@ sidebar:
 - Setting up tone mapping
 - Adding rain and snow effects
 - Rendering water surfaces from the terrain water mask
+
+## Setup
+
+This tutorial builds on the project from [Getting Started](../../../guides/introduction/getting-started/).
+
+In addition, this tutorial imports Descriptor types such as `CloudsEffectDesc` and `RainMeshDesc` from `@navaramap/three-default-descs`.
+
+<Tabs syncKey="pkg">
+
+<TabItem label="npm">
+
+```bash
+npm install @navaramap/three-default-descs
+```
+
+</TabItem>
+
+<TabItem label="yarn">
+
+```bash
+yarn add @navaramap/three-default-descs
+```
+
+</TabItem>
+
+<TabItem label="pnpm">
+
+```bash
+pnpm add @navaramap/three-default-descs
+```
+
+</TabItem>
+
+</Tabs>
 
 ## Adding the Aerial Perspective Effect
 

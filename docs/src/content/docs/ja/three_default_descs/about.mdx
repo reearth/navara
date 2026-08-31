@@ -5,6 +5,8 @@ sidebar:
   order: 1
 ---
 
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
 ## What is three_default_descs?
 
 `three_default_descs` は、`navara_three` が提供するレイヤーシステム向けのデフォルトDescriptor実装パッケージです。3D メッシュ、ポストプロセッシングエフェクト、照明など、よく使われるDescriptorをすぐに利用できる形で提供します。
@@ -20,6 +22,42 @@ navara_three（コア）
         ├── Effect Desc（ポストプロセッシング）
         └── Light Desc（照明）
 ```
+
+## インストール
+
+`@navaramap/three-default-descs` は npm の [`@navaramap`](https://www.npmjs.com/org/navaramap) スコープで公開されています。peer dependencies として `@navaramap/three`・`three`・`postprocessing` が必要です。まだセットアップしていない場合は [Install](../../three/introduction/install/) ガイドを参照してください。
+
+<Tabs syncKey="pkg">
+
+<TabItem label="npm">
+
+```bash
+npm install @navaramap/three-default-descs
+```
+
+</TabItem>
+
+<TabItem label="yarn">
+
+```bash
+yarn add @navaramap/three-default-descs
+```
+
+</TabItem>
+
+<TabItem label="pnpm">
+
+```bash
+pnpm add @navaramap/three-default-descs
+```
+
+</TabItem>
+
+</Tabs>
+
+:::note
+`@navaramap/three-default-plugin` はこのパッケージに依存しているため、プラグインをインストールすると `node_modules` には既に存在します。しかし、`CloudsEffectDesc` などのDescriptor型を参照する場合のように、アプリケーションのコードから `@navaramap/three-default-descs` を直接インポートするには、上記の明示的なインストールが必要です。パッケージマネージャーによっては（特に pnpm）、推移的依存のパッケージを直接インポートできないためです。
+:::
 
 ## 使い方
 

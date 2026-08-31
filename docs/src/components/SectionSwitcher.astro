@@ -1,10 +1,11 @@
 ---
-import { sections, families, sectionLabel, localizedHref } from '../utils/sections';
+import { sections, families, sectionLabel, localizedHref, pathSegmentsWithoutBase } from '../utils/sections';
 
 const { locale } = Astro.locals.starlightRoute;
 
-// Determine the active top-level section from the URL (skip the locale prefix).
-const segments = Astro.url.pathname.split("/").filter(Boolean);
+// Determine the active top-level section from the URL (skip the base path and
+// the locale prefix).
+const segments = pathSegmentsWithoutBase(Astro.url.pathname);
 const activeSection = locale ? segments[1] : segments[0];
 const currentLabel = sectionLabel(activeSection, locale);
 

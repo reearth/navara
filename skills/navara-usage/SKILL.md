@@ -23,6 +23,8 @@ Navara is a 3D globe map engine: reusable GIS logic lives in a Rust/WASM core, a
 
 Most apps need only the first two.
 
+Install every package your code imports from, explicitly. `@navaramap/three-default-plugin` depends on `@navaramap/three-default-descs`, but importing descriptor types from the latter with only the plugin installed fails to resolve under pnpm (transitive deps are not importable). Peer deps to install alongside: `three`, `postprocessing`.
+
 ## The canonical setup order (invariant)
 
 ```typescript
