@@ -1,6 +1,6 @@
 # Contributing to Navara
 
-Thank you for your interest in contributing! All kinds of contributions are welcome, including bug reports, documentation, examples, and code.
+Thank you for your interest in contributing! Navara is part of the [MapLibre](https://maplibre.org/) ecosystem, and all kinds of contributions are welcome, including bug reports, documentation, examples, and code.
 
 ## Getting in touch
 
