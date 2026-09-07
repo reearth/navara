@@ -4,9 +4,9 @@ metadata:
   name: navara
   namespace: reearth
   annotations:
-    github.com/project-slug: reearth/navara
+    github.com/project-slug: maplibre/navara
   links:
-  - url: https://github.com/reearth/navara
+  - url: https://github.com/maplibre/navara
     title: GitHub
     icon: github
   tags:
@@ -14,4 +14,4 @@ metadata:
 spec:
   type: service
   lifecycle: production
-  owner: reearth/navara
+  owner: maplibre/navara

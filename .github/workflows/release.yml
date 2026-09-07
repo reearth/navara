@@ -14,7 +14,7 @@ name: Release
 #
 # npm side setup (once per package, after its first publish):
 #   npmjs.com -> package -> Settings -> Trusted Publisher
-#   -> GitHub Actions: reearth/navara, workflow file "release.yml",
+#   -> GitHub Actions: maplibre/navara, workflow file "release.yml",
 #      environment "npm-publish"
 
 on:
@@ -119,10 +119,9 @@ jobs:
     name: GitHub release
     runs-on: ubuntu-latest
     needs: publish
-    # Skip on forks; keep in sync with the canonical repo slug (currently
-    # eukarya-inc/navara, reearth/navara kept for a future transfer — see the
-    # trusted-publishing note at the top).
-    if: github.repository == 'eukarya-inc/navara' || github.repository == 'reearth/navara'
+    # Skip on forks; keep in sync with the canonical repo slug — see the
+    # trusted-publishing note at the top.
+    if: github.repository == 'maplibre/navara'
     permissions:
       contents: write # create the GitHub Release for the pushed tag
     steps:

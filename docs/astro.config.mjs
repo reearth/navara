@@ -53,7 +53,7 @@ export default defineConfig({
     starlight({
       title: "Navara Developer Document",
       favicon: "/favicon.png",
-      social: [{ icon: "github", label: "GitHub", href: "https://github.com/reearth/navara" }],
+      social: [{ icon: "github", label: "GitHub", href: "https://github.com/maplibre/navara" }],
       defaultLocale: "root",
       locales: {
         root: {

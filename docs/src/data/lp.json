@@ -21,9 +21,9 @@
     "gettingStarted": "/guides/introduction/getting-started/",
     "tutorial": "/three/tutorial/basic-visualization/",
     "examples": "/examples/",
-    "github": "https://github.com/eukarya-inc/navara",
+    "github": "https://github.com/maplibre/navara",
     "discord": "#",
-    "roadmap": "https://github.com/reearth/navara/issues/757"
+    "roadmap": "https://github.com/maplibre/navara/issues/757"
   },
   "images": {
     "hero": {
